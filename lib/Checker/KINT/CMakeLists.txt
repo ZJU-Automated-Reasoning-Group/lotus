@@ -9,8 +9,3 @@ add_library(CanaryKint STATIC
     Options.cpp
     Log.cpp
 )
-
-target_link_libraries(CanaryKint 
-        CanaryReport
-        ${Z3_LIBRARIES}
-)

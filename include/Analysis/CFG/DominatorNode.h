@@ -19,40 +19,41 @@
  OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
  OR OTHER DEALINGS IN THE SOFTWARE.
  */
- #ifndef NOELLE_SRC_CORE_DOMINATORS_DOMINATORNODE_H_
- #define NOELLE_SRC_CORE_DOMINATORS_DOMINATORNODE_H_
- 
- #include "llvm/Analysis/PostDominators.h"
- #include "Utils/LLVM/SystemHeaders.h"
- 
- namespace noelle {
- 
- namespace DTAliases {
- using Node = DomTreeNodeBase<BasicBlock>;
- } // namespace DTAliases
- 
- class DominatorNode {
- public:
-   DominatorNode(const DTAliases::Node &node);
-   DominatorNode(const DominatorNode &node);
- 
-   BasicBlock *getBlock(void) const;
-   DominatorNode *getParent(void) const;
-   std::vector<DominatorNode *> getChildren(void) const;
-   uint32_t getLevel(void) const;
- 
-   raw_ostream &print(raw_ostream &stream, std::string prefixToUse = "");
- 
-   friend class DominatorForest;
- 
- private:
-   BasicBlock *B;
-   uint32_t level;
- 
-   DominatorNode *parent;
-   std::vector<DominatorNode *> children;
- };
- 
- } // namespace noelle
- 
- #endif // NOELLE_SRC_CORE_DOMINATORS_DOMINATORNODE_H_
+#ifndef NOELLE_SRC_CORE_DOMINATORS_DOMINATORNODE_H_
+#define NOELLE_SRC_CORE_DOMINATORS_DOMINATORNODE_H_
+
+#include "llvm/Analysis/PostDominators.h"
+
+#include "Utils/LLVM/SystemHeaders.h"
+
+namespace noelle {
+
+namespace DTAliases {
+using Node = DomTreeNodeBase<BasicBlock>;
+} // namespace DTAliases
+
+class DominatorNode {
+public:
+  DominatorNode(const DTAliases::Node &node);
+  DominatorNode(const DominatorNode &node);
+
+  BasicBlock *getBlock(void) const;
+  DominatorNode *getParent(void) const;
+  std::vector<DominatorNode *> getChildren(void) const;
+  uint32_t getLevel(void) const;
+
+  raw_ostream &print(raw_ostream &stream, std::string prefixToUse = "");
+
+  friend class DominatorForest;
+
+private:
+  BasicBlock *B;
+  uint32_t level;
+
+  DominatorNode *parent;
+  std::vector<DominatorNode *> children;
+};
+
+} // namespace noelle
+
+#endif // NOELLE_SRC_CORE_DOMINATORS_DOMINATORNODE_H_

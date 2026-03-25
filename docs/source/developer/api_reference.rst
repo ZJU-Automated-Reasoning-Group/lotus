@@ -189,8 +189,8 @@ Include headers:
 
 .. code-block:: cpp
 
-   #include "IR/PDG/ProgramDependencyGraph.h"
-   #include "IR/PDG/Graph.h"
+   #include "IR/PDG/Core/ProgramDependencyGraph.h"
+   #include "IR/PDG/Core/Graph.h"
 
 Build PDG:
 
@@ -260,8 +260,8 @@ Include headers:
 
 .. code-block:: cpp
 
-   #include "IR/PDG/CypherQuery.h"
-   #include "IR/PDG/ProgramDependencyGraph.h"
+   #include "IR/PDG/Analysis/CypherQuery.h"
+   #include "IR/PDG/Core/ProgramDependencyGraph.h"
 
 Parse and execute Cypher queries:
 
@@ -651,35 +651,6 @@ Use programmatically:
        errs() << "Description: " << bug.description << "\n";
    }
 
-GVFA API
-~~~~~~~~
-
-Include headers:
-
-.. code-block:: cpp
-
-   #include "Analysis/GVFA/GlobalValueFlowAnalysis.h"
-
-Detect null pointer bugs:
-
-.. code-block:: cpp
-
-   // Create GVFA
-   GlobalValueFlowAnalysis gvfa(module);
-   
-   // Run null pointer analysis
-   gvfa.detectNullPointerBugs();
-   
-   // Get vulnerable dereferences
-   std::vector<NullDerefBug> bugs = gvfa.getNullPointerBugs();
-   
-   for (auto &bug : bugs) {
-       errs() << "Potential null dereference:\n";
-       errs() << "  Instruction: " << *bug.instruction << "\n";
-       errs() << "  Pointer: " << *bug.pointer << "\n";
-       errs() << "  Null source: " << *bug.nullSource << "\n";
-   }
-
 Utility APIs
 ------------
 
@@ -690,7 +661,7 @@ Include headers:
 
 .. code-block:: cpp
 
-   #include "IR/PDG/PDGCallGraph.h"
+   #include "IR/PDG/Core/PDGCallGraph.h"
 
 Build and query call graph:
 
@@ -775,7 +746,7 @@ Here's a complete example of building a custom analysis tool:
    #include "llvm/Support/SourceMgr.h"
    #include "llvm/IR/LegacyPassManager.h"
    #include "Alias/DyckAA/DyckAliasAnalysis.h"
-   #include "IR/PDG/ProgramDependencyGraph.h"
+   #include "IR/PDG/Core/ProgramDependencyGraph.h"
    #include "Dataflow/TaintAnalysis/TaintAnalysis.h"
    #include "Checker/KINT/MKintPass.h"
    
@@ -841,4 +812,3 @@ See Also
 - :doc:`../user_guide/architecture` - Understanding the framework architecture
 - :doc:`../user_guide/tutorials` - Practical usage examples
 - :doc:`developer_guide` - Extending Lotus
-

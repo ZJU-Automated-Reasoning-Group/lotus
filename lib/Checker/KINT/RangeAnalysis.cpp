@@ -3,7 +3,7 @@
 #include "Checker/KINT/KINTTaintAnalysis.h"
 #include "Checker/KINT/Log.h"
 #include "Checker/KINT/Options.h"
-#include "Utils/General/range.h"
+#include "Utils/Types/range.h"
 
 #include <deque>
 
@@ -216,8 +216,12 @@ void RangeAnalysis::analyze_one_bb_range(
             if (CheckArrayOOB && !RobustReachability && idx_max >= arr_size)
               gep_oob.insert(gep);
 
-            for (size_t i = idx_rng.getUnsignedMin().getLimitedValue();
-                 i < std::min(arr_size, idx_max); ++i) {
+            // Use <= idx_max (clamped to arr_size-1) so the last reachable
+            // element is included in the range merge.
+            const size_t idx_min = idx_rng.getUnsignedMin().getLimitedValue();
+            const size_t idx_end =
+                std::min(arr_size, idx_max + 1); // inclusive upper bound
+            for (size_t i = idx_min; i < idx_end; ++i) {
               if (garr2ranges[garr][i].getBitWidth() == valrng.getBitWidth()) {
                 garr2ranges[garr][i] = garr2ranges[garr][i].unionWith(valrng);
               } else {
@@ -437,8 +441,12 @@ void RangeAnalysis::analyze_one_bb_range(
                 gep_oob.insert(gep);
               }
 
-              for (size_t i = idx_rng.getUnsignedMin().getLimitedValue();
-                   i < std::min(arr_size, idx_max); ++i) {
+              // Include idx_max itself (clamped to arr_size-1) so the last
+              // reachable element contributes to the merged range.
+              const size_t load_idx_min =
+                  idx_rng.getUnsignedMin().getLimitedValue();
+              const size_t load_idx_end = std::min(arr_size, idx_max + 1);
+              for (size_t i = load_idx_min; i < load_idx_end; ++i) {
                 if (new_range.getBitWidth() ==
                     garr2ranges[garr][i].getBitWidth()) {
                   new_range = new_range.unionWith(garr2ranges[garr][i]);
@@ -681,16 +689,18 @@ void RangeAnalysis::range_analysis(
           }
 
           if (cond_rng.getBitWidth() == emp_rng.getBitWidth()) {
-            branch_rng[cond] = cond_rng.unionWith(emp_rng);
+            branch_rng[cond] = cond_rng.intersectWith(emp_rng);
           } else {
             branch_rng[cond] = cond_rng;
           }
         }
       } else {
-        // try catch... (thank god, C does not have try-catch)
-        // indirectbr... ?
-        MKINT_CHECK_ABORT(false)
-            << "Unknown terminator: " << *pred->getTerminator();
+        // Invoke, IndirectBr, CallBr, etc. — proceed conservatively without
+        // adding branch-specific range constraints.  Using MKINT_CHECK_RELAX
+        // (not ABORT) so the analysis continues rather than crashing.
+        MKINT_CHECK_RELAX(false) << "[Range Analysis] Unknown terminator "
+                                    "(proceeding conservatively): "
+                                 << *pred->getTerminator();
       }
 
       analyze_one_bb_range(bb, branch_rng, func2range_info, backedges,
@@ -800,9 +810,9 @@ void RangeAnalysis::init_ranges(
         }
       } else {
         for (const auto &u : cur->users()) {
-          if (auto *uu = dyn_cast<CallInst>(u)) {
-            auto *caller = uu->getCalledFunction();
-            if (!hist.contains(caller)) {
+          if (auto *uu = dyn_cast<CallBase>(u)) {
+            auto *caller = uu->getFunction();
+            if (caller && !hist.contains(caller)) {
               worklist.push_back(caller);
               hist.insert(caller);
             }
@@ -920,7 +930,7 @@ void RangeAnalysis::print_all_ranges(
       for (const auto &val_rng_pair : inst2rng) {
         const auto *val = val_rng_pair.first;
         auto rng = val_rng_pair.second;
-        if (dyn_cast<ConstantInt>(val))
+        if (isa<ConstantInt>(val))
           continue; // meaningless to pring const range.
 
         if (rng.isFullSet())

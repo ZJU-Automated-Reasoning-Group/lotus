@@ -1,7 +1,8 @@
 // Implementation of the ValueDependenceTracker.
 //
-// This component is responsible for computing the backward data-flow dependencies
-// for a given program point. It answers the question: "Where did the value at this point come from?"
+// This component is responsible for computing the backward data-flow
+// dependencies for a given program point. It answers the question: "Where did
+// the value at this point come from?"
 //
 // Usage:
 // Used by the PrecisionLossTracker to traverse the value graph backwards.
@@ -45,10 +46,11 @@ private:
   void addDef(const CFGNode &node, const Value *val) {
     assert(val != nullptr);
 
-    // Global values don't have a defining CFG node in the function (they are constant/static).
+    // Global values don't have a defining CFG node in the function (they are
+    // constant/static).
     if (isa<GlobalValue>(val))
       return;
-      
+
     const auto *predNode = node.getCFG().getCFGNodeForValue(val);
     assert(predNode != nullptr);
     ppSet.insert(ProgramPoint(ctx, predNode));
@@ -72,7 +74,7 @@ public:
     for (const auto *src : copyNode)
       addDef(copyNode, src);
   }
-  
+
   // Offset Node: Depends on the base pointer.
   void visitOffsetNode(const OffsetCFGNode &offsetNode) {
     addDef(offsetNode, offsetNode.getSrc());
@@ -84,8 +86,9 @@ public:
     for (auto const &callee : callees) {
       const auto *cfg = ssProg.getCFGForFunction(*callee.getFunction());
       assert(cfg != nullptr);
-      
-      // If the function returns, add its exit node (ReturnNode) as a dependency.
+
+      // If the function returns, add its exit node (ReturnNode) as a
+      // dependency.
       if (!cfg->doesNotReturn()) {
         const auto *retNode = cfg->getExitNode();
         ppSet.insert(ProgramPoint(callee.getContext(), retNode));
@@ -94,19 +97,21 @@ public:
   }
 
   // Return Node: Depends on the value being returned.
-  // Note: ReturnCFGNode usually has a 'def' set which tracks the reaching definition of the return value?
-  // Or maybe it tracks the value operand itself?
-  // Looking at CFG.h/cpp, ReturnCFGNode seems to hold the return value.
-  // 'defs()' likely returns the node defining that value (via def-use chain logic?).
+  // Note: ReturnCFGNode usually has a 'def' set which tracks the reaching
+  // definition of the return value? Or maybe it tracks the value operand
+  // itself? Looking at CFG.h/cpp, ReturnCFGNode seems to hold the return value.
+  // 'defs()' likely returns the node defining that value (via def-use chain
+  // logic?).
   void visitReturnNode(const ReturnCFGNode &retNode) {
     for (auto *defNode : retNode.defs())
       ppSet.insert(ProgramPoint(ctx, defNode));
   }
 
-  // These nodes are no-ops for *value* dependence (they affect memory, not the top-level pointer value being tracked).
-  // Alloc: Is a source, depends on nothing (except size, irrelevant here).
-  // Load: Depends on memory content, handled separately? Or treated as a source?
-  // Store: Affects memory, doesn't produce a value.
+  // These nodes are no-ops for *value* dependence (they affect memory, not the
+  // top-level pointer value being tracked). Alloc: Is a source, depends on
+  // nothing (except size, irrelevant here). Load: Depends on memory content,
+  // handled separately? Or treated as a source? Store: Affects memory, doesn't
+  // produce a value.
   void visitAllocNode(const AllocCFGNode &) {}
   void visitLoadNode(const LoadCFGNode &) {}
   void visitStoreNode(const StoreCFGNode &) {}

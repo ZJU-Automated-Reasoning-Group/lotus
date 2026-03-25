@@ -10,7 +10,7 @@ class TargetLibraryInfo;
 class DataLayout;
 class LLVMContext;
 class Module;
-}
+} // namespace llvm
 
 namespace seahorn {
 

@@ -50,9 +50,7 @@ Transformations that restructure and clean up control flow.
 - **`RemoveNoRetFunction.cpp`**: Remove calls to known non-returning functions and tidy up unreachable code
 - **`SimplifyLatch.cpp`**: Normalize loop latch structure to a canonical form
 - **`NameBlock.cpp`**: Assign stable, human-readable names to basic blocks
-- **Failure-directed trimming**: Implemented in `lib/Verification/FailureDirectedTrimming/` (adds `verifier.assume` conditions derived from inferred safety conditions). Header: `include/Verification/FailureDirectedTrimming/FailureDirectedTrimming.h`.
-- **`ReplaceAsserts.cpp`**: Replace assertion calls with appropriate handling
-- **`ReplaceUBSan.cpp`**: Replace undefined behavior sanitizer checks
+
 
 **Typical use cases**:
 - Cleanup after aggressive inlining or partial optimization
@@ -63,12 +61,11 @@ Transformations that restructure and clean up control flow.
 
 Passes that implement light-weight optimizations or orchestrate multiple transforms.
 
-- **`SoftFloat.cpp`**: Replace hardware floating-point operations with software implementations
 - **`UnrollVectors.cpp`**: Unroll short vector operations when profitable
 - **`Unrolling.cpp`**: Loop unrolling transforms for selected loops
 
 **Typical use cases**:
-- Build an analysis-friendly optimization pipeline before running CLAM, SymbolicAbstraction, or alias analyses
+- Build an analysis-friendly optimization pipeline before running CLAM, SymAbsAI, or alias analyses
 - Experiment with different levels of inlining and loop/vector transformations
 - Replace floating-point operations in environments without hardware FP support
 
@@ -117,7 +114,7 @@ These transforms are used by:
 
 - **TPA**: IR normalization prepasses (GEP expansion, constant folding, etc.)
 - **CLAM**: Numerical abstract interpretation pipeline
-- **SymbolicAbstraction**: Symbolic abstraction analysis pipeline
+- **SymAbsAI**: Symbolic abstraction analysis pipeline
 - **Alias Analysis**: Preprocessing passes for pointer analysis
 - **ModuleOptimizer**: Driver pass that orchestrates multiple transforms
 

@@ -20,6 +20,7 @@
 #define ALIAS_DYCKAA_DYCKVALUEFLOWANALYSIS_H
 
 #include "Alias/DyckAA/DyckVFG.h"
+
 #include <llvm/Pass.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/Debug.h>
@@ -29,20 +30,20 @@ using namespace llvm;
 
 class DyckValueFlowAnalysis : public ModulePass {
 private:
-    DyckVFG *VFG;
+  DyckVFG *VFG;
 
 public:
-    static char ID;
+  static char ID;
 
-    DyckValueFlowAnalysis();
+  DyckValueFlowAnalysis();
 
-    ~DyckValueFlowAnalysis() override;
+  ~DyckValueFlowAnalysis() override;
 
-    bool runOnModule(Module &M) override;
+  bool runOnModule(Module &M) override;
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-    DyckVFG *getDyckVFGraph() const;
+  DyckVFG *getDyckVFGraph() const;
 };
 
 #endif // ALIAS_DYCKAA_DYCKVALUEFLOWANALYSIS_H

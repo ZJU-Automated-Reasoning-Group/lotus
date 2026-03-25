@@ -5,10 +5,10 @@
  * Identifies which functions may access to memory
  */
 
-#include "llvm/Pass.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Pass.h"
 
 namespace seahorn
 {

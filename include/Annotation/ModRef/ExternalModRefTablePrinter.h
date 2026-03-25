@@ -1,23 +1,21 @@
 #pragma once
 
-namespace llvm
-{
-	class raw_ostream;
+namespace llvm {
+class raw_ostream;
 } // namespace llvm
 
-namespace annotation
-{
+namespace annotation {
 
 class ExternalModRefTable;
 
-class ExternalModRefTablePrinter
-{
+class ExternalModRefTablePrinter {
 private:
-	llvm::raw_ostream& os;
-public:
-	ExternalModRefTablePrinter(llvm::raw_ostream& o): os(o) {}
+  llvm::raw_ostream &os;
 
-	void printTable(const ExternalModRefTable&);
+public:
+  ExternalModRefTablePrinter(llvm::raw_ostream &o) : os(o) {}
+
+  void printTable(const ExternalModRefTable &);
 };
 
 } // namespace annotation

@@ -19,44 +19,44 @@
  OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
  OR OTHER DEALINGS IN THE SOFTWARE.
  */
- #include "Analysis/DebugInfo/MetadataManager/MetadataManager.h"
+#include "Analysis/DebugInfo/MetadataManager/MetadataManager.h"
 
- namespace noelle {
- 
- bool MetadataManager::doesHaveMetadata(const std::string &metadataName) const {
- 
-   /*
-    * Check if the metadata exists.
-    */
-   auto *metaNode = this->program.getNamedMetadata(metadataName);
-   if (!metaNode) {
-     return false;
-   }
- 
-   return true;
- }
- 
- void MetadataManager::addMetadata(const std::string &metadataName,
-                                   const std::string &metadataValue) {
- 
-   /*
-    * Create the metadata.
-    */
-   auto *n = this->program.getOrInsertNamedMetadata(metadataName);
- 
-   /*
-    * Create the metadata value.
-    */
-   auto *v =
-       MDNode::get(this->program.getContext(),
-                   MDString::get(this->program.getContext(), metadataValue));
- 
-   /*
-    * Set the metadata value.
-    */
-   n->addOperand(v);
- 
-   return;
- }
- 
- } // namespace noelle
+namespace noelle {
+
+bool MetadataManager::doesHaveMetadata(const std::string &metadataName) const {
+
+  /*
+   * Check if the metadata exists.
+   */
+  auto *metaNode = this->program.getNamedMetadata(metadataName);
+  if (!metaNode) {
+    return false;
+  }
+
+  return true;
+}
+
+void MetadataManager::addMetadata(const std::string &metadataName,
+                                  const std::string &metadataValue) {
+
+  /*
+   * Create the metadata.
+   */
+  auto *n = this->program.getOrInsertNamedMetadata(metadataName);
+
+  /*
+   * Create the metadata value.
+   */
+  auto *v =
+      MDNode::get(this->program.getContext(),
+                  MDString::get(this->program.getContext(), metadataValue));
+
+  /*
+   * Set the metadata value.
+   */
+  n->addOperand(v);
+
+  return;
+}
+
+} // namespace noelle

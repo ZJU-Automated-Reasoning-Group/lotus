@@ -1,833 +1,963 @@
-// from https://github.com/DanielGuoVT/pldi_code
-// ===- Branch.cpp - Transform branches dependent on secrete data
-// ---------------===//
-//   - 10/04 treat all input as sensitive
-//
-//===---------------------------------------------------------------------------===//
-
 #include "Analysis/Spectre/CacheSpecuAnalysis.h"
+
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/User.h"
-#include "llvm/IR/Value.h"
-#include "llvm/Pass.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include <algorithm>
 #include <deque>
-using namespace llvm;
-using namespace std;
-#define DEBUG_TYPE "spectre"
+#include <memory>
+#include <set>
+#include <unordered_map>
+#include <utility>
+
 namespace spectre {
 
-CacheSpecuAnalysis::CacheSpecuAnalysis(Function &F, DominatorTree &DT,
-                                       PostDominatorTree &PDT,
-                                       AliasAnalysis *AA, unsigned lineSize,
-                                       unsigned lineNum, unsigned setNum,
-                                       unsigned depth, unsigned merge) {
-  this->AA = AA;
-  this->F = &F;
-  this->DT = &DT;
-  this->PDT = &PDT;
-  this->model = new CacheModel(lineSize, lineNum, setNum);
+using namespace llvm;
 
-  if (depth > 0)
-    runSpecu = true;
-  this->MissSpecuDepth = depth;
-  if (merge == 1)
-    this->MergeOption = 1;
+namespace {
 
-  missNum = 0;
-  llvm::FindFunctionBackedges(F, backEdges);
-}
+struct PointerLocation {
+  const Value *Base = nullptr;
+  uint64_t Offset = 0;
+  bool Precise = false;
+};
 
-bool CacheSpecuAnalysis::IsValueInCache(Instruction *inst) {
-  Value *loadPointer;
-  GlobalVariable *GV;
-  unsigned offset_b = 0, offset_e = 0;
+struct AccessEffect {
+  bool Hit = false;
+  bool Observed = false;
+  SpectreObservation Observation;
+};
 
-  if (LoadInst *load = dyn_cast<LoadInst>(inst))
-    loadPointer = load->getPointerOperand();
-  else
-    return false;
+struct BlockSimulationResult {
+  std::unique_ptr<CacheModel> ExitState;
+  bool StopSpeculation = false;
+};
 
-  if (!GetInstCacheRange(loadPointer, GV, offset_b, offset_e))
-    return false;
+struct SpeculationState {
+  const BranchInst *Branch = nullptr;
+  const BasicBlock *MergeBlock = nullptr;
+  unsigned Budget = 0;
+};
 
-  unsigned CacheLoc = this->model->LocateVar(GV, offset_b);
-  unsigned CacheLoc_e = this->model->LocateVar(GV, offset_e);
-  if (CacheLoc == (unsigned)-1) {
-    // DEBUG(dbgs() << "Cannot find Value when check in cache: ";
-    // GV->print(dbgs()); dbgs() << "\n");
-    return false;
+class MemoryResolution {
+public:
+  MemoryResolution(Function &function, AliasAnalysis *aliasAnalysis,
+                   CacheModel &cacheModel)
+      : F(function), AA(aliasAnalysis), Cache(cacheModel) {}
+
+  void seedObjects() {
+    unsigned argIndex = 0;
+    for (Argument &arg : F.args()) {
+      ++argIndex;
+      registerObject(&arg, arg.getType(), F.getParamAlignment(argIndex),
+                     false, false, false, true);
+    }
+
+    Module *module = F.getParent();
+    for (GlobalVariable &global : module->globals()) {
+      registerObject(&global, global.getValueType(), global.getAlignment(),
+                     false, true, false, false);
+    }
+
+    for (Instruction &inst : instructions(F)) {
+      if (auto *allocaInst = dyn_cast<AllocaInst>(&inst)) {
+        registerObject(allocaInst, allocaInst->getAllocatedType(),
+                       allocaInst->getAlignment(), false, false, true, false);
+      } else if (auto *callInst = dyn_cast<CallInst>(&inst)) {
+        if (isAllocationCall(callInst)) {
+          Type *allocatedTy = callInst->getType()->getPointerElementType();
+          if (allocatedTy == nullptr) {
+            allocatedTy = Type::getInt8Ty(F.getContext());
+          }
+          registerObject(callInst, allocatedTy, ARCH_SIZE, true, false, false,
+                         false);
+        }
+      }
+    }
   }
 
-  for (; CacheLoc <= CacheLoc_e; ++CacheLoc) {
-    if (this->model->Ages[CacheLoc] >= this->model->CacheLineNum)
+  void recordBitCast(const Value *result, const Value *source) {
+    PointerAliases[result] = resolvePointer(source);
+  }
+
+  void recordGEP(const Value *result, const Value *source, uint64_t beginOffset,
+                 bool precise) {
+    PointerLocation target = resolvePointer(source);
+    target.Offset += beginOffset;
+    target.Precise = target.Precise && precise;
+    PointerAliases[result] = target;
+  }
+
+  void recordPhi(const PHINode &phi) {
+    PointerLocation merged;
+    bool first = true;
+    for (const Value *incoming : phi.incoming_values()) {
+      PointerLocation candidate = resolvePointer(incoming);
+      if (candidate.Base == nullptr) {
+        continue;
+      }
+      if (first) {
+        merged = candidate;
+        first = false;
+      } else if (merged.Base != candidate.Base || merged.Offset != candidate.Offset) {
+        merged.Precise = false;
+      }
+    }
+    if (!first) {
+      PointerAliases[&phi] = merged;
+    }
+  }
+
+  void recordSelect(const SelectInst &select) {
+    PointerLocation lhs = resolvePointer(select.getTrueValue());
+    PointerLocation rhs = resolvePointer(select.getFalseValue());
+    if (lhs.Base == nullptr && rhs.Base == nullptr) {
+      return;
+    }
+    if (lhs.Base == nullptr) {
+      lhs = rhs;
+    }
+    if (rhs.Base != nullptr &&
+        (lhs.Base != rhs.Base || lhs.Offset != rhs.Offset)) {
+      lhs.Precise = false;
+    }
+    PointerAliases[&select] = lhs;
+  }
+
+  void recordPointerStore(const StoreInst &store) {
+    const Value *storedValue = store.getValueOperand();
+    if (!storedValue->getType()->isPointerTy()) {
+      return;
+    }
+    PointerAliases[store.getPointerOperand()] = resolvePointer(storedValue);
+  }
+
+  ResolvedAccess resolveMemoryAccess(const Instruction &inst, const Value *ptr,
+                                     AccessKind kind, bool isRead,
+                                     bool isWrite) {
+    ResolvedAccess access;
+    access.Inst = &inst;
+    access.Kind = kind;
+    access.IsRead = isRead;
+    access.IsWrite = isWrite;
+
+    PointerLocation loc = resolvePointer(ptr);
+    if (loc.Base == nullptr && AA != nullptr) {
+      loc = resolveViaAliasAnalysis(ptr);
+    }
+    if (loc.Base == nullptr) {
+      return access;
+    }
+
+    access.Base = loc.Base;
+    access.OffsetBegin = loc.Offset;
+    access.OffsetEnd = loc.Offset;
+    access.IsPrecise = loc.Precise;
+    return access;
+  }
+
+  const AbstractMemoryObject *lookupObject(const Value *base) const {
+    auto it = Objects.find(base);
+    if (it == Objects.end()) {
+      return nullptr;
+    }
+    return &it->second;
+  }
+
+  SmallVector<const AbstractMemoryObject *, 8> allObjects() const {
+    SmallVector<const AbstractMemoryObject *, 8> result;
+    for (const auto &entry : Objects) {
+      result.push_back(&entry.second);
+    }
+    return result;
+  }
+
+private:
+  Function &F;
+  AliasAnalysis *AA;
+  CacheModel &Cache;
+  std::unordered_map<const Value *, PointerLocation> PointerAliases;
+  std::unordered_map<const Value *, AbstractMemoryObject> Objects;
+
+  static bool isAllocationCall(const CallInst *callInst) {
+    const Function *callee = callInst->getCalledFunction();
+    if (callee == nullptr) {
       return false;
+    }
+    StringRef name = callee->getName();
+    return name.contains("malloc") || name.contains("calloc") ||
+           name.contains("realloc") || name.contains("operator new");
+  }
+
+  std::string objectName(const Value *value) const {
+    if (value == nullptr) {
+      return "<unknown>";
+    }
+    if (value->hasName()) {
+      return value->getName().str();
+    }
+    std::string text;
+    raw_string_ostream os(text);
+    value->printAsOperand(os, false);
+    return os.str();
+  }
+
+  void registerObject(Value *base, Type *ty, unsigned alignment, bool isHeap,
+                      bool isGlobal, bool isStack, bool isArgument) {
+    Cache.AddVar(base, ty, alignment);
+    AbstractMemoryObject object;
+    object.Base = base;
+    object.Name = objectName(base);
+    object.Size = CacheModel::GetTySize(ty);
+    object.Alignment = alignment;
+    object.IsHeap = isHeap;
+    object.IsGlobal = isGlobal;
+    object.IsStack = isStack;
+    object.IsArgument = isArgument;
+    Objects[base] = object;
+    PointerAliases[base] = PointerLocation{base, 0, true};
+  }
+
+  PointerLocation resolveViaAliasAnalysis(const Value *ptr) const {
+    if (AA == nullptr) {
+      return {};
+    }
+
+    PointerLocation resolved;
+    for (const auto &entry : Objects) {
+      const Value *base = entry.first;
+      if (base == nullptr || !base->getType()->isPointerTy() ||
+          !ptr->getType()->isPointerTy()) {
+        continue;
+      }
+      AliasResult result = AA->alias(const_cast<Value *>(ptr),
+                                     const_cast<Value *>(base));
+      if (result != AliasResult::NoAlias) {
+        if (resolved.Base == nullptr) {
+          resolved = PointerLocation{base, 0, false};
+        } else {
+          resolved.Precise = false;
+          return resolved;
+        }
+      }
+    }
+    return resolved;
+  }
+
+  PointerLocation resolvePointer(const Value *value) {
+    if (value == nullptr) {
+      return {};
+    }
+
+    auto aliasIt = PointerAliases.find(value);
+    if (aliasIt != PointerAliases.end()) {
+      return aliasIt->second;
+    }
+
+    if (auto *constantExpr = dyn_cast<ConstantExpr>(value)) {
+      if (auto *op = dyn_cast<GEPOperator>(constantExpr)) {
+        const Value *base = op->getPointerOperand();
+        unsigned from = 0;
+        unsigned to = 0;
+        auto *tmp = cast<GetElementPtrInst>(constantExpr->getAsInstruction());
+        int precise = CacheModel::GEPInstPos(*tmp, from, to);
+        delete tmp;
+        PointerLocation loc = resolvePointer(base);
+        loc.Offset += from;
+        loc.Precise = loc.Precise && precise == 1;
+        return loc;
+      }
+      if (constantExpr->isCast()) {
+        return resolvePointer(constantExpr->getOperand(0));
+      }
+    }
+
+    if (auto *bitCastInst = dyn_cast<BitCastInst>(value)) {
+      PointerLocation loc = resolvePointer(bitCastInst->getOperand(0));
+      PointerAliases[value] = loc;
+      return loc;
+    }
+
+    if (auto *gep = dyn_cast<GetElementPtrInst>(value)) {
+      unsigned from = 0;
+      unsigned to = 0;
+      int precise =
+          CacheModel::GEPInstPos(const_cast<GetElementPtrInst &>(*gep), from, to);
+      PointerLocation loc = resolvePointer(gep->getPointerOperand());
+      loc.Offset += from;
+      loc.Precise = loc.Precise && precise == 1;
+      PointerAliases[value] = loc;
+      return loc;
+    }
+
+    if (auto *phi = dyn_cast<PHINode>(value)) {
+      recordPhi(*phi);
+      return PointerAliases[value];
+    }
+
+    if (auto *selectInst = dyn_cast<SelectInst>(value)) {
+      recordSelect(*selectInst);
+      return PointerAliases[value];
+    }
+
+    auto objectIt = Objects.find(value);
+    if (objectIt != Objects.end()) {
+      return PointerLocation{value, 0, true};
+    }
+
+    if (value->getType()->isPointerTy()) {
+      return resolveViaAliasAnalysis(value);
+    }
+    return {};
+  }
+};
+
+class BranchSideSimulator {
+public:
+  BranchSideSimulator(CacheSpecuAnalysis &analysis, MemoryResolution &memory,
+                      const SpeculationState &state)
+      : Analysis(analysis), Memory(memory), State(state) {}
+
+  std::pair<std::unique_ptr<CacheModel>, SpectreFinding>
+  run(const BasicBlock *entry, const CacheModel &startState, bool thenSide) {
+    std::map<const BasicBlock *, std::unique_ptr<CacheModel>> inStates;
+    std::map<const BasicBlock *, std::unique_ptr<CacheModel>> outStates;
+    std::map<const BasicBlock *, unsigned> visitBudget;
+    std::deque<const BasicBlock *> worklist;
+    worklist.push_back(entry);
+    inStates[entry] = std::unique_ptr<CacheModel>(startState.fork());
+
+    SpectreFinding finding;
+    finding.Branch = State.Branch;
+    finding.MergeBlock = State.MergeBlock;
+
+    while (!worklist.empty()) {
+      const BasicBlock *bb = worklist.front();
+      worklist.pop_front();
+      if (bb == State.MergeBlock) {
+        continue;
+      }
+      if (++visitBudget[bb] > State.Budget) {
+        continue;
+      }
+
+      CacheModel *inState = inStates[bb].get();
+      if (inState == nullptr) {
+        continue;
+      }
+
+      BlockSimulationResult blockResult = simulateBlock(*bb, *inState);
+      outStates[bb] = std::move(blockResult.ExitState);
+      if (thenSide) {
+        finding.ExploredThenBlocks.push_back(bb);
+      } else {
+        finding.ExploredElseBlocks.push_back(bb);
+      }
+
+      if (blockResult.StopSpeculation) {
+        continue;
+      }
+
+      for (const BasicBlock *succ : successors(bb)) {
+        if (succ == State.MergeBlock) {
+          continue;
+        }
+        if (inStates[succ] == nullptr) {
+          inStates[succ] = std::unique_ptr<CacheModel>(outStates[bb]->fork());
+          worklist.push_back(succ);
+          continue;
+        }
+
+        std::unique_ptr<CacheModel> before(inStates[succ]->fork());
+        inStates[succ]->merge(outStates[bb].get());
+        if (Analysis.wideningOp(before.get(), inStates[succ].get()) ||
+            !inStates[succ]->equal(before.get())) {
+          worklist.push_back(succ);
+        }
+      }
+    }
+
+    std::unique_ptr<CacheModel> exitState(startState.fork());
+    for (const auto &entryState : outStates) {
+      exitState->merge(entryState.second.get());
+    }
+
+    if (thenSide) {
+      finding.ThenObservations = std::move(CollectedObservations);
+    } else {
+      finding.ElseObservations = std::move(CollectedObservations);
+    }
+    return {std::move(exitState), std::move(finding)};
+  }
+
+private:
+  CacheSpecuAnalysis &Analysis;
+  MemoryResolution &Memory;
+  const SpeculationState &State;
+  SmallVector<SpectreObservation, 8> CollectedObservations;
+
+  BlockSimulationResult simulateBlock(const BasicBlock &bb,
+                                      const CacheModel &inState) {
+    BlockSimulationResult result;
+    result.ExitState = std::unique_ptr<CacheModel>(inState.fork());
+
+    for (const Instruction &inst : bb) {
+      AccessEffect effect = simulateInstruction(inst, *result.ExitState);
+      if (effect.Observed) {
+        CollectedObservations.push_back(effect.Observation);
+      }
+      if (isSpeculationBarrier(inst)) {
+        result.StopSpeculation = true;
+        break;
+      }
+    }
+
+    return result;
+  }
+
+  AccessEffect simulateInstruction(const Instruction &inst, CacheModel &state) {
+    if (const auto *loadInst = dyn_cast<LoadInst>(&inst)) {
+      return observeResolvedAccess(
+          Memory.resolveMemoryAccess(inst, loadInst->getPointerOperand(),
+                                     AccessKind::Load, true, false),
+          state, false);
+    }
+    if (const auto *storeInst = dyn_cast<StoreInst>(&inst)) {
+      return observeResolvedAccess(
+          Memory.resolveMemoryAccess(inst, storeInst->getPointerOperand(),
+                                     AccessKind::Store, false, true),
+          state, false);
+    }
+    if (const auto *callInst = dyn_cast<CallInst>(&inst)) {
+      return observeCall(*callInst, state);
+    }
+    if (const auto *intrinsicInst = dyn_cast<IntrinsicInst>(&inst)) {
+      return observeIntrinsic(*intrinsicInst, state);
+    }
+    return {};
+  }
+
+  AccessEffect observeCall(const CallInst &callInst, CacheModel &state) {
+    AccessEffect effect;
+    effect.Observation.Inst = &callInst;
+    effect.Observation.FromCall = true;
+
+    if (isSpeculationBarrier(callInst)) {
+      return effect;
+    }
+
+    const Function *callee = callInst.getCalledFunction();
+    if (callee != nullptr && callee->onlyReadsMemory()) {
+      if (callInst.arg_empty()) {
+        return effect;
+      }
+      if (callInst.getArgOperand(0)->getType()->isPointerTy()) {
+        return observeResolvedAccess(
+            Memory.resolveMemoryAccess(callInst, callInst.getArgOperand(0),
+                                       AccessKind::Call, true, false),
+            state, true);
+      }
+      return effect;
+    }
+
+    state.invalidateAll();
+    effect.Observed = true;
+    effect.Observation.ObjectName = "<unknown-call>";
+    for (unsigned line = 0; line < state.CacheLineNum; ++line) {
+      effect.Observation.CacheLines.push_back(line);
+    }
+    return effect;
+  }
+
+  AccessEffect observeIntrinsic(const IntrinsicInst &intrinsicInst,
+                                CacheModel &state) {
+    if (intrinsicInst.getIntrinsicID() == Intrinsic::memcpy ||
+        intrinsicInst.getIntrinsicID() == Intrinsic::memmove) {
+      return observeResolvedAccess(
+          Memory.resolveMemoryAccess(intrinsicInst, intrinsicInst.getArgOperand(0),
+                                     AccessKind::Intrinsic, true, true),
+          state, false);
+    }
+    return {};
+  }
+
+  AccessEffect observeResolvedAccess(const ResolvedAccess &access,
+                                     CacheModel &state, bool fromCall) {
+    AccessEffect effect;
+    effect.Observation.Inst = access.Inst;
+    effect.Observation.MemoryObject = access.Base;
+    effect.Observation.FromCall = fromCall;
+
+    if (access.Base == nullptr) {
+      state.invalidateAll();
+      effect.Observed = true;
+      effect.Observation.ObjectName = "<unknown>";
+      for (unsigned line = 0; line < state.CacheLineNum; ++line) {
+        effect.Observation.CacheLines.push_back(line);
+      }
+      return effect;
+    }
+
+    const AbstractMemoryObject *object = Memory.lookupObject(access.Base);
+    effect.Observation.ObjectName =
+        object != nullptr ? object->Name : "<unregistered>";
+
+    unsigned startLine =
+        state.LocateVar(const_cast<Value *>(access.Base), access.OffsetBegin);
+    unsigned endLine =
+        state.LocateVar(const_cast<Value *>(access.Base), access.OffsetEnd);
+    if (startLine == static_cast<unsigned>(-1)) {
+      state.invalidateAll();
+      effect.Observed = true;
+      return effect;
+    }
+
+    for (unsigned line = startLine; line <= endLine; ++line) {
+      unsigned before = state.Ages[line];
+      unsigned hit = state.Access(const_cast<Value *>(access.Base),
+                                  static_cast<unsigned>(access.OffsetBegin));
+      effect.Hit = hit != 0;
+      if (before != state.Ages[line] || before >= state.CacheLinesPerSet) {
+        effect.Observed = true;
+      }
+      effect.Observation.CacheLines.push_back(line % state.CacheLineNum);
+    }
+    return effect;
+  }
+
+  static bool isSpeculationBarrier(const Instruction &inst) {
+    if (const auto *callInst = dyn_cast<CallInst>(&inst)) {
+      const Function *callee = callInst->getCalledFunction();
+      if (callee == nullptr) {
+        return false;
+      }
+      StringRef name = callee->getName();
+      return name.contains("lfence") || name.contains("speculation_safe_value") ||
+             name.contains("spec.barrier");
+    }
+    return false;
+  }
+};
+
+SmallVector<const BasicBlock *, 32> reversePostOrder(Function &F) {
+  SmallVector<const BasicBlock *, 32> order;
+  ReversePostOrderTraversal<Function *> traversal(&F);
+  for (BasicBlock *bb : traversal) {
+    order.push_back(bb);
+  }
+  return order;
+}
+
+std::set<std::pair<const BasicBlock *, const BasicBlock *>>
+collectBackEdges(Function &F) {
+  SmallVector<std::pair<const BasicBlock *, const BasicBlock *>, 8> edges;
+  FindFunctionBackedges(F, edges);
+  return std::set<std::pair<const BasicBlock *, const BasicBlock *>>(edges.begin(),
+                                                                     edges.end());
+}
+
+bool sameFootprint(const SmallVectorImpl<SpectreObservation> &lhs,
+                   const SmallVectorImpl<SpectreObservation> &rhs) {
+  auto project = [](const SmallVectorImpl<SpectreObservation> &observations) {
+    std::set<std::pair<std::string, unsigned>> footprint;
+    for (const SpectreObservation &observation : observations) {
+      for (unsigned line : observation.CacheLines) {
+        footprint.emplace(observation.ObjectName, line);
+      }
+    }
+    return footprint;
+  };
+  return project(lhs) == project(rhs);
+}
+
+} // namespace
+
+CacheSpecuAnalysis::CacheSpecuAnalysis(Function &function, DominatorTree &domTree,
+                                       PostDominatorTree &postDomTree,
+                                       AliasAnalysis *aliasAnalysis,
+                                       unsigned lineSize, unsigned lineNum,
+                                       unsigned setNum, unsigned depth,
+                                       unsigned merge)
+    : F(&function), DT(&domTree), PDT(&postDomTree), AA(aliasAnalysis),
+      model(new CacheModel(lineSize, lineNum, setNum == 0 ? 1 : setNum)),
+      SpeculationDepth(depth == 0 ? 1 : depth), MergeOption(merge),
+      RunSpeculation(depth > 0), cacheChanged(false) {}
+
+bool CacheSpecuAnalysis::wideningOp(CacheModel *last, CacheModel *current) {
+  if (last == nullptr || current == nullptr) {
+    return false;
+  }
+  if (!last->ConfigConsistent(current)) {
+    errs() << "Fatal: cache configuration inconsistent when widening!";
+    return false;
+  }
+  return current->widenFrom(*last);
+}
+
+bool CacheSpecuAnalysis::SpecuSim(BasicBlock *from, BasicBlock *to,
+                                  CacheModel *init) {
+  (void)to;
+  Result = SpectreAnalysisResult{};
+  ArchitecturalInStates.clear();
+  ArchitecturalOutStates.clear();
+
+  if (from == nullptr) {
+    from = &F->getEntryBlock();
+  }
+
+  std::unique_ptr<CacheModel> ownedInitial(init != nullptr ? init->fork()
+                                                           : model->fork());
+  model = ownedInitial.get();
+  InitModel();
+
+  MemoryResolution memory(*F, AA, *model);
+  memory.seedObjects();
+  ownedInitial.reset(model->fork());
+
+  std::set<std::pair<const BasicBlock *, const BasicBlock *>> backEdges =
+      collectBackEdges(*F);
+  SmallVector<const BasicBlock *, 32> order = reversePostOrder(*F);
+
+  bool changed = true;
+  unsigned iterations = 0;
+  while (changed && ++iterations <= 8) {
+    changed = false;
+    for (const BasicBlock *bb : order) {
+      std::unique_ptr<CacheModel> inState;
+      if (bb == from) {
+        inState.reset(ownedInitial->fork());
+      } else {
+        for (const BasicBlock *pred : predecessors(bb)) {
+          auto predOut = ArchitecturalOutStates.find(pred);
+          if (predOut == ArchitecturalOutStates.end()) {
+            continue;
+          }
+          if (!inState) {
+            inState.reset(predOut->second->fork());
+          } else {
+            inState->merge(predOut->second);
+          }
+        }
+      }
+      if (!inState) {
+        continue;
+      }
+
+      auto existingIn = ArchitecturalInStates.find(bb);
+      if (existingIn != ArchitecturalInStates.end()) {
+        std::unique_ptr<CacheModel> before(inState->fork());
+        for (const BasicBlock *pred : predecessors(bb)) {
+          if (backEdges.count({pred, bb}) != 0) {
+            wideningOp(before.get(), inState.get());
+            break;
+          }
+        }
+      }
+
+      ArchitecturalInStates[bb] = inState->fork();
+
+      model = inState.get();
+      for (Instruction &inst : *const_cast<BasicBlock *>(bb)) {
+        visit(inst);
+      }
+
+      auto existingOut = ArchitecturalOutStates.find(bb);
+      if (existingOut == ArchitecturalOutStates.end() ||
+          !existingOut->second->equal(model)) {
+        changed = true;
+        ArchitecturalOutStates[bb] = model->fork();
+      }
+    }
+  }
+
+  Result.ArchitecturalHits = model->HitCount;
+  Result.ArchitecturalMisses = model->MissCount;
+
+  if (!RunSpeculation) {
+    return true;
+  }
+
+  for (BasicBlock &bb : *F) {
+    auto *branch = dyn_cast<BranchInst>(bb.getTerminator());
+    if (branch == nullptr || branch->isUnconditional()) {
+      continue;
+    }
+
+    BasicBlock *thenBB = branch->getSuccessor(0);
+    BasicBlock *elseBB = branch->getSuccessor(1);
+    BasicBlock *mergeBB = PDT->findNearestCommonDominator(thenBB, elseBB);
+    if (mergeBB == nullptr) {
+      continue;
+    }
+
+    CacheModel *branchState = nullptr;
+    auto outIt = ArchitecturalOutStates.find(&bb);
+    if (outIt != ArchitecturalOutStates.end()) {
+      branchState = outIt->second;
+    } else {
+      branchState = ownedInitial.get();
+    }
+
+    SpeculationState speculation{branch, mergeBB, SpeculationDepth};
+    BranchSideSimulator thenSimulator(*this, memory, speculation);
+    auto thenRun = thenSimulator.run(thenBB, *branchState, true);
+    BranchSideSimulator elseSimulator(*this, memory, speculation);
+    auto elseRun = elseSimulator.run(elseBB, *branchState, false);
+
+    SpectreFinding finding;
+    finding.Branch = branch;
+    finding.MergeBlock = mergeBB;
+    finding.ExploredThenBlocks = std::move(thenRun.second.ExploredThenBlocks);
+    finding.ExploredElseBlocks = std::move(elseRun.second.ExploredElseBlocks);
+    finding.ThenObservations = std::move(thenRun.second.ThenObservations);
+    finding.ElseObservations = std::move(elseRun.second.ElseObservations);
+    finding.HasDivergence =
+        !sameFootprint(finding.ThenObservations, finding.ElseObservations);
+
+    for (SpectreObservation &observation : finding.ThenObservations) {
+      observation.DivergesFromArchitectural = finding.HasDivergence;
+      Result.SpeculativeMisses += observation.CacheLines.empty() ? 0 : 1;
+    }
+    for (SpectreObservation &observation : finding.ElseObservations) {
+      observation.DivergesFromArchitectural = finding.HasDivergence;
+      Result.SpeculativeMisses += observation.CacheLines.empty() ? 0 : 1;
+    }
+
+    Result.SpeculativeHits +=
+        static_cast<unsigned>(finding.ThenObservations.size() +
+                              finding.ElseObservations.size());
+
+    if (finding.HasDivergence) {
+      Result.Findings.push_back(std::move(finding));
+    }
   }
 
   return true;
+}
+
+bool CacheSpecuAnalysis::IsValueInCache(Instruction *inst) {
+  if (auto *load = dyn_cast<LoadInst>(inst)) {
+    GlobalVariable *global = nullptr;
+    unsigned begin = 0;
+    unsigned end = 0;
+    if (!GetInstCacheRange(load->getPointerOperand(), global, begin, end)) {
+      return false;
+    }
+
+    unsigned startLine = model->LocateVar(global, begin);
+    unsigned endLine = model->LocateVar(global, end);
+    if (startLine == static_cast<unsigned>(-1)) {
+      return false;
+    }
+
+    for (unsigned line = startLine; line <= endLine; ++line) {
+      if (model->Ages[line] >= model->CacheLinesPerSet) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
 }
 
 bool CacheSpecuAnalysis::GetInstCacheRange(Value *inst, GlobalVariable *&GV,
                                            unsigned &offset_b,
                                            unsigned &offset_e) {
-  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(inst);
+  GV = nullptr;
   offset_b = 0;
   offset_e = 0;
 
-  while (GEP) {
-    if (ConstantExpr *GEPC = dyn_cast<ConstantExpr>(GEP->getPointerOperand())) {
-      if (dyn_cast<GEPOperator>(GEPC) &&
-          dyn_cast<GEPOperator>(GEPC)->isInBounds()) {
-        GetElementPtrInst *GEPCGEP =
-            cast<GetElementPtrInst>(GEPC->getAsInstruction());
-        GV = dyn_cast<GlobalVariable>(GEPCGEP->getPointerOperand());
-        delete (GEPCGEP);
-        if (!GV)
-          return false;
-      } else
-        return false;
-
-      if (CacheModel::GEPInstPos(*GEP, offset_b, offset_e) == -1) {
-        return false;
-      }
-      return true;
-
-    } else if (isa<GetElementPtrInst>(GEP->getPointerOperand())) {
-      GEP = cast<GetElementPtrInst>(GEP->getPointerOperand());
-      continue;
-    } else if (isa<GlobalVariable>(GEP->getPointerOperand())) {
-      GV = cast<GlobalVariable>(GEP->getPointerOperand());
-      offset_e = CacheModel::GetTySize(GV->getValueType()) - 1;
-      return true;
-    } else {
-      return false;
+  if (auto *gep = dyn_cast<GetElementPtrInst>(inst)) {
+    Value *base = gep->getPointerOperand();
+    if (auto *global = dyn_cast<GlobalVariable>(base)) {
+      GV = global;
+      int precise = CacheModel::GEPInstPos(*gep, offset_b, offset_e);
+      return precise != -1;
     }
   }
-  return true;
-}
 
-// return false, if reached fixed point. Otherwise, return true.
-bool CacheSpecuAnalysis::wideningOp(CacheModel *last, CacheModel *current) {
-  // add new vars, keep going
-  if (!last->ConfigConsistent(current)) {
-    errs() << "Fatal: cache configuration inconsistent when widening!";
-    return false;
-  }
-
-  if (!last->CacheConsistent(current))
+  if (auto *global = dyn_cast<GlobalVariable>(inst)) {
+    GV = global;
+    unsigned size = CacheModel::GetTySize(global->getValueType());
+    offset_e = size == 0 ? 0 : size - 1;
     return true;
-
-  /******Begin Debug: True fixed point*********/
-  for (int i = 0; i < last->Ages.size(); ++i) {
-    if (current->Ages[i] != last->Ages[i])
-      return true;
   }
+
   return false;
-  /**********End of Debug**********************/
+}
 
-  bool fixed = true;
-  ;
-  for (int i = 0; i < last->Ages.size(); ++i) {
-    if (current->Ages[i] >= current->CacheLinesPerSet) {
-      current->Ages[i] = current->CacheLinesPerSet;
+std::vector<Value *> CacheSpecuAnalysis::GetAlias(Value *val, unsigned offset) {
+  (void)offset;
+  std::vector<Value *> aliases;
+  if (AA == nullptr || !val->getType()->isPointerTy()) {
+    return aliases;
+  }
+
+  for (const auto &entry : model->Vars) {
+    if (!entry.first->getType()->isPointerTy()) {
       continue;
     }
-
-    if (current->Ages[i] > last->Ages[i]) {
-      // this var is aging
-      if (current->Ages[i] < current->CacheLinesPerSet / 4)
-        current->Ages[i] = current->CacheLinesPerSet / 4;
-      else if (current->Ages[i] < current->CacheLinesPerSet / 2)
-        current->Ages[i] = current->CacheLinesPerSet / 2;
-      else
-        current->Ages[i] = current->CacheLinesPerSet;
-      fixed = false;
-    } else {
-      // this var is accessed in loop
-      fixed = false;
+    if (AA->alias(val, entry.first) != AliasResult::NoAlias) {
+      aliases.push_back(entry.first);
     }
   }
-  return !fixed; // reached fixed point
-}
-
-bool CacheSpecuAnalysis::SpecuSim(BasicBlock *from, BasicBlock *to,
-                                  CacheModel *initModel) {
-  this->cacheTrace.clear();
-
-  std::deque<BasicBlock *> WL;
-  WL.push_back(from);
-
-  //	this->model = initModel;
-  //	this->visit(from);
-  //	this->cacheTrace[from] = this->model;
-  //
-  //	for (auto it = succ_begin(from), et = succ_end(from); it != et; ++it)
-  //		WL.push_back(*it);
-
-  CacheModel *predModel;
-  BasicBlock *bb;
-  bool skipBB = false;
-  int debugcounter = 1;
-
-  while (!WL.empty()) {
-    bb = WL.front();
-    WL.pop_front();
-
-    //		dbgs()<<"=====" <<debugcounter <<": ";
-    //		bb->printAsOperand(dbgs(), false);
-    //		dbgs()<<" =======\n";
-    debugcounter++;
-
-    skipBB = false;
-    if (bb == from)
-      predModel = initModel->fork();
-    else
-      predModel = nullptr;
-
-    for (auto it = pred_begin(bb), et = pred_end(bb); it != et; ++it) {
-      if (this->cacheTrace.find(*it) == this->cacheTrace.end()) {
-        if (!IsBackEdge(*it, bb)) {
-          WL.push_back(
-              bb); // if pred is not a back edge, and is unvisited, do it later
-          skipBB = true;
-          //					dbgs()<<"\nHas unvisited pred
-          //bb, skip this bb.\n";
-          break;
-        }
-        continue;
-      }
-
-      // stop back trace if loop reach fixed point
-      if (IsBackEdge(*it, bb)) {
-        predModel = this->cacheTrace[*it]->fork();
-        auto edge = std::pair<const BasicBlock *, const BasicBlock *>(*it, bb);
-        //				dbgs()<<"\nbb from back edge: ";
-
-        if (wideningMap.find(edge) == wideningMap.end()) {
-          wideningMap[edge] = predModel;
-          wideningMapCount[edge] = 1;
-        } else if (wideningMap[edge] == nullptr) {
-          //					dbgs()<<"fixed point already
-          //reached before!\n";
-          // already reached fix-point before, skip it anyway
-          skipBB = true;
-        } else if (wideningOp(wideningMap[edge], predModel)) {
-          //					dbgs()<<"keep looping!\n";
-          // loop havn't reach fix-point
-          wideningMap[edge] = predModel;
-
-          if (++wideningMapCount[edge] < 10) {
-            //						dbgs()<<"fixed point
-            //reached!\n";
-            wideningMap[edge] = nullptr;
-            wideningMapCount[edge] = 0;
-            skipBB = true; // wideningOp reach fixed point, finish this loop
-          }
-        } else {
-          //					dbgs()<<"fixed point
-          //reached!\n";
-          wideningMap[edge] = nullptr;
-          wideningMapCount[edge] = 0;
-          skipBB = true; // wideningOp reach fixed point, finish this loop
-        }
-        if (skipBB) {
-          for (auto suc = succ_begin(bb), suce = succ_end(bb); suc != suce;
-               ++suc) {
-            if (isPotentiallyReachable(bb, *suc))
-              continue;
-
-            if (std::find(WL.begin(), WL.end(), *suc) == WL.end())
-              WL.push_back(*suc);
-          }
-        }
-        break;
-      }
-
-      if (predModel)
-        predModel->merge(this->cacheTrace[*it]);
-      else
-        predModel = this->cacheTrace[*it]->fork();
-    }
-
-    if (skipBB)
-      continue;
-    this->model = predModel;
-
-    for (auto it = bb->begin(), et = bb->end(); it != et; ++it) {
-      unsigned hitCount = this->model->HitCount;
-      unsigned missCount = this->model->MissCount;
-
-      this->cacheChanged = false;
-      this->visit(*it);
-
-      CacheModel *tmpMod =
-          this->model; // save model cause specu propagation may change it
-
-      for (auto &sp : SpecuInfo) {
-        if (sp->Finished)
-          continue;
-        unsigned isSpecu = sp->IsSpeculative(bb);
-
-        if (isSpecu != 0) {
-          if (this->model->HitCount != hitCount)
-            this->model->SpecuHitCount++;
-          if (this->model->MissCount != missCount)
-            this->model->SpecuMissCount++;
-        } else {
-          continue;
-        }
-
-        if (isSpecu & 0x1) {
-          //					dbgs()<<"\nBB is speculatively
-          //executed at if branch with depth: " << sp->IfDepth <<"\n";
-          if (sp->AddModel(this->model, true, cacheChanged))
-            sp->IfEndBB = bb;
-        }
-
-        if (isSpecu & 0x2) {
-          //					dbgs()<<"\nBB is speculatively
-          //executed at else branch with depth: " << sp->ElseDepth <<"\n";
-          if (sp->AddModel(this->model, false, cacheChanged))
-            sp->ElseEndBB = bb;
-        }
-
-        if (sp->IsFinished()) {
-
-          // record iteration info
-          if (this->result.find(sp->CauseBB) == this->result.end())
-            this->result[sp->CauseBB] = 1;
-          else
-            this->result[sp->CauseBB] = this->result[sp->CauseBB] + 1;
-
-          if (this->MergeOption == 1) {
-            // merge at eariler point:
-            BasicBlock *spIfbb = sp->DTIf->getBlock();
-
-            if (this->propCacheTrace.find(spIfbb) != this->propCacheTrace.end())
-              this->propCacheTrace[spIfbb] =
-                  this->propCacheTrace[spIfbb]->merge(sp->IfModel);
-            else
-              this->propCacheTrace[spIfbb] = sp->IfModel->fork();
-
-            if (std::find(WL.begin(), WL.end(), spIfbb) == WL.end())
-              WL.push_back(spIfbb);
-
-            BasicBlock *spElsebb = sp->DTElse->getBlock();
-            if (this->propCacheTrace.find(spElsebb) !=
-                this->propCacheTrace.end())
-              this->propCacheTrace[spElsebb] =
-                  this->propCacheTrace[spElsebb]->merge(sp->ElseModel);
-            else
-              this->propCacheTrace[spElsebb] = sp->ElseModel->fork();
-            if (std::find(WL.begin(), WL.end(), spElsebb) == WL.end())
-              WL.push_back(spElsebb);
-          } else {
-            // merge at late point
-            // dbgs()<<"Finished specu execution, begin to propagate states:\n";
-            // both if and else branch end bb have determined, now calculate the
-            // merge bb of propagation which should be the nearest common post
-            // dominator of IfEndBB and ElseEndBB
-
-            BasicBlock *mergeBB =
-                PDT->findNearestCommonDominator(sp->IfEndBB, sp->ElseEndBB);
-            if (mergeBB) {
-              sp->MergeBB = mergeBB;
-            } else {
-              errs()
-                  << "Fatal: cannot find merge point for specu propagation!\n";
-              return false;
-            }
-
-            BasicBlock *propMergeBB = SpecuPropagation(
-                sp->DTIf->getBlock(), sp->MergeBB, sp->ElseModel);
-            //					dbgs() << "If propagate to:
-            //\n\t"; 					propMergeBB->print(dbgs());
-            if (propMergeBB &&
-                std::find(WL.begin(), WL.end(), propMergeBB) == WL.end())
-              WL.push_back(propMergeBB);
-
-            propMergeBB = SpecuPropagation(sp->DTElse->getBlock(), sp->MergeBB,
-                                           sp->IfModel);
-            //					dbgs() << "Else propagate to:
-            //\n\t"; 					propMergeBB->print(dbgs());
-            if (propMergeBB &&
-                std::find(WL.begin(), WL.end(), propMergeBB) == WL.end())
-              WL.push_back(propMergeBB);
-          }
-          sp->Finished = 2;
-        }
-      }
-      this->model = tmpMod;
-    }
-
-    if (this->propCacheTrace.find(bb) != this->propCacheTrace.end()) {
-      this->cacheTrace[bb] =
-          this->propCacheTrace[bb]->merge(this->model); //->fork();
-      this->propCacheTrace.erase(bb);
-    } else
-      this->cacheTrace[bb] = this->model;
-    //		if(this->cacheTrace.find(bb) == this->cacheTrace.end())
-    //			this->cacheTrace[bb] = this->model;
-    //		else
-    //			this->cacheTrace[bb] =
-    //this->cacheTrace[bb]->merge(this->model);
-
-    for (auto it = succ_begin(bb), et = succ_end(bb); it != et; ++it) {
-      if (std::find(WL.begin(), WL.end(), *it) == WL.end())
-        WL.push_back(*it);
-
-      for (auto &sp : SpecuInfo) {
-        // if bb is still speculative, which means not reached depth, add its
-        // succ to specu WL
-        unsigned isSpecu = sp->IsSpeculative(bb);
-        if (isSpecu & 0x1) {
-          sp->WLIf.erase(bb);
-          sp->WLIf.insert(*it);
-        }
-        if (isSpecu & 0x2) {
-          sp->WLElse.erase(bb);
-          sp->WLElse.insert(*it);
-        }
-      }
-    }
-
-    if (!runSpecu)
-      continue;
-
-    CacheSpecuInfo *specuInfo = nullptr;
-    unsigned addSpecu = GetSpecuInfo(specuInfo, bb);
-
-    if (addSpecu == 1)
-      if (specuInfo->Finished)
-        specuInfo->Reset();
-    if (addSpecu == 2)
-      SpecuInfo.push_back(specuInfo);
-  }
-
-  //	this->model->dump(true);
-  bool buffincache = this->model->isInCache("buff");
-  buffincache |= this->model->isInCache("doencryption.buf");
-
-  int i = 0, totalIter = 0;
-  for (auto spresult : this->result) {
-    i++;
-    // dbgs()<<"========"<< i<<"th bb: "<<spresult.second<< "
-    // iterations======\n";
-    totalIter += spresult.second;
-    // 		spresult.first->dump();
-  }
-  dbgs() << "========Num Specu Branch:" << i << "======\n";
-  dbgs() << "========Num Cache Misses:" << this->model->MissCount << "=====\n";
-  dbgs() << "========Num Specu Misses:" << this->model->SpecuMissCount
-         << "======\n";
-  dbgs() << "========Total iterations:" << totalIter << "======\n";
-  // 	dbgs()<<"========Num cache lines used:"<<
-  // this->model->cacheRecord.size()<< "======\n";
-  dbgs() << "========Buff is in cache:" << buffincache << "======\n";
-  return true;
-}
-
-// Propagate the speculative state to other basic blocks from startBB, untill
-//     1. reach the termBB
-//     2. back edge to a loop entry, that will be revisited again
-BasicBlock *CacheSpecuAnalysis::SpecuPropagation(BasicBlock *startBB,
-                                                 BasicBlock *termBB,
-                                                 CacheModel *initModl) {
-  ValueMap<BasicBlock *, CacheModel *> cacheSpecuTrace;
-  std::deque<BasicBlock *> WL;
-
-  this->model = initModl;
-  this->visit(startBB);
-  cacheSpecuTrace[startBB] = this->model;
-  for (auto it = succ_begin(startBB), et = succ_end(startBB); it != et; ++it)
-    WL.push_back(*it);
-
-  if (WL.empty())
-    return startBB;
-
-  while (!WL.empty()) {
-    BasicBlock *sp_bb = WL.front();
-    WL.pop_front();
-
-    this->model = nullptr;
-    for (auto it = pred_begin(sp_bb), et = pred_end(sp_bb); it != et; ++it) {
-      if (cacheSpecuTrace.find(*it) != cacheSpecuTrace.end()) {
-        if (this->model)
-          this->model->merge(cacheSpecuTrace[*it]);
-        else
-          this->model = cacheSpecuTrace[*it]->fork();
-      }
-    }
-    if (!this->model)
-      continue;
-
-    this->visit(sp_bb);
-    cacheSpecuTrace[sp_bb] = this->model;
-
-    CacheSpecuInfo *unusedSpecuInfo = nullptr;
-    if ((sp_bb == termBB) || (GetSpecuInfo(unusedSpecuInfo, sp_bb) != 2)) {
-      if (this->propCacheTrace.find(sp_bb) != this->propCacheTrace.end())
-        this->propCacheTrace[sp_bb] =
-            this->propCacheTrace[sp_bb]->merge(this->model);
-      else
-        this->propCacheTrace[sp_bb] = this->model->fork();
-
-      return sp_bb;
-    }
-
-    for (auto it = succ_begin(sp_bb), et = succ_end(sp_bb); it != et; ++it) {
-      if (std::find(WL.begin(), WL.end(), *it) == WL.end())
-        WL.push_back(*it);
-    }
-  }
-  errs() << "Fatal: specu propagate terminate on null!\n";
-  return nullptr;
-}
-
-unsigned CacheSpecuAnalysis::GetSpecuInfo(CacheSpecuInfo *&specuInfo,
-                                          BasicBlock *bb) {
-  // is bb end with conditional branch that initial speculative execution?
-  BranchInst *BI = dyn_cast<BranchInst>(bb->getTerminator());
-  if (!BI || BI->isUnconditional()) {
-    return 0;
-  } else {
-    //		dbgs()<<"Detect a specu entry point.\n";
-    DomTreeNode *S0 = DT->getNode(BI->getParent());
-    DomTreeNode *S1 = DT->getNode(BI->getSuccessor(0));
-    DomTreeNode *S2 = DT->getNode(BI->getSuccessor(1));
-    DomTreeNode *S3 = S2;
-    bool hasElse = S0->getNumChildren() == 3;
-    for (DomTreeNode::iterator child = S0->begin(); child != S0->end();
-         ++child) {
-      DomTreeNode *node = *child;
-      if (node == S1 || node == S2)
-        continue;
-      S3 = *child;
-    }
-    // TODO: add depth opt here
-    for (auto &sp : SpecuInfo) {
-      if (sp->CauseBB == bb) {
-        specuInfo = sp;
-        return 1;
-      }
-    }
-    specuInfo = new CacheSpecuInfo(bb, this->DT, S1, S2, S3,
-                                   this->MissSpecuDepth, hasElse);
-    return 2;
-  }
-}
-
-unsigned CacheSpecuAnalysis::IsAliasTo(Value *from, Value *&to,
-                                       unsigned &offset) {
-  //    offset = 0;
-  to = from;
-
-  if ((!from->getType()->isPointerTy()) &&
-      this->model->Vars.find(from) != this->model->Vars.end())
-    return 2;
-
-  auto dest = AliasMap.find(from);
-  if (dest == AliasMap.end())
-    return 0;
-
-  int counter = 0;
-  while (dest != AliasMap.end()) {
-    if (dest->second->Offset == (unsigned)-1 || offset == (unsigned)-1)
-      offset = dest->second->Offset;
-    else
-      offset += dest->second->Offset;
-    to = dest->second->Dest;
-    dest = AliasMap.find(to);
-
-    if (counter++ > 100) {
-      if (this->model->Vars.find(to) != this->model->Vars.end()) {
-        dbgs() << "Return random global var: ";
-        to->dump();
-        dbgs() << "after too many iterations when searching alias for: ";
-        from->dump();
-        return 3;
-      }
-    }
-    if (counter > 200) {
-      dbgs() << "Error when searching alias for: ";
-      from->dump();
-      return 0;
-    }
-  }
-  return 1;
-}
-
-vector<Value *> CacheSpecuAnalysis::GetAlias(Value *val, unsigned offset) {
-  vector<Value *> aas;
-  dbgs() << "The alias of\n\t";
-  val->dump();
-  dbgs() << "are";
-  for (const auto &v : this->model->Vars) {
-    AliasResult R = this->AA->alias(val, v.first);
-    if (R != AliasResult::NoAlias) {
-      dbgs() << R;
-      v.first->dump();
-      aas.push_back(v.first);
-    }
-  }
-  return aas;
+  return aliases;
 }
 
 void CacheSpecuAnalysis::InitModel() {
-  Module *module = this->F->getParent();
-  int i = 0;
-
-  for (auto &A : F->args()) {
-    i++;
-    unsigned alignment = F->getParamAlignment(i);
-    Type *ty = A.getType();
-    this->model->AddVar(&A, ty, alignment);
+  unsigned argIndex = 0;
+  for (Argument &arg : F->args()) {
+    ++argIndex;
+    model->AddVar(&arg, arg.getType(), F->getParamAlignment(argIndex));
   }
 
-  for (Module::global_iterator i = module->global_begin();
-       i != module->global_end(); ++i) {
-    GlobalVariable &v = *i;
-    unsigned alignment = v.getAlignment();
-    Type *ty = v.getValueType();
-    // errs()<< "\nGV " <<v.getName()<<" has type:"; ty->print(errs());
-    this->model->AddVar(&v, ty, alignment);
-    if (v.getName() == "buff" || v.getName() == "doencryption.buf" ||
-        v.getName() == "doencryption.obuf") {
-      // preload buff into cache
-      this->model->Access(&v, true);
-    }
-  }
-
-  //	this->model->dump();
-}
-
-void CacheSpecuAnalysis::visitLoadInst(LoadInst &I) {
-  Value *var = I.getPointerOperand();
-  Value *to;
-  unsigned offset = 0;
-  unsigned hit;
-  this->cacheChanged = true;
-  if (ConstantExpr *GEPC = dyn_cast<ConstantExpr>(var))
-    this->ExtractGEPC(GEPC, var, offset);
-
-  this->IsAliasTo(var, to, offset);
-  AliasMap[&I] = new PointerLocation(var, 0);
-
-  hit = this->model->Access(to, offset);
-
-  if (hit == 0) {
-    this->model->MissCount++;
-    missNum++;
-    //    	dbgs() << "Load value" << *to << "@" <<offset << " : "<< missNum
-    //    << "\n";
-  } else {
-    this->model->HitCount++;
+  Module *module = F->getParent();
+  for (GlobalVariable &global : module->globals()) {
+    model->AddVar(&global, global.getValueType(), global.getAlignment());
   }
 }
 
-void CacheSpecuAnalysis::visitIntrinsicInst(IntrinsicInst &I) {
-  unsigned offset = 0;
-  unsigned hit;
-
-  if (I.getName().find("llvm.memset") != std::string::npos) {
+void CacheSpecuAnalysis::InitModel(GlobalVariable *var, unsigned b, unsigned e) {
+  if (var == nullptr) {
+    return;
   }
-
-  if ((I.getName().find("llvm.memmov") != std::string::npos) ||
-      (I.getName().find("llvm.memcpy") != std::string::npos)) {
-    Value *src = I.getArgOperand(0);
-    Value *dec = I.getArgOperand(1);
-    Value *to;
-    if (ConstantExpr *GEPC = dyn_cast<ConstantExpr>(src))
-      this->ExtractGEPC(GEPC, src, offset);
-
-    this->IsAliasTo(src, to, offset);
-    AliasMap[&I] = new PointerLocation(src, 0);
-
-    hit = this->model->Access(to, offset);
-  }
-}
-
-void CacheSpecuAnalysis::visitCallInst(CallInst &I) {}
-
-void CacheSpecuAnalysis::visitAllocaInst(AllocaInst &I) {
-  unsigned alignment = I.getAlignment();
-  Type *ty = I.getAllocatedType();
-  this->cacheChanged = true;
-  this->model->AddVar(&I, ty, alignment);
-}
-
-void CacheSpecuAnalysis::visitStoreInst(StoreInst &I) {
-  unsigned from, to, offset, hit;
-  PointerLocation *pl = nullptr;
-  Value *target;
-  Value *var = I.getPointerOperand();
-  Value *alias;
-  this->cacheChanged = true;
-  if (I.getValueOperand()->getType()->isPointerTy() &&
-      I.getPointerOperand()->getType()->getContainedType(0)->isPointerTy()) {
-    if (ConstantExpr *GEPC = dyn_cast<ConstantExpr>(I.getValueOperand())) {
-      if (dyn_cast<GEPOperator>(GEPC) &&
-          dyn_cast<GEPOperator>(GEPC)->isInBounds()) {
-        GetElementPtrInst *GEP =
-            cast<GetElementPtrInst>(GEPC->getAsInstruction());
-        target = GEP->getPointerOperand();
-        if (!CacheModel::GEPInstPos(*GEP, from, to))
-          offset = 0;
-        else
-          offset = from;
-        delete (GEP);
-      }
-    } else {
-      target = I.getValueOperand();
-      offset = 0;
-    }
-
-    this->IsAliasTo(target, alias, offset);
-    if (var != alias)
-      AliasMap[var] = new PointerLocation(alias, offset);
-  }
-
-  if (ConstantExpr *GEPC = dyn_cast<ConstantExpr>(var))
-    this->ExtractGEPC(GEPC, var, offset);
-  this->IsAliasTo(var, alias, offset);
-
-  hit = this->model->Access(alias, offset);
-
-  if (hit == 0) {
-    this->model->MissCount++;
-    missNum++;
-    //    	dbgs() << "Store value" << *alias << "@" <<offset << " : "<<
-    //    missNum << "\n";
-  } else {
-    this->model->HitCount++;
-  }
-}
-
-void CacheSpecuAnalysis::visitVACopyInst(VACopyInst &I) {}
-
-void CacheSpecuAnalysis::visitBranchInst(BranchInst &I) {}
-
-void CacheSpecuAnalysis::visitBitCastInst(BitCastInst &I) {
-  Value *target = I.getOperand(0);
-  unsigned offset = 0, from, to;
-
-  if (ConstantExpr *GEPC = dyn_cast<ConstantExpr>(target))
-    this->ExtractGEPC(GEPC, target, offset);
-
-  this->AliasMap[&I] = new PointerLocation(target, offset);
+  model->AddVar(var, var->getValueType(), var->getAlignment());
+  model->SetAge(var, 0, b, e);
 }
 
 void CacheSpecuAnalysis::ExtractGEPC(ConstantExpr *source, Value *&target,
                                      unsigned &offset) {
   target = source;
   offset = 0;
-  unsigned from, to;
-
-  if (dyn_cast<GEPOperator>(source) &&
-      dyn_cast<GEPOperator>(source)->isInBounds()) {
-    GetElementPtrInst *GEP =
-        cast<GetElementPtrInst>(source->getAsInstruction());
-    target = GEP->getPointerOperand();
-    if (!CacheModel::GEPInstPos(*GEP, from, to))
-      offset = 0;
-    else
-      offset = from;
-    delete (GEP);
+  if (auto *gep = dyn_cast<GEPOperator>(source)) {
+    auto *tmp = cast<GetElementPtrInst>(source->getAsInstruction());
+    unsigned from = 0;
+    unsigned to = 0;
+    CacheModel::GEPInstPos(*tmp, from, to);
+    offset = from;
+    target = gep->getPointerOperand();
+    delete tmp;
+  } else if (source->isCast()) {
+    target = source->getOperand(0);
   }
 }
-void CacheSpecuAnalysis::visitPHINode(PHINode &I) {
-  unsigned i = I.getNumIncomingValues();
-  Value *alias, *target;
-  unsigned offset = 0;
-  while (i--) {
-    target = I.getIncomingValue(i);
 
-    if (ConstantExpr *GEPC = dyn_cast<ConstantExpr>(target))
-      this->ExtractGEPC(GEPC, target, offset);
+void CacheSpecuAnalysis::visitAllocaInst(AllocaInst &I) {
+  cacheChanged = true;
+  model->AddVar(&I, I.getAllocatedType(), I.getAlignment());
+}
 
-    if (this->IsAliasTo(target, alias, offset)) {
-      this->AliasMap[&I] = new PointerLocation(alias, offset);
+void CacheSpecuAnalysis::visitLoadInst(LoadInst &I) {
+  cacheChanged = true;
+  if (!I.getPointerOperand()->getType()->isPointerTy()) {
+    return;
+  }
+
+  unsigned hit = 1;
+  std::vector<Value *> aliases = GetAlias(I.getPointerOperand());
+  if (!aliases.empty()) {
+    hit = model->Access(aliases.front(), static_cast<unsigned>(0));
+  } else if (model->Vars.find(I.getPointerOperand()) != model->Vars.end()) {
+    hit = model->Access(I.getPointerOperand(), static_cast<unsigned>(0));
+  }
+
+  if (hit == 0) {
+    model->MissCount++;
+  } else {
+    model->HitCount++;
+  }
+}
+
+void CacheSpecuAnalysis::visitBitCastInst(BitCastInst &I) { cacheChanged = false; }
+
+void CacheSpecuAnalysis::visitStoreInst(StoreInst &I) {
+  cacheChanged = true;
+  unsigned hit = 1;
+  std::vector<Value *> aliases = GetAlias(I.getPointerOperand());
+  if (!aliases.empty()) {
+    hit = model->Access(aliases.front(), static_cast<unsigned>(0));
+  } else if (model->Vars.find(I.getPointerOperand()) != model->Vars.end()) {
+    hit = model->Access(I.getPointerOperand(), static_cast<unsigned>(0));
+  }
+
+  if (hit == 0) {
+    model->MissCount++;
+  } else {
+    model->HitCount++;
+  }
+}
+
+void CacheSpecuAnalysis::visitCallInst(CallInst &I) {
+  cacheChanged = true;
+  Function *callee = I.getCalledFunction();
+  if (callee != nullptr && callee->onlyReadsMemory() && I.arg_size() > 0 &&
+      I.getArgOperand(0)->getType()->isPointerTy()) {
+    if (model->Vars.find(I.getArgOperand(0)) != model->Vars.end()) {
+      unsigned hit =
+          model->Access(I.getArgOperand(0), static_cast<unsigned>(0));
+      if (hit == 0) {
+        model->MissCount++;
+      } else {
+        model->HitCount++;
+      }
       return;
     }
   }
+
+  model->invalidateAll();
+  model->MissCount++;
 }
-void CacheSpecuAnalysis::visitSelectInst(SelectInst &I) {
-  Value *alias, *target;
-  unsigned offset = 0;
 
-  target = I.getTrueValue();
-  if (ConstantExpr *GEPC = dyn_cast<ConstantExpr>(target))
-    this->ExtractGEPC(GEPC, target, offset);
+void CacheSpecuAnalysis::visitPHINode(PHINode &I) { cacheChanged = false; }
 
-  if (this->IsAliasTo(target, alias, offset)) {
-    this->AliasMap[&I] = new PointerLocation(alias, offset);
-    return;
-  }
+void CacheSpecuAnalysis::visitSelectInst(SelectInst &I) { cacheChanged = false; }
 
-  target = I.getFalseValue();
-  if (ConstantExpr *GEPC = dyn_cast<ConstantExpr>(target))
-    this->ExtractGEPC(GEPC, target, offset);
-
-  if (this->IsAliasTo(target, alias, offset)) {
-    this->AliasMap[&I] = new PointerLocation(alias, offset);
-    return;
+void CacheSpecuAnalysis::visitIntrinsicInst(IntrinsicInst &I) {
+  cacheChanged = true;
+  if (I.getIntrinsicID() == Intrinsic::memcpy ||
+      I.getIntrinsicID() == Intrinsic::memmove) {
+    if (I.getArgOperand(0)->getType()->isPointerTy() &&
+        model->Vars.find(I.getArgOperand(0)) != model->Vars.end()) {
+      unsigned hit =
+          model->Access(I.getArgOperand(0), static_cast<unsigned>(0));
+      if (hit == 0) {
+        model->MissCount++;
+      } else {
+        model->HitCount++;
+      }
+    }
   }
 }
+
+void CacheSpecuAnalysis::visitVACopyInst(VACopyInst &I) { (void)I; }
+
+void CacheSpecuAnalysis::visitBranchInst(BranchInst &I) { (void)I; }
 
 void CacheSpecuAnalysis::visitGetElementPtrInst(GetElementPtrInst &I) {
-  Value *dest = I.getPointerOperand();
-  unsigned from, to;
-
-  if (ConstantExpr *GEPC = dyn_cast<ConstantExpr>(dest)) {
-    if (dyn_cast<GEPOperator>(GEPC) &&
-        dyn_cast<GEPOperator>(GEPC)->isInBounds()) {
-      GetElementPtrInst *GEP =
-          cast<GetElementPtrInst>(GEPC->getAsInstruction());
-      //    		if(!CacheModel::GEPInstPos(*GEP, from, to))
-      //    		{
-      //    			this->AliasMap[&I] = new
-      //    PointerLocation(dest,-1); 			delete(GEP); 			return;
-      //    		}
-      dest = GEP->getPointerOperand();
-      delete (GEP);
-    }
+  cacheChanged = false;
+  Value *base = I.getPointerOperand();
+  if (model->Vars.find(base) == model->Vars.end() && isa<GlobalVariable>(base)) {
+    auto *global = cast<GlobalVariable>(base);
+    model->AddVar(global, global->getValueType(), global->getAlignment());
   }
-
-  if (!CacheModel::GEPInstPos(I, from, to)) {
-    this->AliasMap[&I] = new PointerLocation(dest, -1);
-    return;
-  }
-
-  this->AliasMap[&I] = new PointerLocation(dest, from);
 }
 
-void CacheSpecuAnalysis::visitInstruction(Instruction &I) {}
+void CacheSpecuAnalysis::visitInstruction(Instruction &I) { (void)I; }
 
 void CacheSpecuAnalysis::dump(int mod) {
-  if (mod == 1) {
-    for (const auto &ed : backEdges) {
-      dbgs() << "back edge from";
-      ed.first->dump();
-      dbgs() << " to ";
-      ed.second->dump();
-      dbgs() << "\n";
-    }
+  if (mod == 0) {
+    Result.dump(dbgs());
+    return;
   }
-
-  if (mod == 2) {
-    for (const auto &alia : AliasMap) {
-      dbgs() << "Alia from";
-      alia.first->dump();
-      dbgs() << "to\t";
-      alia.second->Dest->dump();
-      dbgs() << " @ " << alia.second->Offset << "\n";
-    }
-  }
+  model->dump(mod > 1);
 }
 
 } // namespace spectre

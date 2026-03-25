@@ -38,6 +38,7 @@ IDELinearConstantAnalysis::Fact IDELinearConstantAnalysis::zero_fact() const {
 
 IDELinearConstantAnalysis::FactSet
 IDELinearConstantAnalysis::normal_flow(const llvm::Instruction *stmt,
+                                       const llvm::Instruction *succ,
                                        const Fact &fact) {
   FactSet result;
 
@@ -67,14 +68,21 @@ IDELinearConstantAnalysis::normal_flow(const llvm::Instruction *stmt,
       result.insert(fact);
     }
   } else if (const auto *store = llvm::dyn_cast<llvm::StoreInst>(stmt)) {
-    // Store: propagate value to pointer location
+    // Store: propagate value to pointer location.
+    // BUG (fixed): the old code re-inserted store->getPointerOperand() even
+    // when fact == getPointerOperand(), which means the old value of the
+    // pointer location was kept alive after the store.  In IFDS, a store
+    // *kills* the previous definition of the pointer location and *generates*
+    // a new one (from the stored value).  We must NOT propagate the pointer
+    // fact through the store; instead we only generate it from the value fact
+    // (or from zero, handled by the edge function).
     if (fact == store->getValueOperand()) {
       result.insert(fact);
       result.insert(store->getPointerOperand());
     } else if (fact == store->getPointerOperand()) {
-      // The location gets killed and replaced
-      // (handled by edge function)
-      result.insert(store->getPointerOperand());
+      // The old definition of the pointer location is killed by this store.
+      // Do NOT re-insert it here; the edge function will assign the new value.
+      // (No-op: fall through without inserting.)
     } else {
       result.insert(fact);
     }
@@ -139,7 +147,7 @@ IDELinearConstantAnalysis::normal_flow(const llvm::Instruction *stmt,
 }
 
 IDELinearConstantAnalysis::FactSet
-IDELinearConstantAnalysis::call_flow(const llvm::CallBase*call,
+IDELinearConstantAnalysis::call_flow(const llvm::CallBase *call,
                                      const llvm::Function *callee,
                                      const Fact &fact) {
   FactSet result;
@@ -166,8 +174,10 @@ IDELinearConstantAnalysis::call_flow(const llvm::CallBase*call,
 }
 
 IDELinearConstantAnalysis::FactSet IDELinearConstantAnalysis::return_flow(
-    const llvm::CallBase*call, const llvm::Function *callee,
+    const llvm::CallBase *call, const llvm::Instruction *exit_inst,
+    const llvm::Instruction *return_site, const llvm::Function *callee,
     const Fact &exit_fact, const Fact & /*call_fact*/) {
+  (void)exit_inst;
   FactSet result;
 
   if (exit_fact == zero_fact()) {
@@ -175,13 +185,16 @@ IDELinearConstantAnalysis::FactSet IDELinearConstantAnalysis::return_flow(
     return result;
   }
 
-  // Map return value back to call site
-  if (exit_fact && exit_fact->getType()->isIntegerTy()) {
-    // Check if it's the return value
-    if (const auto *ret_inst = llvm::dyn_cast<llvm::ReturnInst>(exit_fact)) {
-      if (ret_inst->getReturnValue()) {
-        result.insert(call);
-      }
+  // Map return value back to call site.
+  // The old code guarded with exit_fact->getType()->isIntegerTy() before the
+  // dyn_cast<ReturnInst>.  A ReturnInst is an Instruction, not an
+  // integer-typed value, so that type check was always false and the return
+  // value was never mapped back to the call site.  The correct check is simply
+  // whether exit_fact is a ReturnInst with a non-void return value.
+  if (const auto *ret_inst =
+          llvm::dyn_cast_or_null<llvm::ReturnInst>(exit_fact)) {
+    if (ret_inst->getReturnValue()) {
+      result.insert(call);
     }
   }
 
@@ -202,8 +215,9 @@ IDELinearConstantAnalysis::FactSet IDELinearConstantAnalysis::return_flow(
 }
 
 IDELinearConstantAnalysis::FactSet
-IDELinearConstantAnalysis::call_to_return_flow(const llvm::CallBase*call,
-                                               const Fact &fact) {
+IDELinearConstantAnalysis::call_to_return_flow(const llvm::CallBase *call,
+                                               const llvm::Instruction *return_site,
+                                               llvm::ArrayRef<const llvm::Function *> callees, const Fact &fact) {
   FactSet result;
 
   // For non-pointer facts, pass through
@@ -250,6 +264,7 @@ IDELinearConstantAnalysis::join(const Value &v1, const Value &v2) const {
 
 IDELinearConstantAnalysis::EdgeFunction
 IDELinearConstantAnalysis::normal_edge_function(const llvm::Instruction *stmt,
+                                                const llvm::Instruction *succ,
                                                 const Fact &src_fact,
                                                 const Fact &tgt_fact) {
   // Identity by default
@@ -257,9 +272,13 @@ IDELinearConstantAnalysis::normal_edge_function(const llvm::Instruction *stmt,
     return create_identity();
   }
 
-  // Constant assignment
-  if (const auto *const_int = llvm::dyn_cast<llvm::ConstantInt>(stmt)) {
-    if (tgt_fact == stmt) {
+  // Constant assignment: when the zero fact generates a new fact that is a
+  // ConstantInt operand of some instruction, the edge function should return
+  // the constant value.  Note: llvm::ConstantInt is NOT a subclass of
+  // llvm::Instruction, so dyn_cast<ConstantInt>(stmt) always fails.  Instead,
+  // detect the pattern where tgt_fact is a ConstantInt value.
+  if (src_fact == nullptr /* zero fact */ && tgt_fact != nullptr) {
+    if (const auto *const_int = llvm::dyn_cast<llvm::ConstantInt>(tgt_fact)) {
       return create_constant(const_int->getSExtValue());
     }
   }
@@ -309,10 +328,13 @@ IDELinearConstantAnalysis::normal_edge_function(const llvm::Instruction *stmt,
           break;
         case llvm::Instruction::AShr:
         case llvm::Instruction::LShr:
-          if (c >= 0 && c < 64) {
-            return create_linear(1LL >> c, 0);
-          }
-          break;
+          // Right-shift by a constant c is equivalent to integer division by
+          // 2^c, which is not representable as an exact linear function
+          // (multiplier * x + offset) with integer coefficients.  The previous
+          // code used `1LL >> c` which evaluates to 0 for c >= 1, producing a
+          // constant-zero function instead of the correct transformation.
+          // Return bottom (non-constant) to be sound.
+          return create_bottom();
         default:
           break;
         }
@@ -347,23 +369,30 @@ IDELinearConstantAnalysis::normal_edge_function(const llvm::Instruction *stmt,
 }
 
 IDELinearConstantAnalysis::EdgeFunction
-IDELinearConstantAnalysis::call_edge_function(const llvm::CallBase* /*call*/,
+IDELinearConstantAnalysis::call_edge_function(const llvm::CallBase * /*call*/,
+                                              const llvm::Function * /*callee*/,
                                               const Fact & /*src_fact*/,
                                               const Fact & /*tgt_fact*/) {
   return create_identity();
 }
 
 IDELinearConstantAnalysis::EdgeFunction
-IDELinearConstantAnalysis::return_edge_function(const llvm::CallBase* /*call*/,
-                                                const Fact & /*exit_fact*/,
+IDELinearConstantAnalysis::return_edge_function(const llvm::CallBase * /*call*/,
+                                                const llvm::Function * /*callee*/,
+                                                const llvm::Instruction * /*exit_inst*/,
+                                                const llvm::Instruction *return_site, const Fact & /*exit_fact*/,
                                                 const Fact & /*ret_fact*/) {
+  (void)return_site;
   return create_identity();
 }
 
 IDELinearConstantAnalysis::EdgeFunction
 IDELinearConstantAnalysis::call_to_return_edge_function(
-    const llvm::CallBase* /*call*/, const Fact & /*src_fact*/,
+    const llvm::CallBase * /*call*/, const llvm::Instruction *return_site,
+    llvm::ArrayRef<const llvm::Function *> /*callees*/,
+    const Fact & /*src_fact*/,
     const Fact & /*tgt_fact*/) {
+  (void)return_site;
   return create_identity();
 }
 

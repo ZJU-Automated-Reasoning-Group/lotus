@@ -1,7 +1,7 @@
+#include "crab/domains/register_domains.hh"
+#include <clam/RegisterAnalysis.hh>
 #include <clam/config.h>
 #include <crab/config.h>
-#include <clam/RegisterAnalysis.hh>
-#include "crab/domains/register_domains.hh"
 
 namespace clam {
 

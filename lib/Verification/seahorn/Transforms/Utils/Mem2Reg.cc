@@ -16,16 +16,16 @@
 // invalidate DSA passes.
 
 #include "llvm/ADT/Statistic.h"
+#include "seahorn/config.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
-#include "llvm/InitializePasses.h"
-#include "seahorn/config.h"
 
 using namespace llvm;
 
@@ -97,7 +97,7 @@ FunctionPass *createPromoteMemoryToRegisterPass() {
   return llvm::createPromoteMemoryToRegisterPass();
 }
 
-} // end of seahorn namespace
+} // namespace seahorn
 
 static llvm::RegisterPass<seahorn::PromotePass> X("sea-mem2reg",
                                                   "Promote Memory to Register");

@@ -43,11 +43,18 @@ static cl::opt<bool>
 //   for each basic block BB:
 //     seen = {} // (TLVar, Ptr) -> dominating load
 //     for inst I in BB:
-//       if I mayReadOrWriteMemory: seen.clear()
 //       if I is shadow.mem.load and next inst is Load L:
 //         key = (TLVar, stripCasts(L.ptr))
 //         if key in seen: replace L with seen[key], drop L and maybe load call
 //         else: seen[key] = L
+//       elif I mayWriteToMemory (but is NOT a shadow.mem.load): seen.clear()
+//
+// Fix Bug 10: the original code called resetSeen() on every
+// mayReadOrWriteMemory() instruction, which includes shadow.mem.load calls
+// themselves — clearing the cache just before checking for a redundant load.
+// The fix is to only invalidate the cache on instructions that *write* to
+// memory (and are not shadow.mem markers), since reads cannot change the
+// memory state that the TLVar encodes.
 
 /// @brief Inter-procedural Redundant Load Elimination pass
 ///
@@ -81,27 +88,48 @@ public:
       for (BasicBlock &BB : F) {
         // Map from (TLVar, Ptr) to the dominating load instruction.
         DenseMap<std::pair<const Value *, const Value *>, LoadInst *> SeenLoads;
-        auto resetSeen = [&]() { SeenLoads.clear(); };
 
-        for (auto It = BB.begin(), Et = BB.end(); It != Et; ++It) {
+        for (auto It = BB.begin(), Et = BB.end(); It != Et;) {
           Instruction *I = &*It;
 
-          // Any instruction that may read/write memory can invalidate cached
-          // loads (to stay conservative).
-          if (I->mayReadOrWriteMemory()) {
-            resetSeen();
+          // Fix Bug 10: only invalidate the cache on instructions that write
+          // to memory. Pure reads (including shadow.mem.load) do not change
+          // the memory state encoded by TLVars, so they should not clear the
+          // cache. Shadow.mem calls are intrinsics that report mayReadOrWrite,
+          // but they are markers — not real memory operations — so we skip
+          // them for invalidation purposes.
+          if (I->mayWriteToMemory()) {
+            // If this is a shadow.mem marker, do not invalidate — it is a
+            // bookkeeping call, not a real write.
+            bool IsShadowMem = false;
+            if (const CallBase *CB2 = dyn_cast<CallBase>(I)) {
+              if (CB2->getCalledFunction() &&
+                  CB2->getCalledFunction()->getName().startswith(
+                      "shadow.mem")) {
+                IsShadowMem = true;
+              }
+            }
+            if (!IsShadowMem) {
+              SeenLoads.clear();
+            }
           }
 
           CallBase *CB = dyn_cast<CallBase>(I);
-          if (!CB || !isMemSSALoad(CB, OnlySingletonRLE))
+          if (!CB || !isMemSSALoad(CB, OnlySingletonRLE)) {
+            ++It;
             continue;
+          }
 
           auto NextIt = std::next(It);
-          if (NextIt == BB.end())
+          if (NextIt == BB.end()) {
+            ++It;
             continue;
+          }
           LoadInst *LI = dyn_cast<LoadInst>(&*NextIt);
-          if (!LI)
+          if (!LI) {
+            ++It;
             continue;
+          }
 
           const Value *TLVar = CB->getArgOperand(1);
           const Value *Ptr = LI->getPointerOperand()->stripPointerCasts();
@@ -110,19 +138,34 @@ public:
           auto Found = SeenLoads.find(Key);
           if (Found == SeenLoads.end()) {
             SeenLoads.insert({Key, LI});
+            ++It;
             continue;
           }
 
           // We have an earlier dominating load with the same TLVar and pointer.
           LoadInst *DomLoad = Found->second;
           LI->replaceAllUsesWith(DomLoad);
-          LI->eraseFromParent();
+
+          // Fix Bug 11: save a stable iterator before erasing instructions.
+          // After erasing LI (NextIt), NextIt is dangling — do not use
+          // std::prev(NextIt). Instead, advance It past CB before any erasure,
+          // then erase LI and optionally CB.
+          //
+          // Current state: It -> CB, NextIt -> LI
+          // We want to continue from the instruction after LI.
+          auto AfterLI = std::next(NextIt);
+
+          LI->eraseFromParent(); // NextIt (LI) is now invalid.
+
           if (CB->use_empty()) {
-            CB->eraseFromParent();
-            // Adjust iterator because we removed the current load's
-            // shadow.mem.load.
-            It = std::prev(NextIt);
+            // CB is at It; erase it and set It to AfterLI.
+            CB->eraseFromParent(); // It (CB) is now invalid.
+            It = AfterLI;
+          } else {
+            // CB still has uses; advance past it normally.
+            It = AfterLI;
           }
+
           NumRemoved++;
         }
       }
@@ -137,7 +180,11 @@ public:
   /// @brief Specify analysis dependencies and preserves
   /// @param AU Analysis usage information to populate
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
+    // Fix Bug 12: do NOT call setPreservesCFG() — this pass erases load
+    // instructions, which invalidates analyses that track instruction pointers
+    // (e.g., MemorySSA, DominatorTree). Declare no preserved analyses so the
+    // pass manager invalidates them correctly.
+    (void)AU;
   }
 
   /// @brief Get the name of this pass

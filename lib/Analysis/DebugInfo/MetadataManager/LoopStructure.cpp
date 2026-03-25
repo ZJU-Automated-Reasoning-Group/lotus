@@ -19,222 +19,246 @@
  OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
  OR OTHER DEALINGS IN THE SOFTWARE.
  */
- #include "Analysis/DebugInfo/MetadataManager/LoopStructure.h"
- #include "Analysis/DebugInfo/MetadataManager/MetadataManager.h"
- 
- namespace noelle {
- 
- /*
-  * Set the string for loop ID that we use as key to get the corresponding
-  * metadata
-  */
- const std::string LoopStructure::metadataKeyID = "noelle.loop.id";
- 
- LoopStructure::LoopStructure(Loop *l) {
- 
-   /*
-    * Set the nesting level
-    */
-   this->depth = l->getLoopDepth();
- 
-   /*
-    * Set the headers.
-    */
-   this->header = l->getHeader();
-   this->preHeader = l->getLoopPreheader();
- 
-   /*
-    * Set the basic blocks and latches of the loop.
-    */
-   for (auto *bb : l->blocks()) {
-     // NOTE: Unsure if this is program forward order
-     this->bbs.insert(bb);
-     if (l->isLoopLatch(bb)) {
-       latchBBs.insert(bb);
-     }
- 
-     for (auto &inst : *bb) {
- 
-       /*
-        * NOTE: Loop implementation of isLoopInvariant simply checks if the value
-        * is in the loop, not if it changes between iterations.
-        */
-       if (l->isLoopInvariant(&inst)) {
-         this->invariants.insert(&inst);
-       }
-     }
-   }
- 
-   /*
-    * Set the loop exits and exit edges.
-    */
-   SmallVector<BasicBlock *, 10> exits;
-   l->getExitBlocks(exits);
-   this->exitBlocks = std::vector<BasicBlock *>(exits.begin(), exits.end());
- 
-   SmallVector<std::pair<BasicBlock *, BasicBlock *>, 10> exitEdges;
-   l->getExitEdges(exitEdges);
-   this->exitEdges =
-       std::vector<std::pair<BasicBlock *, BasicBlock *>>(exitEdges.begin(),
-                                                          exitEdges.end());
- 
-   return;
- }
- 
- BasicBlock *LoopStructure::getHeader(void) const {
-   return this->header;
- }
- 
- BasicBlock *LoopStructure::getPreHeader(void) const {
-   return this->preHeader;
- }
- 
- Instruction *LoopStructure::getEntryInstruction(void) const {
-   auto *header = this->getHeader();
-   auto *firstInst = &*header->begin();
-   return firstInst;
- }
- 
- BasicBlock *LoopStructure::getSuccessorWithinLoopOfTheHeader(void) const {
- 
-   /*
-    * Fetch the header.
-    */
-   auto *header = this->getHeader();
- 
-   /*
-    * The successor of the header that belongs to the loop is the first loop
-    * basic block executed after executing the header.
-    */
-   for (auto *succ : successors(header)) {
-     if (this->isIncluded(succ)) {
-       return succ;
-     }
-   }
- 
-   return nullptr;
- }
- 
- uint32_t LoopStructure::getNestingLevel(void) const {
-   return this->depth;
- }
- 
- std::unordered_set<BasicBlock *> LoopStructure::getLatches(void) const {
-   return this->latchBBs;
- }
- 
- std::unordered_set<BasicBlock *> LoopStructure::getBasicBlocks(void) const {
-   return this->bbs;
- }
- 
- std::unordered_set<Instruction *> LoopStructure::getInstructions(void) const {
-   std::unordered_set<Instruction *> insts{};
-   for (auto *bb : this->bbs) {
-     for (auto &inst : *bb) {
-       insts.insert(&inst);
-     }
-   }
- 
-   return insts;
- }
- 
- uint64_t LoopStructure::getNumberOfInstructions(void) const {
-   uint64_t t = 0;
-   for (auto *bb : this->bbs) {
-     t += bb->size();
-   }
- 
-   return t;
- }
- 
- std::vector<BasicBlock *> LoopStructure::getLoopExitBasicBlocks(void) const {
-   return this->exitBlocks;
- }
- 
- bool LoopStructure::isALoopExit(Instruction *i) const {
-   for (auto p : this->getLoopExitEdges()) {
-     auto *exitingBB = p.first;
-     auto *e = exitingBB->getTerminator();
-     if (e == i) {
-       return true;
-     }
-   }
- 
-   return false;
- }
- 
- std::vector<std::pair<BasicBlock *, BasicBlock *>> LoopStructure::
-     getLoopExitEdges(void) const {
-   return this->exitEdges;
- }
- 
- bool LoopStructure::isLoopInvariant(Value *value) const {
- 
-   /*
-    * Check if value is an instruction.
-    */
-   if (auto *inst = dyn_cast<Instruction>(value)) {
- 
-     /*
-      * Check if the instruction is not included in the loop.
-      */
-     if (!this->isIncluded(inst->getParent())) {
-       return true;
-     }
- 
-     return this->isContainedInstructionLoopInvariant(inst);
-   }
- 
-   /*
-    * Constants are loop invariants.
-    */
-   if (isa<Constant>(value)) {
-     return true;
-   }
- 
-   /*
-    * Check if value is an argument.
-    */
-   if (isa<Argument>(value)) {
-     return true;
-   }
- 
-   /*
-    * We cannot determine whether the value is loop invariant without further
-    * analysis
-    */
-   return false;
- }
- 
- bool LoopStructure::isContainedInstructionLoopInvariant(
-     Instruction *inst) const {
- 
-   /*
-    * Currently, we are as naive as LLVM, not including loop internal
-    * instructions which derive from loop invariants as being loop invariant. We
-    * simply cache loop instructions which LLVM's isLoopInvariant returns true
-    * for
-    */
-   return this->invariants.find(inst) != this->invariants.end();
- }
- 
- bool LoopStructure::isIncluded(BasicBlock *bb) const {
-   auto found = this->bbs.find(bb) != this->bbs.end();
- 
-   return found;
- }
- 
- bool LoopStructure::isIncluded(Instruction *i) const {
-   auto *bb = i->getParent();
-   auto contained = this->isIncluded(bb);
- 
-   return contained;
- }
- 
+#include "Analysis/DebugInfo/MetadataManager/LoopStructure.h"
+
+#include "Analysis/DebugInfo/MetadataManager/MetadataManager.h"
+
+#include <stdexcept>
+
+namespace noelle {
+
+/*
+ * Set the string for loop ID that we use as key to get the corresponding
+ * metadata
+ */
+const std::string LoopStructure::metadataKeyID = "noelle.loop.id";
+
+LoopStructure::LoopStructure(Loop *l) {
+
+  /*
+   * Set the nesting level
+   */
+  this->depth = l->getLoopDepth();
+
+  /*
+   * Set the headers.
+   */
+  this->header = l->getHeader();
+  this->preHeader = l->getLoopPreheader();
+
+  /*
+   * Set the basic blocks and latches of the loop.
+   */
+  for (auto *bb : l->blocks()) {
+    // NOTE: Unsure if this is program forward order
+    this->bbs.insert(bb);
+    if (l->isLoopLatch(bb)) {
+      latchBBs.insert(bb);
+    }
+
+    for (auto &inst : *bb) {
+
+      /*
+       * NOTE: Loop implementation of isLoopInvariant simply checks if the value
+       * is in the loop, not if it changes between iterations.
+       */
+      if (l->isLoopInvariant(&inst)) {
+        this->invariants.insert(&inst);
+      }
+    }
+  }
+
+  /*
+   * Set the loop exits and exit edges.
+   */
+  SmallVector<BasicBlock *, 10> exits;
+  l->getExitBlocks(exits);
+  this->exitBlocks = std::vector<BasicBlock *>(exits.begin(), exits.end());
+
+  SmallVector<std::pair<BasicBlock *, BasicBlock *>, 10> exitEdges;
+  l->getExitEdges(exitEdges);
+  this->exitEdges = std::vector<std::pair<BasicBlock *, BasicBlock *>>(
+      exitEdges.begin(), exitEdges.end());
+
+  return;
+}
+
+BasicBlock *LoopStructure::getHeader(void) const { return this->header; }
+
+BasicBlock *LoopStructure::getPreHeader(void) const { return this->preHeader; }
+
+Instruction *LoopStructure::getEntryInstruction(void) const {
+  auto *header = this->getHeader();
+  auto *firstInst = &*header->begin();
+  return firstInst;
+}
+
+BasicBlock *LoopStructure::getSuccessorWithinLoopOfTheHeader(void) const {
+
+  /*
+   * Fetch the header.
+   */
+  auto *header = this->getHeader();
+
+  /*
+   * The successor of the header that belongs to the loop is the first loop
+   * basic block executed after executing the header.
+   */
+  for (auto *succ : successors(header)) {
+    if (this->isIncluded(succ)) {
+      return succ;
+    }
+  }
+
+  return nullptr;
+}
+
+uint32_t LoopStructure::getNestingLevel(void) const { return this->depth; }
+
+std::unordered_set<BasicBlock *> LoopStructure::getLatches(void) const {
+  return this->latchBBs;
+}
+
+std::unordered_set<BasicBlock *> LoopStructure::getBasicBlocks(void) const {
+  return this->bbs;
+}
+
+std::unordered_set<Instruction *> LoopStructure::getInstructions(void) const {
+  std::unordered_set<Instruction *> insts{};
+  for (auto *bb : this->bbs) {
+    for (auto &inst : *bb) {
+      insts.insert(&inst);
+    }
+  }
+
+  return insts;
+}
+
+uint64_t LoopStructure::getNumberOfInstructions(void) const {
+  uint64_t t = 0;
+  for (auto *bb : this->bbs) {
+    t += bb->size();
+  }
+
+  return t;
+}
+
+std::vector<BasicBlock *> LoopStructure::getLoopExitBasicBlocks(void) const {
+  return this->exitBlocks;
+}
+
+bool LoopStructure::isALoopExit(Instruction *i) const {
+  for (auto p : this->getLoopExitEdges()) {
+    auto *exitingBB = p.first;
+    auto *e = exitingBB->getTerminator();
+    if (e == i) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+std::vector<std::pair<BasicBlock *, BasicBlock *>>
+LoopStructure::getLoopExitEdges(void) const {
+  return this->exitEdges;
+}
+
+bool LoopStructure::isLoopInvariant(Value *value) const {
+
+  /*
+   * Check if value is an instruction.
+   */
+  if (auto *inst = dyn_cast<Instruction>(value)) {
+
+    /*
+     * Check if the instruction is not included in the loop.
+     */
+    if (!this->isIncluded(inst->getParent())) {
+      return true;
+    }
+
+    return this->isContainedInstructionLoopInvariant(inst);
+  }
+
+  /*
+   * Constants are loop invariants.
+   */
+  if (isa<Constant>(value)) {
+    return true;
+  }
+
+  /*
+   * Check if value is an argument.
+   */
+  if (isa<Argument>(value)) {
+    return true;
+  }
+
+  /*
+   * We cannot determine whether the value is loop invariant without further
+   * analysis
+   */
+  return false;
+}
+
+bool LoopStructure::isContainedInstructionLoopInvariant(
+    Instruction *inst) const {
+
+  // Fast path: LLVM already determined this instruction is loop-invariant.
+  if (this->invariants.find(inst) != this->invariants.end()) {
+    return true;
+  }
+
+  // Extended check: an instruction is loop-invariant if all of its operands
+  // are loop-invariant.  This catches one level of derived invariants that
+  // LLVM's naive isLoopInvariant misses (e.g., "add invariant_a, invariant_b").
+  //
+  // We only apply this to side-effect-free instructions to stay conservative.
+  if (inst->mayHaveSideEffects() || inst->mayReadFromMemory()) {
+    return false;
+  }
+
+  for (auto &operand : inst->operands()) {
+    Value *V = operand.get();
+    // Constants and arguments are always invariant.
+    if (isa<Constant>(V) || isa<Argument>(V)) {
+      continue;
+    }
+    // Instructions outside the loop are invariant.
+    if (auto *opInst = dyn_cast<Instruction>(V)) {
+      if (!this->isIncluded(opInst->getParent())) {
+        continue;
+      }
+      // Recursively check if the operand instruction is invariant.
+      if (!this->isContainedInstructionLoopInvariant(opInst)) {
+        return false;
+      }
+    } else {
+      // Unknown value kind — be conservative.
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool LoopStructure::isIncluded(BasicBlock *bb) const {
+  auto found = this->bbs.find(bb) != this->bbs.end();
+
+  return found;
+}
+
+bool LoopStructure::isIncluded(Instruction *i) const {
+  auto *bb = i->getParent();
+  auto contained = this->isIncluded(bb);
+
+  return contained;
+}
+
 void LoopStructure::print(raw_ostream &stream) {
   uint64_t id = this->getID();
-  stream << "Loop summary: " << id
-         << ", depth: " << depth << "\n";
+  stream << "Loop summary: " << id << ", depth: " << depth << "\n";
   header->begin()->print(stream);
   stream << "\n";
 
@@ -242,47 +266,59 @@ void LoopStructure::print(raw_ostream &stream) {
 }
 
 uint64_t LoopStructure::getID(void) {
-  Module *M = this->header->getModule();
-  MetadataManager metadataManager{ *M };
-  if (metadataManager.doesHaveMetadata(this, LoopStructure::metadataKeyID)) {
-    std::string idAsString =
-        metadataManager.getMetadata(this, LoopStructure::metadataKeyID);
-    uint64_t ID = std::stoi(idAsString);
-    return ID;
+  // Read the metadata directly from the header terminator (O(1)) instead of
+  // constructing a MetadataManager which scans the entire module (O(N)).
+  auto *headerTerm = this->header->getTerminator();
+  auto *metaNode = headerTerm->getMetadata(LoopStructure::metadataKeyID);
+  if (!metaNode) {
+    return 0;
   }
 
-  return 0;
+  auto *mdStr = dyn_cast<MDString>(metaNode->getOperand(0));
+  if (!mdStr) {
+    return 0;
+  }
+
+  // Use stoull with exception handling to avoid crashes on malformed metadata.
+  try {
+    return std::stoull(mdStr->getString().str());
+  } catch (const std::invalid_argument &) {
+    errs() << "LoopStructure::getID: WARNING = metadata \""
+           << LoopStructure::metadataKeyID << "\" is not a valid integer: \""
+           << mdStr->getString() << "\"\n";
+    return 0;
+  } catch (const std::out_of_range &) {
+    errs() << "LoopStructure::getID: WARNING = metadata \""
+           << LoopStructure::metadataKeyID << "\" value out of range: \""
+           << mdStr->getString() << "\"\n";
+    return 0;
+  }
 }
- 
- bool LoopStructure::doesHaveID(void) {
-   Module *M = this->header->getModule();
-   MetadataManager metadataManager{ *M };
-   return metadataManager.doesHaveMetadata(this, LoopStructure::metadataKeyID);
- }
- 
- void LoopStructure::setID(uint64_t ID) {
-   Module *M = this->header->getModule();
-   MetadataManager metadataManager{ *M };
-   if (this->doesHaveID()) {
-     metadataManager.setMetadata(this,
-                                 LoopStructure::metadataKeyID,
-                                 std::to_string(ID));
-   } else {
-     metadataManager.addMetadata(this,
-                                 LoopStructure::metadataKeyID,
-                                 std::to_string(ID));
-   }
- 
-   return;
- }
- 
- Function *LoopStructure::getFunction(void) const {
-   auto *f = this->header->getParent();
-   return f;
- }
- 
- uint64_t LoopStructure::numberOfExitBasicBlocks(void) const {
-   return this->exitBlocks.size();
- }
- 
- } // namespace noelle
+
+bool LoopStructure::doesHaveID(void) {
+  // Check the IR directly (O(1)) — no need for a full MetadataManager.
+  auto *headerTerm = this->header->getTerminator();
+  return headerTerm->getMetadata(LoopStructure::metadataKeyID) != nullptr;
+}
+
+void LoopStructure::setID(uint64_t ID) {
+  auto *headerTerm = this->header->getTerminator();
+  auto &cxt = headerTerm->getContext();
+  auto *s = MDString::get(cxt, std::to_string(ID));
+  auto *n = MDNode::get(cxt, s);
+  // setMetadata replaces any existing node, so this handles both add and
+  // update.
+  headerTerm->setMetadata(LoopStructure::metadataKeyID, n);
+  return;
+}
+
+Function *LoopStructure::getFunction(void) const {
+  auto *f = this->header->getParent();
+  return f;
+}
+
+uint64_t LoopStructure::numberOfExitBasicBlocks(void) const {
+  return this->exitBlocks.size();
+}
+
+} // namespace noelle

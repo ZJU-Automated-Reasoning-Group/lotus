@@ -6,7 +6,7 @@
 
 #include "IR/ICFG/GraphAnalysis.h"
 
-#include "Utils/General/System.h"
+#include "Utils/Platform/System.h"
 
 #include <list>
 #include <map>
@@ -26,6 +26,11 @@
 using namespace llvm;
 using namespace std;
 
+/// Collects the loop exit blocks — i.e. the successors of in-loop blocks that
+/// lie outside the loop. These are the blocks where control flow continues
+/// after the loop, and are the correct targets to push onto the BFS worklist
+/// in isReachableFrom() so that reachability analysis can proceed past the
+/// loop.
 static void getLoopExitBlocks(const Loop *L,
                               SmallVectorImpl<BasicBlock *> &ExitBlocks) {
   SmallPtrSet<const BasicBlock *, 32> LoopBlocks;
@@ -36,8 +41,9 @@ static void getLoopExitBlocks(const Loop *L,
     for (const_succ_iterator SI = succ_begin(BB), SE = succ_end(BB); SI != SE;
          ++SI) {
       const BasicBlock *SuccBB = *SI;
+      // Push the out-of-loop successor (the exit block), not the in-loop block.
       if (!LoopBlocks.count(SuccBB))
-        ExitBlocks.push_back(const_cast<BasicBlock *>(BB));
+        ExitBlocks.push_back(const_cast<BasicBlock *>(SuccBB));
     }
   }
 }
@@ -103,21 +109,25 @@ void findFunctionBackedgesIntraICFG(ICFG *icfg, const llvm::Function *func,
   if (Node->getOutEdges().empty())
     return;
 
+  // Stack entries store the node and its current out-edge iterator so that
+  // we resume scanning from where we left off (not from the beginning).
+  using StackEntry = std::pair<ICFGNode *, ICFGNode::iterator>;
+
   set<ICFGNode *> Visited;
-  vector<ICFGNode *> VisitStack;
+  vector<StackEntry> VisitStack;
   set<ICFGNode *> InStack;
 
   Visited.insert(Node);
-  VisitStack.emplace_back(Node);
+  VisitStack.emplace_back(Node, Node->OutEdgeBegin());
   InStack.insert(Node);
-  do {
 
-    ICFGNode *ParentNode = VisitStack.back();
-    auto I = ParentNode->OutEdgeBegin();
+  while (!VisitStack.empty()) {
+    StackEntry &Top = VisitStack.back();
+    ICFGNode *ParentNode = Top.first;
+    ICFGNode::iterator &I = Top.second;
 
     bool FoundNew = false;
     while (I != ParentNode->OutEdgeEnd()) {
-
       ICFGEdge *Edge = *I++;
 
       // skip edges other than intra block edge
@@ -131,30 +141,22 @@ void findFunctionBackedgesIntraICFG(ICFG *icfg, const llvm::Function *func,
         break;
       }
 
-      // Successor is in VisitStack, it's a back edge.
-      if (InStack.count(Node)) {
-
+      // Successor is already in the DFS stack — it's a back edge.
+      if (InStack.count(Node))
         res.insert(Edge);
-        //                outs() << "goto " << Node->getBasicBlock()->getName()
-        //                << "\n"; outs() << Edge->getSrcNode()->toString() << "
-        //                -> " << Edge->getDstNode()->toString() << "\n";
-      }
     }
 
     if (FoundNew) {
-
-      // Go down one level if there is a unvisited successor.
+      // Go down one level to the newly discovered successor.
       InStack.insert(Node);
-      VisitStack.emplace_back(Node);
+      VisitStack.emplace_back(Node, Node->OutEdgeBegin());
     } else {
-
-      // Go up one level.
-      auto *val = VisitStack.back();
-      InStack.erase(val);
+      // All successors exhausted — go up one level.
+      InStack.erase(ParentNode);
       VisitStack.pop_back();
       assert(InStack.size() == VisitStack.size());
     }
-  } while (!VisitStack.empty());
+  }
 }
 
 void findFunctionBackedgesInterICFG(ICFG *icfg, const llvm::Function *func,
@@ -167,25 +169,31 @@ void findFunctionBackedgesInterICFG(ICFG *icfg, const llvm::Function *func,
   if (Node->getOutEdges().empty())
     return;
 
+  // Stack entries store the node and its current out-edge iterator so that
+  // we resume scanning from where we left off (not from the beginning).
+  // Return edges are skipped so that we stay within the interprocedural
+  // call tree rooted at func.
+  using StackEntry = std::pair<ICFGNode *, ICFGNode::iterator>;
+
   set<ICFGNode *> Visited;
-  vector<ICFGNode *> VisitStack;
+  vector<StackEntry> VisitStack;
   set<ICFGNode *> InStack;
 
   Visited.insert(Node);
-  VisitStack.emplace_back(Node);
+  VisitStack.emplace_back(Node, Node->OutEdgeBegin());
   InStack.insert(Node);
-  do {
 
-    ICFGNode *ParentNode = VisitStack.back();
-    auto I = ParentNode->OutEdgeBegin();
+  while (!VisitStack.empty()) {
+    StackEntry &Top = VisitStack.back();
+    ICFGNode *ParentNode = Top.first;
+    ICFGNode::iterator &I = Top.second;
 
     bool FoundNew = false;
     while (I != ParentNode->OutEdgeEnd()) {
-
       ICFGEdge *Edge = *I++;
 
-      // skip return edge
-      if (Edge->isRetCFGEdge())
+      // Skip return edges — we only follow call/intra edges.
+      if (Edge->isInterRetCFGEdge())
         continue;
 
       Node = Edge->getDstNode();
@@ -195,27 +203,22 @@ void findFunctionBackedgesInterICFG(ICFG *icfg, const llvm::Function *func,
         break;
       }
 
-      // call the main function, it is a backedge
-      if (Node->getBasicBlock() == &func->getEntryBlock()) {
-
+      // Node is already on the DFS stack — this is a back edge (cycle).
+      if (InStack.count(Node))
         res.insert(Edge);
-      }
     }
 
     if (FoundNew) {
-
-      // Go down one level if there is a unvisited successor.
+      // Go down one level to the newly discovered successor.
       InStack.insert(Node);
-      VisitStack.emplace_back(Node);
+      VisitStack.emplace_back(Node, Node->OutEdgeBegin());
     } else {
-
-      // Go up one level.
-      auto *val = VisitStack.back();
-      InStack.erase(val);
+      // All successors exhausted — go up one level.
+      InStack.erase(ParentNode);
       VisitStack.pop_back();
       assert(InStack.size() == VisitStack.size());
     }
-  } while (!VisitStack.empty());
+  }
 }
 
 std::map<llvm::BasicBlock *, uint64_t>
@@ -315,7 +318,7 @@ void calculateDistanceMapInterICFGWithDistanceMap(
       ICFGEdge *edge = *I;
       ICFGNode *adjBB = edge->getDstNode();
 
-      if (edge->isRetCFGEdge())
+      if (edge->isInterRetCFGEdge())
         continue;
 
       uint64_t distanceToAdj = 1;
@@ -340,60 +343,62 @@ void calculateDistanceMapInterICFGWithDistanceMap(
 std::map<ICFGNode *, uint64_t>
 calculateDistanceMapInterICFG(ICFG *icfg, ICFGNode *sourceBB) {
   typedef std::pair<uint64_t, ICFGNode *> DisBBPair;
-  typedef ICFGEdge Edge;
 
-  auto *func = sourceBB->getFunction();
-
-  // initialize INF distance from source to other blocks
+  // Initialize INF distance for every node reachable via the function map.
   std::map<ICFGNode *, uint64_t> distanceMap;
-  auto funcMap = icfg->getFunctionEntryMap();
+  const auto &funcMap = icfg->getFunctionEntryMap();
 
-  for (auto p : funcMap) {
-
+  for (const auto &p : funcMap) {
     for (auto &bb : *p.first) {
-
       ICFGNode *node = icfg->getIntraBlockNode(&bb);
       distanceMap[node] = INF;
     }
   }
 
-  // Distance from source to itself is 0
+  // Distance from source to itself is 0.
   distanceMap[sourceBB] = 0;
 
-  // set of pair indicates <distance, block>
+  // Priority queue: <distance, node>.
   std::set<DisBBPair> distanceBlockSet;
   distanceBlockSet.insert(DisBBPair(0, sourceBB));
 
   while (!distanceBlockSet.empty()) {
-
     auto top = *distanceBlockSet.begin();
     distanceBlockSet.erase(distanceBlockSet.begin());
 
     auto *currentSourceBB = top.second;
+    uint64_t currentDist = top.first;
+
+    // Skip stale entries (node was already relaxed to a shorter distance).
+    auto it = distanceMap.find(currentSourceBB);
+    if (it == distanceMap.end() || it->second < currentDist)
+      continue;
 
     for (auto I = currentSourceBB->OutEdgeBegin();
-         I != currentSourceBB->OutEdgeEnd(); I++) {
+         I != currentSourceBB->OutEdgeEnd(); ++I) {
 
       ICFGEdge *edge = *I;
       ICFGNode *adjBB = edge->getDstNode();
 
-      if (edge->isRetCFGEdge())
+      if (edge->isInterRetCFGEdge())
         continue;
 
       uint64_t distanceToAdj = 1;
+      uint64_t newDist = currentDist + distanceToAdj;
 
-      // Edge relaxation
-      if (distanceMap[adjBB] > distanceToAdj + distanceMap[currentSourceBB]) {
+      // Use find() to avoid default-constructing a 0-distance entry for nodes
+      // that were not pre-populated (e.g. nodes from unprocessed functions).
+      auto adjIt = distanceMap.find(adjBB);
+      uint64_t adjCurDist = (adjIt != distanceMap.end()) ? adjIt->second : INF;
 
-        // If the distance to the adjacent node is not INF,
-        // means the pair <dist, block> is in the set
-        // Remove the pair before updating it in the set.
-        if (distanceMap[adjBB] != INF) {
+      // Edge relaxation.
+      if (adjCurDist > newDist) {
+        // Remove the old entry from the priority set if it was finite.
+        if (adjCurDist != INF)
           distanceBlockSet.erase(
-              distanceBlockSet.find(DisBBPair(distanceMap[adjBB], adjBB)));
-        }
-        distanceMap[adjBB] = distanceToAdj + distanceMap[currentSourceBB];
-        distanceBlockSet.insert(DisBBPair(distanceMap[adjBB], adjBB));
+              distanceBlockSet.find(DisBBPair(adjCurDist, adjBB)));
+        distanceMap[adjBB] = newDist;
+        distanceBlockSet.insert(DisBBPair(newDist, adjBB));
       }
     }
   }

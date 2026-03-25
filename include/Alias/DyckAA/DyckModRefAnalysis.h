@@ -20,44 +20,54 @@
 #define DYCKAA_DYCKMODREFANALYSIS_H
 
 #include "Alias/DyckAA/DyckGraphNode.h"
+
+#include <set>
+
 #include <llvm/Pass.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/raw_ostream.h>
-#include <set>
 
 using namespace llvm;
 
 typedef struct ModRef {
-    std::set<DyckGraphNode *> Mods;
-    std::set<DyckGraphNode *> Refs;
+  std::set<DyckGraphNode *> Mods;
+  std::set<DyckGraphNode *> Refs;
 } ModRef;
 
 class DyckModRefAnalysis : public ModulePass {
 private:
-    std::map<Function *, ModRef> Func2MR;
+  std::map<Function *, ModRef> Func2MR;
 
 public:
-    static char ID;
+  static char ID;
 
-    DyckModRefAnalysis();
+  DyckModRefAnalysis();
 
-    ~DyckModRefAnalysis() override;
+  ~DyckModRefAnalysis() override;
 
-    bool runOnModule(Module &M) override;
+  bool runOnModule(Module &M) override;
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 public:
-    std::set<DyckGraphNode *>::iterator mod_begin(Function *F) { return Func2MR.at(F).Mods.begin(); }
+  std::set<DyckGraphNode *>::iterator mod_begin(Function *F) {
+    return Func2MR.at(F).Mods.begin();
+  }
 
-    std::set<DyckGraphNode *>::iterator mod_end(Function *F) { return Func2MR.at(F).Mods.end(); }
+  std::set<DyckGraphNode *>::iterator mod_end(Function *F) {
+    return Func2MR.at(F).Mods.end();
+  }
 
-    std::set<DyckGraphNode *>::iterator ref_begin(Function *F) { return Func2MR.at(F).Refs.begin(); }
+  std::set<DyckGraphNode *>::iterator ref_begin(Function *F) {
+    return Func2MR.at(F).Refs.begin();
+  }
 
-    std::set<DyckGraphNode *>::iterator ref_end(Function *F) { return Func2MR.at(F).Refs.end(); }
+  std::set<DyckGraphNode *>::iterator ref_end(Function *F) {
+    return Func2MR.at(F).Refs.end();
+  }
 
-    bool count(Function *F) const { return Func2MR.count(F); }
+  bool count(Function *F) const { return Func2MR.count(F); }
 };
 
 #endif // DYCKAA_DYCKMODREFANALYSIS_H

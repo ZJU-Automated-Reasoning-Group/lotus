@@ -15,15 +15,14 @@
 #include "Alias/AserPTA/PreProcessing/Passes/InsertGlobalCtorCallPass.h"
 #include "Alias/AserPTA/PreProcessing/Passes/LoweringMemCpyPass.h"
 #include "Alias/AserPTA/PreProcessing/Passes/RemoveExceptionHandlerPass.h"
+#include "TestUtils/LLVMHelpers.h"
 
-#include <gtest/gtest.h>
-#include <llvm/AsmParser/Parser.h>
 #include <llvm/IR/Instructions.h>
-#include <llvm/IRReader/IRReader.h>
-#include <llvm/Support/SourceMgr.h>
+#include <gtest/gtest.h>
 
 using namespace llvm;
 using namespace aser;
+using namespace lotus::unittest;
 
 // Field-insensitive, context-insensitive
 using FI_NoCtx_Model = DefaultLangModel<NoCtx, FIMemModel<NoCtx>>;
@@ -38,14 +37,6 @@ using FS_1CFA_Model = DefaultLangModel<KCallSite<1>, FSMemModel<KCallSite<1>>>;
 using FS_1CFA_Solver = PartialUpdateSolver<FS_1CFA_Model>;
 
 namespace {
-
-std::unique_ptr<Module> parseAssembly(LLVMContext &ctx, const char *ir) {
-  SMDiagnostic err;
-  auto M = parseAssemblyString(ir, err, ctx);
-  if (!M)
-    err.print("AserPTATest", errs());
-  return M;
-}
 
 template <typename Solver>
 void addAserPTAPasses(llvm::legacy::PassManager &passes) {
@@ -71,7 +62,7 @@ TEST(AserPTA_FI, NoAliasTwoAllocas) {
     }
   )";
   LLVMContext ctx;
-  auto module = parseAssembly(ctx, ir);
+  auto module = parseModule(ctx, ir, "AserPTATest");
   ASSERT_NE(module, nullptr);
 
   llvm::legacy::PassManager passes;
@@ -90,7 +81,7 @@ TEST(AserPTA_FI, AliasStoreLoad) {
     }
   )";
   LLVMContext ctx;
-  auto module = parseAssembly(ctx, ir);
+  auto module = parseModule(ctx, ir, "AserPTATest");
   ASSERT_NE(module, nullptr);
 
   llvm::legacy::PassManager passes;
@@ -107,7 +98,7 @@ TEST(AserPTA_FI, GlobalNoAlias) {
     }
   )";
   LLVMContext ctx;
-  auto module = parseAssembly(ctx, ir);
+  auto module = parseModule(ctx, ir, "AserPTATest");
   ASSERT_NE(module, nullptr);
 
   llvm::legacy::PassManager passes;
@@ -127,7 +118,7 @@ TEST(AserPTA_FI, PointerChain) {
     }
   )";
   LLVMContext ctx;
-  auto module = parseAssembly(ctx, ir);
+  auto module = parseModule(ctx, ir, "AserPTATest");
   ASSERT_NE(module, nullptr);
 
   llvm::legacy::PassManager passes;
@@ -144,7 +135,7 @@ TEST(AserPTA_FI, NullPointer) {
     }
   )";
   LLVMContext ctx;
-  auto module = parseAssembly(ctx, ir);
+  auto module = parseModule(ctx, ir, "AserPTATest");
   ASSERT_NE(module, nullptr);
 
   llvm::legacy::PassManager passes;

@@ -8,27 +8,17 @@
 #include "Alias/TPA/PointerAnalysis/FrontEnd/SemiSparseProgramBuilder.h"
 #include "Alias/TPA/PointerAnalysis/Support/PtsSet.h"
 #include "Alias/TPA/Transforms/RunPrepass.h"
+#include "TestUtils/LLVMHelpers.h"
 
-#include <gtest/gtest.h>
-#include <llvm/AsmParser/Parser.h>
 #include <llvm/IR/Instructions.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
-#include <llvm/Support/SourceMgr.h>
+#include <gtest/gtest.h>
 
 using namespace llvm;
 using namespace tpa;
 using namespace transform;
+using namespace lotus::unittest;
 
 namespace {
-
-std::unique_ptr<Module> parseModule(LLVMContext &ctx, const char *ir) {
-  SMDiagnostic err;
-  auto M = parseAssemblyString(ir, err, ctx);
-  if (!M)
-    err.print("TPATest", errs());
-  return M;
-}
 
 bool mayAlias(const SemiSparsePointerAnalysis &pta, const Value *v1,
               const Value *v2) {
@@ -43,10 +33,7 @@ bool mayAlias(const SemiSparsePointerAnalysis &pta, const Value *v1,
 
 } // namespace
 
-class TPATest : public ::testing::Test {
-protected:
-  LLVMContext context;
-};
+class TPATest : public lotus::unittest::LlvmModuleTest {};
 
 TEST_F(TPATest, NoAliasTwoAllocas) {
   const char *ir = R"(
@@ -57,7 +44,7 @@ TEST_F(TPATest, NoAliasTwoAllocas) {
     }
   )";
 
-  auto module = parseModule(context, ir);
+  auto module = parseModule(ir);
   ASSERT_NE(module, nullptr);
 
   runPrepassOn(*module);
@@ -97,7 +84,7 @@ TEST_F(TPATest, AliasStoreLoad) {
     }
   )";
 
-  auto module = parseModule(context, ir);
+  auto module = parseModule(ir);
   ASSERT_NE(module, nullptr);
 
   runPrepassOn(*module);
@@ -139,7 +126,7 @@ TEST_F(TPATest, PointsToSetLoadContainsStoredAlloca) {
     }
   )";
 
-  auto module = parseModule(context, ir);
+  auto module = parseModule(ir);
   ASSERT_NE(module, nullptr);
 
   runPrepassOn(*module);
@@ -179,7 +166,7 @@ TEST_F(TPATest, FlowSensitivityBasic) {
     }
   )";
 
-  auto module = parseModule(context, ir);
+  auto module = parseModule(ir);
   ASSERT_NE(module, nullptr);
 
   runPrepassOn(*module);
@@ -224,7 +211,7 @@ TEST_F(TPATest, FlowSensitivityPointerChain) {
     }
   )";
 
-  auto module = parseModule(context, ir);
+  auto module = parseModule(ir);
   ASSERT_NE(module, nullptr);
 
   runPrepassOn(*module);
@@ -271,7 +258,7 @@ TEST_F(TPATest, ContextSensitivitySameFunctionDifferentContexts) {
     }
   )";
 
-  auto module = parseModule(context, ir);
+  auto module = parseModule(ir);
   ASSERT_NE(module, nullptr);
 
   runPrepassOn(*module);
@@ -310,7 +297,7 @@ TEST_F(TPATest, ContextSensitivityRecursiveFunction) {
     }
   )";
 
-  auto module = parseModule(context, ir);
+  auto module = parseModule(ir);
   ASSERT_NE(module, nullptr);
 
   runPrepassOn(*module);
@@ -338,7 +325,7 @@ TEST_F(TPATest, FunctionReturnPointsTo) {
     }
   )";
 
-  auto module = parseModule(context, ir);
+  auto module = parseModule(ir);
   ASSERT_NE(module, nullptr);
 
   runPrepassOn(*module);
@@ -382,7 +369,7 @@ TEST_F(TPATest, FunctionParameterPassing) {
     }
   )";
 
-  auto module = parseModule(context, ir);
+  auto module = parseModule(ir);
   ASSERT_NE(module, nullptr);
 
   runPrepassOn(*module);
@@ -409,7 +396,7 @@ TEST_F(TPATest, NestedStructureAccess) {
     }
   )";
 
-  auto module = parseModule(context, ir);
+  auto module = parseModule(ir);
   ASSERT_NE(module, nullptr);
 
   runPrepassOn(*module);
@@ -439,7 +426,7 @@ TEST_F(TPATest, PointerToPointer) {
     }
   )";
 
-  auto module = parseModule(context, ir);
+  auto module = parseModule(ir);
   ASSERT_NE(module, nullptr);
 
   runPrepassOn(*module);
@@ -479,7 +466,7 @@ TEST_F(TPATest, PointerAliasing) {
     }
   )";
 
-  auto module = parseModule(context, ir);
+  auto module = parseModule(ir);
   ASSERT_NE(module, nullptr);
 
   runPrepassOn(*module);
@@ -522,7 +509,7 @@ TEST_F(TPATest, NullPointerHandling) {
     }
   )";
 
-  auto module = parseModule(context, ir);
+  auto module = parseModule(ir);
   ASSERT_NE(module, nullptr);
 
   runPrepassOn(*module);
@@ -571,7 +558,7 @@ TEST_F(TPATest, MultipleFunctionsAnalysis) {
     }
   )";
 
-  auto module = parseModule(context, ir);
+  auto module = parseModule(ir);
   ASSERT_NE(module, nullptr);
 
   runPrepassOn(*module);

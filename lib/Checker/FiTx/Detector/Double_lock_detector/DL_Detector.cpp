@@ -4,9 +4,9 @@
 #include "Checker/FiTx/Detector/DL_Detector.h"
 
 namespace {
-class DoubleLockDetector : public framework::FrameworkPass {
+class DoubleLockDetector : public fitx::FrameworkPass {
   virtual void defineStates() override {
-    framework::StateManager manager;
+    fitx::StateManager manager;
     DoubleLock::define_states(manager);
     addStateManager(manager);
   }
@@ -14,5 +14,5 @@ class DoubleLockDetector : public framework::FrameworkPass {
 
 }  // namespace
 
-std::vector<framework::FrameworkPass *> framework::FrameworkPass::passes = {
+std::vector<fitx::FrameworkPass *> fitx::FrameworkPass::passes = {
     new DoubleLockDetector()};

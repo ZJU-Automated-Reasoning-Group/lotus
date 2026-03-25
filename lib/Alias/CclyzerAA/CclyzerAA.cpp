@@ -1,11 +1,15 @@
-/// Optional cclyzer++ backend implementation. Built only when LOTUS_USE_CCLYZER=ON.
+/// Optional cclyzer++ backend implementation. Built only when
+/// LOTUS_USE_CCLYZER=ON.
 
 #include "Alias/CclyzerAA/CclyzerAA.h"
+
 #include "PointerAnalysis.h"
+
+#include <set>
+
 #include <llvm/Analysis/MemoryLocation.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
-#include <set>
 
 namespace lotus {
 namespace cclyzer {
@@ -28,7 +32,8 @@ bool CclyzerAA::run(llvm::Module &M) {
   return true;
 }
 
-llvm::AliasResult CclyzerAA::alias(const llvm::Value *v1, const llvm::Value *v2) {
+llvm::AliasResult CclyzerAA::alias(const llvm::Value *v1,
+                                   const llvm::Value *v2) {
   if (!_initialized || !_impl->pass)
     return llvm::AliasResult::MayAlias;
   auto loc1 = llvm::MemoryLocation(
@@ -47,7 +52,7 @@ llvm::AliasResult CclyzerAA::alias(const llvm::MemoryLocation &loc1,
 }
 
 bool CclyzerAA::getPointsToSet(const llvm::Value *ptr,
-                                std::vector<const llvm::Value *> &ptsSet) {
+                               std::vector<const llvm::Value *> &ptsSet) {
   ptsSet.clear();
   if (!_initialized || !_impl->pass)
     return false;

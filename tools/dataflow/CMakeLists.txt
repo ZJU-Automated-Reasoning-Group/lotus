@@ -15,7 +15,7 @@ add_executable(lotus-dfa-ifds lotus-dfa-ifds.cpp)
 
 foreach(target lotus-dfa lotus-dfa-elim lotus-dfa-mono lotus-dfa-ifds)
   target_link_libraries(${target} PRIVATE
-    EliminationDataFlow
+    APADataFlow
     MONODataFlow
     ${LLVM_LINK_COMPONENTS}
   )

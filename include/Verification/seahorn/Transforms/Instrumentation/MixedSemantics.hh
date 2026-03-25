@@ -2,8 +2,8 @@
 #define _MIXED_SEMANTICS_HH_
 
 #include "llvm/Pass.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 
 /**
  * Transforms the program into mixed semantics in which functions that
@@ -26,6 +26,6 @@ namespace seahorn
     virtual void getAnalysisUsage (AnalysisUsage &AU) const override;
     virtual StringRef getPassName() const override { return "MixedSemantics"; }
   };
-}
+} // namespace seahorn
 
 #endif /* _MIXED_SEMANTICS_HH_ */

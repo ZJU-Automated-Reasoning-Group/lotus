@@ -1,11 +1,11 @@
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/ADT/GraphTraits.h"
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/ADT/GraphTraits.h"
-#include "llvm/Support/DOTGraphTraits.h"
-#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/DOTGraphTraits.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/GraphWriter.h"
 
 static llvm::cl::opt<bool>
 HideShadows("cfg-hide-shadows",
@@ -25,7 +25,7 @@ namespace seahorn {
         m_F (F), m_LI(LI), m_HideShadows (HideShadows) { }
   };
   
-} // end namespace 
+} // namespace seahorn
 
 namespace llvm {
 
@@ -149,7 +149,7 @@ namespace llvm {
       return "";
     }
   };
-} // end namespace
+} // namespace llvm
 
 namespace seahorn {
 

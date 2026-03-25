@@ -1,17 +1,19 @@
 //===-- Verification/Sifa/Log/SifaLogger.h --------------------------------===//
 //
-// Configurable logging for Sifa (Symbolic Interpretation with Fluid Abstractions).
-// Provides log levels, output stream control, and integration with SifaStats.
+// Configurable logging for Sifa (Symbolic Interpretation with Fluid
+// Abstractions). Provides log levels, output stream control, and integration
+// with SifaStats.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LOTUS_VERIFICATION_SIFA_LOG_SIFALOGGER_H
 #define LOTUS_VERIFICATION_SIFA_LOG_SIFALOGGER_H
 
+#include <string>
+
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Function.h>
 #include <llvm/Support/raw_ostream.h>
-#include <string>
 
 namespace lotus {
 namespace sifa {
@@ -24,7 +26,7 @@ enum class SifaLogLevel {
   Error = 1,
   Warning = 2,
   Info = 3,
-  Progress = 4,  /// Progress messages (e.g., "Building module context...")
+  Progress = 4, /// Progress messages (e.g., "Building module context...")
   Debug = 5,
   Trace = 6,
 };
@@ -58,7 +60,8 @@ public:
   static void printStats(const SifaStats &stats);
 
 private:
-  static void log(SifaLogLevel level, const char *prefix, const std::string &msg);
+  static void log(SifaLogLevel level, const char *prefix,
+                  const std::string &msg);
   static std::string formatLocation(const llvm::Function *F);
   static std::string formatLocation(const llvm::BasicBlock *BB);
 

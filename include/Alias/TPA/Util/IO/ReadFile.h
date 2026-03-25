@@ -1,24 +1,23 @@
 #pragma once
 
-#include <llvm/Support/MemoryBuffer.h>
-
 #include <memory>
 
-namespace util
-{
-namespace io
-{
+#include <llvm/Support/MemoryBuffer.h>
 
-inline std::unique_ptr<llvm::MemoryBuffer> readFileIntoBuffer(const char* fileName)
-{
-	auto fileOrErr = llvm::MemoryBuffer::getFile(fileName);
-	if (auto ec = fileOrErr.getError())
-	{
-		auto errMsg = (llvm::Twine("Can't open file \'") + fileName + "\' :" + ec.message()).str();
-		llvm::report_fatal_error(errMsg);
-	}
+namespace util {
+namespace io {
 
-	return std::move(fileOrErr.get());
+inline std::unique_ptr<llvm::MemoryBuffer>
+readFileIntoBuffer(const char *fileName) {
+  auto fileOrErr = llvm::MemoryBuffer::getFile(fileName);
+  if (auto ec = fileOrErr.getError()) {
+    auto errMsg =
+        (llvm::Twine("Can't open file \'") + fileName + "\' :" + ec.message())
+            .str();
+    llvm::report_fatal_error(errMsg);
+  }
+
+  return std::move(fileOrErr.get());
 }
 
 } // namespace io

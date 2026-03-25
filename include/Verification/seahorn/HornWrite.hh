@@ -22,7 +22,7 @@ namespace seahorn
     virtual bool runOnModule(Module &M) override;
     virtual void getAnalysisUsage(AnalysisUsage &AU) const override;
   };
-}
+} // namespace seahorn
 
 
 

@@ -42,4 +42,3 @@ struct DIBasedTypeHierarchyData {
 } // namespace lotus
 
 #endif // LOTUS_ANALYSIS_TYPEHIERARCHY_DIBASEDTYPEHIERARCHYDATA_H
-

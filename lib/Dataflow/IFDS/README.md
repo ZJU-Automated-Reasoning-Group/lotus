@@ -4,19 +4,30 @@
 
 ### include/Dataflow/IFDS/
 
-- **IFDSFramework.h** – Core framework (path edges, summary edges, problem interfaces).
-- **IFDSIDESolverConfig.h** – Solver configuration (e.g. `follow_returns_past_seeds`, `record_edges`).
+- **Core/** – Core framework headers:
+  - **IFDSFramework.h** – Core framework (path edges, summary edges, problem interfaces).
+  - **IFDSIDESolverConfig.h** – Solver configuration (e.g. `follow_returns_past_seeds`, `record_edges`).
+  - **IFDSIDESolverStatistics.h** – Solver statistics tracking.
+  - **EdgeFunctionCache.h** – Edge function memoization.
+  - **SolverGraphContext.h** – Shared ICFG/callgraph/successor/seed construction.
+  - **SolverRunState.h** – Shared monotonic path/summary edge run-state containers.
 - **Solvers/** – Header-only solver implementations:
   - **IFDSSolver.h** / **IFDSSolver.tpp** – Sequential IFDS tabulation solver.
   - **IDESolver.h** / **IDESolver.tpp** – IDE solver.
+  - **PathAwareIFDSSolver.h** – Path-tracking IFDS solver.
+  - **PathAwareIDESolver.h** – Path-tracking IDE solver.
+- **Utils/** – Utility headers:
+  - **LLVMFlowHelpers.h** – LLVM-specific flow function helpers.
 - **Clients/** – Analysis problem definitions (IFDSTaintAnalysis, IDEConstantPropagation, etc.).
 
 ### Solver features (aligned with Phasar where applicable)
 
 - **Multiple return sites**: Each call can have several return sites (e.g. normal and unwind for `invoke`). The solver uses all CFG successors of the call.
-- **Unbalanced returns**: When `follow_returns_past_seeds()` is enabled, returns from functions that had no incoming call edge (e.g. entry-point returning) are still propagated to all callers’ return sites with the zero fact.
+- **Unbalanced returns**: When `follow_returns_past_seeds()` is enabled, returns from functions that had no incoming call edge (e.g. entry-point returning) are still propagated to all callers' return sites with the zero fact.
 - **SSA-style result API**: `get_facts_at_in_llvm_ssa(inst)` (IFDS) and `get_value_at_in_llvm_ssa(inst, fact)` (IDE) return results at the successor instruction(s) where the defined value is valid (for non-void instructions).
 - **Caching**: Flow function results (normal, call-to-return) and edge function lookups (normal, call-to-return) are cached to avoid recomputation.
+- **Shared graph context**: IFDS and IDE solvers use a common graph/seed construction layer to avoid drift.
+- **Path-aware hooks**: Path-aware IDE/IFDS solvers consume explicit path/summary edge hooks from the base IDE solver.
 
 ### lib/Dataflow/IFDS/
 

@@ -9,39 +9,31 @@
 
 // Helper for shadow structures
 
-template<typename T> class ImmutableArray {
+template <typename T> class ImmutableArray {
 
-  T* arr;
+  T *arr;
   size_t n;
 
- public:
+public:
+  ImmutableArray() : arr(0), n(0) {}
+  ImmutableArray(T *_arr, size_t _n) : arr(_arr), n(_n) {}
 
- ImmutableArray() : arr(0), n(0) { }
- ImmutableArray(T* _arr, size_t _n) : arr(_arr), n(_n) { }
-
-  ImmutableArray(const ImmutableArray& other) {
+  ImmutableArray(const ImmutableArray &other) {
     arr = other.arr;
     n = other.n;
   }
 
-  ImmutableArray& operator=(const ImmutableArray& other) {
+  ImmutableArray &operator=(const ImmutableArray &other) {
     arr = other.arr;
     n = other.n;
     return *this;
   }
 
-  T& operator[](size_t n) const {
-    return arr[n];
-  }
+  T &operator[](size_t n) const { return arr[n]; }
 
-  size_t size() const {
-    return n;
-  }
+  size_t size() const { return n; }
 
-  T& back() {
-    return arr[size()-1];
-  }
-
+  T &back() { return arr[size() - 1]; }
 };
 
 // Just a tagged union of the types of values that can come out of getOperand.
@@ -63,13 +55,13 @@ enum ShadowValType {
 };
 
 enum va_arg_type {
-  
+
   va_arg_type_none,
   va_arg_type_baseptr,
   va_arg_type_fp,
   va_arg_type_nonfp,
   va_arg_type_any
-  
+
 };
 
 struct ShadowArg;
@@ -79,8 +71,8 @@ struct InstArgImprovement;
 struct LocStore;
 struct AllocData;
 
-template<class, class> struct LocalStoreMap;
-template<class, class> struct MergeBlockVisitor;
+template <class, class> struct LocalStoreMap;
+template <class, class> struct MergeBlockVisitor;
 struct DSEMapPointer;
 struct TLMapPointer;
 struct OrdinaryStoreExtraState;
@@ -98,15 +90,21 @@ typedef MergeBlockVisitor<TLMapPointer, TLStoreExtraState> TLMerger;
 enum ValSetType {
 
   ValSetTypeUnknown,
-  ValSetTypePB, // Pointers; the Offset member is set, and the values must be of idx type.
-  ValSetTypeScalar, // Ordinary constants
-  ValSetTypeScalarSplat, // Constant splat, used to cheaply express memset(block, size), Offset == size
-  ValSetTypeFD, // File descriptors; can only be copied, otherwise opaque. Values are idx type.
-  ValSetTypeVarArg, // Special tokens representing a vararg or VA-related cookie. Values are instruction type.
-  ValSetTypeOverdef, // Useful for disambiguating empty PB from Overdef; never actually used in PB.
-  ValSetTypeDeallocated, // Special single value signifying an object that is deallocted on a given path.
-  ValSetTypeOldOverdef // A special case of Overdef where the value is known not to alias objects
-                       // created since specialisation started.
+  ValSetTypePB, // Pointers; the Offset member is set, and the values must be of
+                // idx type.
+  ValSetTypeScalar,      // Ordinary constants
+  ValSetTypeScalarSplat, // Constant splat, used to cheaply express
+                         // memset(block, size), Offset == size
+  ValSetTypeFD,      // File descriptors; can only be copied, otherwise opaque.
+                     // Values are idx type.
+  ValSetTypeVarArg,  // Special tokens representing a vararg or VA-related
+                     // cookie. Values are instruction type.
+  ValSetTypeOverdef, // Useful for disambiguating empty PB from Overdef; never
+                     // actually used in PB.
+  ValSetTypeDeallocated, // Special single value signifying an object that is
+                         // deallocted on a given path.
+  ValSetTypeOldOverdef // A special case of Overdef where the value is known not
+                       // to alias objects created since specialisation started.
 
 };
 
@@ -114,10 +112,10 @@ struct ShadowValue {
 
   ShadowValType t;
   union {
-    ShadowArg* A;
-    ShadowInstruction* I;
-    ShadowGV* GV;
-    Value* V;
+    ShadowArg *A;
+    ShadowInstruction *I;
+    ShadowGV *GV;
+    Value *V;
     struct {
       int32_t frame;
       uint32_t idx;
@@ -125,109 +123,105 @@ struct ShadowValue {
     uint64_t CI;
   } u;
 
-ShadowValue() : t(SHADOWVAL_INVAL) { u.V = 0; }
-ShadowValue(ShadowArg* _A) : t(SHADOWVAL_ARG) { u.A = _A; }
-ShadowValue(ShadowInstruction* _I) : t(SHADOWVAL_INST) { u.I = _I; }
-ShadowValue(ShadowGV* _GV) : t(SHADOWVAL_GV) { u.GV = _GV; }
-ShadowValue(Value* _V) : t(SHADOWVAL_OTHER) { u.V = _V; }
-ShadowValue(ShadowValType Ty, int32_t frame, uint32_t idx) : t(Ty) { u.PtrOrFd.frame = frame; u.PtrOrFd.idx = idx; }
-ShadowValue(ShadowValType Ty, uint64_t _CI) : t(Ty) { u.CI = _CI; }
+  ShadowValue() : t(SHADOWVAL_INVAL) { u.V = 0; }
+  ShadowValue(ShadowArg *_A) : t(SHADOWVAL_ARG) { u.A = _A; }
+  ShadowValue(ShadowInstruction *_I) : t(SHADOWVAL_INST) { u.I = _I; }
+  ShadowValue(ShadowGV *_GV) : t(SHADOWVAL_GV) { u.GV = _GV; }
+  ShadowValue(Value *_V) : t(SHADOWVAL_OTHER) { u.V = _V; }
+  ShadowValue(ShadowValType Ty, int32_t frame, uint32_t idx) : t(Ty) {
+    u.PtrOrFd.frame = frame;
+    u.PtrOrFd.idx = idx;
+  }
+  ShadowValue(ShadowValType Ty, uint64_t _CI) : t(Ty) { u.CI = _CI; }
 
-  static ShadowValue getPtrIdx(int32_t f, uint32_t i) { return ShadowValue(SHADOWVAL_PTRIDX, f, i); }
-  static ShadowValue getFdIdx(uint32_t i) { return ShadowValue(SHADOWVAL_FDIDX, -1, i); }
-  static ShadowValue getFdIdx64(uint32_t i) { return ShadowValue(SHADOWVAL_FDIDX64, -1, i); }
-  static ShadowValue getInt8(uint8_t i) { return ShadowValue(SHADOWVAL_CI8, i); }
-  static ShadowValue getInt16(uint16_t i) { return ShadowValue(SHADOWVAL_CI16, i); }
-  static ShadowValue getInt32(uint32_t i) { return ShadowValue(SHADOWVAL_CI32, i); }
-  static ShadowValue getInt64(uint64_t i) { return ShadowValue(SHADOWVAL_CI64, i); }
-  static ShadowValue getInt(Type*, uint64_t i);
+  static ShadowValue getPtrIdx(int32_t f, uint32_t i) {
+    return ShadowValue(SHADOWVAL_PTRIDX, f, i);
+  }
+  static ShadowValue getFdIdx(uint32_t i) {
+    return ShadowValue(SHADOWVAL_FDIDX, -1, i);
+  }
+  static ShadowValue getFdIdx64(uint32_t i) {
+    return ShadowValue(SHADOWVAL_FDIDX64, -1, i);
+  }
+  static ShadowValue getInt8(uint8_t i) {
+    return ShadowValue(SHADOWVAL_CI8, i);
+  }
+  static ShadowValue getInt16(uint16_t i) {
+    return ShadowValue(SHADOWVAL_CI16, i);
+  }
+  static ShadowValue getInt32(uint32_t i) {
+    return ShadowValue(SHADOWVAL_CI32, i);
+  }
+  static ShadowValue getInt64(uint64_t i) {
+    return ShadowValue(SHADOWVAL_CI64, i);
+  }
+  static ShadowValue getInt(Type *, uint64_t i);
 
-  bool isInval() const {
-    return t == SHADOWVAL_INVAL;
-  }
-  bool isArg() const {
-    return t == SHADOWVAL_ARG;
-  }
-  bool isInst() const {
-    return t == SHADOWVAL_INST;
-  }
-  bool isVal() const {
-    return t == SHADOWVAL_OTHER;
-  }
-  bool isGV() const {
-    return t == SHADOWVAL_GV;
-  }
-  bool isPtrIdx() const {
-    return t == SHADOWVAL_PTRIDX;
-  }
+  bool isInval() const { return t == SHADOWVAL_INVAL; }
+  bool isArg() const { return t == SHADOWVAL_ARG; }
+  bool isInst() const { return t == SHADOWVAL_INST; }
+  bool isVal() const { return t == SHADOWVAL_OTHER; }
+  bool isGV() const { return t == SHADOWVAL_GV; }
+  bool isPtrIdx() const { return t == SHADOWVAL_PTRIDX; }
   bool isFdIdx() const {
     return t == SHADOWVAL_FDIDX || t == SHADOWVAL_FDIDX64;
   }
   bool isConstantInt() const {
-    return t == SHADOWVAL_CI8 || t == SHADOWVAL_CI16 || t == SHADOWVAL_CI32 || t == SHADOWVAL_CI64;
+    return t == SHADOWVAL_CI8 || t == SHADOWVAL_CI16 || t == SHADOWVAL_CI32 ||
+           t == SHADOWVAL_CI64;
   }
-  ShadowArg* getArg() const {
-    return t == SHADOWVAL_ARG ? u.A : 0;
-  }
-  ShadowInstruction* getInst() const {
-    return t == SHADOWVAL_INST ? u.I : 0;
-  }
-  Value* getVal() const {
-    return t == SHADOWVAL_OTHER ? u.V : 0;
-  }
-  ShadowGV* getGV() const {
-    return t == SHADOWVAL_GV ? u.GV : 0;
-  }
-  bool getCI(uint64_t& Out) const {
+  ShadowArg *getArg() const { return t == SHADOWVAL_ARG ? u.A : 0; }
+  ShadowInstruction *getInst() const { return t == SHADOWVAL_INST ? u.I : 0; }
+  Value *getVal() const { return t == SHADOWVAL_OTHER ? u.V : 0; }
+  ShadowGV *getGV() const { return t == SHADOWVAL_GV ? u.GV : 0; }
+  bool getCI(uint64_t &Out) const {
     bool isci = isConstantInt();
-    if(isci)
+    if (isci)
       Out = u.CI;
     return isci;
   }
-  bool getSignedCI(int64_t& Out) const {
+  bool getSignedCI(int64_t &Out) const {
     bool isci = isConstantInt();
-    if(isci) {
-      switch(t) {
+    if (isci) {
+      switch (t) {
       case SHADOWVAL_CI8:
-	Out = (int8_t)(uint8_t)u.CI;
-	break;
+        Out = (int8_t)(uint8_t)u.CI;
+        break;
       case SHADOWVAL_CI16:
-	Out = (int16_t)(uint16_t)u.CI;
-	break;
+        Out = (int16_t)(uint16_t)u.CI;
+        break;
       case SHADOWVAL_CI32:
-	Out = (int32_t)(uint32_t)u.CI;
-	break;
+        Out = (int32_t)(uint32_t)u.CI;
+        break;
       case SHADOWVAL_CI64:
-	Out = (int64_t)(uint64_t)u.CI;
-	break;
+        Out = (int64_t)(uint64_t)u.CI;
+        break;
       default:
-	llvm_unreachable("Bad integer type");
+        llvm_unreachable("Bad integer type");
       }
     }
     return isci;
   }
 
-  Type* getNonPointerType() const;
+  Type *getNonPointerType() const;
   ShadowValue stripPointerCasts() const;
-  IntegrationAttempt* getCtx() const;
-  Value* getBareVal() const;
-  const ShadowLoopInvar* getScope() const;
-  const ShadowLoopInvar* getNaturalScope() const;
+  IntegrationAttempt *getCtx() const;
+  Value *getBareVal() const;
+  const ShadowLoopInvar *getScope() const;
+  const ShadowLoopInvar *getNaturalScope() const;
   bool isIDObject() const;
-  InstArgImprovement* getIAI() const;
-  LLVMContext& getLLVMContext() const;
-  void setCommittedVal(Value* V);
+  InstArgImprovement *getIAI() const;
+  LLVMContext &getLLVMContext() const;
+  void setCommittedVal(Value *V);
   bool objectAvailable() const;
-  const MDNode* getTBAATag() const;
-  uint64_t getAllocSize(OrdinaryLocalStore*) const;
-  uint64_t getAllocSize(IntegrationAttempt*) const;
+  const MDNode *getTBAATag() const;
+  uint64_t getAllocSize(OrdinaryLocalStore *) const;
+  uint64_t getAllocSize(IntegrationAttempt *) const;
   int32_t getFrameNo() const;
   int32_t getHeapKey() const;
-  int32_t getFramePos() const {
-    return getHeapKey();
-  }
+  int32_t getFramePos() const { return getHeapKey(); }
   int32_t getFd() const {
-    switch(t) {
+    switch (t) {
     case SHADOWVAL_FDIDX:
     case SHADOWVAL_FDIDX64:
       return getHeapKey();
@@ -235,18 +229,17 @@ ShadowValue(ShadowValType Ty, uint64_t _CI) : t(Ty) { u.CI = _CI; }
       return -1;
     }
   }
-  
-  AllocData* getAllocData(OrdinaryLocalStore* Map) const;
+
+  AllocData *getAllocData(OrdinaryLocalStore *Map) const;
   bool isNullOrConst() const;
   bool isNullPointer() const;
   uint64_t getValSize() const;
-
 };
 
 inline bool operator==(ShadowValue V1, ShadowValue V2) {
-  if(V1.t != V2.t)
+  if (V1.t != V2.t)
     return false;
-  switch(V1.t) {
+  switch (V1.t) {
   case SHADOWVAL_INVAL:
     return true;
   case SHADOWVAL_ARG:
@@ -260,7 +253,8 @@ inline bool operator==(ShadowValue V1, ShadowValue V2) {
   case SHADOWVAL_PTRIDX:
   case SHADOWVAL_FDIDX:
   case SHADOWVAL_FDIDX64:
-    return V1.u.PtrOrFd.frame == V2.u.PtrOrFd.frame && V1.u.PtrOrFd.idx == V2.u.PtrOrFd.idx;
+    return V1.u.PtrOrFd.frame == V2.u.PtrOrFd.frame &&
+           V1.u.PtrOrFd.idx == V2.u.PtrOrFd.idx;
   case SHADOWVAL_CI8:
   case SHADOWVAL_CI16:
   case SHADOWVAL_CI32:
@@ -272,14 +266,12 @@ inline bool operator==(ShadowValue V1, ShadowValue V2) {
   llvm_unreachable("invalid ShadowValType");
 }
 
-inline bool operator!=(ShadowValue V1, ShadowValue V2) {
-   return !(V1 == V2);
-}
+inline bool operator!=(ShadowValue V1, ShadowValue V2) { return !(V1 == V2); }
 
 inline bool operator<(ShadowValue V1, ShadowValue V2) {
-  if(V1.t != V2.t)
+  if (V1.t != V2.t)
     return V1.t < V2.t;
-  switch(V1.t) {
+  switch (V1.t) {
   case SHADOWVAL_INVAL:
     return false;
   case SHADOWVAL_ARG:
@@ -293,7 +285,7 @@ inline bool operator<(ShadowValue V1, ShadowValue V2) {
   case SHADOWVAL_PTRIDX:
   case SHADOWVAL_FDIDX:
   case SHADOWVAL_FDIDX64:
-    if(V1.u.PtrOrFd.frame == V2.u.PtrOrFd.frame)
+    if (V1.u.PtrOrFd.frame == V2.u.PtrOrFd.frame)
       return V1.u.PtrOrFd.idx < V2.u.PtrOrFd.idx;
     else
       return V1.u.PtrOrFd.frame < V2.u.PtrOrFd.frame;
@@ -312,83 +304,85 @@ inline bool operator<=(ShadowValue V1, ShadowValue V2) {
   return V1 < V2 || V1 == V2;
 }
 
-inline bool operator>(ShadowValue V1, ShadowValue V2) {
-  return !(V1 <= V2);
-}
+inline bool operator>(ShadowValue V1, ShadowValue V2) { return !(V1 <= V2); }
 
-inline bool operator>=(ShadowValue V1, ShadowValue V2) {
-  return !(V1 < V2);
-}
+inline bool operator>=(ShadowValue V1, ShadowValue V2) { return !(V1 < V2); }
 
-// Characteristics for using ShadowValues in hashsets (DenseSet, or as keys in DenseMaps)
-template<> struct DenseMapInfo<ShadowValue> {
-  
+// Characteristics for using ShadowValues in hashsets (DenseSet, or as keys in
+// DenseMaps)
+template <> struct DenseMapInfo<ShadowValue> {
+
   typedef DenseMapInfo<int> TypeInfo;
-  typedef DenseMapInfo<void*> VoidInfo;
-  typedef DenseMapInfo<std::pair<int, void*> > PairInfo;
+  typedef DenseMapInfo<void *> VoidInfo;
+  typedef DenseMapInfo<std::pair<int, void *>> PairInfo;
 
   static inline ShadowValue getEmptyKey() {
-    return ShadowValue((Value*)VoidInfo::getEmptyKey());
+    return ShadowValue((Value *)VoidInfo::getEmptyKey());
   }
 
   static inline ShadowValue getTombstoneKey() {
-    return ShadowValue((Value*)VoidInfo::getTombstoneKey());
+    return ShadowValue((Value *)VoidInfo::getTombstoneKey());
   }
 
-  static unsigned getHashValue(const ShadowValue& V) {
-    void* hashPtr;
-    switch(V.t) {
+  static unsigned getHashValue(const ShadowValue &V) {
+    void *hashPtr;
+    switch (V.t) {
     case SHADOWVAL_INVAL:
-      hashPtr = 0; break;
+      hashPtr = 0;
+      break;
     case SHADOWVAL_ARG:
-      hashPtr = V.u.A; break;
+      hashPtr = V.u.A;
+      break;
     case SHADOWVAL_INST:
-      hashPtr = V.u.I; break;
+      hashPtr = V.u.I;
+      break;
     case SHADOWVAL_GV:
-      hashPtr = V.u.GV; break;
+      hashPtr = V.u.GV;
+      break;
     case SHADOWVAL_OTHER:
-      hashPtr = V.u.V; break;
+      hashPtr = V.u.V;
+      break;
     case SHADOWVAL_PTRIDX:
     case SHADOWVAL_FDIDX:
     case SHADOWVAL_FDIDX64:
       // Should work due to the union.
-      hashPtr = V.u.V; break;
+      hashPtr = V.u.V;
+      break;
     case SHADOWVAL_CI8:
     case SHADOWVAL_CI16:
     case SHADOWVAL_CI32:
     case SHADOWVAL_CI64:
-      hashPtr = (void*)V.u.CI; break;
-    /* default: */
-    /*   release_assert(0 && "Bad value type"); */
-    /*   hashPtr = 0; */
+      hashPtr = (void *)V.u.CI;
+      break;
+      /* default: */
+      /*   release_assert(0 && "Bad value type"); */
+      /*   hashPtr = 0; */
     }
     return PairInfo::getHashValue(std::make_pair((int)V.t, hashPtr));
   }
 
-  static bool isEqual(const ShadowValue& V1, const ShadowValue& V2) {
+  static bool isEqual(const ShadowValue &V1, const ShadowValue &V2) {
     return V1 == V2;
   }
+};
 
- };
-
-// ImprovedValSetSingle: an SCCP-like value giving candidate constants or pointer base addresses for a value.
-// May be: 
-// overdefined (overflowed, or defined by an unknown)
-// defined (known set of possible values)
-// undefined (implied by absence from map)
-// Note Value members may be null (signifying a null pointer) without being Overdef.
+// ImprovedValSetSingle: an SCCP-like value giving candidate constants or
+// pointer base addresses for a value. May be: overdefined (overflowed, or
+// defined by an unknown) defined (known set of possible values) undefined
+// (implied by absence from map) Note Value members may be null (signifying a
+// null pointer) without being Overdef.
 
 #define PBMAX 16
 
-bool functionIsBlacklisted(Function*);
+bool functionIsBlacklisted(Function *);
 
 struct ImprovedVal {
 
   ShadowValue V;
   int64_t Offset;
 
-ImprovedVal() : V(), Offset(LLONG_MAX) { }
-ImprovedVal(ShadowValue _V, int64_t _O = LLONG_MAX) : V(_V), Offset(_O) { }
+  ImprovedVal() : V(), Offset(LLONG_MAX) {}
+  ImprovedVal(ShadowValue _V, int64_t _O = LLONG_MAX) : V(_V), Offset(_O) {}
 
   // Values for Offset when this is a VarArg:
   static const int64_t not_va_arg = -1;
@@ -400,25 +394,24 @@ ImprovedVal(ShadowValue _V, int64_t _O = LLONG_MAX) : V(_V), Offset(_O) { }
 
   int getVaArgType() {
 
-    if(Offset == not_va_arg)
+    if (Offset == not_va_arg)
       return va_arg_type_none;
-    else if(Offset == va_baseptr)
+    else if (Offset == va_baseptr)
       return va_arg_type_baseptr;
-    else if(Offset >= first_nonfp_arg && Offset < first_fp_arg)
+    else if (Offset >= first_nonfp_arg && Offset < first_fp_arg)
       return va_arg_type_nonfp;
-    else if(Offset >= first_fp_arg && Offset < first_any_arg)
+    else if (Offset >= first_fp_arg && Offset < first_any_arg)
       return va_arg_type_fp;
-    else if(Offset >= first_any_arg && Offset < max_arg)
+    else if (Offset >= first_any_arg && Offset < max_arg)
       return va_arg_type_any;
     else
       assert(0 && "Bad va_arg value\n");
     return va_arg_type_none;
-
   }
 
   int64_t getVaArg() {
 
-    switch(getVaArgType()) {
+    switch (getVaArgType()) {
     case va_arg_type_any:
       return Offset - first_any_arg;
     case va_arg_type_fp:
@@ -429,36 +422,27 @@ ImprovedVal(ShadowValue _V, int64_t _O = LLONG_MAX) : V(_V), Offset(_O) { }
       release_assert(0 && "Bad vaarg type");
       return 0;
     }
-
   }
 
   bool isNull() {
 
-    if(Constant* C = dyn_cast_or_null<Constant>(V.getVal()))
+    if (Constant *C = dyn_cast_or_null<Constant>(V.getVal()))
       return C->isNullValue();
     else
       return false;
-
   }
 
-  bool isFunction() {
-
-    return !!dyn_cast_or_null<Function>(V.getVal());
-
-  }
-
+  bool isFunction() { return !!dyn_cast_or_null<Function>(V.getVal()); }
 };
 
 inline bool operator==(ImprovedVal V1, ImprovedVal V2) {
   return (V1.V == V2.V && V1.Offset == V2.Offset);
 }
 
-inline bool operator!=(ImprovedVal V1, ImprovedVal V2) {
-   return !(V1 == V2);
-}
+inline bool operator!=(ImprovedVal V1, ImprovedVal V2) { return !(V1 == V2); }
 
 inline bool operator<(ImprovedVal V1, ImprovedVal V2) {
-  if(V1.V != V2.V)
+  if (V1.V != V2.V)
     return V1.V < V2.V;
   return V1.Offset < V2.Offset;
 }
@@ -467,45 +451,48 @@ inline bool operator<=(ImprovedVal V1, ImprovedVal V2) {
   return V1 < V2 || V1 == V2;
 }
 
-inline bool operator>(ImprovedVal V1, ImprovedVal V2) {
-  return !(V1 <= V2);
-}
+inline bool operator>(ImprovedVal V1, ImprovedVal V2) { return !(V1 <= V2); }
 
-inline bool operator>=(ImprovedVal V1, ImprovedVal V2) {
-  return !(V1 < V2);
-}
+inline bool operator>=(ImprovedVal V1, ImprovedVal V2) { return !(V1 < V2); }
 
 struct ImprovedValSetSingle;
 
 typedef std::pair<std::pair<uint64_t, uint64_t>, ImprovedValSetSingle> IVSRange;
 
-#define SAFE_DROP_REF(x) do { if(x->dropReference()) x = 0; } while(0);
+#define SAFE_DROP_REF(x)                                                       \
+  do {                                                                         \
+    if (x->dropReference())                                                    \
+      x = 0;                                                                   \
+  } while (0);
 
 struct ImprovedValSet {
 
   bool isMulti;
-ImprovedValSet(bool M) : isMulti(M) { }
+  ImprovedValSet(bool M) : isMulti(M) {}
   virtual bool dropReference() = 0;
   virtual bool isWritableMulti() = 0;
-  virtual ImprovedValSet* getReadableCopy() = 0;
-  virtual void print(raw_ostream&, bool brief = false) const = 0;
+  virtual ImprovedValSet *getReadableCopy() = 0;
+  virtual void print(raw_ostream &, bool brief = false) const = 0;
   virtual ~ImprovedValSet() {}
   virtual bool isWhollyUnknown() const = 0;
-  
 };
 
 struct ImprovedValSetSingle : public ImprovedValSet {
 
-  static bool classof(const ImprovedValSet* IVS) { return !IVS->isMulti; }
+  static bool classof(const ImprovedValSet *IVS) { return !IVS->isMulti; }
 
   ValSetType SetType;
   SmallVector<ImprovedVal, 1> Values;
   bool Overdef;
 
- ImprovedValSetSingle() : ImprovedValSet(false), SetType(ValSetTypeUnknown), Overdef(false) { }
- ImprovedValSetSingle(ValSetType T) : ImprovedValSet(false), SetType(T), Overdef(false) { }
- ImprovedValSetSingle(ValSetType T, bool OD) : ImprovedValSet(false), SetType(T), Overdef(OD) { }
- ImprovedValSetSingle(ImprovedVal V, ValSetType T) : ImprovedValSet(false), SetType(T), Overdef(false) {
+  ImprovedValSetSingle()
+      : ImprovedValSet(false), SetType(ValSetTypeUnknown), Overdef(false) {}
+  ImprovedValSetSingle(ValSetType T)
+      : ImprovedValSet(false), SetType(T), Overdef(false) {}
+  ImprovedValSetSingle(ValSetType T, bool OD)
+      : ImprovedValSet(false), SetType(T), Overdef(OD) {}
+  ImprovedValSetSingle(ImprovedVal V, ValSetType T)
+      : ImprovedValSet(false), SetType(T), Overdef(false) {
     Values.push_back(V);
   }
 
@@ -514,193 +501,179 @@ struct ImprovedValSetSingle : public ImprovedValSet {
   virtual bool dropReference();
 
   bool isInitialised() const {
-    return Overdef || SetType == ValSetTypeDeallocated || SetType == ValSetTypeOldOverdef || Values.size() > 0;
+    return Overdef || SetType == ValSetTypeDeallocated ||
+           SetType == ValSetTypeOldOverdef || Values.size() > 0;
   }
 
   virtual bool isWhollyUnknown() const {
-    return Overdef || SetType == ValSetTypeDeallocated || SetType == ValSetTypeOldOverdef || Values.size() == 0;
+    return Overdef || SetType == ValSetTypeDeallocated ||
+           SetType == ValSetTypeOldOverdef || Values.size() == 0;
   }
 
   bool isOldValue() const {
     return (!Overdef) && SetType == ValSetTypeOldOverdef;
   }
-  
+
   void removeValsWithBase(ShadowValue Base) {
 
-    for(SmallVector<ImprovedVal, 1>::iterator it = Values.end(), endit = Values.begin(); it != endit; --it) {
+    for (SmallVector<ImprovedVal, 1>::iterator it = Values.end(),
+                                               endit = Values.begin();
+         it != endit; --it) {
 
-      ImprovedVal& ThisV = *(it - 1);
-      if(ThisV.V == Base)
-	Values.erase(it);
-      
+      ImprovedVal &ThisV = *(it - 1);
+      if (ThisV.V == Base)
+        Values.erase(it);
     }
-
   }
 
   bool onlyContainsZeroes() {
 
-    if(Values.size() == 1)
+    if (Values.size() == 1)
       return Values[0].isNull();
     else
       return false;
-
   }
 
   bool onlyContainsNulls() {
 
-    if(SetType == ValSetTypePB)
+    if (SetType == ValSetTypePB)
       return onlyContainsZeroes();
     else
       return false;
-    
   }
 
   bool onlyContainsFunctions() {
 
-    if(SetType != ValSetTypeScalar)
+    if (SetType != ValSetTypeScalar)
       return false;
-    
-    for(uint32_t i = 0; i < Values.size(); ++i) {
 
-      if(!Values[i].isFunction())
-	return false;
-      
+    for (uint32_t i = 0; i < Values.size(); ++i) {
+
+      if (!Values[i].isFunction())
+        return false;
     }
-    
-    return true;
 
+    return true;
   }
 
-  ImprovedValSetSingle& insert(ImprovedVal V) {
+  ImprovedValSetSingle &insert(ImprovedVal V) {
 
     release_assert(V.V.t != SHADOWVAL_INVAL);
 
-    if(Overdef)
+    if (Overdef)
       return *this;
 
-    if(SetType == ValSetTypePB) {
+    if (SetType == ValSetTypePB) {
 
-      for(SmallVector<ImprovedVal, 1>::iterator it = Values.begin(), endit = Values.end(); it != endit; ++it) {
+      for (SmallVector<ImprovedVal, 1>::iterator it = Values.begin(),
+                                                 endit = Values.end();
+           it != endit; ++it) {
 
-	if(it->V == V.V) {
+        if (it->V == V.V) {
 
-	  if(it->Offset != V.Offset)
-	    it->Offset = LLONG_MAX;
-	  return *this;
-
-	}
-
+          if (it->Offset != V.Offset)
+            it->Offset = LLONG_MAX;
+          return *this;
+        }
       }
 
-    }
-    else {
+    } else {
 
-      if(std::count(Values.begin(), Values.end(), V))
-	return *this;
-
+      if (std::count(Values.begin(), Values.end(), V))
+        return *this;
     }
 
     Values.push_back(V);
 
-    if(Values.size() > PBMAX)
+    if (Values.size() > PBMAX)
       setOverdef();
-    
-    return *this;
 
+    return *this;
   }
 
-  ImprovedValSetSingle& mergeOne(ValSetType OtherType, ImprovedVal OtherVal) {
+  ImprovedValSetSingle &mergeOne(ValSetType OtherType, ImprovedVal OtherVal) {
 
-    if(OtherType == ValSetTypeUnknown)
+    if (OtherType == ValSetTypeUnknown)
       return *this;
 
-    if(OtherType == ValSetTypeOverdef) {
+    if (OtherType == ValSetTypeOverdef) {
       setOverdef();
       return *this;
     }
 
-    if(isInitialised() && OtherType != SetType) {
+    if (isInitialised() && OtherType != SetType) {
 
-      if(onlyContainsFunctions() && OtherVal.isNull()) {
+      if (onlyContainsFunctions() && OtherVal.isNull()) {
 
-	insert(OtherVal);
-	return *this;
+        insert(OtherVal);
+        return *this;
 
-      }
-      else if(onlyContainsNulls() && OtherVal.isFunction()) {
+      } else if (onlyContainsNulls() && OtherVal.isFunction()) {
 
-	SetType = ValSetTypeScalar;
-	insert(OtherVal);
-	return *this;
+        SetType = ValSetTypeScalar;
+        insert(OtherVal);
+        return *this;
 
-      }
-      else {
+      } else {
 
-	if(OtherType == ValSetTypePB)
-	  SetType = ValSetTypePB;
-	setOverdef();
-	
+        if (OtherType == ValSetTypePB)
+          SetType = ValSetTypePB;
+        setOverdef();
       }
 
-    }
-    else {
+    } else {
 
       SetType = OtherType;
       insert(OtherVal);
-
     }
 
     return *this;
-
   }
 
-  ImprovedValSetSingle& merge(ImprovedValSetSingle& OtherPB) {
-    if(!OtherPB.isInitialised())
+  ImprovedValSetSingle &merge(ImprovedValSetSingle &OtherPB) {
+    if (!OtherPB.isInitialised())
       return *this;
-    if(OtherPB.Overdef) {
-      if(OtherPB.SetType == ValSetTypePB)
-	SetType = ValSetTypePB;
+    if (OtherPB.Overdef) {
+      if (OtherPB.SetType == ValSetTypePB)
+        SetType = ValSetTypePB;
       setOverdef();
-    }
-    else if(isInitialised() && OtherPB.SetType != SetType) {
+    } else if (isInitialised() && OtherPB.SetType != SetType) {
 
       // Deallocated tags are weak, and are overridden by the other value.
-      if(SetType == ValSetTypeDeallocated) {
-	*this = OtherPB;
-	return *this;
-      }
-      
-      if(OtherPB.SetType == ValSetTypeDeallocated) {
-
-	return *this;
-
+      if (SetType == ValSetTypeDeallocated) {
+        *this = OtherPB;
+        return *this;
       }
 
-      // Special case: functions may permissibly merge with null pointers. In this case
-      // reclassify the null as a scalar.
-      if(onlyContainsFunctions() && OtherPB.onlyContainsNulls()) {
+      if (OtherPB.SetType == ValSetTypeDeallocated) {
 
-	insert(OtherPB.Values[0]);
-	return *this;
-
-      }
-      else if(onlyContainsNulls() && OtherPB.onlyContainsFunctions()) {
-
-	SetType = ValSetTypeScalar;
-	// Try again:
-	return merge(OtherPB);
-
+        return *this;
       }
 
-      if(OtherPB.SetType == ValSetTypePB)
-	SetType = ValSetTypePB;
+      // Special case: functions may permissibly merge with null pointers. In
+      // this case reclassify the null as a scalar.
+      if (onlyContainsFunctions() && OtherPB.onlyContainsNulls()) {
+
+        insert(OtherPB.Values[0]);
+        return *this;
+
+      } else if (onlyContainsNulls() && OtherPB.onlyContainsFunctions()) {
+
+        SetType = ValSetTypeScalar;
+        // Try again:
+        return merge(OtherPB);
+      }
+
+      if (OtherPB.SetType == ValSetTypePB)
+        SetType = ValSetTypePB;
       setOverdef();
 
-    }
-    else {
+    } else {
       SetType = OtherPB.SetType;
-      for(SmallVector<ImprovedVal, 4>::iterator it = OtherPB.Values.begin(), it2 = OtherPB.Values.end(); it != it2 && !Overdef; ++it)
-	insert(*it);
+      for (SmallVector<ImprovedVal, 4>::iterator it = OtherPB.Values.begin(),
+                                                 it2 = OtherPB.Values.end();
+           it != it2 && !Overdef; ++it)
+        insert(*it);
     }
     return *this;
   }
@@ -709,7 +682,6 @@ struct ImprovedValSetSingle : public ImprovedValSet {
 
     Values.clear();
     Overdef = true;
-
   }
 
   void set(ImprovedVal V, ValSetType T) {
@@ -718,23 +690,17 @@ struct ImprovedValSetSingle : public ImprovedValSet {
     Values.push_back(V);
     SetType = T;
     Overdef = false;
-
   }
 
-  ImprovedValSet* getReadableCopy() {
+  ImprovedValSet *getReadableCopy() { return new ImprovedValSetSingle(*this); }
 
-    return new ImprovedValSetSingle(*this);
+  bool isWritableMulti() { return false; }
 
-  }
-
-  bool isWritableMulti() {
-    return false;
-  }
-
-  bool coerceToType(Type* Target, uint64_t TargetSize, std::string* error, bool allowImplicitPtrToInt = true);
-  bool canCoerceToType(Type* Target, uint64_t TargetSize, std::string* error, bool allowImplicitPtrToInt = true);
-  virtual void print(raw_ostream&, bool brief = false) const;
-  
+  bool coerceToType(Type *Target, uint64_t TargetSize, std::string *error,
+                    bool allowImplicitPtrToInt = true);
+  bool canCoerceToType(Type *Target, uint64_t TargetSize, std::string *error,
+                       bool allowImplicitPtrToInt = true);
+  virtual void print(raw_ostream &, bool brief = false) const;
 };
 
 // Traits for half-open integers that never coalesce:
@@ -757,7 +723,6 @@ struct HalfOpenNoMerge {
   static inline bool adjacent(const uint64_t &a, const uint64_t &b) {
     return false;
   }
-
 };
 
 struct HalfOpenWithMerge {
@@ -773,49 +738,46 @@ struct HalfOpenWithMerge {
   static inline bool adjacent(const uint64_t &a, const uint64_t &b) {
     return a == b;
   }
-
 };
 
 struct ImprovedValSetMulti : public ImprovedValSet {
 
-  typedef IntervalMap<uint64_t, ImprovedValSetSingle, IntervalMapImpl::NodeSizer<uint64_t, ImprovedValSetSingle>::LeafSize, HalfOpenNoMerge> MapTy;
+  typedef IntervalMap<
+      uint64_t, ImprovedValSetSingle,
+      IntervalMapImpl::NodeSizer<uint64_t, ImprovedValSetSingle>::LeafSize,
+      HalfOpenNoMerge>
+      MapTy;
   typedef MapTy::iterator MapIt;
   typedef MapTy::const_iterator ConstMapIt;
   MapTy Map;
   uint32_t MapRefCount;
-  ImprovedValSet* Underlying;
+  ImprovedValSet *Underlying;
   uint64_t CoveredBytes;
   uint64_t AllocSize;
 
   ImprovedValSetMulti(uint64_t ASize);
-  ImprovedValSetMulti(const ImprovedValSetMulti& other);
+  ImprovedValSetMulti(const ImprovedValSetMulti &other);
 
   virtual ~ImprovedValSetMulti() {}
 
-  static bool classof(const ImprovedValSet* IVS) { return IVS->isMulti; }
+  static bool classof(const ImprovedValSet *IVS) { return IVS->isMulti; }
   virtual bool dropReference();
-  bool isWritableMulti() {
-    return MapRefCount == 1;
-  }
-  ImprovedValSet* getReadableCopy() {
+  bool isWritableMulti() { return MapRefCount == 1; }
+  ImprovedValSet *getReadableCopy() {
     MapRefCount++;
     return this;
   }
 
-  virtual bool isWhollyUnknown() const {
-    return false;
-  }
+  virtual bool isWhollyUnknown() const { return false; }
 
-  virtual void print(raw_ostream&, bool brief = false) const;
-
+  virtual void print(raw_ostream &, bool brief = false) const;
 };
 
-inline bool IVIsInitialised(ImprovedValSet* IV) {
+inline bool IVIsInitialised(ImprovedValSet *IV) {
 
-  if(IV->isMulti)
+  if (IV->isMulti)
     return true;
   return cast<ImprovedValSetSingle>(IV)->isInitialised();
-
 }
 
 #define INVALID_BLOCK_IDX 0xffffffff
@@ -826,33 +788,32 @@ struct ShadowInstIdx {
   uint32_t blockIdx;
   uint32_t instIdx;
 
-ShadowInstIdx() : blockIdx(INVALID_BLOCK_IDX), instIdx(INVALID_INSTRUCTION_IDX) { }
-ShadowInstIdx(uint32_t b, uint32_t i) : blockIdx(b), instIdx(i) { }
-
+  ShadowInstIdx()
+      : blockIdx(INVALID_BLOCK_IDX), instIdx(INVALID_INSTRUCTION_IDX) {}
+  ShadowInstIdx(uint32_t b, uint32_t i) : blockIdx(b), instIdx(i) {}
 };
 
 struct ShadowBBInvar;
 
 struct ShadowInstructionInvar {
-  
+
   uint32_t idx;
-  Instruction* I;
-  ShadowBBInvar* parent;
+  Instruction *I;
+  ShadowBBInvar *parent;
   ImmutableArray<ShadowInstIdx> operandIdxs;
   ImmutableArray<ShadowInstIdx> userIdxs;
   ImmutableArray<uint32_t> operandBBs;
-
 };
 
-template<class X> inline bool inst_is(ShadowInstructionInvar* SII) {
-   return isa<X>(SII->I);
+template <class X> inline bool inst_is(ShadowInstructionInvar *SII) {
+  return isa<X>(SII->I);
 }
 
-template<class X> inline X* dyn_cast_inst(ShadowInstructionInvar* SII) {
+template <class X> inline X *dyn_cast_inst(ShadowInstructionInvar *SII) {
   return dyn_cast<X>(SII->I);
 }
 
-template<class X> inline X* cast_inst(ShadowInstructionInvar* SII) {
+template <class X> inline X *cast_inst(ShadowInstructionInvar *SII) {
   return cast<X>(SII->I);
 }
 
@@ -862,10 +823,9 @@ template<class X> inline X* cast_inst(ShadowInstructionInvar* SII) {
 
 struct InstArgImprovement {
 
-  ImprovedValSet* PB;
+  ImprovedValSet *PB;
 
-InstArgImprovement() : PB(0) { }
-
+  InstArgImprovement() : PB(0) {}
 };
 
 struct ShadowBB;
@@ -874,50 +834,47 @@ extern LocStore NormalEmptyMapPtr;
 
 struct LocStore {
 
-  ImprovedValSet* store;
+  ImprovedValSet *store;
 
-LocStore(ImprovedValSet* s) : store(s) {}
-LocStore() : store(0) {}
-LocStore(const LocStore& other) : store(other.store) {}
+  LocStore(ImprovedValSet *s) : store(s) {}
+  LocStore() : store(0) {}
+  LocStore(const LocStore &other) : store(other.store) {}
 
-  static LocStore& getEmptyStore() {
+  static LocStore &getEmptyStore() { return NormalEmptyMapPtr; }
 
-    return NormalEmptyMapPtr;
-
-  }
-
-  static bool LT(const LocStore* a, const LocStore* b) {
+  static bool LT(const LocStore *a, const LocStore *b) {
 
     return a->store < b->store;
-
   }
 
-  static bool EQ(const LocStore* a, const LocStore* b) {
+  static bool EQ(const LocStore *a, const LocStore *b) {
 
     return a->store == b->store;
-    
   }
 
-  static LocalStoreMap<LocStore, OrdinaryStoreExtraState>* getMapForBlock(ShadowBB*);
+  static LocalStoreMap<LocStore, OrdinaryStoreExtraState> *
+  getMapForBlock(ShadowBB *);
 
   bool isValid() { return !!store; }
 
   // Insert checkStore here to verify store after each merge:
-  void checkMergedResult() {  }
+  void checkMergedResult() {}
 
   // Simple forwards:
-  LocStore getReadableCopy() { return LocStore(store->getReadableCopy());  }
-  bool dropReference() {  return store->dropReference();  }
-  void print(raw_ostream& RSO, bool brief) { store->print(RSO, brief); }
+  LocStore getReadableCopy() { return LocStore(store->getReadableCopy()); }
+  bool dropReference() { return store->dropReference(); }
+  void print(raw_ostream &RSO, bool brief) { store->print(RSO, brief); }
 
-  static void mergeStores(LocStore* mergeFrom, LocStore* mergeTo, uint64_t ASize, MergeBlockVisitor<LocStore, OrdinaryStoreExtraState>*);
+  static void
+  mergeStores(LocStore *mergeFrom, LocStore *mergeTo, uint64_t ASize,
+              MergeBlockVisitor<LocStore, OrdinaryStoreExtraState> *);
 
-  static void simplifyStore(LocStore*);
+  static void simplifyStore(LocStore *);
 
   bool derefWillAllowSimplify() {
-    return store && isa<ImprovedValSetMulti>(store) && cast<ImprovedValSetMulti>(store)->MapRefCount == 2;
+    return store && isa<ImprovedValSetMulti>(store) &&
+           cast<ImprovedValSetMulti>(store)->MapRefCount == 2;
   }
-
 };
 
 enum AllocTestedState {
@@ -936,18 +893,19 @@ struct AllocData {
   AllocTestedState allocTested;
   bool isCommitted;
   ShadowValue allocValue;
-  std::vector<std::pair<WeakVH, uint32_t> > PatchRefs;
-  Type* allocType;
-  Value* committedVal;
+  std::vector<std::pair<WeakVH, uint32_t>> PatchRefs;
+  Type *allocType;
+  Value *committedVal;
 
   bool isAvailable();
-
 };
 
 enum ThreadLocalState {
 
-  TLS_MUSTCHECK, /* instruction might have been clobbered by other threads; check at runtime */
-  TLS_NOCHECK, /* instruction might have been clobbered, but check would be redundant */
+  TLS_MUSTCHECK, /* instruction might have been clobbered by other threads;
+                    check at runtime */
+  TLS_NOCHECK,   /* instruction might have been clobbered, but check would be
+                    redundant */
   TLS_NEVERCHECK /* instruction cannot possibly be clobbered */
 
 };
@@ -959,21 +917,20 @@ enum ThreadLocalState {
 
 struct ShadowInstruction {
 
-  ShadowBB* parent;
-  ShadowInstructionInvar* invar;
+  ShadowBB *parent;
+  ShadowInstructionInvar *invar;
   InstArgImprovement i;
-  Value* committedVal;
-  // Of a load, memcpy or realloc, is there no need to check for thread interference?
+  Value *committedVal;
+  // Of a load, memcpy or realloc, is there no need to check for thread
+  // interference?
   unsigned char isThreadLocal;
   unsigned char needsRuntimeCheck;
   unsigned char dieStatus;
-  void* typeSpecificData;
+  void *typeSpecificData;
 
   void initTypeSpecificData();
 
-  uint32_t getNumOperands() {
-    return invar->operandIdxs.size();
-  }
+  uint32_t getNumOperands() { return invar->operandIdxs.size(); }
 
   ShadowValue getOperand(uint32_t i);
 
@@ -981,26 +938,20 @@ struct ShadowInstruction {
     return getOperand(invar->operandIdxs.size() - i);
   }
 
-  ShadowValue getCallArgOperand(uint32_t i) {
-    return getOperand(i);
-  }
+  ShadowValue getCallArgOperand(uint32_t i) { return getOperand(i); }
 
   uint32_t getNumArgOperands() {
-    if(isa<CallInst>(invar->I))
+    if (isa<CallInst>(invar->I))
       return getNumOperands() - 1;
     else
       return getNumOperands() - 3;
   }
 
-  uint32_t getNumUsers() {
-    return invar->userIdxs.size();
-  }
+  uint32_t getNumUsers() { return invar->userIdxs.size(); }
 
-  ShadowInstruction* getUser(uint32_t i);
+  ShadowInstruction *getUser(uint32_t i);
 
-  Type* getType() {
-    return invar->I->getType();
-  }
+  Type *getType() { return invar->I->getType(); }
 
   bool isCopyInst();
   ShadowValue getCopySource();
@@ -1008,49 +959,43 @@ struct ShadowInstruction {
 
   bool readsMemoryDirectly();
   bool hasOrderingConstraint();
-
 };
 
-template<class X> inline bool inst_is(ShadowInstruction* SI) {
+template <class X> inline bool inst_is(ShadowInstruction *SI) {
   return inst_is<X>(SI->invar);
 }
 
-template<class X> inline X* dyn_cast_inst(ShadowInstruction* SI) {
+template <class X> inline X *dyn_cast_inst(ShadowInstruction *SI) {
   return dyn_cast_inst<X>(SI->invar);
 }
 
-template<class X> inline X* cast_inst(ShadowInstruction* SI) {
+template <class X> inline X *cast_inst(ShadowInstruction *SI) {
   return cast_inst<X>(SI->invar);
 }
 
 struct ShadowArgInvar {
 
-  Argument* A;
+  Argument *A;
   ImmutableArray<ShadowInstIdx> userIdxs;
-
 };
 
 struct ShadowGV {
 
-  GlobalVariable* G;
+  GlobalVariable *G;
   uint64_t storeSize;
   int32_t allocIdx;
-
 };
 
 struct ShadowArg {
 
-  ShadowArgInvar* invar;
-  InlineAttempt* IA;
-  InstArgImprovement i;  
-  Value* committedVal;
+  ShadowArgInvar *invar;
+  InlineAttempt *IA;
+  InstArgImprovement i;
+  Value *committedVal;
   unsigned char dieStatus;
   WeakVH patchInst;
 
-  Type* getType() {
-    return invar->A->getType();
-  }
-
+  Type *getType() { return invar->A->getType(); }
 };
 
 enum ShadowBBStatus {
@@ -1066,192 +1011,191 @@ struct ShadowFunctionInvar;
 
 struct ShadowBBInvar {
 
-  ShadowFunctionInvar* F;
+  ShadowFunctionInvar *F;
   uint32_t idx;
-  BasicBlock* BB;
+  BasicBlock *BB;
   ImmutableArray<uint32_t> succIdxs;
   ImmutableArray<uint32_t> predIdxs;
   ImmutableArray<ShadowInstructionInvar> insts;
-  const ShadowLoopInvar* outerScope;
-  const ShadowLoopInvar* naturalScope;
+  const ShadowLoopInvar *outerScope;
+  const ShadowLoopInvar *naturalScope;
 
-  inline ShadowBBInvar* getPred(uint32_t i);
+  inline ShadowBBInvar *getPred(uint32_t i);
   inline uint32_t preds_size();
 
-  inline ShadowBBInvar* getSucc(uint32_t i);  
+  inline ShadowBBInvar *getSucc(uint32_t i);
   inline uint32_t succs_size();
-
 };
 
 struct OrdinaryStoreExtraState {
 
   // Objects that are certainly not effected by thread yields.
   DenseSet<ShadowValue> threadLocalObjects;
-  // Objects that are certainly not reachable from objects older than specialisation start
+  // Objects that are certainly not reachable from objects older than
+  // specialisation start
   DenseSet<ShadowValue> noAliasOldObjects;
-  // Objects all of whose pointers are known, and therefore are not aliased by unknown pointers.
+  // Objects all of whose pointers are known, and therefore are not aliased by
+  // unknown pointers.
   DenseSet<ShadowValue> unescapedObjects;
 
-  void copyFrom(const OrdinaryStoreExtraState& es) { *this = es; }
-  static void doMerge(LocalStoreMap<LocStore, OrdinaryStoreExtraState>* toMap, 
-		      SmallVector<LocalStoreMap<LocStore, OrdinaryStoreExtraState>*, 4>::iterator fromBegin, 
-		      SmallVector<LocalStoreMap<LocStore, OrdinaryStoreExtraState>*, 4>::iterator fromEnd,
-		      bool verbose);
-  static void dump(LocalStoreMap<LocStore, OrdinaryStoreExtraState>* map);
-
+  void copyFrom(const OrdinaryStoreExtraState &es) { *this = es; }
+  static void
+  doMerge(LocalStoreMap<LocStore, OrdinaryStoreExtraState> *toMap,
+          SmallVector<LocalStoreMap<LocStore, OrdinaryStoreExtraState> *,
+                      4>::iterator fromBegin,
+          SmallVector<LocalStoreMap<LocStore, OrdinaryStoreExtraState> *,
+                      4>::iterator fromEnd,
+          bool verbose);
+  static void dump(LocalStoreMap<LocStore, OrdinaryStoreExtraState> *map);
 };
 
 // Define types for DSE stores:
 
 struct TrackedStore {
 
-  ShadowInstruction* I; // Invalid if isCommitted
+  ShadowInstruction *I; // Invalid if isCommitted
   bool isCommitted;
-  WeakVH* committedInsts; // Valid if the store was live when committed.
+  WeakVH *committedInsts; // Valid if the store was live when committed.
   uint64_t nCommittedInsts;
   uint64_t outstandingBytes;
   bool isNeeded;
 
-  TrackedStore(ShadowInstruction* _I, uint64_t ob);
+  TrackedStore(ShadowInstruction *_I, uint64_t ob);
   ~TrackedStore();
   bool canKill() const;
   void kill();
   void derefBytes(uint64_t nBytes);
-
 };
 
-typedef SmallVector<TrackedStore*, 1> DSEMapEntry;
+typedef SmallVector<TrackedStore *, 1> DSEMapEntry;
 
-typedef IntervalMap<uint64_t, DSEMapEntry, IntervalMapImpl::NodeSizer<uint64_t, DSEMapEntry>::LeafSize, HalfOpenNoMerge> DSEMapTy;
+typedef IntervalMap<uint64_t, DSEMapEntry,
+                    IntervalMapImpl::NodeSizer<uint64_t, DSEMapEntry>::LeafSize,
+                    HalfOpenNoMerge>
+    DSEMapTy;
 
 struct TrackedAlloc {
 
-  ShadowInstruction* SI;
+  ShadowInstruction *SI;
   bool isCommitted;
   uint64_t nRefs;
   bool isNeeded;
 
   bool dropReference();
 
-  TrackedAlloc(ShadowInstruction* _SI);
+  TrackedAlloc(ShadowInstruction *_SI);
   ~TrackedAlloc();
-
 };
 
 extern DSEMapPointer DSEEmptyMapPtr;
 
 struct DSEMapPointer {
 
-  DSEMapTy* M;
-  TrackedAlloc* A;
-  
-DSEMapPointer() : M(0), A(0) {}
-DSEMapPointer(DSEMapTy* _M, TrackedAlloc* _A) : M(_M), A(_A) {}
-DSEMapPointer(const DSEMapPointer& other) : M(other.M), A(other.A) {}
+  DSEMapTy *M;
+  TrackedAlloc *A;
 
-  static DSEMapPointer& getEmptyStore() {
+  DSEMapPointer() : M(0), A(0) {}
+  DSEMapPointer(DSEMapTy *_M, TrackedAlloc *_A) : M(_M), A(_A) {}
+  DSEMapPointer(const DSEMapPointer &other) : M(other.M), A(other.A) {}
 
-    return DSEEmptyMapPtr;
+  static DSEMapPointer &getEmptyStore() { return DSEEmptyMapPtr; }
 
-  }
-
-  static bool LT(const DSEMapPointer* a, const DSEMapPointer* b) {
+  static bool LT(const DSEMapPointer *a, const DSEMapPointer *b) {
 
     return a->M < b->M;
-
   }
 
-  static bool EQ(const DSEMapPointer* a, const DSEMapPointer* b) {
+  static bool EQ(const DSEMapPointer *a, const DSEMapPointer *b) {
 
     return a->M == b->M;
-
   }
 
-  static LocalStoreMap<DSEMapPointer, DSEStoreExtraState>* getMapForBlock(ShadowBB* BB);
+  static LocalStoreMap<DSEMapPointer, DSEStoreExtraState> *
+  getMapForBlock(ShadowBB *BB);
   bool isValid() { return !!M; }
-  void checkMergedResult() { }
+  void checkMergedResult() {}
   DSEMapPointer getReadableCopy();
   bool dropReference();
   void release();
-  void print(raw_ostream& RSO, bool brief);
-  static void mergeStores(DSEMapPointer* mergeFrom, DSEMapPointer* mergeTo, 
-			  uint64_t ASize, MergeBlockVisitor<DSEMapPointer, DSEStoreExtraState>* Visitor);
-  static void simplifyStore(DSEMapPointer*) { }
+  void print(raw_ostream &RSO, bool brief);
+  static void
+  mergeStores(DSEMapPointer *mergeFrom, DSEMapPointer *mergeTo, uint64_t ASize,
+              MergeBlockVisitor<DSEMapPointer, DSEStoreExtraState> *Visitor);
+  static void simplifyStore(DSEMapPointer *) {}
   bool derefWillAllowSimplify() { return false; }
   void useWriters(int64_t Offset, uint64_t Size);
-  void setWriter(int64_t Offset, uint64_t Size, ShadowInstruction* SI);
-
+  void setWriter(int64_t Offset, uint64_t Size, ShadowInstruction *SI);
 };
 
 struct DSEStoreExtraState {
 
-  void copyFrom(const DSEStoreExtraState& es) { }
-  static void doMerge(LocalStoreMap<DSEMapPointer, DSEStoreExtraState>* toMap, 
-		      SmallVector<LocalStoreMap<DSEMapPointer, DSEStoreExtraState>*, 4>::iterator fromBegin, 
-		      SmallVector<LocalStoreMap<DSEMapPointer, DSEStoreExtraState>*, 4>::iterator fromEnd,
-		      bool verbose) {
-
-  }
-  static void dump(LocalStoreMap<DSEMapPointer, DSEStoreExtraState>*) { }
-
+  void copyFrom(const DSEStoreExtraState &es) {}
+  static void
+  doMerge(LocalStoreMap<DSEMapPointer, DSEStoreExtraState> *toMap,
+          SmallVector<LocalStoreMap<DSEMapPointer, DSEStoreExtraState> *,
+                      4>::iterator fromBegin,
+          SmallVector<LocalStoreMap<DSEMapPointer, DSEStoreExtraState> *,
+                      4>::iterator fromEnd,
+          bool verbose) {}
+  static void dump(LocalStoreMap<DSEMapPointer, DSEStoreExtraState> *) {}
 };
 
 // Define types for the TL store:
 
-typedef IntervalMap<uint64_t, bool, IntervalMapImpl::NodeSizer<uint64_t, bool>::LeafSize, HalfOpenWithMerge> TLMapTy;
+typedef IntervalMap<uint64_t, bool,
+                    IntervalMapImpl::NodeSizer<uint64_t, bool>::LeafSize,
+                    HalfOpenWithMerge>
+    TLMapTy;
 
 extern TLMapPointer TLEmptyMapPtr;
 
 struct TLMapPointer {
 
-  TLMapTy* M;
+  TLMapTy *M;
 
-TLMapPointer() : M(0) {}
-TLMapPointer(TLMapTy* _M) : M(_M) {}
-TLMapPointer(const TLMapPointer& other) : M(other.M) {}
+  TLMapPointer() : M(0) {}
+  TLMapPointer(TLMapTy *_M) : M(_M) {}
+  TLMapPointer(const TLMapPointer &other) : M(other.M) {}
 
-  static TLMapPointer& getEmptyStore() {
+  static TLMapPointer &getEmptyStore() { return TLEmptyMapPtr; }
 
-    return TLEmptyMapPtr;
-
-  }
-
-  static bool LT(const TLMapPointer* a, const TLMapPointer* b) {
+  static bool LT(const TLMapPointer *a, const TLMapPointer *b) {
 
     return a->M < b->M;
-
   }
 
-  static bool EQ(const TLMapPointer* a, const TLMapPointer* b) {
+  static bool EQ(const TLMapPointer *a, const TLMapPointer *b) {
 
     return a->M == b->M;
-
   }
 
-  static LocalStoreMap<TLMapPointer, TLStoreExtraState>* getMapForBlock(ShadowBB* BB);
+  static LocalStoreMap<TLMapPointer, TLStoreExtraState> *
+  getMapForBlock(ShadowBB *BB);
   bool isValid() { return !!M; }
-  void checkMergedResult() { }
+  void checkMergedResult() {}
   TLMapPointer getReadableCopy();
   bool dropReference();
-  void print(raw_ostream& RSO, bool brief);
-  static void mergeStores(TLMapPointer* mergeFrom, TLMapPointer* mergeTo, 
-			  uint64_t ASize, MergeBlockVisitor<TLMapPointer, TLStoreExtraState>* Visitor);
-  static void simplifyStore(TLMapPointer*) { }
+  void print(raw_ostream &RSO, bool brief);
+  static void
+  mergeStores(TLMapPointer *mergeFrom, TLMapPointer *mergeTo, uint64_t ASize,
+              MergeBlockVisitor<TLMapPointer, TLStoreExtraState> *Visitor);
+  static void simplifyStore(TLMapPointer *) {}
   bool derefWillAllowSimplify() { return false; }
-  
 };
 
 struct TLStoreExtraState {
 
-  void copyFrom(const TLStoreExtraState& other) {  }
+  void copyFrom(const TLStoreExtraState &other) {}
 
-  static void doMerge(LocalStoreMap<TLMapPointer, TLStoreExtraState>* toMap, 
-		      SmallVector<LocalStoreMap<TLMapPointer, TLStoreExtraState>*, 4>::iterator fromBegin, 
-		      SmallVector<LocalStoreMap<TLMapPointer, TLStoreExtraState>*, 4>::iterator fromEnd,
-		      bool verbose) { }
+  static void doMerge(
+      LocalStoreMap<TLMapPointer, TLStoreExtraState> *toMap,
+      SmallVector<LocalStoreMap<TLMapPointer, TLStoreExtraState> *, 4>::iterator
+          fromBegin,
+      SmallVector<LocalStoreMap<TLMapPointer, TLStoreExtraState> *, 4>::iterator
+          fromEnd,
+      bool verbose) {}
 
-  static void dump(LocalStoreMap<TLMapPointer, TLStoreExtraState>*) { }
-
+  static void dump(LocalStoreMap<TLMapPointer, TLStoreExtraState> *) {}
 };
 
 #include "SharedTree.h"
@@ -1262,10 +1206,10 @@ struct FDState {
   uint64_t pos;
   bool clean;
 
-FDState() : filename(""), pos((uint64_t)-1), clean(false) {}
-FDState(std::string fn) : filename(fn), pos(0), clean(false) {}
-FDState(const FDState& Other) : filename(Other.filename), pos(Other.pos), clean(Other.clean) {}
-
+  FDState() : filename(""), pos((uint64_t)-1), clean(false) {}
+  FDState(std::string fn) : filename(fn), pos(0), clean(false) {}
+  FDState(const FDState &Other)
+      : filename(Other.filename), pos(Other.pos), clean(Other.clean) {}
 };
 
 struct FDStore {
@@ -1276,71 +1220,67 @@ struct FDStore {
   bool dropReference() {
 
     bool ret = false;
-    if(!(--refCount)) {
+    if (!(--refCount)) {
       ret = true;
       delete this;
     }
     return ret;
-
   }
 
-  FDStore* getWritable() {
+  FDStore *getWritable() {
 
-    if(refCount == 1)
+    if (refCount == 1)
       return this;
 
     release_assert(refCount);
     refCount--;
     return new FDStore(*this);
-
   }
-  
-FDStore() : refCount(1), fds() {}
-FDStore(const FDStore& Other) : refCount(1), fds(Other.fds) {}
 
+  FDStore() : refCount(1), fds() {}
+  FDStore(const FDStore &Other) : refCount(1), fds(Other.fds) {}
 };
 
 struct FDGlobalState {
 
-  ShadowInstruction* SI;
+  ShadowInstruction *SI;
   bool isCommitted;
-  Value* CommittedVal;
-  std::vector<std::pair<WeakVH, uint32_t> > PatchRefs;
+  Value *CommittedVal;
+  std::vector<std::pair<WeakVH, uint32_t>> PatchRefs;
   bool isFifo;
 
-  FDGlobalState(ShadowInstruction* _SI, bool _isFifo);
+  FDGlobalState(ShadowInstruction *_SI, bool _isFifo);
   FDGlobalState(bool _isFifo);
 
   bool isAvailable();
-
 };
 
 struct CommittedBlock {
 
-  BasicBlock* specBlock;
-  BasicBlock* breakBlock;
+  BasicBlock *specBlock;
+  BasicBlock *breakBlock;
   uint32_t startIndex;
 
-CommittedBlock() : specBlock(0), breakBlock(0), startIndex(UINT_MAX) {}
-CommittedBlock(BasicBlock* SB, BasicBlock* BB, uint32_t i) : specBlock(SB), breakBlock(BB), startIndex(i) {}
-
+  CommittedBlock() : specBlock(0), breakBlock(0), startIndex(UINT_MAX) {}
+  CommittedBlock(BasicBlock *SB, BasicBlock *BB, uint32_t i)
+      : specBlock(SB), breakBlock(BB), startIndex(i) {}
 };
 
 struct ShadowBB {
 
-  IntegrationAttempt* IA;
-  ShadowBBInvar* invar;
-  bool* succsAlive;
+  IntegrationAttempt *IA;
+  ShadowBBInvar *invar;
+  bool *succsAlive;
   ShadowBBStatus status;
   ImmutableArray<ShadowInstruction> insts;
 
-  OrdinaryLocalStore* localStore;
-  DSELocalStore* dseStore;
-  TLLocalStore* tlStore;
-  FDStore* fdStore;
+  OrdinaryLocalStore *localStore;
+  DSELocalStore *dseStore;
+  TLLocalStore *tlStore;
+  FDStore *fdStore;
 
   SmallVector<CommittedBlock, 1> committedBlocks;
-  
+
   bool useSpecialVarargMerge;
   bool inAnyLoop;
 
@@ -1348,102 +1288,96 @@ struct ShadowBB {
 
     delete[] &(insts[0]);
     delete[] succsAlive;
-
   }
 
-  bool isMarkedCertain() {
-    return status == BBSTATUS_CERTAIN;
-  }
+  bool isMarkedCertain() { return status == BBSTATUS_CERTAIN; }
 
   bool isMarkedCertainOrAssumed() {
     return status == BBSTATUS_CERTAIN || status == BBSTATUS_ASSUMED;
   }
 
-  bool edgeIsDead(ShadowBBInvar* BB2I) {
+  bool edgeIsDead(ShadowBBInvar *BB2I) {
 
     bool foundLiveEdge = false;
 
-    for(uint32_t i = 0; i < invar->succIdxs.size() && !foundLiveEdge; ++i) {
+    for (uint32_t i = 0; i < invar->succIdxs.size() && !foundLiveEdge; ++i) {
 
-      if(BB2I->idx == invar->succIdxs[i]) {
+      if (BB2I->idx == invar->succIdxs[i]) {
 
-	if(succsAlive[i])
-	  foundLiveEdge = true;
-	
+        if (succsAlive[i])
+          foundLiveEdge = true;
       }
-
     }
 
     return !foundLiveEdge;
-
   }
 
-  DenseMap<ShadowValue, LocStore>& getWritableStoreMapFor(ShadowValue&);
-  DenseMap<ShadowValue, LocStore>& getReadableStoreMapFor(ShadowValue&);
-  LocStore* getWritableStoreFor(ShadowValue&, int64_t Off, uint64_t Size, bool writeSingleObject);
-  LocStore* getOrCreateStoreFor(ShadowValue&, bool* isNewStore);
-  LocStore* getReadableStoreFor(const ShadowValue& V);
-  void pushStackFrame(InlineAttempt*);
+  DenseMap<ShadowValue, LocStore> &getWritableStoreMapFor(ShadowValue &);
+  DenseMap<ShadowValue, LocStore> &getReadableStoreMapFor(ShadowValue &);
+  LocStore *getWritableStoreFor(ShadowValue &, int64_t Off, uint64_t Size,
+                                bool writeSingleObject);
+  LocStore *getOrCreateStoreFor(ShadowValue &, bool *isNewStore);
+  LocStore *getReadableStoreFor(const ShadowValue &V);
+  void pushStackFrame(InlineAttempt *);
   void popStackFrame();
   void setAllObjectsMayAliasOld();
   void setAllObjectsThreadGlobal();
   void clobberMayAliasOldObjects();
   void clobberGlobalObjects();
-  void clobberAllExcept(DenseSet<ShadowValue>& Save, bool verbose);
-  BasicBlock* getCommittedBreakBlockAt(uint32_t);
-  DSEMapPointer* getWritableDSEStore(ShadowValue O);
-  TLMapPointer* getWritableTLStore(ShadowValue O);
+  void clobberAllExcept(DenseSet<ShadowValue> &Save, bool verbose);
+  BasicBlock *getCommittedBreakBlockAt(uint32_t);
+  DSEMapPointer *getWritableDSEStore(ShadowValue O);
+  TLMapPointer *getWritableTLStore(ShadowValue O);
   uint64_t getAllocSize(ShadowValue);
-  FDStore* getWritableFDStore();
+  FDStore *getWritableFDStore();
 
   void refStores() {
     ++localStore->refCount;
     ++fdStore->refCount;
-    if(tlStore)
+    if (tlStore)
       ++tlStore->refCount;
-    if(dseStore)
+    if (dseStore)
       ++dseStore->refCount;
   }
-  void derefStores(std::vector<ShadowValue>* simplify = 0) {
-    if(localStore->dropReference(simplify))
+  void derefStores(std::vector<ShadowValue> *simplify = 0) {
+    if (localStore->dropReference(simplify))
       localStore = 0;
     SAFE_DROP_REF(fdStore);
-    if(tlStore)
+    if (tlStore)
       SAFE_DROP_REF(tlStore);
-    if(dseStore)
+    if (dseStore)
       SAFE_DROP_REF(dseStore);
   }
 
-  void takeStoresFrom(ShadowBB* Other, bool inLoopAnalyser) {
+  void takeStoresFrom(ShadowBB *Other, bool inLoopAnalyser) {
     localStore = Other->localStore;
     fdStore = Other->fdStore;
-    if(!inLoopAnalyser) {
+    if (!inLoopAnalyser) {
       tlStore = Other->tlStore;
       dseStore = Other->dseStore;
-    }
-    else {
+    } else {
       tlStore = 0;
       dseStore = 0;
     }
   }
-
 };
 
 struct FDStoreMerger : public ShadowBBVisitor {
 
-  FDStore* newStore;
+  FDStore *newStore;
 
-  SmallVector<ShadowBB*, 4> incomingBlocks;
-  void visit(ShadowBB* BB, void* Ctx, bool mustCopyCtx) { incomingBlocks.push_back(BB); }
+  SmallVector<ShadowBB *, 4> incomingBlocks;
+  void visit(ShadowBB *BB, void *Ctx, bool mustCopyCtx) {
+    incomingBlocks.push_back(BB);
+  }
   void doMerge();
-  void merge2(FDStore* to, FDStore* from);
-
+  void merge2(FDStore *to, FDStore *from);
 };
 
-inline LocalStoreMap<LocStore, OrdinaryStoreExtraState>* LocStore::getMapForBlock(ShadowBB* BB) {
+inline LocalStoreMap<LocStore, OrdinaryStoreExtraState> *
+LocStore::getMapForBlock(ShadowBB *BB) {
 
   return BB->localStore;
-
 }
 
 struct ShadowLoopInvar {
@@ -1455,22 +1389,20 @@ struct ShadowLoopInvar {
   std::pair<uint32_t, uint32_t> optimisticEdge;
   std::vector<uint32_t> exitingBlocks;
   std::vector<uint32_t> exitBlocks;
-  std::vector<std::pair<uint32_t, uint32_t> > exitEdges;
+  std::vector<std::pair<uint32_t, uint32_t>> exitEdges;
   bool alwaysIterate;
-  struct ShadowLoopInvar* parent;
-  SmallVector<ShadowLoopInvar*, 1> childLoops;
+  struct ShadowLoopInvar *parent;
+  SmallVector<ShadowLoopInvar *, 1> childLoops;
 
-  bool contains(const ShadowLoopInvar* Other) const {
+  bool contains(const ShadowLoopInvar *Other) const {
 
-    if(!Other)
+    if (!Other)
       return false;
-    else if(Other == this)
+    else if (Other == this)
       return true;
     else
       return contains(Other->parent);
-
   }
-  
 };
 
 struct PathConditions;
@@ -1480,50 +1412,44 @@ struct ShadowFunctionInvar {
   ImmutableArray<ShadowBBInvar> BBs;
   ImmutableArray<ShadowArgInvar> Args;
   int32_t frameSize;
-  
-  PathConditions* pathConditions;
-  SmallVector<ShadowLoopInvar*, 4> TopLevelLoops;
-  
-ShadowFunctionInvar() : frameSize(0), pathConditions(0) {}
 
+  PathConditions *pathConditions;
+  SmallVector<ShadowLoopInvar *, 4> TopLevelLoops;
+
+  ShadowFunctionInvar() : frameSize(0), pathConditions(0) {}
 };
 
-ShadowBBInvar* ShadowBBInvar::getPred(uint32_t i) {
+ShadowBBInvar *ShadowBBInvar::getPred(uint32_t i) {
   return &(F->BBs[predIdxs[i]]);
 }
 
-uint32_t ShadowBBInvar::preds_size() { 
-  return predIdxs.size();
-}
+uint32_t ShadowBBInvar::preds_size() { return predIdxs.size(); }
 
-ShadowBBInvar* ShadowBBInvar::getSucc(uint32_t i) {
+ShadowBBInvar *ShadowBBInvar::getSucc(uint32_t i) {
   return &(F->BBs[succIdxs[i]]);
 }
-  
-uint32_t ShadowBBInvar::succs_size() {
-  return succIdxs.size();
-}
 
-extern Type* GInt8Ptr;
-extern Type* GInt8;
-extern Type* GInt16;
-extern Type* GInt32;
-extern Type* GInt64;
+uint32_t ShadowBBInvar::succs_size() { return succIdxs.size(); }
 
-inline const MDNode* ShadowValue::getTBAATag() const {
+extern Type *GInt8Ptr;
+extern Type *GInt8;
+extern Type *GInt16;
+extern Type *GInt32;
+extern Type *GInt64;
 
-  switch(t) {
+inline const MDNode *ShadowValue::getTBAATag() const {
+
+  switch (t) {
   case SHADOWVAL_INST:
     return u.I->invar->I->getMetadata(LLVMContext::MD_tbaa);
   default:
     return 0;
   }
-
 }
 
-inline Value* ShadowValue::getBareVal() const {
+inline Value *ShadowValue::getBareVal() const {
 
-  switch(t) {
+  switch (t) {
   case SHADOWVAL_ARG:
     return u.A->invar->A;
   case SHADOWVAL_INST:
@@ -1536,54 +1462,49 @@ inline Value* ShadowValue::getBareVal() const {
     release_assert(0 && "Bad value type in getBareVal");
     llvm_unreachable("Bad value type in getBareVal");
   }
-
 }
 
-inline const ShadowLoopInvar* ShadowValue::getScope() const {
+inline const ShadowLoopInvar *ShadowValue::getScope() const {
 
-  switch(t) {
+  switch (t) {
   case SHADOWVAL_INST:
     return u.I->invar->parent->outerScope;
   default:
     return 0;
   }
-  
 }
 
-inline const ShadowLoopInvar* ShadowValue::getNaturalScope() const {
+inline const ShadowLoopInvar *ShadowValue::getNaturalScope() const {
 
-  switch(t) {
+  switch (t) {
   case SHADOWVAL_INST:
     return u.I->invar->parent->naturalScope;
   default:
     return 0;
   }
-
 }
 
-bool isIdentifiedObject(const Value*);
+bool isIdentifiedObject(const Value *);
 
 inline bool ShadowValue::isIDObject() const {
 
   return isIdentifiedObject(getBareVal());
-
 }
 
-inline InstArgImprovement* ShadowValue::getIAI() const {
+inline InstArgImprovement *ShadowValue::getIAI() const {
 
-  switch(t) {
+  switch (t) {
   case SHADOWVAL_INST:
     return &(u.I->i);
   case SHADOWVAL_ARG:
-    return &(u.A->i);      
+    return &(u.A->i);
   default:
     return 0;
   }
-
 }
 
-inline LLVMContext& ShadowValue::getLLVMContext() const {
-  switch(t) {
+inline LLVMContext &ShadowValue::getLLVMContext() const {
+  switch (t) {
   case SHADOWVAL_INST:
     return u.I->invar->I->getContext();
   case SHADOWVAL_ARG:
@@ -1604,8 +1525,8 @@ inline LLVMContext& ShadowValue::getLLVMContext() const {
   }
 }
 
-inline void ShadowValue::setCommittedVal(Value* V) {
-  switch(t) {
+inline void ShadowValue::setCommittedVal(Value *V) {
+  switch (t) {
   case SHADOWVAL_INST:
     u.I->committedVal = V;
     break;
@@ -1617,8 +1538,8 @@ inline void ShadowValue::setCommittedVal(Value* V) {
   }
 }
 
-template<class X> inline bool val_is(ShadowValue V) {
-  switch(V.t) {
+template <class X> inline bool val_is(ShadowValue V) {
+  switch (V.t) {
   case SHADOWVAL_OTHER:
     return isa<X>(V.u.V);
   case SHADOWVAL_GV:
@@ -1626,7 +1547,7 @@ template<class X> inline bool val_is(ShadowValue V) {
   case SHADOWVAL_INST:
     return inst_is<X>(V.u.I);
   case SHADOWVAL_ARG: {
-    if(!V.u.A->invar)
+    if (!V.u.A->invar)
       return false;
     return isa<X>(V.u.A->invar->A);
   }
@@ -1636,8 +1557,8 @@ template<class X> inline bool val_is(ShadowValue V) {
   }
 }
 
-template<class X> inline X* dyn_cast_val(ShadowValue V) {
-  switch(V.t) {
+template <class X> inline X *dyn_cast_val(ShadowValue V) {
+  switch (V.t) {
   case SHADOWVAL_OTHER:
     return dyn_cast<X>(V.u.V);
   case SHADOWVAL_GV:
@@ -1652,8 +1573,8 @@ template<class X> inline X* dyn_cast_val(ShadowValue V) {
   }
 }
 
-template<class X> inline X* cast_val(ShadowValue V) {
-  switch(V.t) {
+template <class X> inline X *cast_val(ShadowValue V) {
+  switch (V.t) {
   case SHADOWVAL_OTHER:
     return cast<X>(V.u.V);
   case SHADOWVAL_GV:
@@ -1668,91 +1589,83 @@ template<class X> inline X* cast_val(ShadowValue V) {
   }
 }
 
-static Constant* CIToConst(const ShadowValue V) {
+static Constant *CIToConst(const ShadowValue V) {
 
-  Type* CITy = V.getNonPointerType();
+  Type *CITy = V.getNonPointerType();
   return ConstantInt::get(CITy, V.u.CI, true);
-
 }
 
-inline Constant* getSingleConstant(const ShadowValue V) {
+inline Constant *getSingleConstant(const ShadowValue V) {
 
-  if(V.t == SHADOWVAL_OTHER)
-    return cast<Constant>(V.u.V);  
-  else if(V.isConstantInt())
+  if (V.t == SHADOWVAL_OTHER)
+    return cast<Constant>(V.u.V);
+  else if (V.isConstantInt())
     return CIToConst(V);
   else {
     release_assert(0 && "getSingleConstant on non-constant");
     return 0;
   }
-
 }
 
-inline bool hasSingleConstant(const ImprovedValSet* IV) {
+inline bool hasSingleConstant(const ImprovedValSet *IV) {
 
-  const ImprovedValSetSingle* IVS = dyn_cast<ImprovedValSetSingle>(IV);
-  if(!IVS)
+  const ImprovedValSetSingle *IVS = dyn_cast<ImprovedValSetSingle>(IV);
+  if (!IVS)
     return false;
-  if(IVS->Overdef || IVS->Values.size() != 1 || IVS->SetType != ValSetTypeScalar)
-    return false;  
+  if (IVS->Overdef || IVS->Values.size() != 1 ||
+      IVS->SetType != ValSetTypeScalar)
+    return false;
   return true;
-
 }
 
-inline Constant* getSingleConstant(const ImprovedValSet* IV) {
-  
-  if(!hasSingleConstant(IV))
+inline Constant *getSingleConstant(const ImprovedValSet *IV) {
+
+  if (!hasSingleConstant(IV))
     return 0;
   return getSingleConstant(cast<ImprovedValSetSingle>(IV)->Values[0].V);
-
 }
 
-inline bool hasConstReplacement(const ShadowArg* SA) {
+inline bool hasConstReplacement(const ShadowArg *SA) {
 
-  if(!SA->i.PB)
+  if (!SA->i.PB)
     return false;
   return hasSingleConstant(SA->i.PB);
-
 }
 
-inline Constant* getConstReplacement(const ShadowArg* SA) {
+inline Constant *getConstReplacement(const ShadowArg *SA) {
 
-  if(!SA->i.PB)
+  if (!SA->i.PB)
     return 0;
   return getSingleConstant(SA->i.PB);
-
 }
 
-inline bool hasConstReplacement(const ShadowInstruction* SI) {
+inline bool hasConstReplacement(const ShadowInstruction *SI) {
 
-  if(!SI->i.PB)
+  if (!SI->i.PB)
     return false;
   return hasSingleConstant(SI->i.PB);
-
 }
 
-inline Constant* getConstReplacement(const ShadowInstruction* SI) {
+inline Constant *getConstReplacement(const ShadowInstruction *SI) {
 
-  if(!SI->i.PB)
+  if (!SI->i.PB)
     return 0;
   return getSingleConstant(SI->i.PB);
-
 }
 
-inline ImprovedValSet* getIVSRef(ShadowValue V);
+inline ImprovedValSet *getIVSRef(ShadowValue V);
 
 inline bool hasConstReplacement(const ShadowValue SV) {
 
-  switch(SV.t) {
+  switch (SV.t) {
 
   case SHADOWVAL_ARG:
-  case SHADOWVAL_INST: 
-    {
-      ImprovedValSet* IVS = getIVSRef(SV);
-      if(!IVS)
-	return 0;
-      return hasSingleConstant(IVS);
-    }
+  case SHADOWVAL_INST: {
+    ImprovedValSet *IVS = getIVSRef(SV);
+    if (!IVS)
+      return 0;
+    return hasSingleConstant(IVS);
+  }
   case SHADOWVAL_CI8:
   case SHADOWVAL_CI16:
   case SHADOWVAL_CI32:
@@ -1764,23 +1677,20 @@ inline bool hasConstReplacement(const ShadowValue SV) {
   default:
     release_assert(0 && "Bad SV type in hasConstReplacement");
     llvm_unreachable("Bad SV type in hasConstReplacement");
-
   }
-
 }
 
-inline Constant* getConstReplacement(ShadowValue SV) {
+inline Constant *getConstReplacement(ShadowValue SV) {
 
-  switch(SV.t) {
+  switch (SV.t) {
 
   case SHADOWVAL_ARG:
-  case SHADOWVAL_INST: 
-    {
-      ImprovedValSet* IVS = getIVSRef(SV);
-      if(!IVS)
-	return 0;
-      return getSingleConstant(IVS);
-    }
+  case SHADOWVAL_INST: {
+    ImprovedValSet *IVS = getIVSRef(SV);
+    if (!IVS)
+      return 0;
+    return getSingleConstant(IVS);
+  }
   case SHADOWVAL_CI8:
   case SHADOWVAL_CI16:
   case SHADOWVAL_CI32:
@@ -1792,48 +1702,44 @@ inline Constant* getConstReplacement(ShadowValue SV) {
   default:
     release_assert(0 && "Bad SV type in getConstReplacement");
     llvm_unreachable("Bad SV type in getConstReplacement");
-
   }
-
 }
 
 inline ShadowValue tryGetConstReplacement(ShadowValue SV) {
 
-  if(Constant* C = getConstReplacement(SV))
+  if (Constant *C = getConstReplacement(SV))
     return ShadowValue(C);
   else
     return SV;
-
 }
 
-inline bool tryGetConstantSignedInt(ShadowValue SV, int64_t& Out) {
+inline bool tryGetConstantSignedInt(ShadowValue SV, int64_t &Out) {
 
-  if(SV.getSignedCI(Out))
+  if (SV.getSignedCI(Out))
     return true;
 
-  ConstantInt* CI;
-  if(SV.isVal() && (CI = dyn_cast<ConstantInt>(SV.u.V))) {
+  ConstantInt *CI;
+  if (SV.isVal() && (CI = dyn_cast<ConstantInt>(SV.u.V))) {
 
-    if(CI->getBitWidth() > 64)
+    if (CI->getBitWidth() > 64)
       return false;
 
     Out = CI->getSExtValue();
     return true;
   }
-  
+
   return false;
-  
 }
 
-inline bool tryGetConstantInt(ShadowValue SV, uint64_t& Out) {
+inline bool tryGetConstantInt(ShadowValue SV, uint64_t &Out) {
 
-  if(SV.getCI(Out))
+  if (SV.getCI(Out))
     return true;
 
-  ConstantInt* CI;
-  if(SV.isVal() && (CI = dyn_cast<ConstantInt>(SV.u.V))) {
+  ConstantInt *CI;
+  if (SV.isVal() && (CI = dyn_cast<ConstantInt>(SV.u.V))) {
 
-    if(CI->getBitWidth() > 64)
+    if (CI->getBitWidth() > 64)
       return false;
 
     Out = CI->getLimitedValue();
@@ -1841,38 +1747,36 @@ inline bool tryGetConstantInt(ShadowValue SV, uint64_t& Out) {
   }
 
   return false;
-
 }
 
-inline bool tryGetConstantIntReplacement(ShadowValue SV, uint64_t& Out) {
+inline bool tryGetConstantIntReplacement(ShadowValue SV, uint64_t &Out) {
 
-  if(tryGetConstantInt(SV, Out))
+  if (tryGetConstantInt(SV, Out))
     return true;
 
-  switch(SV.t) {
+  switch (SV.t) {
 
   case SHADOWVAL_ARG:
-  case SHADOWVAL_INST: 
-    {
-      ImprovedValSetSingle* IVS = dyn_cast_or_null<ImprovedValSetSingle>(getIVSRef(SV));
-      if((!IVS) || IVS->Values.size() != 1)
-	return false;
-      return tryGetConstantInt(IVS->Values[0].V, Out);
-    }
+  case SHADOWVAL_INST: {
+    ImprovedValSetSingle *IVS =
+        dyn_cast_or_null<ImprovedValSetSingle>(getIVSRef(SV));
+    if ((!IVS) || IVS->Values.size() != 1)
+      return false;
+    return tryGetConstantInt(IVS->Values[0].V, Out);
+  }
   default:
     return false;
-
   }
-
 }
 
-std::pair<ValSetType, ImprovedVal> getValPB(Value* V);
+std::pair<ValSetType, ImprovedVal> getValPB(Value *V);
 
-inline void getIVOrSingleVal(ShadowValue V, ImprovedValSet*& IVS, std::pair<ValSetType, ImprovedVal>& Single) {
+inline void getIVOrSingleVal(ShadowValue V, ImprovedValSet *&IVS,
+                             std::pair<ValSetType, ImprovedVal> &Single) {
 
   IVS = 0;
 
-  switch(V.t) {
+  switch (V.t) {
 
   case SHADOWVAL_INST:
   case SHADOWVAL_ARG:
@@ -1887,7 +1791,7 @@ inline void getIVOrSingleVal(ShadowValue V, ImprovedValSet*& IVS, std::pair<ValS
   case SHADOWVAL_CI8:
   case SHADOWVAL_CI16:
   case SHADOWVAL_CI32:
-  case SHADOWVAL_CI64: 
+  case SHADOWVAL_CI64:
     Single.first = ValSetTypeScalar;
     Single.second = V;
     break;
@@ -1895,75 +1799,73 @@ inline void getIVOrSingleVal(ShadowValue V, ImprovedValSet*& IVS, std::pair<ValS
     release_assert(0 && "Bad value type in getIVOrSingleVal");
     llvm_unreachable("Bad value type in getIVOrSingleVal");
   }
-
 }
 
-inline bool tryGetUniqueIV(ShadowValue V, std::pair<ValSetType, ImprovedVal>& Out) {
+inline bool tryGetUniqueIV(ShadowValue V,
+                           std::pair<ValSetType, ImprovedVal> &Out) {
 
-  ImprovedValSet* IVS;
+  ImprovedValSet *IVS;
   getIVOrSingleVal(V, IVS, Out);
-  if(!IVS)
-    return true;
-  
-  ImprovedValSetSingle* IVSingle = dyn_cast<ImprovedValSetSingle>(IVS);
-  if(!IVSingle)
+  if (!IVS)
     return true;
 
-  if(IVSingle->Values.size() != 1)
+  ImprovedValSetSingle *IVSingle = dyn_cast<ImprovedValSetSingle>(IVS);
+  if (!IVSingle)
+    return true;
+
+  if (IVSingle->Values.size() != 1)
     return false;
 
   Out.first = IVSingle->SetType;
   Out.second = IVSingle->Values[0];
 
   return true;
-
 }
 
-inline bool IVsEqualShallow(ImprovedValSet*, ImprovedValSet*);
+inline bool IVsEqualShallow(ImprovedValSet *, ImprovedValSet *);
 
-inline bool IVMatchesVal(ShadowValue V, ImprovedValSet* IV) {
+inline bool IVMatchesVal(ShadowValue V, ImprovedValSet *IV) {
 
-  ImprovedValSet* OtherIV = 0;
+  ImprovedValSet *OtherIV = 0;
   std::pair<ValSetType, ImprovedVal> OtherSingle;
   getIVOrSingleVal(V, OtherIV, OtherSingle);
 
-  if(OtherIV)
+  if (OtherIV)
     return IVsEqualShallow(IV, OtherIV);
 
-  ImprovedValSetSingle* IVS = dyn_cast<ImprovedValSetSingle>(IV);
-  if(!IVS)
+  ImprovedValSetSingle *IVS = dyn_cast<ImprovedValSetSingle>(IV);
+  if (!IVS)
     return false;
-  
-  if(OtherSingle.first == ValSetTypeOverdef)
+
+  if (OtherSingle.first == ValSetTypeOverdef)
     return IVS->Overdef;
 
-  if(OtherSingle.first != IVS->SetType)
+  if (OtherSingle.first != IVS->SetType)
     return false;
 
-  if(IVS->Values.size() != 1)
+  if (IVS->Values.size() != 1)
     return false;
 
   return IVS->Values[0] == OtherSingle.second;
-
 }
 
-inline bool getImprovedValSetSingle(ShadowValue V, ImprovedValSetSingle& OutPB) {
+inline bool getImprovedValSetSingle(ShadowValue V,
+                                    ImprovedValSetSingle &OutPB) {
 
-  switch(V.t) {
+  switch (V.t) {
 
   case SHADOWVAL_INST:
-  case SHADOWVAL_ARG:
-    {
-      ImprovedValSetSingle* IVS = dyn_cast_or_null<ImprovedValSetSingle>(getIVSRef(V));
-      if(!IVS) {
-	OutPB.setOverdef();
-	return true;
-      }
-      else {
-	OutPB = *IVS;
-	return OutPB.isInitialised();
-      }	
+  case SHADOWVAL_ARG: {
+    ImprovedValSetSingle *IVS =
+        dyn_cast_or_null<ImprovedValSetSingle>(getIVSRef(V));
+    if (!IVS) {
+      OutPB.setOverdef();
+      return true;
+    } else {
+      OutPB = *IVS;
+      return OutPB.isInitialised();
     }
+  }
 
   case SHADOWVAL_GV:
     OutPB.set(ImprovedVal(V, 0), ValSetTypePB);
@@ -1971,176 +1873,160 @@ inline bool getImprovedValSetSingle(ShadowValue V, ImprovedValSetSingle& OutPB) 
   case SHADOWVAL_CI8:
   case SHADOWVAL_CI16:
   case SHADOWVAL_CI32:
-  case SHADOWVAL_CI64: 
+  case SHADOWVAL_CI64:
     OutPB.set(V, ValSetTypeScalar);
     return true;
-    
-  case SHADOWVAL_OTHER:
-    {
-      std::pair<ValSetType, ImprovedVal> VPB = getValPB(V.getVal());
-      if(VPB.first == ValSetTypeUnknown)
-	return false;
-      OutPB.set(VPB.second, VPB.first);
-      return true;
-    }
 
-
+  case SHADOWVAL_OTHER: {
+    std::pair<ValSetType, ImprovedVal> VPB = getValPB(V.getVal());
+    if (VPB.first == ValSetTypeUnknown)
+      return false;
+    OutPB.set(VPB.second, VPB.first);
+    return true;
+  }
 
   default:
     release_assert(0 && "Bad value type in getImprovedValSetSingle");
     llvm_unreachable("Bad value type in getImprovedValSetSingle");
-
   }
-
 }
 
-inline ImprovedValSet* tryGetIVSRef(ShadowValue V) {
+inline ImprovedValSet *tryGetIVSRef(ShadowValue V) {
 
-  switch(V.t) {
+  switch (V.t) {
   case SHADOWVAL_INST:
     return V.u.I->i.PB;
   case SHADOWVAL_ARG:
-    return V.u.A->i.PB;    
+    return V.u.A->i.PB;
   default:
     return 0;
   }
-
 }
 
-inline ImprovedValSet* getIVSRef(ShadowValue V) {
+inline ImprovedValSet *getIVSRef(ShadowValue V) {
 
-  release_assert((V.t == SHADOWVAL_INST || V.t == SHADOWVAL_ARG) 
-		 && "getIVSRef only applicable to instructions and arguments");
-  
+  release_assert((V.t == SHADOWVAL_INST || V.t == SHADOWVAL_ARG) &&
+                 "getIVSRef only applicable to instructions and arguments");
+
   return tryGetIVSRef(V);
-
 }
 
 // V must have an IVS.
-inline void addValToPB(ShadowValue& V, ImprovedValSetSingle& ResultPB) {
+inline void addValToPB(ShadowValue &V, ImprovedValSetSingle &ResultPB) {
 
-  switch(V.t) {
+  switch (V.t) {
 
   case SHADOWVAL_INST:
-  case SHADOWVAL_ARG:
-    {
-      ImprovedValSetSingle* IVS = cast<ImprovedValSetSingle>(getIVSRef(V));
-      if(!IVS->isInitialised())
-	ResultPB.setOverdef();
-      else
-	ResultPB.merge(*IVS);
-      return;
-    }
+  case SHADOWVAL_ARG: {
+    ImprovedValSetSingle *IVS = cast<ImprovedValSetSingle>(getIVSRef(V));
+    if (!IVS->isInitialised())
+      ResultPB.setOverdef();
+    else
+      ResultPB.merge(*IVS);
+    return;
+  }
   case SHADOWVAL_GV:
     ResultPB.mergeOne(ValSetTypePB, ImprovedVal(V, 0));
     return;
   case SHADOWVAL_CI8:
   case SHADOWVAL_CI16:
   case SHADOWVAL_CI32:
-  case SHADOWVAL_CI64: 
+  case SHADOWVAL_CI64:
     ResultPB.mergeOne(ValSetTypeScalar, V);
     return;
-  case SHADOWVAL_OTHER:
-    {
-      std::pair<ValSetType, ImprovedVal> VPB = getValPB(V.getVal());
-      if(VPB.first == ValSetTypeUnknown)
-	ResultPB.setOverdef();
-      else
-	ResultPB.mergeOne(VPB.first, VPB.second);
-    }
+  case SHADOWVAL_OTHER: {
+    std::pair<ValSetType, ImprovedVal> VPB = getValPB(V.getVal());
+    if (VPB.first == ValSetTypeUnknown)
+      ResultPB.setOverdef();
+    else
+      ResultPB.mergeOne(VPB.first, VPB.second);
+  }
     return;
 
   default:
     release_assert(0 && "Bad value type in addValToPB");
     llvm_unreachable("Bad value type in addValToPB");
-    
   }
-
 }
 
-inline bool getBaseAndOffset(ShadowValue SV, ShadowValue& Base, int64_t& Offset, bool ignoreNull = false) {
+inline bool getBaseAndOffset(ShadowValue SV, ShadowValue &Base, int64_t &Offset,
+                             bool ignoreNull = false) {
 
   ImprovedValSetSingle SVPB;
-  if(!getImprovedValSetSingle(SV, SVPB))
+  if (!getImprovedValSetSingle(SV, SVPB))
     return false;
 
-  if(SVPB.SetType != ValSetTypePB || SVPB.Overdef || SVPB.Values.size() == 0)
+  if (SVPB.SetType != ValSetTypePB || SVPB.Overdef || SVPB.Values.size() == 0)
     return false;
 
-  if(!ignoreNull) {
-    if(SVPB.Values.size() != 1)
+  if (!ignoreNull) {
+    if (SVPB.Values.size() != 1)
       return false;
 
     Base = SVPB.Values[0].V;
     Offset = SVPB.Values[0].Offset;
     return true;
-  }
-  else {
+  } else {
 
     bool setAlready = false;
 
     // Search for a unique non-null value:
-    for(uint32_t i = 0, ilim = SVPB.Values.size(); i != ilim; ++i) {
+    for (uint32_t i = 0, ilim = SVPB.Values.size(); i != ilim; ++i) {
 
-      if(SVPB.Values[i].V.isVal() && isa<ConstantPointerNull>(SVPB.Values[i].V.getVal()))
-	continue;
+      if (SVPB.Values[i].V.isVal() &&
+          isa<ConstantPointerNull>(SVPB.Values[i].V.getVal()))
+        continue;
 
-      if(!setAlready) {
-	setAlready = true;
-	Base = SVPB.Values[i].V;
-	Offset = SVPB.Values[i].Offset;
+      if (!setAlready) {
+        setAlready = true;
+        Base = SVPB.Values[i].V;
+        Offset = SVPB.Values[i].Offset;
+      } else {
+        Base = ShadowValue();
+        return false;
       }
-      else {
-	Base = ShadowValue();
-	return false;
-      }
-
     }
 
     return setAlready;
-
   }
-
 }
 
-inline bool getBaseObject(ShadowValue SV, ShadowValue& Base) {
+inline bool getBaseObject(ShadowValue SV, ShadowValue &Base) {
 
   int64_t ign;
   return getBaseAndOffset(SV, Base, ign);
-
 }
 
-inline bool getBaseAndConstantOffset(ShadowValue SV, ShadowValue& Base, int64_t& Offset, bool ignoreNull = false) {
+inline bool getBaseAndConstantOffset(ShadowValue SV, ShadowValue &Base,
+                                     int64_t &Offset, bool ignoreNull = false) {
 
   Offset = 0;
   bool ret = getBaseAndOffset(SV, Base, Offset, ignoreNull);
-  if(Offset == LLONG_MAX)
+  if (Offset == LLONG_MAX)
     return false;
   return ret;
-
 }
 
-inline bool mayBeReplaced(InstArgImprovement& IAI) {
+inline bool mayBeReplaced(InstArgImprovement &IAI) {
 
-  ImprovedValSetSingle* IVS = dyn_cast_or_null<ImprovedValSetSingle>(IAI.PB);
-  if(!IVS)
+  ImprovedValSetSingle *IVS = dyn_cast_or_null<ImprovedValSetSingle>(IAI.PB);
+  if (!IVS)
     return false;
   return IVS->Values.size() == 1 && (IVS->SetType == ValSetTypeScalar ||
-				       (IVS->SetType == ValSetTypePB && IVS->Values[0].Offset != LLONG_MAX) ||
-				       IVS->SetType == ValSetTypeFD);
+                                     (IVS->SetType == ValSetTypePB &&
+                                      IVS->Values[0].Offset != LLONG_MAX) ||
+                                     IVS->SetType == ValSetTypeFD);
 }
 
-inline bool mayBeReplaced(ShadowInstruction* SI) {
+inline bool mayBeReplaced(ShadowInstruction *SI) {
   return mayBeReplaced(SI->i);
 }
 
-inline bool mayBeReplaced(ShadowArg* SA) {
-  return mayBeReplaced(SA->i);
-}
+inline bool mayBeReplaced(ShadowArg *SA) { return mayBeReplaced(SA->i); }
 
 inline bool mayBeReplaced(ShadowValue SV) {
 
-  switch(SV.t) {
+  switch (SV.t) {
   case SHADOWVAL_INST:
     return mayBeReplaced(SV.u.I);
   case SHADOWVAL_ARG:
@@ -2148,51 +2034,46 @@ inline bool mayBeReplaced(ShadowValue SV) {
   default:
     return false;
   }
-
 }
 
-inline void deleteIV(ImprovedValSet* I);
-inline ImprovedValSetSingle* newIVS();
+inline void deleteIV(ImprovedValSet *I);
+inline ImprovedValSetSingle *newIVS();
 
-inline void setReplacement(InstArgImprovement& IAI, Constant* C) {
+inline void setReplacement(InstArgImprovement &IAI, Constant *C) {
 
-  if(IAI.PB)
+  if (IAI.PB)
     deleteIV(IAI.PB);
 
-  ImprovedValSetSingle* NewIVS = newIVS();
+  ImprovedValSetSingle *NewIVS = newIVS();
   IAI.PB = NewIVS;
 
   std::pair<ValSetType, ImprovedVal> P = getValPB(C);
   NewIVS->Values.push_back(P.second);
   NewIVS->SetType = P.first;
-
 }
 
-inline void setReplacement(ShadowInstruction* SI, Constant* C) {
+inline void setReplacement(ShadowInstruction *SI, Constant *C) {
 
   setReplacement(SI->i, C);
-
 }
 
-inline void setReplacement(ShadowArg* SA, Constant* C) {
+inline void setReplacement(ShadowArg *SA, Constant *C) {
 
   setReplacement(SA->i, C);
-
 }
 
 inline ShadowValue ShadowValue::stripPointerCasts() const {
 
-  switch(t) {
+  switch (t) {
   case SHADOWVAL_ARG:
   case SHADOWVAL_GV:
     return *this;
   case SHADOWVAL_INST:
 
-    if(inst_is<CastInst>(u.I)) {
+    if (inst_is<CastInst>(u.I)) {
       ShadowValue Op = u.I->getOperand(0);
       return Op.stripPointerCasts();
-    }
-    else {
+    } else {
       return *this;
     }
 
@@ -2202,29 +2083,26 @@ inline ShadowValue ShadowValue::stripPointerCasts() const {
     release_assert(0 && "Bad val type in stripPointerCasts");
     llvm_unreachable("Bad val type in stripPointerCasts");
   }
-
 }
 
 inline bool ShadowValue::isNullOrConst() const {
 
-  if(t == SHADOWVAL_GV)
+  if (t == SHADOWVAL_GV)
     return u.GV->G->isConstant();
-  else if(t == SHADOWVAL_PTRIDX)
+  else if (t == SHADOWVAL_PTRIDX)
     return false;
 
   return isa<ConstantPointerNull>(getBareVal());
-
 }
 
 inline bool ShadowValue::isNullPointer() const {
 
-  switch(t) {
+  switch (t) {
   case SHADOWVAL_OTHER:
     return isa<ConstantPointerNull>(u.V);
   default:
     return false;
   }
-
 }
 
 // Support functions for AA, which can use bare instructions in a ShadowValue.
@@ -2232,24 +2110,20 @@ inline bool ShadowValue::isNullPointer() const {
 
 inline ShadowValue getValArgOperand(ShadowValue V, uint32_t i) {
 
-  if(ShadowInstruction* SI = V.getInst())
+  if (ShadowInstruction *SI = V.getInst())
     return SI->getCallArgOperand(i);
   else {
-    CallInst* I = cast<CallInst>(V.getVal());
+    CallInst *I = cast<CallInst>(V.getVal());
     return ShadowValue(I->getArgOperand(i));
   }
-
 }
-
 
 inline ShadowValue getValOperand(ShadowValue V, uint32_t i) {
 
-  if(ShadowInstruction* SI = V.getInst())
+  if (ShadowInstruction *SI = V.getInst())
     return SI->getOperand(i);
   else {
-    Instruction* I = cast<Instruction>(V.getVal());
+    Instruction *I = cast<Instruction>(V.getVal());
     return ShadowValue(I->getOperand(i));
   }
-
 }
-

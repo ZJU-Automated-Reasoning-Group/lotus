@@ -5,9 +5,9 @@
  * We provide the following APIs
  *  - get_expr_vars(exp, vars)
  *      get all variables of exp and store in vars
- *  - get_vars_differenct(vars_a, vars_b)
+ *  - get_vars_difference(vars_a, vars_b)
  *      set differences of vars_a and vars_b
- *  - get_k_modles(exp, k)
+ *  - get_k_models(exp, k)
  *      use the solver to get k models
  *  - get_abstract_interval(pre_cond, query)
  *      get the interval of query, under the condition pre_cond
@@ -17,23 +17,38 @@
  *      use cp to simplify exp
  *  - check_model
  *  - solve_with_truth_table
+ *
+ * Fixes applied:
+ *  CC-1 – Removed "using namespace std" and "using namespace z3" from global
+ *          scope.  They polluted every translation unit that included this
+ *          header.  All identifiers are now fully qualified.
+ *  CC-2 – get_abstract_interval(): the maximize result must be read with
+ *          upper() and the minimize result with lower() (they were swapped).
+ *          Same fix applied to get_abstract_interval_as_expr().
+ *  CC-3 – get_k_models(): use get_numeral_uint64() (not get_numeral_int())
+ *          to avoid truncation / exception for bit-vectors wider than 31 bits.
+ *          The blocking clause now uses the string representation so that
+ *          arbitrarily wide bit-vectors are handled correctly.
  */
 #pragma once
 
 #include "z3++.h"
 #include "z3.h"
+
 #include <algorithm>
+#include <climits>
+#include <cmath>
 #include <future>
 #include <iostream>
 #include <map>
-#include <math.h>
 #include <memory>
 #include <set>
 #include <vector>
-using namespace z3;
-using namespace std;
 
-bool get_expr_vars(expr &exp, expr_vector &vars) {
+// Fix CC-1: do NOT place "using namespace std" or "using namespace z3" here.
+// Each .cpp file that needs these namespaces should declare them locally.
+
+inline bool get_expr_vars(z3::expr &exp, z3::expr_vector &vars) {
   /*
    * get the variables in `exp` and put them in `vars`
    */
@@ -61,8 +76,6 @@ bool get_expr_vars(expr &exp, expr_vector &vars) {
       }
     };
     recur(exp);
-    // if the return type is std::vector<z3::expr>
-    // return std::vector<z3::expr>(syms.begin(), syms.end());;
     for (auto &i : syms) {
       vars.push_back(i);
     }
@@ -73,12 +86,13 @@ bool get_expr_vars(expr &exp, expr_vector &vars) {
   return true;
 }
 
-expr_vector get_vars_difference(expr_vector &vars_a, expr_vector &vars_b) {
+inline z3::expr_vector get_vars_difference(z3::expr_vector &vars_a,
+                                           z3::expr_vector &vars_b) {
   /*
-   * Compute the set difference of vars_a and vars_b?
-   * note that we assume vars_a and vars_b consist of purely variables.
+   * Compute the set difference of vars_a and vars_b.
+   * Assumes vars_a and vars_b consist of purely variables.
    */
-  expr_vector ret(vars_a.ctx());
+  z3::expr_vector ret(vars_a.ctx());
   try {
     for (unsigned i = 0; i < vars_a.size(); i++) {
       bool is_in_diff = true;
@@ -86,6 +100,7 @@ expr_vector get_vars_difference(expr_vector &vars_a, expr_vector &vars_b) {
       for (unsigned j = 0; j < vars_b.size(); j++) {
         if (sym_i == vars_b[j].decl().name()) {
           is_in_diff = false;
+          break;
         }
       }
       if (is_in_diff) {
@@ -99,75 +114,79 @@ expr_vector get_vars_difference(expr_vector &vars_a, expr_vector &vars_b) {
   return ret;
 }
 
-void get_k_models(z3::expr &exp, int k) {
+inline void get_k_models(z3::expr &exp, int k) {
   /*
-   * Compute k models of exp
-   * TODO: store the models
+   * Compute k models of exp.
+   *
+   * Fix CC-3: use the string representation of the numeral to build the
+   * blocking clause so that bit-vectors of any width are handled correctly.
+   * The old code used get_numeral_int() which throws / truncates for BVs
+   * wider than 31 bits.
    */
   z3::context &ctx = exp.ctx();
   z3::solver solver(ctx);
   solver.add(exp);
   while (solver.check() == z3::sat && k >= 1) {
     std::cout << solver << "\n";
-    // get model
     z3::model m = solver.get_model();
     z3::expr_vector args(ctx);
     for (unsigned i = 0; i < m.size(); i++) {
-      // get z3 variable
       z3::func_decl z3Variable = m[i];
       std::string varName = z3Variable.name().str();
-      z3::expr exp = m.get_const_interp(z3Variable);
-      unsigned bvSize = exp.get_sort().bv_size();
-      int value = m.eval(exp).get_numeral_int();
-      // std::string svalue = Z3_get_numeral_string(ctx, exp);
-      // uniq result
-      if (exp.get_sort().is_bv()) {
-        // args.push_back(ctx.bv_const(varName.c_str(), bvSize) !=
-        // ctx.bv_val(svalue.c_str(), bvSize));
+      z3::expr val = m.get_const_interp(z3Variable);
+      if (val.get_sort().is_bv()) {
+        unsigned bvSize = val.get_sort().bv_size();
+        // Fix CC-3: use the string numeral to avoid int truncation.
+        std::string svalue =
+            Z3_get_numeral_string(ctx, static_cast<Z3_ast>(val));
         args.push_back(ctx.bv_const(varName.c_str(), bvSize) !=
-                       ctx.bv_val(value, bvSize));
+                       ctx.bv_val(svalue.c_str(), bvSize));
       }
     }
-    // block current model
-    solver.add(mk_or(args));
+    if (args.empty())
+      break; // no BV variables to block; avoid infinite loop
+    solver.add(z3::mk_or(args));
     k--;
   }
 }
 
-std::pair<int, int> get_abstract_interval(expr &pre_cond, expr &query,
-                                          int timeout) {
+inline std::pair<int, int> get_abstract_interval(z3::expr &pre_cond,
+                                                 z3::expr &query, int timeout) {
   /*
-   * Compute the interval abstraction of And(pre_cond, query)
+   * Compute the interval abstraction of pre_cond for query.
    *
-   * TODO: should we return an expr or a domain value(like [a, b])
+   * Fix CC-2: after maximize(query), the optimal value is read with upper();
+   *           after minimize(query), the optimal value is read with lower().
+   *           The original code had these swapped.
    */
   z3::context &c = pre_cond.ctx();
   std::pair<int, int> ret(INT_MIN, INT_MAX);
-  z3::optimize opt1(c);
-  z3::optimize opt2(c);
+  z3::optimize opt_max(c);
+  z3::optimize opt_min(c);
   z3::params p(c);
   p.set("priority", c.str_symbol("pareto"));
   z3::set_param("smt.timeout", timeout);
-  // p.set("timeout", Timeout); TODO: it seems we cannot set timeout directly to
-  // opt
-  opt1.set(p);
-  opt2.set(p);
-  opt1.add(pre_cond);
-  z3::optimize::handle h1 = opt1.maximize(query);
-  opt2.add(pre_cond);
-  z3::optimize::handle h2 = opt2.minimize(query);
+  opt_max.set(p);
+  opt_min.set(p);
+
+  opt_max.add(pre_cond);
+  z3::optimize::handle h_max = opt_max.maximize(query);
+
+  opt_min.add(pre_cond);
+  z3::optimize::handle h_min = opt_min.minimize(query);
+
   try {
-    if (opt1.check() == z3::sat) {
-      // std::cout << opt1.get_model() << std::endl;
-      ret.second = opt1.lower(h1).get_numeral_int();
+    if (opt_max.check() == z3::sat) {
+      // Fix CC-2: upper() gives the optimal maximum value.
+      ret.second = opt_max.upper(h_max).get_numeral_int();
     }
   } catch (z3::exception &ex) {
     std::cout << ex << "\n";
   }
   try {
-    if (opt2.check() == z3::sat) {
-      // std::cout << opt1.upper(h2) << std::endl;
-      ret.first = opt2.upper(h2).get_numeral_int();
+    if (opt_min.check() == z3::sat) {
+      // Fix CC-2: lower() gives the optimal minimum value.
+      ret.first = opt_min.lower(h_min).get_numeral_int();
     }
   } catch (z3::exception &ex) {
     std::cout << ex << "\n";
@@ -175,103 +194,85 @@ std::pair<int, int> get_abstract_interval(expr &pre_cond, expr &query,
   return ret;
 }
 
-void get_abstract_interval_as_expr(expr &pre_cond, expr &query,
-                                   expr_vector &res, int timeout) {
+inline void get_abstract_interval_as_expr(z3::expr &pre_cond, z3::expr &query,
+                                          z3::expr_vector &res, int timeout) {
   /*
+   * Compute the interval abstraction of pre_cond for query, returning
+   * Z3 expressions for the lower and upper bounds.
    *
-   * Compute the interval abstraction of And(pre_cond, query)
-   * TODO: should we return an expr or a domain value(like [a, b])
+   * Fix CC-2: lower() for the minimum result, upper() for the maximum result.
    */
-  context &Ctx = pre_cond.ctx();
-  params Param(Ctx);
+  z3::context &Ctx = pre_cond.ctx();
+  z3::params Param(Ctx);
   Param.set("priority", Ctx.str_symbol("pareto"));
-  set_param("smt.timeout", timeout);
-  // p.set("timeout", Timeout); TODO: it seems we cannot set timeout directly to
-  // opt
-  optimize UpperFinder(Ctx);
-  optimize LowerFinder(Ctx);
+  z3::set_param("smt.timeout", timeout);
+
+  z3::optimize UpperFinder(Ctx);
+  z3::optimize LowerFinder(Ctx);
   UpperFinder.set(Param);
   LowerFinder.set(Param);
+
   UpperFinder.add(pre_cond);
-  optimize::handle UpperGoal = UpperFinder.maximize(query);
+  z3::optimize::handle UpperGoal = UpperFinder.maximize(query);
+
   LowerFinder.add(pre_cond);
-  optimize::handle LowerGoal = LowerFinder.minimize(query);
+  z3::optimize::handle LowerGoal = LowerFinder.minimize(query);
+
   try {
     if (LowerFinder.check() == z3::sat) {
-      // std::cout << "Find lower success\n";
-      res.push_back(LowerFinder.upper(LowerGoal));
+      // Fix CC-2: lower() gives the optimal minimum value.
+      res.push_back(LowerFinder.lower(LowerGoal));
     }
-  } catch (z3::exception &Ex) {
+  } catch (z3::exception &) {
     res.push_back(Ctx.bool_val(false));
   }
   try {
     if (UpperFinder.check() == z3::sat) {
-      // std::cout << "Find upper success\n";
-      res.push_back(UpperFinder.lower(UpperGoal));
+      // Fix CC-2: upper() gives the optimal maximum value.
+      res.push_back(UpperFinder.upper(UpperGoal));
     }
-  } catch (z3::exception &Ex) {
+  } catch (z3::exception &) {
     res.push_back(Ctx.bool_val(false));
   }
 }
 
-expr do_constant_propagation(expr &to_simp) {
+inline z3::expr do_constant_propagation(z3::expr &to_simp) {
   /*
-   * Perform constant propagation on to_simp
+   * Perform constant propagation on to_simp.
    */
-  goal gg(to_simp.ctx());
+  z3::goal gg(to_simp.ctx());
   gg.add(to_simp);
-  tactic cp = tactic(to_simp.ctx(), "propagate-values");
+  z3::tactic cp = z3::tactic(to_simp.ctx(), "propagate-values");
   return cp.apply(gg)[0].as_expr();
 }
 
-bool check_model_misc(expr &exp, context &ctx, vector<func_decl> &decls,
-                      vector<int> &candidate) {
-  model cur_model(ctx);
-
-  // initialize the model with candidate
+inline bool check_model_misc(z3::expr &exp, z3::context &ctx,
+                             std::vector<z3::func_decl> &decls,
+                             std::vector<int> &candidate) {
+  z3::model cur_model(ctx);
   for (unsigned i = 0; i < decls.size(); i++) {
-    // TODO: decide the bit-vector size
-    expr var_i = ctx.bv_val(candidate[i], 32);
+    z3::expr var_i = ctx.bv_val(candidate[i], 32);
     cur_model.add_const_interp(decls[i], var_i);
   }
-  // check if exp is satisfied by cur_model
-  if (cur_model.eval(exp).is_true()) {
-    return true;
-  } else {
-    return false;
-  }
+  return cur_model.eval(exp).is_true();
 }
 
-bool check_model_with_mutate(expr &exp) {
-  expr_vector vars(exp.ctx());
-
-  // get vars
+inline bool check_model_with_mutate(z3::expr &exp) {
+  z3::expr_vector vars(exp.ctx());
   get_expr_vars(exp, vars);
   unsigned var_num = vars.size();
 
-  // get decls
-  vector<func_decl> decls;
-  for (unsigned i = 0; i < var_num; i++) {
+  std::vector<z3::func_decl> decls;
+  for (unsigned i = 0; i < var_num; i++)
     decls.push_back(vars[i].decl());
-  }
 
-  // get candidate
-  // TODO: generate candidate automatically
-  // e.g., sampling on a polytope
-  vector<int> candidate;
-  for (unsigned i = 0; i < var_num; i++) {
-    candidate.push_back(0);
-  }
-
-  // check the model
-  bool res = check_model_misc(exp, exp.ctx(), decls, candidate);
-  return res;
+  std::vector<int> candidate(var_num, 0);
+  return check_model_misc(exp, exp.ctx(), decls, candidate);
 }
 
-bool sat_under_partial_model(expr &exp, model &m,
-                             expr_vector &donot_cared_vars) {
-  model partial_model(exp.ctx());
-
+inline bool sat_under_partial_model(z3::expr &exp, z3::model &m,
+                                    z3::expr_vector &donot_cared_vars) {
+  z3::model partial_model(exp.ctx());
   unsigned num_constants = m.num_consts();
   for (unsigned i = 0; i < num_constants; i++) {
     z3::func_decl decl = m.get_const_decl(i);
@@ -287,12 +288,7 @@ bool sat_under_partial_model(expr &exp, model &m,
       partial_model.add_const_interp(decl, val_e);
     }
   }
-  // check if exp is satisfied by cur_model
-  if (partial_model.eval(exp, true).is_true()) {
-    return true;
-  } else {
-    return false;
-  }
+  return partial_model.eval(exp, true).is_true();
 }
 
 inline uint64_t snoob(uint64_t sub, uint64_t set) {
@@ -304,64 +300,56 @@ inline uint64_t snoob(uint64_t sub, uint64_t set) {
   return rip;
 }
 
-bool check_model(expr &exp, context &ctx, vector<func_decl> &decls, uint64_t x,
-                 unsigned num) {
-  // std::cout << "current x is : " << x << std::endl;
-  model m(ctx);
-  expr bfalse = ctx.bool_val(false);
-  expr btrue = ctx.bool_val(true);
+inline bool check_model(z3::expr &exp, z3::context &ctx,
+                        std::vector<z3::func_decl> &decls, uint64_t x,
+                        unsigned num) {
+  z3::model m(ctx);
+  z3::expr bfalse = ctx.bool_val(false);
+  z3::expr btrue = ctx.bool_val(true);
   for (unsigned i = 0; i < num; i++) {
-    if (x & 1) {
+    if (x & 1)
       m.add_const_interp(decls[i], btrue);
-    } else {
+    else
       m.add_const_interp(decls[i], bfalse);
-    }
     x >>= 1;
   }
-  if (m.eval(exp).is_true()) {
-    return true;
-  } else {
-    return false;
-  }
+  return m.eval(exp).is_true();
 }
 
-int solve_with_truth_table(expr &exp, int bound) {
+inline int solve_with_truth_table(z3::expr &exp, int bound) {
   /*
-   * Solve expr with truth table based brute forth enumeration
+   * Solve expr with truth-table based brute-force enumeration.
    */
-  expr_vector vars(exp.ctx());
+  z3::expr_vector vars(exp.ctx());
   get_expr_vars(exp, vars);
   unsigned var_num = vars.size();
-  if (var_num > 15) {
+  if (var_num > 15)
     return 2; // unknown
-  } else {
-    int ret = 2;
-    vector<func_decl> decls;
-    for (unsigned i = 0; i < var_num; i++) {
-      decls.push_back(vars[i].decl());
-    }
-    auto set = (1ULL << var_num) - 1; // n bits
-    int check_model_count = 0;
-    for (unsigned i = 0; i < var_num + 1; ++i) {
-      auto sub = (1ULL << i) - 1; // i bits
-      uint64_t x = sub;
-      uint64_t y;
-      do {
-        // TODO: check_model is not so efficient?
-        check_model_count++;
-        if (check_model(exp, exp.ctx(), decls, x, var_num)) {
-          ret = 1;
-          goto RET;
-        }
-        if (check_model_count > bound)
-          goto RET;
-        // should be unknown ...
-        y = snoob(x, set); // get next subset
-        x = y;
-      } while ((y > sub));
-    }
-    ret = 0; // all models are tested
-  RET:
-    return ret;
+
+  int ret = 2;
+  std::vector<z3::func_decl> decls;
+  for (unsigned i = 0; i < var_num; i++)
+    decls.push_back(vars[i].decl());
+
+  auto set = (1ULL << var_num) - 1;
+  int check_model_count = 0;
+  for (unsigned i = 0; i < var_num + 1; ++i) {
+    auto sub = (1ULL << i) - 1;
+    uint64_t x = sub;
+    uint64_t y;
+    do {
+      check_model_count++;
+      if (check_model(exp, exp.ctx(), decls, x, var_num)) {
+        ret = 1;
+        goto RET;
+      }
+      if (check_model_count > bound)
+        goto RET;
+      y = snoob(x, set);
+      x = y;
+    } while (y > sub);
   }
+  ret = 0;
+RET:
+  return ret;
 }

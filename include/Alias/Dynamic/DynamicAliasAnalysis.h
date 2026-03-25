@@ -8,25 +8,24 @@
 
 namespace dynamic {
 
-class DynamicAliasAnalysis
-{
+class DynamicAliasAnalysis {
 private:
-    using AliasPairSet = llvm::DenseSet<AliasPair>;
-    using AnalysisMap = llvm::DenseMap<DynamicPointer, AliasPairSet>;
-    AnalysisMap aliasPairMap;
+  using AliasPairSet = llvm::DenseSet<AliasPair>;
+  using AnalysisMap = llvm::DenseMap<DynamicPointer, AliasPairSet>;
+  AnalysisMap aliasPairMap;
 
-    const char* fileName;
+  const char *fileName;
 
 public:
-    using const_iterator = AnalysisMap::const_iterator;
+  using const_iterator = AnalysisMap::const_iterator;
 
-    DynamicAliasAnalysis(const char* fileName);
+  DynamicAliasAnalysis(const char *fileName);
 
-    void runAnalysis();
+  void runAnalysis();
 
-    const AliasPairSet* getAliasPairs(DynamicPointer) const;
+  const AliasPairSet *getAliasPairs(DynamicPointer) const;
 
-    const_iterator begin() const { return aliasPairMap.begin(); }
-    const_iterator end() const { return aliasPairMap.end(); }
+  const_iterator begin() const { return aliasPairMap.begin(); }
+  const_iterator end() const { return aliasPairMap.end(); }
 };
 } // namespace dynamic

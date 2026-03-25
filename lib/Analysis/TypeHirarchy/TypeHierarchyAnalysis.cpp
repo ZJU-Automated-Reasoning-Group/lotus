@@ -1,6 +1,5 @@
 #include "Analysis/TypeHirarchy/TypeHierarchyAnalysis.h"
-#include "Utils/General/spdlog/spdlog.h"
-#include "Utils/LLVM/Demangle.h"
+
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -12,7 +11,11 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "Utils/LLVM/Demangle.h"
+
 #include <sstream>
+
+#include <spdlog/spdlog.h>
 
 /*
    #Background about virtual calls in LLVM#
@@ -305,8 +308,8 @@ TypeHierarchyAnalysis_Impl::getVtable(const StructType *ty) const {
 }
 
 void TypeHierarchyAnalysis_Impl::addCHGEdge(const StructType *src,
-                                             const StructType *dest,
-                                             graph_t &g) {
+                                            const StructType *dest,
+                                            graph_t &g) {
   auto it = g.find(src);
   if (it != g.end()) {
     it->second.insert(dest);
@@ -318,8 +321,8 @@ void TypeHierarchyAnalysis_Impl::addCHGEdge(const StructType *src,
 }
 
 bool TypeHierarchyAnalysis_Impl::hasCHGEdge(const StructType *src,
-                                             const StructType *dest,
-                                             graph_t &g) const {
+                                            const StructType *dest,
+                                            graph_t &g) const {
   auto it = g.find(src);
   if (it == g.end()) {
     return false;
@@ -504,8 +507,8 @@ void TypeHierarchyAnalysis_Impl::buildVtables(void) {
                  *      typeinfo is a named struct type.
                  */
                 if (Cast->getOperand(0)->hasName()) {
-                  std::string demangled_name(
-                      DemangleUtils::demangle(Cast->getOperand(0)->getName().str()));
+                  std::string demangled_name(DemangleUtils::demangle(
+                      Cast->getOperand(0)->getName().str()));
                   size_t pos = demangled_name.find_last_of(typeinfo_for_str);
                   if (pos != std::string::npos) {
                     /* here we know that the cast contains the typeinfo_ptr */
@@ -513,16 +516,18 @@ void TypeHierarchyAnalysis_Impl::buildVtables(void) {
                     // XXX: sometimes the compiler add the prefix
                     // "class." to the class name but not always.
                     std::string class_name = demangled_name.substr(pos + 1);
-                    class_typeinfo = StructType::getTypeByName(m_module.getContext(), 
-							       "class." + class_name);
+                    class_typeinfo = StructType::getTypeByName(
+                        m_module.getContext(), "class." + class_name);
                     if (!class_typeinfo) {
-                      class_typeinfo = StructType::getTypeByName(m_module.getContext(), class_name);
+                      class_typeinfo = StructType::getTypeByName(
+                          m_module.getContext(), class_name);
                     }
 
                     if (old_class_typeinfo && class_typeinfo &&
                         old_class_typeinfo != class_typeinfo) {
-                      SPDLOG_ERROR("Found a vtable with two different typeinfo: {} and {}", 
-                                   llvmToString(old_class_typeinfo), 
+                      SPDLOG_ERROR("Found a vtable with two different "
+                                   "typeinfo: {} and {}",
+                                   llvmToString(old_class_typeinfo),
                                    llvmToString(class_typeinfo));
                       llvm_unreachable(nullptr);
                     } else {
@@ -551,7 +556,9 @@ void TypeHierarchyAnalysis_Impl::buildVtables(void) {
           m_num_vtables++;
         } else {
           std::string ca_str = llvmToString(CA);
-          SPDLOG_WARN("We found something that looks a vtable but we couldn't find typeinfo: {}", ca_str);
+          SPDLOG_WARN("We found something that looks a vtable but we couldn't "
+                      "find typeinfo: {}",
+                      ca_str);
         }
       }
     }
@@ -610,8 +617,7 @@ void TypeHierarchyAnalysis_Impl::addCandidateFunction(
         if (matchVirtualSignature(callsite_type, callee->getFunctionType())) {
           out.insert(callees[vtable_index]);
         } else {
-          SPDLOG_ERROR("Did not match {} and {}", 
-                       llvmToString(callsite_type), 
+          SPDLOG_ERROR("Did not match {} and {}", llvmToString(callsite_type),
                        llvmToString(callee->getFunctionType()));
         }
       }
@@ -653,7 +659,7 @@ bool mayBeVirtualCall(const CallBase &CB) {
 }
 
 bool TypeHierarchyAnalysis_Impl::resolveVirtualCall(const CallBase &CB,
-                                                     function_vector_t &out) {
+                                                    function_vector_t &out) {
 
   // if not indirect call then we bail out ...
   if (CB.getCalledFunction()) {
@@ -714,7 +720,9 @@ bool TypeHierarchyAnalysis_Impl::resolveVirtualCall(const CallBase &CB,
   }
 
   std::string cb_str = llvmToString(&CB);
-  SPDLOG_WARN("Cannot resolve virtual call {} because first argument is not StructType\n", cb_str);
+  SPDLOG_WARN("Cannot resolve virtual call {} because first argument is not "
+              "StructType\n",
+              cb_str);
 
   return false;
 }
@@ -727,7 +735,8 @@ void TypeHierarchyAnalysis_Impl::printVtables(raw_ostream &o) const {
     for (unsigned i = 0, e = funs.size(); i < e; ++i) {
       if (funs[i]) {
         o << "\t" << i << ": " << funs[i]->getName().str() << "   "
-          << "DEMANGLED NAME=" << DemangleUtils::demangle(funs[i]->getName().str())
+          << "DEMANGLED NAME="
+          << DemangleUtils::demangle(funs[i]->getName().str())
           << "   TYPE=" << *(funs[i]->getType()) << "\n";
       }
     }
@@ -766,13 +775,13 @@ void TypeHierarchyAnalysis_Impl::printStats(raw_ostream &o) const {
   o << "BRUNCH_STAT GRAPH NUMBER NODES " << m_num_graph_nodes << "\n";
   o << "BRUNCH_STAT GRAPH NUMBER EDGES " << m_num_graph_edges << "\n";
   o << "BRUNCH_STAT GRAPH NUMBER CLOSED EDGES " << m_num_graph_closed_edges
-         << "\n";
+    << "\n";
   o << "BRUNCH_STAT POTENTIAL VTABLES " << m_num_potential_vtables << "\n";
   o << "BRUNCH_STAT IDENTIFIED VTABLES " << m_num_vtables << "\n";
-  o << "BRUNCH_STAT POTENTIAL VIRTUAL CALLS "
-         << m_num_potential_virtual_calls << "\n";
-  o << "BRUNCH_STAT RESOLVED VIRTUAL CALLS "
-         << m_num_resolved_virtual_calls << "\n";
+  o << "BRUNCH_STAT POTENTIAL VIRTUAL CALLS " << m_num_potential_virtual_calls
+    << "\n";
+  o << "BRUNCH_STAT RESOLVED VIRTUAL CALLS " << m_num_resolved_virtual_calls
+    << "\n";
 }
 
 /** TypeHierarchyAnalysis methods **/
@@ -838,8 +847,8 @@ public:
           errs() << "\tpossible callees:\n";
           for (unsigned i = 0, e = callees.size(); i < e; ++i) {
             const auto *f = callees[i];
-            errs() << "\t\t" << DemangleUtils::demangle(f->getName().str()) << " "
-                   << *(f->getType()) << "\n";
+            errs() << "\t\t" << DemangleUtils::demangle(f->getName().str())
+                   << " " << *(f->getType()) << "\n";
           }
         }
       }

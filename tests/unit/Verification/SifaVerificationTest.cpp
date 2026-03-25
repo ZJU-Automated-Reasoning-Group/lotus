@@ -10,8 +10,8 @@
  */
 
 #include "Verification/Sifa/SifaSymAbs.h"
-#include "Verification/SymbolicAbstraction/Core/AbstractValue.h"
-#include "Verification/SymbolicAbstraction/Core/InstructionSemantics.h"
+#include "Verification/SymAbsAI/Core/AbstractValue.h"
+#include "Verification/SymAbsAI/Core/InstructionSemantics.h"
 
 #include <llvm/AsmParser/Parser.h>
 #include <llvm/IR/BasicBlock.h>

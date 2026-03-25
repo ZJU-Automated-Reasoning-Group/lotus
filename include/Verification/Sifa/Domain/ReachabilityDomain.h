@@ -2,11 +2,11 @@
 //
 // A minimal concrete domain for end-to-end Sifa wiring: reachability.
 //
-// State is a boolean; bottom=false means "unreachable", top=true means "reachable".
-// join is OR; widen is OR; post is identity.
+// State is a boolean; bottom=false means "unreachable", top=true means
+// "reachable". join is OR; widen is OR; post is identity.
 //
-// This is intentionally simple and is meant as a scaffolding domain for the
-// initial intraprocedural milestone.
+// This is intentionally simple and is primarily used for Sifa reachability
+// queries and end-to-end regression coverage.
 //
 //===----------------------------------------------------------------------===//
 
@@ -38,15 +38,28 @@ public:
   }
 
   State meet(const State &a, const State &b) const override { return a && b; }
+  bool supportsMeet() const override { return true; }
 
   State post(const Label &t, const State &in) const override {
     (void)t;
     return in;
   }
 
-  State postCall(const State &callerState) const override { return callerState; }
+  State postCall(const Label &t, const State &callerState) const override {
+    (void)t;
+    return callerState;
+  }
+  State postCall(const State &callerState) const override {
+    return callerState;
+  }
 
-  State postReturn(const State &callerState, const State &calleeSummary) const override {
+  State postReturn(const Label &t, const State &callerState,
+                   const State &calleeSummary) const override {
+    (void)t;
+    return callerState && calleeSummary;
+  }
+  State postReturn(const State &callerState,
+                   const State &calleeSummary) const override {
     return callerState && calleeSummary;
   }
 };
@@ -55,4 +68,3 @@ public:
 } // namespace lotus
 
 #endif // LOTUS_VERIFICATION_SIFA_DOMAIN_REACHABILITYDOMAIN_H
-

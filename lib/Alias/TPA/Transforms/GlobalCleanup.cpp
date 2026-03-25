@@ -60,7 +60,8 @@ static bool cleanUpLinkage(GlobalValue *gv) {
  *
  * @param M The module to transform
  * @param analysisManager Module analysis manager (unused)
- * @return PreservedAnalyses::none() if modified, PreservedAnalyses::all() otherwise
+ * @return PreservedAnalyses::none() if modified, PreservedAnalyses::all()
+ * otherwise
  */
 PreservedAnalyses GlobalCleanup::run(Module &M,
                                      ModuleAnalysisManager &analysisManager) {
@@ -88,11 +89,13 @@ PreservedAnalyses GlobalCleanup::run(Module &M,
  * @brief Run the ResolveAliases pass on a module.
  *
  * Replaces all uses of GlobalAliases with their aliasee values, then removes
- * the alias declarations. This simplifies the IR by eliminating alias indirection.
+ * the alias declarations. This simplifies the IR by eliminating alias
+ * indirection.
  *
  * @param M The module to transform
  * @param analysisManager Module analysis manager (unused)
- * @return PreservedAnalyses::none() if modified, PreservedAnalyses::all() otherwise
+ * @return PreservedAnalyses::none() if modified, PreservedAnalyses::all()
+ * otherwise
  */
 PreservedAnalyses ResolveAliases::run(Module &M,
                                       ModuleAnalysisManager &analysisManager) {

@@ -1,14 +1,14 @@
 #pragma once
 
+#include "Solvers/SMT/LIBSMT/SMTExpr.h"
+#include "Solvers/SMT/LIBSMT/SMTSolver.h"
+#include "z3++.h"
+
 #include <map>
 #include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#include "Solvers/SMT/LIBSMT/SMTExpr.h"
-#include "Solvers/SMT/LIBSMT/SMTSolver.h"
-#include "z3++.h"
 
 class SMTRenamingAdvisor {
 public:
@@ -136,4 +136,4 @@ private:
   bool visit(SMTExpr &, std::unordered_map<std::string, SMTExpr> &,
              SMTExprVec &, std::map<SMTExpr, bool, SMTExprComparator> &,
              SMTRenamingAdvisor *);
-}; 
+};

@@ -8,7 +8,7 @@ Overview
 
 Integrates AFLGo, Hawkeye, and DAFL algorithms for directed greybox fuzzing. The implementation is based on libaflgo and provides modular distance analysis and instrumentation.
 
-**Location**: ``lib/Apps/Fuzzing/``
+**Location**: ``lib/Fuzzing/``
 
 **Components**: Directed fuzzing algorithms, distance analysis, target detection, compiler/linker plugins, IR mutation utilities.
 

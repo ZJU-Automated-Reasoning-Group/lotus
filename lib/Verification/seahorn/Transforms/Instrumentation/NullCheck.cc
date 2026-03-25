@@ -131,8 +131,8 @@ BasicBlock *NullCheck::createErrorBlock(Function &F, IRBuilder<> &B) {
 
   // update call graph
   if (CG) {
-    auto f1 = CG->getOrInsertFunction(&F);
-    auto f2 = CG->getOrInsertFunction(ErrorFn);
+    auto *f1 = CG->getOrInsertFunction(&F);
+    auto *f2 = CG->getOrInsertFunction(ErrorFn);
     f1->addCalledFunction(CI, f2);
   }
 
@@ -189,7 +189,7 @@ bool NullCheck::runOnFunction(Function &F) {
   IRBuilder<> B(ctx);
 
   bool change = false;
-  for (auto I : Worklist) {
+  for (auto *I : Worklist) {
 
     Value *Ptr = nullptr;
     if (auto *LI = dyn_cast<LoadInst>(I)) {
@@ -227,8 +227,8 @@ bool NullCheck::runOnFunction(Function &F) {
 
           // update call graph
           if (CG) {
-            auto f1 = CG->getOrInsertFunction(&F);
-            auto f2 = CG->getOrInsertFunction(AssumeFn);
+            auto *f1 = CG->getOrInsertFunction(&F);
+            auto *f2 = CG->getOrInsertFunction(AssumeFn);
             f1->addCalledFunction(CI, f2);
           }
         }

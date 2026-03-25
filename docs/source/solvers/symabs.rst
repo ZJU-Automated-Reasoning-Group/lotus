@@ -9,7 +9,7 @@ Overview
 
 **Location**: ``lib/Solvers/SMT/SymAbs/``
 
-**Important**: This library is distinct from ``lib/Verification/SymbolicAbstraction``.
+**Important**: This library is distinct from ``lib/Verification/SymAbsAI``.
 SymAbs operates on **SMT formulas**, while the verification module operates on
 **LLVM IR programs**.
 
@@ -17,7 +17,7 @@ Key Differences
 ----------------
 
 +----------------------+------------------------------------------+----------------------------------------+
-| Aspect               | ``lib/Solvers/SMT/SymAbs``               | ``lib/Verification/SymbolicAbstraction``|
+| Aspect               | ``lib/Solvers/SMT/SymAbs``               | ``lib/Verification/SymAbsAI``|
 +======================+==========================================+========================================+
 | **Input**            | SMT bit-vector formulas (Z3 expressions) | LLVM IR (program code)                |
 +----------------------+------------------------------------------+----------------------------------------+
@@ -126,7 +126,7 @@ Use ``lib/Solvers/SMT/SymAbs`` when:
 - You need to approximate bit-vector constraints with linear integer constraints
 - You're working at the formula/solver level, not the program level
 
-Use ``lib/Verification/SymbolicAbstraction`` when:
+Use ``lib/Verification/SymAbsAI`` when:
 
 - You're analyzing LLVM IR programs
 - You need a complete abstract interpretation framework

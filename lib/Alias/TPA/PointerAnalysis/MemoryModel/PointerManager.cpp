@@ -8,7 +8,8 @@
 //    handling trivial PHIs) to map equivalent values to the same Pointer.
 // 2. Pointer Interning: Maintaining a unique set of Pointer objects to allow
 //    fast pointer equality comparison.
-// 3. Mapping: Maintaining the relationship between LLVM Values and TPA Pointers.
+// 3. Mapping: Maintaining the relationship between LLVM Values and TPA
+// Pointers.
 // 4. Special Pointers: Managing the Universal and Null pointers.
 
 #include "Alias/TPA/PointerAnalysis/MemoryModel/PointerManager.h"
@@ -30,7 +31,7 @@ namespace tpa {
 const llvm::Value *canonicalizeValue(const llvm::Value *value) {
   assert(value != nullptr);
   value = value->stripPointerCasts();
-  
+
   if (const auto *phiNode = llvm::dyn_cast<llvm::PHINode>(value)) {
     const llvm::Value *rhs = nullptr;
     for (auto &op : phiNode->operands()) {

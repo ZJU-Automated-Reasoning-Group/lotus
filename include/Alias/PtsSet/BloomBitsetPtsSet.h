@@ -2,7 +2,8 @@
 //
 // Representation:
 // - Dynamic dense bitset for exact membership.
-// - Fixed-size Bloom filter to accelerate negative checks for contains/intersect.
+// - Fixed-size Bloom filter to accelerate negative checks for
+// contains/intersect.
 //
 // This file is standalone and not wired into any analysis yet.
 #ifndef ANDERSEN_BLOOM_BITSET_PTSSET_H
@@ -156,8 +157,9 @@ public:
           return false;
       }
     }
-    const std::size_t limit =
-        words_.size() < other.words_.size() ? words_.size() : other.words_.size();
+    const std::size_t limit = words_.size() < other.words_.size()
+                                  ? words_.size()
+                                  : other.words_.size();
     for (std::size_t i = 0; i < limit; ++i) {
       if ((words_[i] & other.words_[i]) != other.words_[i])
         return false;
@@ -168,8 +170,9 @@ public:
   bool intersectWith(const BloomBitsetPtsSet &other) const {
     if (!bloomIntersects(other))
       return false;
-    const std::size_t limit =
-        words_.size() < other.words_.size() ? words_.size() : other.words_.size();
+    const std::size_t limit = words_.size() < other.words_.size()
+                                  ? words_.size()
+                                  : other.words_.size();
     for (std::size_t i = 0; i < limit; ++i) {
       if ((words_[i] & other.words_[i]) != 0)
         return true;

@@ -579,7 +579,7 @@ namespace
     }
 
   };
-}
+} // namespace
 
 namespace seahorn
 {
@@ -748,7 +748,7 @@ namespace seahorn
 
     // an edge into a basic block that does not return includes the block itself
     const auto *term = dst.getTerminator ();
-    if (term && isa<const UnreachableInst> (term)) exec (s, dst, side, trueE);
+    if (isa_and_nonnull<const UnreachableInst> (term)) exec (s, dst, side, trueE);
 
   }
 
@@ -782,4 +782,4 @@ namespace seahorn
     }
   }
 
-}
+} // namespace seahorn

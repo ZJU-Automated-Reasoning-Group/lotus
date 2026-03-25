@@ -16,21 +16,21 @@ cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input file>"),
 cl::opt<std::string> OutputFilename("o", cl::desc("Specify output filename"),
                                     cl::value_desc("filename"), cl::Required);
 
-int main(int argc, char** argv) {
-    cl::ParseCommandLineOptions(argc, argv);
+int main(int argc, char **argv) {
+  cl::ParseCommandLineOptions(argc, argv);
 
-    LLVMContext context;
-    SMDiagnostic error;
-    auto module = parseIRFile(InputFilename, error, context);
-    if (!module) {
-        error.print(InputFilename.data(), errs());
-        return -1;
-    }
+  LLVMContext context;
+  SMDiagnostic error;
+  auto module = parseIRFile(InputFilename, error, context);
+  if (!module) {
+    error.print(InputFilename.data(), errs());
+    return -1;
+  }
 
-    dynamic::MemoryInstrument().runOnModule(*module);
+  dynamic::MemoryInstrument().runOnModule(*module);
 
-    std::error_code ec;
-    ToolOutputFile outFile(OutputFilename, ec, sys::fs::OF_None);
-    outFile.keep();
-    WriteBitcodeToFile(*module, outFile.os());
+  std::error_code ec;
+  ToolOutputFile outFile(OutputFilename, ec, sys::fs::OF_None);
+  outFile.keep();
+  WriteBitcodeToFile(*module, outFile.os());
 }

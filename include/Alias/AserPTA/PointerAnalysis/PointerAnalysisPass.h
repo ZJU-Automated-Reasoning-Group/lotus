@@ -6,13 +6,14 @@
 #ifndef ASER_PTA_POINTERANALYSISPASS_H
 #define ASER_PTA_POINTERANALYSISPASS_H
 
-#include <llvm/ADT/Hashing.h>
-#include <llvm/ADT/StringRef.h>
-#include <llvm/Pass.h>
 #include <chrono>
 #include <memory>
 
 #include "Alias/AserPTA/Util/Log.h"
+
+#include <llvm/ADT/Hashing.h>
+#include <llvm/ADT/StringRef.h>
+#include <llvm/Pass.h>
 
 /// @brief LLVM module pass that runs pointer analysis using a specified solver.
 /// @tparam Solver The pointer analysis solver type to use.

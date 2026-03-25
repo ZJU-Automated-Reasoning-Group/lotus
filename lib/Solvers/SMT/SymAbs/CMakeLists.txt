@@ -3,7 +3,7 @@
 # This library provides formula-level abstraction algorithms for SMT bit-vector formulas.
 # It converts bit-vectors to linear integer formulas for approximation.
 # 
-# ⚠️ This is NOT the same as SymbolicAbstractionAnalysis (lib/Verification/SymbolicAbstraction),
+# ⚠️ This is NOT the same as SymAbsAIAnalysis (lib/Verification/SymAbsAI),
 # which is a program-level analysis framework for LLVM IR.
 # 
 # See README.md for details on the distinction.

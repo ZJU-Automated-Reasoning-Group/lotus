@@ -10,7 +10,7 @@
 
 namespace seahorn {
 extern bool InterProcMemFmaps;
-}
+} // namespace seahorn
 
 static llvm::cl::opt<bool> InternalWriter(
     "horn-fp-internal-writer",

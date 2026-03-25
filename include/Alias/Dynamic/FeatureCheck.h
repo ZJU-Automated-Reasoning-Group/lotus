@@ -1,27 +1,25 @@
 #pragma once
 
-namespace llvm
-{
-	class Function;
-	class Module;
-	class StringRef;
-	class Value;
+namespace llvm {
+class Function;
+class Module;
+class StringRef;
+class Value;
 } // namespace llvm
 
-namespace dynamic
-{
+namespace dynamic {
 
-class FeatureCheck
-{
+class FeatureCheck {
 private:
-	void issueWarning(const llvm::Value&, const llvm::StringRef&);
+  void issueWarning(const llvm::Value &, const llvm::StringRef &);
 
-	void checkIndirectLibraryCall(const llvm::Function& f);
-	void checkArrayArgOrInst(const llvm::Function& f);
+  void checkIndirectLibraryCall(const llvm::Function &f);
+  void checkArrayArgOrInst(const llvm::Function &f);
+
 public:
-	FeatureCheck() = default;
+  FeatureCheck() = default;
 
-	void runOnModule(const llvm::Module& module);
+  void runOnModule(const llvm::Module &module);
 };
 
 } // namespace dynamic

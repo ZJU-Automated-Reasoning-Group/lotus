@@ -8,7 +8,7 @@ struct ZTraceLogOpt {
   void operator=(const std::string &tag) const { Z3_enable_trace(tag.c_str()); }
 };
 ZTraceLogOpt ztrace;
-}
+} // namespace seahorn
 
 static llvm::cl::opt<seahorn::ZTraceLogOpt, true, llvm::cl::parser<std::string>>
     TraceOption("ztrace", llvm::cl::desc("Enable z3 trace level"),

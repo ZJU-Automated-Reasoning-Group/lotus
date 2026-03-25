@@ -10,8 +10,8 @@
 #   - horn-ice      (BUILD_HORN_ICE)
 #   - seahorn       (ENABLE_SEAHORN, defined at top-level)
 
-# SymbolicAbstraction
-add_subdirectory(symbolic-abstraction)
+# SymAbsAI
+add_subdirectory(symabs-ai)
 
 # Sifa (Symbolic Interpretation with Fluid Abstractions)
 add_subdirectory(sifa)

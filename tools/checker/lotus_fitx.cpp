@@ -56,7 +56,7 @@ static cl::opt<std::string>
                           "uaf, ubi, ref_count, ref_uncount"),
                  cl::init("all"));
 
-namespace framework {
+namespace fitx {
 
 // Run all registered FiTx checkers via the legacy pass manager.
 void runFiTxAnalysis(Module &M) {
@@ -80,7 +80,7 @@ void runFiTxAnalysis(Module &M) {
 
   // 2. Run all registered FiTx checkers (e.g. AllDetector runs df, dl, dul,
   //    leak, ref_count, uaf).
-  for (framework::FrameworkPass *P : framework::FrameworkPass::passes) {
+  for (fitx::FrameworkPass *P : fitx::FrameworkPass::passes) {
     PM.add(P);
   }
 
@@ -94,7 +94,7 @@ void runFiTxAnalysis(Module &M) {
   errs() << "Time: " << duration.count() << " ms\n";
 }
 
-} // namespace framework
+} // namespace fitx
 
 int main(int argc, char **argv) {
   sys::PrintStackTraceOnErrorSignal(argv[0]);
@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  framework::runFiTxAnalysis(*M);
+  fitx::runFiTxAnalysis(*M);
 
   return 0;
 }

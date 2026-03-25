@@ -16,7 +16,7 @@
 namespace llvm {
 class DataLayout;
 class Value;
-}
+} // namespace llvm
 
 namespace UnderApprox {
 
@@ -42,7 +42,8 @@ namespace UnderApprox {
 const llvm::Value *stripNoopCasts(const llvm::Value *V);
 
 /**
- * @brief Check if two pointers have the same base and identical constant offsets
+ * @brief Check if two pointers have the same base and identical constant
+ * offsets
  *
  * Uses LLVM's stripAndAccumulateInBoundsConstantOffsets to decompose each
  * pointer into base + offset. Two pointers must-alias if they have the same
@@ -58,8 +59,8 @@ const llvm::Value *stripNoopCasts(const llvm::Value *V);
  *   - GEP(%base, 0, 5) and GEP(%base, 0, 6)  →  false
  *   - %base and GEP(%base, 0, 0)  →  true
  */
-bool sameConstOffset(const llvm::DataLayout &DL,
-                     const llvm::Value *A, const llvm::Value *B);
+bool sameConstOffset(const llvm::DataLayout &DL, const llvm::Value *A,
+                     const llvm::Value *B);
 
 /**
  * @brief Check if a GEP has all zero indices
@@ -77,22 +78,36 @@ bool sameConstOffset(const llvm::DataLayout &DL,
 bool isZeroGEP(const llvm::Value *V);
 
 /**
- * @brief Check if two values form a round-trip cast: inttoptr(ptrtoint(X))
+ * @brief Check if two GEPs have the same base and identical index operands
+ *
+ * Two GEPs with the same source element type, same base pointer (after
+ * stripping no-op casts), and identical index operands (same SSA values) must
+ * alias. Sound under-approx: no false positives.
+ *
+ * @param A First pointer value (should be a GEP)
+ * @param B Second pointer value (should be a GEP)
+ * @return true if both are GEPs with same stripped base and same indices
+ *
+ * Examples:
+ *   - GEP(%base, i) and GEP(%base, i)  →  true (same SSA i)
+ *   - GEP(%base, 0, i) and GEP(%base, 0, i)  →  true
+ */
+bool sameGEPOperands(const llvm::Value *A, const llvm::Value *B);
+
+/**
+ * @brief Check if two values form a round-trip cast: inttoptr(ptrtoint(X)) ≡ X
  *
  * A pointer converted to an integer and back (with no arithmetic) is
- * guaranteed to be the same pointer. This pattern can occur in optimization
- * or when working with pointer arithmetic.
+ * guaranteed to be the same pointer. Both A and B must be pointer-typed.
  *
- * @param A First value (should be IntToPtrInst)
- * @param B Second value (should be PtrToIntInst)
- * @return true if A and B form a round-trip cast, false otherwise
- *
- * Note: Checks both directions (A→B and B→A) since argument order may vary.
+ * @param A First value (pointer type)
+ * @param B Second value (pointer type)
+ * @return true if one is inttoptr(ptrtoint(other)), false otherwise
  *
  * Example:
  *   %i = ptrtoint %p to i64
  *   %q = inttoptr %i to i8*
- *   isRoundTripCast(%q, %i)  →  true (if they form a round-trip)
+ *   isRoundTripCast(%q, %p)  →  true
  */
 bool isRoundTripCast(const llvm::Value *A, const llvm::Value *B);
 
@@ -110,6 +125,69 @@ bool isRoundTripCast(const llvm::Value *A, const llvm::Value *B);
  * no-op casts that should be canonicalized away.
  */
 bool isNoopAddrSpaceCast(const llvm::Value *V);
+
+/**
+ * @brief Strip no-op arithmetic operations from an integer value
+ *
+ * Recursively removes arithmetic operations that don't change the value:
+ * - Add 0, Sub 0
+ * - Mul 1, Div 1
+ * - Or 0, And -1
+ *
+ * This is used to detect enhanced round-trip patterns like:
+ * inttoptr(ptrtoint(p) + 0) which is equivalent to p.
+ *
+ * @param V The integer value to simplify
+ * @return The simplified value with no-op arithmetic removed
+ */
+const llvm::Value *stripNoopArithmetic(const llvm::Value *V);
+
+/**
+ * @brief Check for enhanced round-trip cast with no-op arithmetic
+ *
+ * Detects patterns like inttoptr(ptrtoint(p) + 0) or inttoptr(ptrtoint(p) | 0)
+ * which are guaranteed to equal p. This extends the basic round-trip check
+ * to handle intermediate no-op arithmetic.
+ *
+ * @param A First value (should be IntToPtrInst)
+ * @param B Second value (the original pointer)
+ * @return true if A is an enhanced round-trip of B, false otherwise
+ *
+ * Example:
+ *   %i = ptrtoint %p to i64
+ *   %j = add %i, 0
+ *   %q = inttoptr %j to i8*
+ *   isEnhancedRoundTrip(%q, %p) → true
+ */
+bool isEnhancedRoundTrip(const llvm::Value *A, const llvm::Value *B);
+
+/**
+ * @brief Check if a value is an allocation call (malloc, calloc, new, etc.)
+ *
+ * Used to identify heap allocation sites for same-allocation must-alias
+ * detection. Two pointers derived from the same allocation call must alias.
+ *
+ * @param V The value to check
+ * @return true if V is an allocation call, false otherwise
+ */
+bool isAllocationCall(const llvm::Value *V);
+
+/**
+ * @brief Check if two values derive from the same allocation site
+ *
+ * Two pointers that derive from the same allocation call (malloc, calloc, new)
+ * must alias. This is sound because each allocation returns a unique address.
+ *
+ * @param S1 First pointer value
+ * @param S2 Second pointer value
+ * @return true if both derive from the same allocation site, false otherwise
+ *
+ * Example:
+ *   %p = call i8* @malloc(i64 16)
+ *   %q = bitcast i8* %p to i32*
+ *   checkSameAllocationSite(%p, %q) → true
+ */
+bool checkSameAllocationSite(const llvm::Value *S1, const llvm::Value *S2);
 
 } // end namespace UnderApprox
 #endif

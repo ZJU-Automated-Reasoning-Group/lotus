@@ -1,12 +1,12 @@
 /** Unhoist expressions inside loops */
 
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/IR/Value.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -162,7 +162,7 @@ namespace seahorn
     // -- set all uses
     for (Use *u : uses) u->set (&New);
   }
-}
+} // namespace seahorn
 
 static llvm::RegisterPass<seahorn::LoopUnhoist>
 X ("unhoist", "Unhoist expressions inside loops");

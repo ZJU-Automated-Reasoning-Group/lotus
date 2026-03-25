@@ -4,7 +4,8 @@
 //
 // Use when you need an ICallSummarizer that avoids recomputing the same
 // (calleeName, inputAfterCall) summary. Ultimate uses SummaryCache only for
-// reUseOrCompute (subset-based re-use); this class provides exact-match caching.
+// reUseOrCompute (subset-based re-use); this class provides exact-match
+// caching.
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,9 +24,11 @@ namespace sifa {
 template <typename StateT>
 class ExactCacheCallSummarizer final : public ICallSummarizer<StateT> {
 public:
-  explicit ExactCacheCallSummarizer(ICallSummarizer<StateT> &inner) : inner_(inner) {}
+  explicit ExactCacheCallSummarizer(ICallSummarizer<StateT> &inner)
+      : inner_(inner) {}
 
-  StateT summarize(const std::string &calleeName, const StateT &inputAfterCall) override {
+  StateT summarize(const std::string &calleeName,
+                   const StateT &inputAfterCall) override {
     for (const auto &e : cache_) {
       if (std::get<0>(e) == calleeName && std::get<1>(e) == inputAfterCall)
         return std::get<2>(e);

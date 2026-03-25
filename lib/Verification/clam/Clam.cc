@@ -16,11 +16,11 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 
-#include "clam/config.h"
+#include "ClamQueryCache.hh"
 #include "clam/CfgBuilder.hh"
 #include "clam/Clam.hh"
 #include "clam/ClamAnalysisParams.hh"
@@ -30,10 +30,10 @@
 #include "clam/SeaDsaHeapAbstraction.hh"
 #include "clam/Support/Debug.hh"
 #include "clam/Support/NameValues.hh"
-#include "ClamQueryCache.hh"
-#include "crab/path_analysis/path_analyzer.hpp"
+#include "clam/config.h"
 #include "crab/output/crabir/cfg_printer.hpp"
 #include "crab/output/json/write_json.hh"
+#include "crab/path_analysis/path_analyzer.hpp"
 
 #include "seadsa/AllocWrapInfo.hh"
 #include "seadsa/CompleteCallGraph.hh"
@@ -42,10 +42,9 @@
 #include "seadsa/Printer.hh"
 #include "seadsa/support/Debug.h"
 
-#include "crab/config.h"
 #include "crab/analysis/bwd_analyzer.hpp"
-#include "crab/analysis/dataflow/assumptions.hpp"
 #include "crab/analysis/dataflow/assertion_crawler.hpp"
+#include "crab/analysis/dataflow/assumptions.hpp"
 #include "crab/analysis/fwd_analyzer.hpp"
 #include "crab/analysis/inter/inter_params.hpp"
 #include "crab/analysis/inter/top_down_inter_analyzer.hpp"
@@ -54,6 +53,7 @@
 #include "crab/cg/cg_bgl.hpp"
 #include "crab/checkers/assertion.hpp"
 #include "crab/checkers/checker.hpp"
+#include "crab/config.h"
 #include "crab/domains/abstract_domain_params.hpp"
 #include "crab/support/debug.hpp"
 #include "crab/support/stats.hpp"
@@ -912,7 +912,7 @@ private:
   
   basic_block_label_t getCrabBasicBlock(const BasicBlock *bb) const {
     const Function *f = bb->getParent();
-    if (auto builder = m_crab_builder_man.getCfgBuilder(*f)) {
+    if (auto *builder = m_crab_builder_man.getCfgBuilder(*f)) {
       return builder->getCrabBasicBlock(bb);
     } else {
       CLAM_ERROR("Cannot find crab cfg for " <<  f->getName());      
@@ -947,7 +947,7 @@ private:
 
         // Get the cfg builder to run liveness
         if (const Function *fun = m_M.getFunction(cg_node.name())) {
-          auto cfg_builder = m_crab_builder_man.getCfgBuilder(*fun);
+          auto *cfg_builder = m_crab_builder_man.getCfgBuilder(*fun);
           assert(cfg_builder);
           // run liveness
           cfg_builder->computeLiveSymbols();

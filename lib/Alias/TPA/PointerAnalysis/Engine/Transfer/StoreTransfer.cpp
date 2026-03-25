@@ -1,7 +1,8 @@
 // Implementation of Store transfer functions.
 //
 // Handles the evaluation of store instructions (*p = q).
-// Updates the memory Store based on the points-to sets of the pointers involved.
+// Updates the memory Store based on the points-to sets of the pointers
+// involved.
 //
 // Key Concepts:
 // - Strong Update: Completely overwrites the points-to set of a memory object.
@@ -57,8 +58,10 @@ void TransferFunction::evalStore(const Pointer *dst, const Pointer *src,
   const auto *dstObj = *dstSet.begin();
   // Check conditions for Strong Update:
   // 1. Singleton set: We know exactly which object is being written.
-  // 2. Not a summary object: The object represents a single concrete memory location
-  //    (not an array summary or heap abstraction that represents multiple locs).
+  // 2. Not a summary object: The object represents a single concrete memory
+  // location
+  //    (not an array summary or heap abstraction that represents multiple
+  //    locs).
   if (dstSet.size() == 1 && !dstObj->isSummaryObject())
     strongUpdateStore(dstObj, srcSet, store);
   else

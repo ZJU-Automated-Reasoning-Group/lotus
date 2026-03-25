@@ -247,8 +247,10 @@ static Expr evalCondDsa(Expr cond) {
 }
 
 // dsa-based ite simplifier
-class IteTopDownVisitor : public std::unary_function<Expr, VisitAction> {
-
+class IteTopDownVisitor {
+public:
+  using argument_type = Expr;
+  using result_type = VisitAction;
 
 public:
   IteTopDownVisitor() = default; 
@@ -635,7 +637,11 @@ static Expr mkIteCoreBody(Expr ite, FMapExprsInfo &fmei) {
   return res;
 }
 
-class FMRewritter : public std::unary_function<Expr, Expr> {
+class FMRewritter {
+public:
+  using argument_type = Expr;
+  using result_type = Expr;
+
   ExprMap &m_fmv;
 
 public:
@@ -650,7 +656,11 @@ public:
 };
 
 // -- inlines values in a definition bottom-up (resolving get operations)
-class FMVisitor : public std::unary_function<Expr, VisitAction> {
+class FMVisitor {
+public:
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   std::shared_ptr<FMRewritter> m_rw;
 
 public:

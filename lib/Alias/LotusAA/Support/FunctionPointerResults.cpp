@@ -57,7 +57,7 @@ const CallTargetSet *FunctionPointerResults::getTargets(Function *caller,
 void FunctionPointerResults::addTarget(Function *caller, Value *callsite,
                                        Function *target) {
   if (caller && callsite && target) {
-    results_[caller][callsite].insert(target);
+    results_[caller][callsite][target] = nullptr;
   }
 }
 
@@ -118,8 +118,10 @@ bool FunctionPointerResults::hasChanged(
       return true;
     }
 
-    for (Function *newTarget : newTargets) {
-      if (oldTargets.count(newTarget) == 0) {
+    for (const auto &newTarget : newTargets) {
+      auto oldTargetIt = oldTargets.find(newTarget.first);
+      if (oldTargetIt == oldTargets.end() ||
+          oldTargetIt->second != newTarget.second) {
         outChangedCallers.insert(caller);
         return true;
       }

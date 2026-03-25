@@ -266,7 +266,7 @@ struct Extend : public TypeCheckBase {
       // INVARIANT: exp has atleast two args.
       // ASSUME: sext, zext only has two args and
       // target sort is at arg1.
-      auto a1 = exp->arg(1);
+      auto *a1 = exp->arg(1);
       Expr bvsort = isOp<BVSORT>(a1) ? a1 : tc.typeOf(a1);
       auto width = bv::width(bvsort);
       return bv::bvsort(width, exp->efac());

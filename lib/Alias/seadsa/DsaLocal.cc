@@ -40,7 +40,7 @@
 #include "Alias/seadsa/TypeUtils.hh"
 #include "Alias/seadsa/support/Debug.h"
 
-#include "boost/range/algorithm/reverse.hpp"
+#include <algorithm>
 
 using namespace llvm;
 
@@ -1859,7 +1859,7 @@ void LocalAnalysis::runOnFunction(Function &F, Graph &g) {
 
   std::vector<const BasicBlock *> bbs;
   revTopoSort(F, bbs);
-  boost::reverse(bbs);
+  std::reverse(bbs.begin(), bbs.end());
 
   if (F.getName().equals("main")) {
     GlobalBuilder globalBuilder(F, g, m_dl, tli, m_allocInfo);

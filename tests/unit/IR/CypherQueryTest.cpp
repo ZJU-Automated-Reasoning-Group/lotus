@@ -1,11 +1,11 @@
-#include "IR/PDG/CypherQuery.h"
+#include "IR/PDG/Analysis/CypherQuery.h"
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/SourceMgr.h"
 
-#include "IR/PDG/ProgramDependencyGraph.h"
+#include "IR/PDG/Core/ProgramDependencyGraph.h"
 
 #include <iostream>
 #include <sstream>
@@ -18,7 +18,7 @@ using namespace pdg;
 class CypherQueryTest : public ::testing::Test {
 protected:
   void SetUp() override {
-    LLVMContext Context;
+    context_ = std::make_unique<LLVMContext>();
     SMDiagnostic Err;
 
     std::string testIR = R"(
@@ -34,15 +34,60 @@ protected:
       }
     )";
 
-    auto M = parseIR(MemoryBuffer::getMemBuffer(testIR)->getMemBufferRef(), Err,
-                     Context);
-    if (M) {
+    module_ = parseIR(MemoryBuffer::getMemBuffer(testIR)->getMemBufferRef(),
+                      Err, *context_);
+    if (module_) {
       pdg_ = &ProgramGraph::getInstance();
-      pdg_->build(*M);
+      pdg_->reset();
+      pdg_->build(*module_);
     }
   }
 
+  void TearDown() override {
+    if (pdg_ != nullptr)
+      pdg_->reset();
+    module_.reset();
+    context_.reset();
+    pdg_ = nullptr;
+  }
+
   ProgramGraph *pdg_ = nullptr;
+  std::unique_ptr<LLVMContext> context_;
+  std::unique_ptr<Module> module_;
+};
+
+class CypherQuerySyntheticTest : public ::testing::Test {
+protected:
+  void SetUp() override {
+    pdg_ = &ProgramGraph::getInstance();
+    pdg_->reset();
+  }
+
+  void TearDown() override {
+    if (pdg_ != nullptr)
+      pdg_->reset();
+    pdg_ = nullptr;
+  }
+
+  Node *addNode(GraphNodeType type) {
+    auto *node = new Node(type);
+    pdg_->addNode(*node);
+    nodes_.push_back(node);
+    return node;
+  }
+
+  Edge *addEdge(Node *src, Node *dst, EdgeType type) {
+    auto *edge = new Edge(src, dst, type);
+    src->addOutEdge(*edge);
+    dst->addInEdge(*edge);
+    pdg_->addEdge(*edge);
+    edges_.push_back(edge);
+    return edge;
+  }
+
+  ProgramGraph *pdg_ = nullptr;
+  std::vector<Node *> nodes_;
+  std::vector<Edge *> edges_;
 };
 
 TEST_F(CypherQueryTest, ParseSimple) {
@@ -301,7 +346,75 @@ TEST_F(CypherQueryTest, ReturnPropertyProjection) {
   EXPECT_FALSE(result->getScalarValue().empty());
 }
 
+TEST_F(CypherQueryTest, ScalarProjectionPreservesRowOrderAndLimit) {
+  if (!pdg_) {
+    GTEST_SKIP() << "PDG not available";
+  }
+
+  CypherParser parser;
+  CypherQueryExecutor executor(*pdg_);
+  std::unique_ptr<CypherQuery> query = parser.parse(
+      "MATCH (n) WHERE EXISTS(n.opcode) RETURN n.opcode ORDER BY n.opcode ASC "
+      "LIMIT 4");
+  ASSERT_NE(query, nullptr);
+
+  std::unique_ptr<CypherResult> result = executor.execute(*query);
+  ASSERT_NE(result, nullptr);
+  EXPECT_EQ(result->getType(), CypherResult::ResultType::SCALAR);
+  EXPECT_EQ(result->getScalarValue(), "add\nbr\nicmp\nret");
+}
+
+TEST_F(CypherQueryTest, ScalarProjectionKeepsDuplicateRows) {
+  if (!pdg_) {
+    GTEST_SKIP() << "PDG not available";
+  }
+
+  CypherParser parser;
+  CypherQueryExecutor executor(*pdg_);
+  std::unique_ptr<CypherQuery> query =
+      parser.parse("MATCH (n:INST_RET) RETURN n.label LIMIT 2");
+  ASSERT_NE(query, nullptr);
+
+  std::unique_ptr<CypherResult> result = executor.execute(*query);
+  ASSERT_NE(result, nullptr);
+  EXPECT_EQ(result->getType(), CypherResult::ResultType::SCALAR);
+  EXPECT_EQ(result->getScalarValue(), "INST_RET\nINST_RET");
+}
+
+TEST_F(CypherQuerySyntheticTest, WhereUsesPerRowBindingsForExists) {
+  Node *a1 = addNode(GraphNodeType::INST_OTHER);
+  Node *a2 = addNode(GraphNodeType::INST_BR);
+  Node *b1 = addNode(GraphNodeType::FUNC_ENTRY);
+  Node *b2 = addNode(GraphNodeType::FUNC_ENTRY);
+  addEdge(a1, b1, EdgeType::DATA_DEF_USE);
+  addEdge(a2, b2, EdgeType::DATA_DEF_USE);
+
+  CypherParser parser;
+  CypherQueryExecutor executor(*pdg_);
+  std::unique_ptr<CypherQuery> query = parser.parse(
+      "MATCH (a)-[r]->(b) WHERE EXISTS(r) AND a.label = 'INST_OTHER' "
+      "RETURN b.label");
+  ASSERT_NE(query, nullptr);
+
+  std::unique_ptr<CypherResult> result = executor.execute(*query);
+  ASSERT_NE(result, nullptr);
+  EXPECT_EQ(result->getType(), CypherResult::ResultType::SCALAR);
+  EXPECT_EQ(result->getScalarValue(), "FUNC_ENTRY");
+}
+
+TEST_F(CypherQuerySyntheticTest, ParserDoesNotMutateConstInput) {
+  const std::string query_text = "   MATCH (n) RETURN n   ";
+
+  CypherParser parser;
+  std::unique_ptr<CypherQuery> query = parser.parse(query_text);
+
+  ASSERT_NE(query, nullptr);
+  EXPECT_EQ(query_text, "   MATCH (n) RETURN n   ");
+}
+
+#ifndef LOTUS_GTEST_NO_MAIN
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
+#endif

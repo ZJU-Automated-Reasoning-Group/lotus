@@ -1,5 +1,5 @@
 
-#include "Utils/General/egraphs.h"
+#include "Utils/ADT/egraphs.h"
 #include <gtest/gtest.h>
 
 

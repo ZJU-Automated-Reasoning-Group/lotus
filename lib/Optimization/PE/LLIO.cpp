@@ -8,19 +8,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "Optimization/PE/LLPE.h"
-//#define HAVE_OPEN_SSL
+// #define HAVE_OPEN_SSL
 
 #ifndef HAVE_OPEN_SSL
 #include "llvm/Support/raw_ostream.h"
 void llvm::LLPEAnalysisPass::writeLliowdConfig() {
   llvm::errs() << "Function writeLliowdConfig() is not implemented.\n"
-	       << "Modifiy CMakeLists.txt to include open-ssl stuff and define HAVE_OPEN_SSL in LLIO.cpp.\n";
+               << "Modifiy CMakeLists.txt to include open-ssl stuff and define "
+                  "HAVE_OPEN_SSL in LLIO.cpp.\n";
 }
 #else
 #include "llvm/Support/FileSystem.h"
+
+#include <fcntl.h>
 #include <openssl/sha.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
 
 #define DEBUG_TYPE "llpe-misc"
@@ -32,74 +34,66 @@ using namespace llvm;
 
 // Compute SHA-1 hash of Filename:
 
-static bool getFileSha1(std::string& Filename, unsigned char* hash) {
+static bool getFileSha1(std::string &Filename, unsigned char *hash) {
 
   SHA_CTX hashctx;
-  if(!SHA1_Init(&hashctx)) {
+  if (!SHA1_Init(&hashctx)) {
 
     errs() << "SHA1_Init\n";
     return false;
-
   }
-	
+
   int filefd = open(Filename.c_str(), O_RDONLY);
-  if(filefd == -1) {
-	  
+  if (filefd == -1) {
+
     errs() << "Cannot open " << Filename << "\n";
     return false;
-
   }
-	
+
   char readbuf[4096];
   int thisread;
 
-  while((thisread = read(filefd, readbuf, 4096)) > 0) {
+  while ((thisread = read(filefd, readbuf, 4096)) > 0) {
 
-    if(!SHA1_Update(&hashctx, readbuf, thisread)) {
+    if (!SHA1_Update(&hashctx, readbuf, thisread)) {
 
       errs() << "SHA1_Update\n";
       return false;
-
     }
-
   }
 
-  if(thisread == -1) {
+  if (thisread == -1) {
 
     errs() << "Read failed for " << Filename << "\n";
     close(filefd);
     return false;
-
   }
 
-  if(!SHA1_Final(hash, &hashctx)) {
+  if (!SHA1_Final(hash, &hashctx)) {
 
     errs() << "SHA1_Final\n";
     close(filefd);
-    return false;;
-
+    return false;
+    ;
   }
 
   close(filefd);
   return true;
-
 }
 
 // Get modification time of filename.
 
-static time_t getFileMtime(std::string& filename) {
+static time_t getFileMtime(std::string &filename) {
 
   struct stat st;
   int ret = ::stat(filename.c_str(), &st);
-  if(ret == -1) {
+  if (ret == -1) {
 
     errs() << "Failed to stat " << filename << "\n";
     return 0;
-
   }
 
   return st.st_mtime;
-  
 }
 
 // Write the lliowd configuration file relating to this specialisation
@@ -107,41 +101,40 @@ static time_t getFileMtime(std::string& filename) {
 
 void LLPEAnalysisPass::writeLliowdConfig() {
 
-  raw_ostream* Outp;
+  raw_ostream *Outp;
   std::unique_ptr<raw_fd_ostream> Fdp;
 
-  if(llioConfigFile.empty()) {
+  if (llioConfigFile.empty()) {
 
     errs() << "No config file specified, writing to stdout\n";
     Outp = &outs();
 
-  }
-  else {
+  } else {
 
     std::error_code openerror;
-    Fdp.reset(new raw_fd_ostream(llioConfigFile.c_str(), openerror, sys::fs::OF_None));
-    if(openerror) {
+    Fdp.reset(new raw_fd_ostream(llioConfigFile.c_str(), openerror,
+                                 sys::fs::OF_None));
+    if (openerror) {
 
-      errs() << "Failed to open " << llioConfigFile << ", using stdout: " << openerror.message() << "\n";
+      errs() << "Failed to open " << llioConfigFile
+             << ", using stdout: " << openerror.message() << "\n";
       Fdp.reset();
       Outp = &outs();
 
-    }
-    else {
+    } else {
 
       Outp = Fdp.get();
-
     }
-
   }
 
-  raw_ostream& Out = *Outp;
+  raw_ostream &Out = *Outp;
 
-  for(std::vector<std::string>::iterator it = llioDependentFiles.begin(),
-	itend = llioDependentFiles.end(); it != itend; ++it) {
+  for (std::vector<std::string>::iterator it = llioDependentFiles.begin(),
+                                          itend = llioDependentFiles.end();
+       it != itend; ++it) {
 
     SmallVector<char, 256> relPath;
-    for(unsigned i = 0, ilim = it->size(); i != ilim; ++i)
+    for (unsigned i = 0, ilim = it->size(); i != ilim; ++i)
       relPath.push_back((*it)[i]);
 
     llvm::sys::fs::make_absolute(relPath);
@@ -152,21 +145,17 @@ void LLPEAnalysisPass::writeLliowdConfig() {
 
     unsigned char hash[SHA_DIGEST_LENGTH];
 
-    if(getFileSha1(*it, hash)) {
+    if (getFileSha1(*it, hash)) {
 
-      for(int i = 0; i < SHA_DIGEST_LENGTH; ++i) {
+      for (int i = 0; i < SHA_DIGEST_LENGTH; ++i) {
 
-	if(hash[i]/16 == 0)
-	  Out << '0';
-	Out.write_hex(hash[i]);
-
+        if (hash[i] / 16 == 0)
+          Out << '0';
+        Out.write_hex(hash[i]);
       }
 
       Out << "\n";
-
     }
-
   }
-
 }
 #endif

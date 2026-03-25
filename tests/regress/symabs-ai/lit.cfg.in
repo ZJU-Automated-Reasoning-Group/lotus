@@ -1,0 +1,62 @@
+import lit.formats
+import os.path
+
+config.target_triple = ''
+
+config.name = 'symabs-ai'
+config.test_format = lit.formats.ShTest(False)
+config.suffixes = ['.ll', '.c', '.test']
+config.excludes = []
+
+config.target_triple = "@TARGET_TRIPLE@"
+config.test_exec_root = '@PROJECT_BINARY_DIR@/test/'
+config.test_source_root = '@PROJECT_SOURCE_DIR@/test/'
+
+def find_tool(tool_name):
+    sep = os.path.sep
+    tools_dir = "@PROJECT_BINARY_DIR@" + sep + "tools" + sep
+    candidates = [
+            tools_dir + tool_name,
+            tools_dir + "Debug" + sep + tool_name + ".exe",
+            tools_dir + "Release" + sep + tool_name + ".exe",
+        ]
+
+    for c in candidates:
+        if os.path.exists(c):
+            config.substitutions.append(("%" + tool_name, c))
+            return
+
+    assert False
+
+ALL_TOOLS = ["symabs_ai", "probe_filter"]
+
+if '@ENABLE_DYNAMIC@' == 'ON':
+    ALL_TOOLS.append("sprinstrument")
+else:
+    # ignore `dynamic` tests
+    config.excludes.append('dynamic')
+
+# on some platforms executables are in subdirectories and there's no (easy) way
+# to extract these paths from CMake
+for tool in ALL_TOOLS:
+    find_tool(tool)
+
+# RUNTIME_LIBS is a semicolon-separated list of libraries needed to link code
+# that has been instrumented for the dynamic analysis part of SymAbsAI. This
+# is exposed to the test cases by means of the %rt_flags substitution.
+rt_flags = ["-L" + x for x in "@LLVM_LIBRARY_DIRS@".split(";")]
+for arg in "@RUNTIME_LIBS@".split(";"):
+    if arg.startswith("/"):
+        rt_flags.append(arg)
+    else:
+        rt_flags.append("-l" + arg)
+
+rt_flags.extend(["-lstdc++", "-lm", "-lpthread"])
+
+config.substitutions.append(('%pass', '@PROJECT_BINARY_DIR@/pass/libsymabs-ai-pass.so'))
+config.substitutions.append(('%extract_config', 'python @PROJECT_SOURCE_DIR@/test/extract_config.py'))
+config.substitutions.append(('%checkpy', 'python @PROJECT_BINARY_DIR@/test/check.py'))
+config.substitutions.append(('%checklli', '@PROJECT_SOURCE_DIR@/test/check-lli.sh'))
+config.substitutions.append(('%rt_flags', ' '.join(rt_flags)))
+
+# vim:set filetype=python:

@@ -28,6 +28,6 @@ namespace seahorn
   inline boost::iterator_range<llvm::const_pred_iterator> 
   preds (const llvm::BasicBlock &bb) 
   {return boost::make_iterator_range (pred_begin (&bb), pred_end (&bb));}
-}
+} // namespace seahorn
 
 #endif

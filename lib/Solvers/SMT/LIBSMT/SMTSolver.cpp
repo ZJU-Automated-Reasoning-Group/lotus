@@ -304,7 +304,7 @@ bool SMTSolver::checkN2NQueryWithOverAppro(
   return overApproCheckMisc(CommonVC, FVec, ResVec);
 
   // for (unsigned I = 0; I < FVec.size(); I++) {
-  //    std::cout << ResVec[I] << std::endl;
+  //    std::cout << ResVec[I] << '\n';
   //}
 }
 

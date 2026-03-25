@@ -48,62 +48,65 @@ STATISTIC(numErased, "Number of Instructions Deleted");
 // true  - The module was modified.
 // false - The module was not modified.
 //
-bool SimplifyIV::runOnModule(Module& M) {
+bool SimplifyIV::runOnModule(Module &M) {
+  bool erased_this_run = false;
   // Repeat till no change
   bool changed;
   do {
     changed = false;
-    std::vector<StoreInst*> worklist;
+    std::vector<StoreInst *> worklist;
     for (Module::iterator F = M.begin(); F != M.end(); ++F) {
-      for (Function::iterator B = F->begin(), FE = F->end(); B != FE; ++B) {      
+      for (Function::iterator B = F->begin(), FE = F->end(); B != FE; ++B) {
         for (BasicBlock::iterator I = B->begin(), BE = B->end(); I != BE;) {
           InsertValueInst *IV = dyn_cast<InsertValueInst>(I++);
-          if(!IV)
+          if (!IV)
             continue;
           // Find all insert value instructions.
-          if(!IV->hasOneUse())
+          if (!IV->hasOneUse())
             continue;
           // Check that its only use is a StoreInst
           StoreInst *SI = dyn_cast<StoreInst>(*(IV->use_begin()));
-          if(!SI)
+          if (!SI)
             continue;
           // Check that it is the stored value
-          if(SI->getOperand(0) != IV)
+          if (SI->getOperand(0) != IV)
             continue;
           changed = true;
+          erased_this_run = true;
           numErased++;
           do {
             // replace by a series of gep/stores
-            SmallVector<Value*, 8> Indices;
+            SmallVector<Value *, 8> Indices;
             Type *Int32Ty = Type::getInt32Ty(M.getContext());
             Indices.push_back(Constant::getNullValue(Int32Ty));
-            for (InsertValueInst::idx_iterator I = IV->idx_begin(), E = IV->idx_end();
+            for (InsertValueInst::idx_iterator I = IV->idx_begin(),
+                                               E = IV->idx_end();
                  I != E; ++I) {
               Indices.push_back(ConstantInt::get(Int32Ty, *I));
             }
-            Type *PtrElemTy = cast<PointerType>(SI->getOperand(1)->getType())->getPointerElementType();
-            GetElementPtrInst *GEP = GetElementPtrInst::CreateInBounds(PtrElemTy, SI->getOperand(1), Indices,
-                                                                       SI->getName(), SI) ;
+            Type *PtrElemTy = cast<PointerType>(SI->getOperand(1)->getType())
+                                  ->getPointerElementType();
+            GetElementPtrInst *GEP = GetElementPtrInst::CreateInBounds(
+                PtrElemTy, SI->getOperand(1), Indices, SI->getName(), SI);
             new StoreInst(IV->getInsertedValueOperand(), GEP, SI);
             IV = dyn_cast<InsertValueInst>(IV->getAggregateOperand());
 
-          } while(IV);
+          } while (IV);
           worklist.push_back(SI);
         }
       }
     }
-    while(!worklist.empty()) {
+    while (!worklist.empty()) {
       StoreInst *SI = worklist.back();
       worklist.pop_back();
       SI->eraseFromParent();
     }
-  } while(changed);
-  return (numErased > 0);
+  } while (changed);
+  return erased_this_run;
 }
 
 // Pass ID variable
 char SimplifyIV::ID = 0;
 
 // Register the pass
-static RegisterPass<SimplifyIV>
-X("simplify-iv", "Simplify insert value");
+static RegisterPass<SimplifyIV> X("simplify-iv", "Simplify insert value");

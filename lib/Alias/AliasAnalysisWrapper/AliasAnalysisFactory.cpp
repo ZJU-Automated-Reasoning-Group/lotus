@@ -111,7 +111,9 @@ std::unique_ptr<AliasAnalysisWrapper> AliasAnalysisFactory::createSparrowAA(Modu
  * @param kCFA The k-CFA context sensitivity level (0 = context-insensitive)
  * @return A unique_ptr to the newly created AliasAnalysisWrapper
  * 
- * @note Currently falls back to SparrowAA - full AserPTA integration is TODO
+ * @note This only constructs an AserPTA wrapper configuration. The wrapper
+ *       backend currently rejects AserPTA requests until native integration is
+ *       implemented.
  * @note kCFA = 0: Context-insensitive
  * @note kCFA = 1: 1-CFA
  * @note kCFA = 2: 2-CFA

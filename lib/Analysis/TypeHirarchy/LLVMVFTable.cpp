@@ -9,11 +9,11 @@
 
 #include "Analysis/TypeHirarchy/LLVMVFTable.h"
 
-#include "Analysis/TypeHirarchy/LLVMVFTableData.h"
-
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include "Analysis/TypeHirarchy/LLVMVFTableData.h"
 
 #include <algorithm>
 
@@ -90,5 +90,3 @@ LLVMVFTable::getVFVectorFromIRVTable(const llvm::ConstantStruct &VT,
   return VFS;
 }
 } // namespace lotus
-
-

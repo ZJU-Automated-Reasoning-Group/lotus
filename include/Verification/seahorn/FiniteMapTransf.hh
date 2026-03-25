@@ -36,12 +36,15 @@ struct FMapExprsInfo {
         m_dimpl(dimpl) {}
 };
 
-class FiniteMapArgRewriter : public std::unary_function<Expr, Expr> {
+class FiniteMapArgRewriter {
   ExprSet &m_evars;
   const ExprMap &m_pred_decl_t;
   ExprFactory &m_efac;
 
 public:
+  using argument_type = Expr;
+  using result_type = Expr;
+
   FiniteMapArgRewriter(ExprSet &evars, const ExprMap &pred_decl_t,
                        ExprFactory &efac)
       : m_evars(evars), m_pred_decl_t(pred_decl_t), m_efac(efac){};
@@ -50,7 +53,7 @@ public:
 };
 
 // Top-down visitor to rewrite maps in arguments of predicate fapps
-class FiniteMapArgsVisitor : public std::unary_function<Expr, VisitAction> {
+class FiniteMapArgsVisitor {
 
 private:
   ExprSet &m_evars;
@@ -60,6 +63,9 @@ private:
   std::shared_ptr<FiniteMapArgRewriter> m_rw;
 
 public:
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   FiniteMapArgsVisitor(ExprSet &evars, const ExprMap &pred_decl_t,
                        ExprFactory &efac)
       : m_evars(evars), m_pred_decl_t(pred_decl_t), m_efac(efac) {
@@ -76,12 +82,15 @@ Expr rewriteFiniteMapArgs(Expr e, ExprSet &evars, const ExprMap &predDeclMap);
 // Rewrites a finite map operation to remove finite map terms. The arguments
 // of the operation are assumed to be already rewritten (no finite map
 // terms). The rewriter needs to be initialized for every clause
-class FiniteMapBodyRewriter : public std::unary_function<Expr, Expr> {
+class FiniteMapBodyRewriter {
   // put Expr as a friend class have access to expr->args()??
 
   FMapExprsInfo m_fmei;
 
 public:
+  using argument_type = Expr;
+  using result_type = Expr;
+
   FiniteMapBodyRewriter(ExprSet &evars, ExprMap &expr_type, ExprMap &fmapKeys,
                         ExprMap &fmapVarVal, int &dimpl, ExprFactory &efac,
                         ZSimplifier<EZ3> &zsimp)
@@ -91,7 +100,7 @@ public:
 };
 
 // Bottom-up visitor to rewrite maps in bodies
-class FiniteMapBodyVisitor : public std::unary_function<Expr, VisitAction> {
+class FiniteMapBodyVisitor {
 
 private:
   ExprMap m_types;
@@ -101,6 +110,9 @@ private:
   std::shared_ptr<FiniteMapBodyRewriter> m_rw;
 
 public:
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   FiniteMapBodyVisitor(ExprSet &evars, ExprFactory &efac,
                        ZSimplifier<EZ3> &zsimp) {
     m_rw = std::make_shared<FiniteMapBodyRewriter>(

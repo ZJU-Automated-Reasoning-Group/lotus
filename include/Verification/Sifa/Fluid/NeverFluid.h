@@ -12,8 +12,7 @@
 namespace lotus {
 namespace sifa {
 
-template <typename StateT>
-class NeverFluid final : public IFluid<StateT> {
+template <typename StateT> class NeverFluid final : public IFluid<StateT> {
 public:
   bool shallBeAbstracted(const StateT &state) const override {
     (void)state;
@@ -29,4 +28,3 @@ extern template class lotus::sifa::NeverFluid<bool>;
 extern template class lotus::sifa::NeverFluid<lotus::sifa::SymAbsState>;
 
 #endif // LOTUS_VERIFICATION_SIFA_FLUID_NEVERFLUID_H
-

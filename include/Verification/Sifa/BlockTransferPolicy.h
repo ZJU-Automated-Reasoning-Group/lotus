@@ -1,4 +1,5 @@
-//===-- Verification/Sifa/BlockTransferPolicy.h ----------------------------===//
+//===-- Verification/Sifa/BlockTransferPolicy.h
+//----------------------------===//
 //
 // Per-block transfer strategy for precision-performance trade-offs.
 // When set, blocks in the "block-wise" set use a fast, imprecise transfer
@@ -21,7 +22,8 @@ namespace sifa {
 enum class BlockTransferStrategy {
   /// Instruction-by-instruction transfer (more precise, slower).
   InstructionWise,
-  /// Block-wise transfer: treat block as black box, havoc defined values (faster, less precise).
+  /// Block-wise transfer: treat block as black box, havoc defined values
+  /// (faster, less precise).
   BlockWise,
 };
 
@@ -36,21 +38,28 @@ public:
       : default_(defaultStrategy) {}
 
   /// Blocks in \p blockWiseBlocks use BlockWise; others use InstructionWise.
-  BlockTransferPolicy(std::unordered_set<const llvm::BasicBlock *> blockWiseBlocks,
-                      BlockTransferStrategy defaultStrategy = BlockTransferStrategy::InstructionWise)
-      : blockWiseBlocks_(std::move(blockWiseBlocks)), default_(defaultStrategy) {}
+  BlockTransferPolicy(
+      std::unordered_set<const llvm::BasicBlock *> blockWiseBlocks,
+      BlockTransferStrategy defaultStrategy =
+          BlockTransferStrategy::InstructionWise)
+      : blockWiseBlocks_(std::move(blockWiseBlocks)),
+        default_(defaultStrategy) {}
 
-  /// Use a predicate: when \p useBlockWise(bb) is true, use BlockWise for \p bb.
-  explicit BlockTransferPolicy(std::function<bool(const llvm::BasicBlock *)> useBlockWise)
+  /// Use a predicate: when \p useBlockWise(bb) is true, use BlockWise for \p
+  /// bb.
+  explicit BlockTransferPolicy(
+      std::function<bool(const llvm::BasicBlock *)> useBlockWise)
       : predicate_(std::move(useBlockWise)),
         default_(BlockTransferStrategy::InstructionWise) {}
 
   BlockTransferStrategy strategyFor(const llvm::BasicBlock *bb) const {
     if (predicate_) {
-      if (predicate_(bb)) return BlockTransferStrategy::BlockWise;
+      if (predicate_(bb))
+        return BlockTransferStrategy::BlockWise;
       return default_;
     }
-    if (blockWiseBlocks_.count(bb)) return BlockTransferStrategy::BlockWise;
+    if (blockWiseBlocks_.count(bb))
+      return BlockTransferStrategy::BlockWise;
     return default_;
   }
 

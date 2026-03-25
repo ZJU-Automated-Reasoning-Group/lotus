@@ -22,20 +22,20 @@
 
 using namespace llvm;
 void FuncAnalysis::processInitFuncs(Instruction *I, llvm::Function *Callee,
-                                    bool init, std::vector<int> &in,
-                                    std::vector<int> &out) {
+                                    bool init, QualifierArray &in,
+                                    QualifierArray &out) {
   CallInst *CI = dyn_cast<CallInst>(I);
   Value *dst = CI->getArgOperand(0);
   NodeIndex dstIndex = nodeFactory.getValueNodeFor(dst);
-  int qualiSrc = _ID;
+  QualifierState qualiSrc = QualifierState::Initialized;
   std::set<const llvm::Value *> reqVisit;
-  if (out.at(dstIndex) == _UNKNOWN) {
+  if (out.at(dstIndex) == QualifierState::Unknown) {
     if (dstIndex > nodeFactory.getConstantIntNode())
       setReqFor(I, dst, out, reqVisit);
-    out.at(dstIndex) = _ID;
+    out.at(dstIndex) = QualifierState::Initialized;
   }
-  if (out.at(dstIndex) == _UD)
-    qualiSrc = _UD;
+  if (out.at(dstIndex) == QualifierState::Uninitialized)
+    qualiSrc = QualifierState::Uninitialized;
 
   if (Callee->getName().str() == "llvm.va_start") {
     for (auto obj : nPtsGraph[I][dstIndex]) {
@@ -53,20 +53,20 @@ void FuncAnalysis::processInitFuncs(Instruction *I, llvm::Function *Callee,
   NodeIndex srcIndex = nodeFactory.getValueNodeFor(src);
   NodeIndex sizeIndex = nodeFactory.getValueNodeFor(size);
   // 0.set the qualifer req for args
-  if (out.at(srcIndex) == _UNKNOWN) {
+  if (out.at(srcIndex) == QualifierState::Unknown) {
     if (srcIndex > nodeFactory.getConstantIntNode())
       setReqFor(I, src, out, reqVisit);
-    out.at(srcIndex) = _ID;
+    out.at(srcIndex) = QualifierState::Initialized;
   }
-  if (out.at(sizeIndex) == _UNKNOWN) {
+  if (out.at(sizeIndex) == QualifierState::Unknown) {
     if (sizeIndex > nodeFactory.getConstantIntNode())
       setReqFor(I, size, out, reqVisit);
-    out.at(sizeIndex) = _ID;
+    out.at(sizeIndex) = QualifierState::Initialized;
   }
-  qualiSrc = _ID;
+  qualiSrc = QualifierState::Initialized;
   // 1. set the qualifier of target to initialized
-  if (out.at(srcIndex) == _UD || out.at(sizeIndex) == _UD) {
-    qualiSrc = _UD;
+  if (out.at(srcIndex) == QualifierState::Uninitialized || out.at(sizeIndex) == QualifierState::Uninitialized) {
+    qualiSrc = QualifierState::Uninitialized;
   }
   // look the real type for memset.
   const Type *type = dst->getType()->getPointerElementType();
@@ -91,8 +91,8 @@ void FuncAnalysis::processInitFuncs(Instruction *I, llvm::Function *Callee,
   }
 }
 void FuncAnalysis::processCopyFuncs(Instruction *I, llvm::Function *Callee,
-                                    bool init, std::vector<int> &in,
-                                    std::vector<int> &out) {
+                                    bool init, QualifierArray &in,
+                                    QualifierArray &out) {
   unsigned numNodes = nodeFactory.getNumNodes();
   CallInst *CI = dyn_cast<CallInst>(I);
   if (CI->arg_size() < 3)
@@ -107,23 +107,23 @@ void FuncAnalysis::processCopyFuncs(Instruction *I, llvm::Function *Callee,
   NodeIndex sizeIndex = nodeFactory.getValueNodeFor(size);
 
   // 0.set the qualifer req for args
-  if (out.at(srcIndex) == _UNKNOWN) {
+  if (out.at(srcIndex) == QualifierState::Unknown) {
     setReqFor(I, src, out, reqVisit);
-    out.at(srcIndex) = _ID;
+    out.at(srcIndex) = QualifierState::Initialized;
   }
-  if (out.at(dstIndex) == _UNKNOWN) {
+  if (out.at(dstIndex) == QualifierState::Unknown) {
     setReqFor(I, dst, out, reqVisit);
-    out.at(dstIndex) = _ID;
+    out.at(dstIndex) = QualifierState::Initialized;
   }
-  if (out.at(sizeIndex) == _UNKNOWN) {
+  if (out.at(sizeIndex) == QualifierState::Unknown) {
     setReqFor(I, size, out, reqVisit);
-    out.at(sizeIndex) = _ID;
+    out.at(sizeIndex) = QualifierState::Initialized;
   }
   if (!dst->getType()->isPointerTy() || !src->getType()->isPointerTy())
     return;
 
-  if (out.at(srcIndex) == _UD || out.at(sizeIndex) == _UD) {
-    out.at(dstIndex) = _UD;
+  if (out.at(srcIndex) == QualifierState::Uninitialized || out.at(sizeIndex) == QualifierState::Uninitialized) {
+    out.at(dstIndex) = QualifierState::Uninitialized;
     return;
   }
   uint64_t objSize = 0;
@@ -138,9 +138,9 @@ void FuncAnalysis::processCopyFuncs(Instruction *I, llvm::Function *Callee,
         unsigned srcObjOffset = nodeFactory.getObjectOffset(srcObj);
         unsigned srcObjSize = nodeFactory.getObjectSize(srcObj);
         for (unsigned i = srcObjOffset; i < srcObjSize - srcObjOffset; i++) {
-          if (nQualiArray[I].at(srcObj + i) == _UNKNOWN) {
-            qualiReq.at(srcObj + i) = _ID;
-            out.at(srcObj + i) = _ID;
+          if (nQualiArray[I].at(srcObj + i) == QualifierState::Unknown &&
+              nRequiredIn[I].at(srcObj + i) == RequirednessState::Required) {
+            out.at(srcObj + i) = QualifierState::Initialized;
           }
         }
       }
@@ -152,7 +152,7 @@ void FuncAnalysis::processCopyFuncs(Instruction *I, llvm::Function *Callee,
         unsigned srcObjOffset = nodeFactory.getObjectOffset(srcObj);
         unsigned srcObjSize = nodeFactory.getObjectSize(srcObj);
         for (unsigned i = srcObjOffset; i < srcObjSize - srcObjOffset; i++) {
-          if (in.at(srcObj + i) == _UNKNOWN) {
+          if (in.at(srcObj + i) == QualifierState::Unknown) {
             relatedNode[obj + i].insert(srcObj + i);
             relatedNode[obj + i].insert(relatedNode[srcObj + i].begin(),
                                         relatedNode[srcObj + i].end());
@@ -213,7 +213,7 @@ void FuncAnalysis::processCopyFuncs(Instruction *I, llvm::Function *Callee,
         objSize = 1;
     }
   }
-  if (out.at(dstIndex) == _ID) {
+  if (out.at(dstIndex) == QualifierState::Initialized) {
     // Now construct the pointer and memory object variable
     // It depends on whether the type of this variable is a struct or not
     bool init = false;
@@ -224,20 +224,20 @@ void FuncAnalysis::processCopyFuncs(Instruction *I, llvm::Function *Callee,
         continue;
       for (auto srcObj : nPtsGraph[I][srcIndex]) {
         if (obj < nodeFactory.getNullPtrNode()) {
-          if (out.at(srcObj) == _UNKNOWN) {
-            qualiReq[srcObj] = _ID;
-            out.at(srcObj) = _ID;
+          if (out.at(srcObj) == QualifierState::Unknown &&
+              nRequiredIn[I].at(srcObj) == RequirednessState::Required) {
+            out.at(srcObj) = QualifierState::Initialized;
           }
         }
         // unsigned objSize = nodeFactory.getObjectSize(srcObj);
         for (int i = 0; i < objSize; i++) {
           // considering memcpy from universal ptr node
-          int srcQuali = 0;
+          QualifierState srcQuali = QualifierState::Initialized;
           if (srcObj <= nodeFactory.getConstantIntNode()) {
-            srcQuali = _ID;
+            srcQuali = QualifierState::Initialized;
           } else {
             srcQuali = out.at(srcObj + i);
-            if (srcQuali == _UNKNOWN) {
+            if (srcQuali == QualifierState::Unknown) {
               relatedNode[obj + i].insert(srcObj + i);
               for (auto aa : nAAMap[I][srcObj]) {
                 relatedNode[obj + i].insert(relatedNode[aa].begin(),
@@ -253,7 +253,7 @@ void FuncAnalysis::processCopyFuncs(Instruction *I, llvm::Function *Callee,
           }
           if (obj + i >= numNodes)
             break;
-          if (!init || srcQuali == _ID) {
+          if (!init || srcQuali == QualifierState::Initialized) {
             out.at(obj + i) = srcQuali;
             init = true;
           } else {
@@ -265,8 +265,8 @@ void FuncAnalysis::processCopyFuncs(Instruction *I, llvm::Function *Callee,
   }
 }
 void FuncAnalysis::processTransferFuncs(Instruction *I, llvm::Function *Callee,
-                                        bool init, std::vector<int> &in,
-                                        std::vector<int> &out) {
+                                        bool init, QualifierArray &in,
+                                        QualifierArray &out) {
   CallInst *CI = dyn_cast<CallInst>(I);
   // 1. copy the qualifier inference from src to dst
   Value *dst = CI->getArgOperand(0);
@@ -277,16 +277,16 @@ void FuncAnalysis::processTransferFuncs(Instruction *I, llvm::Function *Callee,
   NodeIndex sizeIndex = nodeFactory.getValueNodeFor(size);
   std::set<const llvm::Value *> reqVisit;
   // 0.set the qualifer req for args
-  if (out.at(srcIndex) == _UNKNOWN) {
-    out.at(srcIndex) = _ID;
+  if (out.at(srcIndex) == QualifierState::Unknown) {
+    out.at(srcIndex) = QualifierState::Initialized;
     setReqFor(I, src, out, reqVisit);
   }
-  if (out.at(dstIndex) == _UNKNOWN) {
-    out.at(dstIndex) = _ID;
+  if (out.at(dstIndex) == QualifierState::Unknown) {
+    out.at(dstIndex) = QualifierState::Initialized;
     setReqFor(I, dst, out, reqVisit);
   }
-  if (out.at(sizeIndex) == _UNKNOWN) {
-    out.at(sizeIndex) = _ID;
+  if (out.at(sizeIndex) == QualifierState::Unknown) {
+    out.at(sizeIndex) = QualifierState::Initialized;
     setReqFor(I, size, out, reqVisit);
   }
 
@@ -295,11 +295,11 @@ void FuncAnalysis::processTransferFuncs(Instruction *I, llvm::Function *Callee,
     type = arrayType->getPointerElementType();
 
   // 1. copy the data from src to dst
-  if (out.at(srcIndex) != _ID || out.at(sizeIndex) != _ID) {
-    out.at(dstIndex) = _UD;
+  if (out.at(srcIndex) != QualifierState::Initialized || out.at(sizeIndex) != QualifierState::Initialized) {
+    out.at(dstIndex) = QualifierState::Uninitialized;
     return;
   }
-  if (out.at(dstIndex) == _ID) {
+  if (out.at(dstIndex) == QualifierState::Initialized) {
     bool init = false;
     // Now construct the pointer and memory object variable
     // It depends on whether the type of this variable is a struct or not
@@ -310,17 +310,17 @@ void FuncAnalysis::processTransferFuncs(Instruction *I, llvm::Function *Callee,
       for (auto obj : nPtsGraph[I][dstIndex]) {
         for (auto srcObj : nPtsGraph[I][srcIndex]) {
           for (int i = 0; i < stSize; i++) {
-            if (out.at(srcObj + i) == _UNKNOWN) {
-              qualiReq.at(srcObj + i) = _ID;
-              out.at(srcObj + i) = _ID;
+            if (out.at(srcObj + i) == QualifierState::Unknown &&
+                nRequiredIn[I].at(srcObj + i) == RequirednessState::Required) {
+              out.at(srcObj + i) = QualifierState::Initialized;
             }
-            int srcQuali = 0;
+            QualifierState srcQuali = QualifierState::Initialized;
             if (srcObj <= nodeFactory.getConstantIntNode()) {
-              srcQuali = _ID;
+              srcQuali = QualifierState::Initialized;
             } else {
               srcQuali = in[srcObj + i];
             }
-            if (!init || srcQuali == _UD) {
+            if (!init || srcQuali == QualifierState::Uninitialized) {
               out.at(obj + i) = srcQuali;
               init = true;
             } else {
@@ -332,18 +332,18 @@ void FuncAnalysis::processTransferFuncs(Instruction *I, llvm::Function *Callee,
     } else {
       for (auto obj : nPtsGraph[I][dstIndex]) {
         for (auto srcObj : nPtsGraph[I][srcIndex]) {
-          if (out.at(srcObj) == _UNKNOWN) {
+          if (out.at(srcObj) == QualifierState::Unknown) {
             reqVisit.clear();
             setReqFor(I, src, out, reqVisit);
-            out.at(srcObj) = _ID;
+            out.at(srcObj) = QualifierState::Initialized;
           }
-          int srcQuali = 0;
+          QualifierState srcQuali = QualifierState::Initialized;
           if (srcObj <= nodeFactory.getConstantIntNode()) {
-            srcQuali = _ID;
+            srcQuali = QualifierState::Initialized;
           } else {
             srcQuali = in[srcObj];
           }
-          if (!init || srcQuali == _UD) {
+          if (!init || srcQuali == QualifierState::Uninitialized) {
             out.at(obj) = srcQuali;
             init = true;
           } else {
@@ -355,8 +355,8 @@ void FuncAnalysis::processTransferFuncs(Instruction *I, llvm::Function *Callee,
   }
 }
 void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
-                                bool init, std::vector<int> &in,
-                                std::vector<int> &out) {
+                                bool init, QualifierArray &in,
+                                QualifierArray &out) {
 
   OP << "inside processFuncs:\n";
   CallInst *CI = dyn_cast<CallInst>(I);
@@ -411,8 +411,8 @@ void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
         unsigned objSize = nodeFactory.getObjectSize(obj);
         unsigned objOffset = nodeFactory.getObjectOffset(obj);
         for (unsigned i = 0; i < objSize; i++) {
-          if (nQualiArray[I].at(obj - objOffset + i) == _UNKNOWN) {
-            out.at(obj - objOffset + i) = _ID;
+          if (nQualiArray[I].at(obj - objOffset + i) == QualifierState::Unknown) {
+            out.at(obj - objOffset + i) = QualifierState::Initialized;
 
             // DFS(I, obj - objOffset + i);
           }
@@ -421,14 +421,14 @@ void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
     }
     // update return value to be: initialized:
     NodeIndex retNode = nodeFactory.getValueNodeFor(I);
-    out.at(retNode) = _ID;
+    out.at(retNode) = QualifierState::Initialized;
     for (auto retObj : nPtsGraph[I][retNode]) {
       if (retObj <= nodeFactory.getConstantIntNode())
         continue;
       unsigned retObjSize = nodeFactory.getObjectSize(retObj);
       unsigned objOffset = nodeFactory.getObjectOffset(retObj);
       for (unsigned i = 0; i < retObjSize; i++) {
-        out.at(retObj - objOffset + i) = _ID;
+        out.at(retObj - objOffset + i) = QualifierState::Initialized;
       }
     }
     return;
@@ -480,8 +480,8 @@ void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
     NodeIndex argNode = nodeFactory.getValueNodeFor(CI->getArgOperand(argNo));
     // Deal with VarArg function
     if (argNo >= calleeArgs.size()) {
-      if (out.at(argNode) == _UNKNOWN) {
-        out.at(argNode) = _ID;
+      if (out.at(argNode) == QualifierState::Unknown) {
+        out.at(argNode) = QualifierState::Initialized;
         reqVisit.clear();
         setReqFor(I, CI->getArgOperand(argNo), out, reqVisit);
       }
@@ -491,24 +491,30 @@ void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
         unsigned objSize = nodeFactory.getObjectSize(obj);
         unsigned objOffset = nodeFactory.getObjectOffset(obj);
         for (unsigned i = 0; i < objSize; i++) {
-          if (nQualiArray[I].at(obj - objOffset + i) == _UNKNOWN) {
-            out.at(obj - objOffset + i) = _ID;
+          if (nQualiArray[I].at(obj - objOffset + i) == QualifierState::Unknown) {
+            out.at(obj - objOffset + i) = QualifierState::Initialized;
           }
         }
       }
       continue;
     }
     NodeIndex sumArgNode =
-        Ctx->FSummaries[Callee].args[argNo + 1].getNodeIndex();
+        Ctx->FSummaries[Callee].sumNodeFactory.getValueNodeFor(
+            calleeArgs.at(argNo));
+    if (sumArgNode == AndersNodeFactory::InvalidIndex)
+      continue;
     // Check the pointer itself
-    if (Ctx->FSummaries[Callee].reqVec.at(sumArgNode) == _ID) {
-      if (out.at(argNode) == _UNKNOWN) {
+    if (Ctx->FSummaries[Callee].reqVec.at(sumArgNode) == QualifierState::Initialized) {
+      if (out.at(argNode) == QualifierState::Unknown) {
         reqVisit.clear();
         setReqFor(I, CI->getArgOperand(argNo), out, reqVisit);
       }
     }
     unsigned numNodes = nodeFactory.getNumNodes();
-    for (auto sumObj : Ctx->FSummaries[Callee].sumPtsGraph[sumArgNode]) {
+    auto sumPtsIt = Ctx->FSummaries[Callee].sumPtsGraph.find(sumArgNode);
+    if (sumPtsIt == Ctx->FSummaries[Callee].sumPtsGraph.end())
+      continue;
+    for (auto sumObj : sumPtsIt->second) {
       unsigned sumObjSize = Ctx->FSummaries[Callee].args[argNo].getObjSize();
       unsigned sumObjOffset = Ctx->FSummaries[Callee].args[argNo].getOffset();
       for (auto obj : nPtsGraph[I][argNode]) {
@@ -522,7 +528,7 @@ void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
         if (nodeFactory.isUnOrArrObjNode(obj)) {
           bool init = false;
           for (unsigned i = 0; i < checkSize; i++) {
-            if (Ctx->FSummaries[Callee].updateVec[sumObj + i] != _UNKNOWN) {
+            if (Ctx->FSummaries[Callee].updateVec[sumObj + i] != QualifierState::Unknown) {
               if (!init) {
                 if (out.at(obj) >= Ctx->FSummaries[Callee].reqVec[sumObj + i]) {
                   out.at(obj) = Ctx->FSummaries[Callee].updateVec[sumObj + i];
@@ -537,7 +543,7 @@ void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
               }
             }
 #ifdef ListProp
-            if (Ctx->FSummaries[Callee].updateVec[sumObj + i] != _ID) {
+            if (Ctx->FSummaries[Callee].updateVec[sumObj + i] != QualifierState::Initialized) {
               nodeFactory.setWL(
                   obj, Ctx->FSummaries[Callee].args[sumObj + i].getWhiteList());
               nodeFactory.setBL(
@@ -545,9 +551,9 @@ void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
             }
 #endif
 #ifdef RM
-            if (Ctx->FSummaries[Callee].reqVec.at(sumObj + i) == _ID) {
-              if (out.at(obj) == _UNKNOWN) {
-                out.at(obj) = _ID;
+            if (Ctx->FSummaries[Callee].reqVec.at(sumObj + i) == QualifierState::Initialized) {
+              if (out.at(obj) == QualifierState::Unknown) {
+                out.at(obj) = QualifierState::Initialized;
                 // DFS(I, obj);
               }
             }
@@ -559,7 +565,7 @@ void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
             if (obj + i >= numNodes)
               break;
 #ifdef ListProp
-            if (Ctx->FSummaries[Callee].updateVec[sumObj + i] != _ID) {
+            if (Ctx->FSummaries[Callee].updateVec[sumObj + i] != QualifierState::Initialized) {
               nodeFactory.setWL(
                   obj + i,
                   Ctx->FSummaries[Callee].args[sumObj + i].getWhiteList());
@@ -569,7 +575,7 @@ void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
             }
 #endif
 
-            if (Ctx->FSummaries[Callee].updateVec[sumObj + i] != _UNKNOWN) {
+            if (Ctx->FSummaries[Callee].updateVec[sumObj + i] != QualifierState::Unknown) {
               if (out.at(obj + i) >=
                   Ctx->FSummaries[Callee].reqVec[sumObj + i]) {
                 out.at(obj + i) = Ctx->FSummaries[Callee].updateVec[sumObj + i];
@@ -598,7 +604,7 @@ void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
                   continue;
                 if (argNoIndex + i >= nodeFactory.getNumNodes())
                   continue;
-                if (out.at(argNoIndex + i) == _UNKNOWN) {
+                if (out.at(argNoIndex + i) == QualifierState::Unknown) {
                   relatedNode[obj + i].insert(
                       relatedNode[argNoIndex + i].begin(),
                       relatedNode[argNoIndex + i].end());
@@ -613,9 +619,9 @@ void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
               }
             }
 #ifdef RM
-            if (Ctx->FSummaries[Callee].reqVec.at(sumObj + i) == _ID) {
-              if (out.at(obj + i) == _UNKNOWN) {
-                out.at(obj + i) = _ID;
+            if (Ctx->FSummaries[Callee].reqVec.at(sumObj + i) == QualifierState::Initialized) {
+              if (out.at(obj + i) == QualifierState::Unknown) {
+                out.at(obj + i) = QualifierState::Initialized;
                 // DFS(I, obj + i);
               }
             }
@@ -628,20 +634,20 @@ void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
             continue;
 
           for (unsigned i = objOffset; i > 0; i--) {
-            if (Ctx->FSummaries[Callee].updateVec[sumObj - i] != _UNKNOWN) {
+            if (Ctx->FSummaries[Callee].updateVec[sumObj - i] != QualifierState::Unknown) {
               if (out.at(obj - i) >=
                   Ctx->FSummaries[Callee].reqVec[sumObj - i]) {
                 out.at(obj - i) = Ctx->FSummaries[Callee].updateVec[sumObj - i];
               }
 #ifdef RM
-              if (Ctx->FSummaries[Callee].reqVec.at(sumObj - i) == _ID) {
-                out.at(obj - i) = _ID;
+              if (Ctx->FSummaries[Callee].reqVec.at(sumObj - i) == QualifierState::Initialized) {
+                out.at(obj - i) = QualifierState::Initialized;
                 // DFS(I, obj - i);
               }
 #endif
             }
 #ifdef ListProp
-            if (Ctx->FSummaries[Callee].updateVec[sumObj - i] != _ID) {
+            if (Ctx->FSummaries[Callee].updateVec[sumObj - i] != QualifierState::Initialized) {
               nodeFactory.setWL(
                   obj - i,
                   Ctx->FSummaries[Callee].args[sumObj - i].getWhiteList());
@@ -666,7 +672,7 @@ void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
   // context-sensitivity
   std::set<NodeIndex> sumRSet =
       Ctx->FSummaries[Callee].args[sumRetNode].getRelatedArgs();
-  if (out.at(retNode) != _ID) {
+  if (out.at(retNode) != QualifierState::Initialized) {
     nodeFactory.setWL(retNode,
                       Ctx->FSummaries[Callee].args[sumRetNode].getWhiteList());
     nodeFactory.setBL(retNode,
@@ -687,7 +693,7 @@ void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
       }
       if (argNoIndex == AndersNodeFactory::InvalidIndex)
         continue;
-      if (out.at(argNoIndex + argOffset) == _UNKNOWN) {
+      if (out.at(argNoIndex + argOffset) == QualifierState::Unknown) {
         relatedNode[retNode].insert(relatedNode[argNoIndex + argOffset].begin(),
                                     relatedNode[argNoIndex + argOffset].end());
       }
@@ -714,7 +720,7 @@ void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
           std::min(sumRetSize - sumRetOffset, retObjSize - retObjOffset);
 
       for (unsigned i = 0; i < checkSize; i++) {
-        if (Ctx->FSummaries[Callee].updateVec[sumRetObj + i] != _UNKNOWN) {
+        if (Ctx->FSummaries[Callee].updateVec[sumRetObj + i] != QualifierState::Unknown) {
           out.at(retObj + i) = Ctx->FSummaries[Callee].updateVec[sumRetObj + i];
         } else {
           std::set<NodeIndex> sumRSet =
@@ -729,7 +735,7 @@ void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
                 nodeFactory.getObjectNodeFor(CI->getArgOperand(argNoCurr));
             if (argNoIndex == AndersNodeFactory::InvalidIndex)
               continue;
-            if (out.at(argNoIndex + i) == _UNKNOWN) {
+            if (out.at(argNoIndex + i) == QualifierState::Unknown) {
               relatedNode[retObj + i].insert(
                   relatedNode[argNoIndex + i].begin(),
                   relatedNode[argNoIndex + i].end());
@@ -743,7 +749,7 @@ void FuncAnalysis::processFuncs(llvm::Instruction *I, llvm::Function *Callee,
             }
           }
         }
-        if (out.at(retObj + i) != _ID) {
+        if (out.at(retObj + i) != QualifierState::Initialized) {
 
           nodeFactory.setWL(
               retObj + i,
@@ -771,11 +777,11 @@ void FuncAnalysis::checkCopyFuncs(llvm::Instruction *I,
   NodeIndex sizeIndex = nodeFactory.getValueNodeFor(CI->getArgOperand(2));
   if (!dst->getType()->isPointerTy() || !src->getType()->isPointerTy())
     return;
-  if (nQualiArray[I].at(dstIndex) != _ID) {
+  if (nQualiArray[I].at(dstIndex) != QualifierState::Initialized) {
     insertUninit(I, dstIndex, uninitArg);
   }
 
-  if (nQualiArray[I].at(dstIndex) == _UD) {
+  if (nQualiArray[I].at(dstIndex) == QualifierState::Uninitialized) {
     if (!warningReported(I, dstIndex)) {
 #ifdef PRINTWARN
       OP << "***********Warning: argument check fails @ argument 0: dst "
@@ -789,11 +795,11 @@ void FuncAnalysis::checkCopyFuncs(llvm::Instruction *I,
       warningSet.insert(dstIndex);
     }
   }
-  if (nQualiArray[I].at(srcIndex) != _ID) {
+  if (nQualiArray[I].at(srcIndex) != QualifierState::Initialized) {
     insertUninit(I, srcIndex, uninitArg);
   }
 
-  if (nQualiArray[I].at(srcIndex) == _UD) {
+  if (nQualiArray[I].at(srcIndex) == QualifierState::Uninitialized) {
     if (!warningReported(I, srcIndex)) {
       insertUninit(I, srcIndex, uninitArg);
 #ifdef PRINTWARN
@@ -822,10 +828,10 @@ void FuncAnalysis::checkCopyFuncs(llvm::Instruction *I,
           objSize = objSize - nodeFactory.getObjectOffset(obj);
         }
         for (int i = 0; i < objSize; i++) {
-          if (nQualiArray[I].at(obj + i) != _ID) {
+          if (nQualiArray[I].at(obj + i) != QualifierState::Initialized) {
             insertUninit(I, obj + i, uninitArg);
           }
-          if (nQualiArray[I].at(obj + i) == _UD) {
+          if (nQualiArray[I].at(obj + i) == QualifierState::Uninitialized) {
             if (warningReported(I, obj + i))
               continue;
 #ifdef PRINTWARN
@@ -846,8 +852,8 @@ void FuncAnalysis::checkCopyFuncs(llvm::Instruction *I,
     }
   }
 
-  if (nQualiArray[I].at(sizeIndex) == _UD) {
-    if (nQualiArray[I].at(sizeIndex) != _ID) {
+  if (nQualiArray[I].at(sizeIndex) == QualifierState::Uninitialized) {
+    if (nQualiArray[I].at(sizeIndex) != QualifierState::Initialized) {
       insertUninit(I, sizeIndex, uninitArg);
     }
     if (!warningReported(I, sizeIndex)) {
@@ -871,8 +877,8 @@ void FuncAnalysis::checkTransferFuncs(llvm::Instruction *I,
   NodeIndex sizeIndex = nodeFactory.getValueNodeFor(CI->getArgOperand(2));
   std::set<const Instruction *> visit;
   std::string warningTy = "OTHER";
-  if (nQualiArray[I].at(srcIndex) == _UD) {
-    if (nQualiArray[I].at(srcIndex) == _UD) {
+  if (nQualiArray[I].at(srcIndex) == QualifierState::Uninitialized) {
+    if (nQualiArray[I].at(srcIndex) == QualifierState::Uninitialized) {
       insertUninit(I, srcIndex, uninitArg);
     }
 
@@ -898,7 +904,7 @@ void FuncAnalysis::checkTransferFuncs(llvm::Instruction *I,
       uint64_t stSize = stInfo->getExpandedSize();
       for (auto obj : nPtsGraph[I][srcIndex]) {
         for (int i = 0; i < stSize; i++) {
-          if (nQualiArray[I].at(obj + i) == _UD) {
+          if (nQualiArray[I].at(obj + i) == QualifierState::Uninitialized) {
             insertUninit(I, obj + i, uninitArg);
 
             if (warningReported(I, obj + i))
@@ -919,7 +925,7 @@ void FuncAnalysis::checkTransferFuncs(llvm::Instruction *I,
     }
   } else {
     for (auto obj : nPtsGraph[I][srcIndex]) {
-      if (nQualiArray[I].at(obj) == _UD) {
+      if (nQualiArray[I].at(obj) == QualifierState::Uninitialized) {
         insertUninit(I, obj, uninitArg);
 
         if (warningReported(I, obj))
@@ -936,11 +942,11 @@ void FuncAnalysis::checkTransferFuncs(llvm::Instruction *I,
       }
     }
   }
-  if (nQualiArray[I].at(sizeIndex) != _ID) {
+  if (nQualiArray[I].at(sizeIndex) != QualifierState::Initialized) {
     insertUninit(I, sizeIndex, uninitArg);
   }
 
-  if (nQualiArray[I].at(sizeIndex) == _UD) {
+  if (nQualiArray[I].at(sizeIndex) == QualifierState::Uninitialized) {
     if (!warningReported(I, sizeIndex)) {
 #ifdef PRINTWARN
       OP << "***********Warning: argument check fails @ argument 3: size not "
@@ -982,7 +988,7 @@ void FuncAnalysis::checkFuncs(llvm::Instruction *I, llvm::Function *Callee) {
     // for var arg functions, check the rest of the argument to be init
     if (argNo >= calleeArgs.size()) {
       NodeIndex argNode = nodeFactory.getValueNodeFor(CI->getArgOperand(argNo));
-      if (nQualiArray[I].at(argNode) == _UD) {
+      if (nQualiArray[I].at(argNode) == QualifierState::Uninitialized) {
         insertUninit(I, argNode, uninitArg);
         if (!warningReported(I, argNode)) {
 #ifdef PRINTWARN
@@ -1005,11 +1011,11 @@ void FuncAnalysis::checkFuncs(llvm::Instruction *I, llvm::Function *Callee) {
         for (unsigned i = 0; i < objSize; i++) {
           if (warningReported(I, obj - objOffset + i))
             continue;
-          if (nQualiArray[I].at(obj - objOffset + i) == _UD) {
+          if (nQualiArray[I].at(obj - objOffset + i) == QualifierState::Uninitialized) {
             insertUninit(I, obj - objOffset + i, uninitArg);
           }
 
-          if (nQualiArray[I].at(obj - objOffset + i) == _UD) {
+          if (nQualiArray[I].at(obj - objOffset + i) == QualifierState::Uninitialized) {
 #ifdef PRINTWARN
             OP << "***********Warning: argument check fails @ argument "
                << argNo << " : field " << i << " not initialized1";
@@ -1038,11 +1044,11 @@ void FuncAnalysis::checkFuncs(llvm::Instruction *I, llvm::Function *Callee) {
 
     // else it's the pointer type
     // check weather it's one variable or pointer qualifier
-    if (nQualiArray[I].at(argNode) == _UD) {
+    if (nQualiArray[I].at(argNode) == QualifierState::Uninitialized) {
       insertUninit(I, argNode, uninitArg);
     }
 
-    if (nQualiArray[I].at(argNode) != _UNKNOWN &&
+    if (nQualiArray[I].at(argNode) != QualifierState::Unknown &&
         nQualiArray[I].at(argNode) <
             Ctx->FSummaries[Callee].reqVec.at(sumArgNode)) {
       if (!warningReported(I, argNode)) {
@@ -1095,10 +1101,10 @@ void FuncAnalysis::checkFuncs(llvm::Instruction *I, llvm::Function *Callee) {
         checkSize = std::min(checkSize, objSize);
         for (unsigned i = 0; i < checkSize; i++) {
           if (nodeFactory.isUnOrArrObjNode(obj)) {
-            if (nQualiArray[I].at(obj) == _ID) {
+            if (nQualiArray[I].at(obj) == QualifierState::Initialized) {
               insertUninit(I, obj, uninitArg);
             }
-            if (nQualiArray[I].at(obj) == _UD) {
+            if (nQualiArray[I].at(obj) == QualifierState::Uninitialized) {
               if (!warningReported(I, obj)) {
 #ifdef PRINTWARN
                 OP << "***********Warning: argument check fails @ argument "
@@ -1116,11 +1122,11 @@ void FuncAnalysis::checkFuncs(llvm::Instruction *I, llvm::Function *Callee) {
           }
           if (obj + i >= nodeFactory.getNumNodes())
             continue;
-          if (nQualiArray[I].at(obj + i) != _ID) {
+          if (nQualiArray[I].at(obj + i) != QualifierState::Initialized) {
             insertUninit(I, obj + i, uninitArg);
           }
 
-          if (nQualiArray[I].at(obj + i) != _UNKNOWN &&
+          if (nQualiArray[I].at(obj + i) != QualifierState::Unknown &&
               nQualiArray[I].at(obj + i) <
                   Ctx->FSummaries[Callee].reqVec.at(sumObj + i)) {
             if (!warningReported(I, obj + i)) {
@@ -1143,11 +1149,11 @@ void FuncAnalysis::checkFuncs(llvm::Instruction *I, llvm::Function *Callee) {
         // 2. if offset != 0
         if (objOffset > 0 && sumObjOffset > 0) {
           for (unsigned i = 0; i < objOffset; i++) {
-            if (nQualiArray[I].at(obj - i) == _UD) {
+            if (nQualiArray[I].at(obj - i) == QualifierState::Uninitialized) {
               insertUninit(I, obj - i, uninitArg);
             }
 
-            if (nQualiArray[I].at(obj - i) != _UNKNOWN &&
+            if (nQualiArray[I].at(obj - i) != QualifierState::Unknown &&
                 nQualiArray[I].at(obj - i) <
                     Ctx->FSummaries[Callee].reqVec.at(sumObj - i)) {
               if (warningReported(I, obj - i))
@@ -1173,13 +1179,15 @@ void FuncAnalysis::checkFuncs(llvm::Instruction *I, llvm::Function *Callee) {
     }
   } // for arg iterator
 }
-void FuncAnalysis::propInitFuncs(llvm::Instruction *I, int *reqArray) {
+void FuncAnalysis::propInitFuncs(llvm::Instruction *I,
+                                 RequirednessArray &reqArray) {
   CallInst *CI = dyn_cast<CallInst>(I);
   NodeIndex ptrNode = nodeFactory.getValueNodeFor(CI->getArgOperand(0));
-  reqArray[ptrNode] = _ID;
+  reqArray[ptrNode] = RequirednessState::Required;
   return;
 }
-void FuncAnalysis::propCopyFuncs(llvm::Instruction *I, int *reqArray) {
+void FuncAnalysis::propCopyFuncs(llvm::Instruction *I,
+                                 RequirednessArray &reqArray) {
   CallInst *CI = dyn_cast<CallInst>(I);
   if (CI->arg_size() < 3)
     return;
@@ -1191,9 +1199,9 @@ void FuncAnalysis::propCopyFuncs(llvm::Instruction *I, int *reqArray) {
   NodeIndex srcIndex = nodeFactory.getValueNodeFor(src);
   NodeIndex sizeIndex = nodeFactory.getValueNodeFor(size);
 
-  reqArray[dstIndex] = _ID;
-  reqArray[srcIndex] = _ID;
-  reqArray[sizeIndex] = _ID;
+  reqArray[dstIndex] = RequirednessState::Required;
+  reqArray[srcIndex] = RequirednessState::Required;
+  reqArray[sizeIndex] = RequirednessState::Required;
   if (!dst->getType()->isPointerTy() || !src->getType()->isPointerTy()) {
     return;
   }
@@ -1205,7 +1213,7 @@ void FuncAnalysis::propCopyFuncs(llvm::Instruction *I, int *reqArray) {
     for (auto dstObj : nPtsGraph[I][dstIndex]) {
       if (dstObj < nodeFactory.getConstantIntNode()) {
         for (unsigned i = 0; i < objSize - objOffset; i++) {
-          reqArray[dstObj + i] = _ID;
+          reqArray[dstObj + i] = RequirednessState::Required;
         }
       } else {
         for (unsigned i = 0; i < objSize - objOffset; i++) {
@@ -1215,7 +1223,8 @@ void FuncAnalysis::propCopyFuncs(llvm::Instruction *I, int *reqArray) {
     }
   }
 }
-void FuncAnalysis::propTransferFuncs(llvm::Instruction *I, int *reqArray) {
+void FuncAnalysis::propTransferFuncs(llvm::Instruction *I,
+                                     RequirednessArray &reqArray) {
   CallInst *CI = dyn_cast<CallInst>(I);
   // 1. copy the qualifier inference from src to dst
   Value *dst = CI->getArgOperand(0);
@@ -1225,9 +1234,9 @@ void FuncAnalysis::propTransferFuncs(llvm::Instruction *I, int *reqArray) {
   NodeIndex srcIndex = nodeFactory.getValueNodeFor(src);
   NodeIndex sizeIndex = nodeFactory.getValueNodeFor(size);
 
-  reqArray[dstIndex] = _ID;
-  reqArray[srcIndex] = _ID;
-  reqArray[sizeIndex] = _ID;
+  reqArray[dstIndex] = RequirednessState::Required;
+  reqArray[srcIndex] = RequirednessState::Required;
+  reqArray[sizeIndex] = RequirednessState::Required;
 
   if (!dst->getType()->isPointerTy() || !src->getType()->isPointerTy()) {
     return;
@@ -1238,12 +1247,12 @@ void FuncAnalysis::propTransferFuncs(llvm::Instruction *I, int *reqArray) {
     unsigned objSize = nodeFactory.getObjectSize(obj);
     unsigned objOffset = nodeFactory.getObjectOffset(obj);
     for (unsigned i = 0; i < objSize - objOffset; i++) {
-      reqArray[obj + i] = _ID;
+      reqArray[obj + i] = RequirednessState::Required;
     }
   }
 }
 void FuncAnalysis::propFuncs(llvm::Instruction *I, llvm::Function *Callee,
-                             int *reqArray) {
+                             RequirednessArray &reqArray) {
   if (Callee == NULL || Ctx->FSummaries.find(Callee) == Ctx->FSummaries.end())
     return;
   CallInst *CI = dyn_cast<CallInst>(I);
@@ -1254,11 +1263,24 @@ void FuncAnalysis::propFuncs(llvm::Instruction *I, llvm::Function *Callee,
   }
   for (int argNo = 0; argNo < (int)CI->arg_size(); argNo++) {
     NodeIndex argNode = nodeFactory.getValueNodeFor(CI->getArgOperand(argNo));
+    if (argNo >= static_cast<int>(calleeArgs.size()))
+      break;
     NodeIndex sumArgNode =
         Ctx->FSummaries[Callee].sumNodeFactory.getValueNodeFor(
-            calleeArgs.at(argNo + 1));
+            calleeArgs.at(argNo));
+    if (sumArgNode == AndersNodeFactory::InvalidIndex)
+      continue;
+    if (Ctx->FSummaries[Callee].reqVec.at(sumArgNode) ==
+        QualifierState::Initialized) {
+      reqArray[argNode] = RequirednessState::Required;
+    }
     NodeIndex sumArgObjNode = 0;
-    for (auto sumObj : Ctx->FSummaries[Callee].sumPtsGraph[sumArgNode]) {
+    auto sumPtsIt = Ctx->FSummaries[Callee].sumPtsGraph.find(sumArgNode);
+    if (sumPtsIt == Ctx->FSummaries[Callee].sumPtsGraph.end() ||
+        sumPtsIt->second.empty()) {
+      continue;
+    }
+    for (auto sumObj : sumPtsIt->second) {
       sumArgObjNode = sumObj;
     }
     unsigned sumArgObjOffset =
@@ -1269,13 +1291,13 @@ void FuncAnalysis::propFuncs(llvm::Instruction *I, llvm::Function *Callee,
       unsigned objOffset = nodeFactory.getObjectOffset(argObj);
       unsigned objSize = nodeFactory.getObjectSize(argObj);
       for (unsigned i = sumArgObjOffset; i < sumArgObjSize; i++) {
-        if (Ctx->FSummaries[Callee].reqVec.at(sumArgObjNode + i) == _ID)
-          reqArray[argObj + i] = _ID;
+        if (Ctx->FSummaries[Callee].reqVec.at(sumArgObjNode + i) == QualifierState::Initialized)
+          reqArray[argObj + i] = RequirednessState::Required;
       }
       if (objOffset != 0) {
         for (unsigned i = 0; i < sumArgObjOffset; i++) {
-          if (Ctx->FSummaries[Callee].reqVec.at(sumArgObjNode - i) == _ID)
-            reqArray[argObj - i] = _ID;
+          if (Ctx->FSummaries[Callee].reqVec.at(sumArgObjNode - i) == QualifierState::Initialized)
+            reqArray[argObj - i] = RequirednessState::Required;
         }
       }
     }

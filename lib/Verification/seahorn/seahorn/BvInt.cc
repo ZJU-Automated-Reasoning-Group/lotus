@@ -17,7 +17,10 @@ inline bool is_iabs(Expr v) { return isOpX<IABS>(v); }
 } // namespace expr
 
 namespace {
-struct BvIntRewriter : public std::unary_function<Expr, Expr> {
+struct BvIntRewriter {
+  using argument_type = Expr;
+  using result_type = Expr;
+
   ExprFactory &m_efac;
 
   BvIntRewriter(ExprFactory &efac) : m_efac(efac) {}
@@ -77,7 +80,10 @@ struct BvIntRewriter : public std::unary_function<Expr, Expr> {
   }
 };
 
-struct BVINTABS : public std::unary_function<Expr, VisitAction> {
+struct BVINTABS {
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   ExprFactory &m_efac;
   /// side-condition
   ExprVector m_side;

@@ -1,1 +1,1 @@
-add_lotus_test(sym_abs_test SymAbsTest.cpp)
+add_lotus_solver_test(sym_abs_test SymAbsTest.cpp)

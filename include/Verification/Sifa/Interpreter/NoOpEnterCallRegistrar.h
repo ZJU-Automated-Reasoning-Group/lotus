@@ -1,4 +1,5 @@
-//===-- Verification/Sifa/Interpreter/NoOpEnterCallRegistrar.h -------------===//
+//===-- Verification/Sifa/Interpreter/NoOpEnterCallRegistrar.h
+//-------------===//
 //
 // No-op implementation of IEnterCallRegistrar (e.g. intraprocedural only).
 //

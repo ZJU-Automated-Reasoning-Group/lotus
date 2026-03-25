@@ -1,7 +1,7 @@
 // Implementation of the SemiSparsePointerAnalysis class.
 //
-// This file implements the high-level driver for the semi-sparse pointer analysis.
-// It orchestrates the two main phases of the analysis:
+// This file implements the high-level driver for the semi-sparse pointer
+// analysis. It orchestrates the two main phases of the analysis:
 // 1. Global Initialization: Processing global variables and their initializers.
 // 2. Data-Flow Analysis: Running the fixpoint algorithm on the semi-sparse CFG.
 
@@ -23,9 +23,9 @@ namespace tpa {
 // The analysis proceeds in two distinct phases:
 //
 // Phase 1: Global Initialization
-// Uses GlobalPointerAnalysis to scan the module for global variables and functions.
-// It populates the initial Environment (Env) with mappings for globals and
-// the initial Store with the effects of global initializers.
+// Uses GlobalPointerAnalysis to scan the module for global variables and
+// functions. It populates the initial Environment (Env) with mappings for
+// globals and the initial Store with the effects of global initializers.
 //
 // Phase 2: Data-Flow Analysis
 // Sets up the GlobalState (which holds immutable context for the analysis) and
@@ -49,12 +49,13 @@ void SemiSparsePointerAnalysis::runOnProgram(const SemiSparseProgram &ssProg) {
   // Construct the global state that will be passed to transfer functions.
   // Note that 'env' is passed by reference and will be updated during analysis.
   auto globalState = GlobalState(ptrManager, memManager, ssProg, extTable, env);
-  
+
   // Configure the generic DataFlowAnalysis engine with our specific components.
   auto dfa = util::DataFlowAnalysis<GlobalState, Memo, TransferFunction,
                                     SemiSparsePropagator>(globalState, memo);
-                                    
-  // Run the fixpoint iteration starting with the initial store derived from globals.
+
+  // Run the fixpoint iteration starting with the initial store derived from
+  // globals.
   dfa.runOnInitialState<Initializer>(std::move(initStore));
   LOG_INFO("Data-flow analysis completed");
 }

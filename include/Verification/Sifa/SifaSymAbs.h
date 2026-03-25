@@ -1,10 +1,11 @@
 //===-- Verification/Sifa/SifaSymAbs.h ------------------------------------===//
 //
-// Public API for Sifa using SymbolicAbstraction-backed abstract domains.
+// Public API for the SymAbsAI-backed Sifa helper.
 //
-// This provides support for domains such as Interval and Octagon, and
-// interprocedural call semantics via SymbolicAbstraction's InstructionSemantics
-// (which queries ModuleContext function summaries).
+// This is intentionally narrower than the migrated Sifa engine: it uses
+// SymAbsAI as a whole-block transfer engine on a single function's
+// CFG. Calls are interpreted by SymAbsAI's own transformers and
+// ModuleContext, not by Sifa's interprocedural call-summary machinery.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,17 +22,17 @@ class Function;
 class Module;
 } // namespace llvm
 
-namespace symbolic_abstraction {
+namespace symabs_ai {
 class AbstractValue;
-} // namespace symbolic_abstraction
+} // namespace symabs_ai
 
 namespace lotus {
 namespace sifa {
 
-using SymAbsState = std::shared_ptr<symbolic_abstraction::AbstractValue>;
+using SymAbsState = std::shared_ptr<symabs_ai::AbstractValue>;
 
-/// Run Sifa for a single function and compute the abstract state at `target`
-/// (after phi nodes in `target`).
+/// Run the intraprocedural SymAbsAI-backed helper for one function
+/// and compute the abstract state at `target` (after phi nodes in `target`).
 ///
 /// Returns a null state for bottom/unreachable.
 SymAbsState analyzeSymAbsTo(const llvm::Module &M, const llvm::Function &F,
@@ -44,11 +45,11 @@ bool isReachableSymAbs(const llvm::Module &M, const llvm::Function &F,
                        const SifaSymAbsOptions &options = {});
 
 /// Compute the abstract state at the procedure exit (the synthetic EXIT node).
-SymAbsState analyzeSymAbsToReturn(const llvm::Module &M, const llvm::Function &F,
+SymAbsState analyzeSymAbsToReturn(const llvm::Module &M,
+                                  const llvm::Function &F,
                                   const SifaSymAbsOptions &options = {});
 
 } // namespace sifa
 } // namespace lotus
 
 #endif // LOTUS_VERIFICATION_SIFA_SIFASYMABS_H
-

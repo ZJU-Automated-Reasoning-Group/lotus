@@ -346,13 +346,13 @@ public:
     m_se = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 
-    for (auto L : boost::make_iterator_range(LI->begin(), LI->end())) {
+    for (auto *L : boost::make_iterator_range(LI->begin(), LI->end())) {
       getPointerInductionVariables(L);
     }
 
     IRBuilder<> B(F.getContext());
     bool Change = false;
-    for (auto L : boost::make_iterator_range(LI->begin(), LI->end())) {
+    for (auto *L : boost::make_iterator_range(LI->begin(), LI->end())) {
       Change |= convertDisEqToIneqWithSlack(L, B);
     }
     return Change;

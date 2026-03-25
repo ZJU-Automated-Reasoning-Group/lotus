@@ -19,85 +19,93 @@
 #ifndef DYCKAA_DYCKHALFGRAPH_H
 #define DYCKAA_DYCKHALFGRAPH_H
 
+#include "Alias/DyckAA/DyckGraphNode.h"
+
 #include <stack>
 #include <unordered_map>
 
-#include "Alias/DyckAA/DyckGraphNode.h"
-
 class DyckGraphEdgeLabel;
 
-/// This class models a dyck-cfl language as a graph, which does not contain the barred edges.
-/// See details in http://dl.acm.org/citation.cfm?id=2491956.2462159&coll=DL&dl=ACM&CFID=379446910&CFTOKEN=65130716 .
+/// This class models a dyck-cfl language as a graph, which does not contain the
+/// barred edges. See details in
+/// http://dl.acm.org/citation.cfm?id=2491956.2462159&coll=DL&dl=ACM&CFID=379446910&CFTOKEN=65130716
+/// .
 class DyckGraph {
 private:
-    std::set<DyckGraphNode *> Vertices;
+  std::set<DyckGraphNode *> Vertices;
 
-    std::unordered_map<void *, DyckGraphNode *> ValVertexMap;
+  std::unordered_map<void *, DyckGraphNode *> ValVertexMap;
 
-    /// edge labels
-    /// @{
-    DyckGraphEdgeLabel *DerefEdgeLabel;
-    std::map<long, DyckGraphEdgeLabel *> OffsetEdgeLabelMap;
-    std::map<long, DyckGraphEdgeLabel *> IndexEdgeLabelMap;
-    /// @}
+  /// edge labels
+  /// @{
+  DyckGraphEdgeLabel *DerefEdgeLabel;
+  std::map<long, DyckGraphEdgeLabel *> OffsetEdgeLabelMap;
+  std::map<long, DyckGraphEdgeLabel *> IndexEdgeLabelMap;
+  /// @}
 
 public:
-    DyckGraph();
+  DyckGraph();
 
-    ~DyckGraph();
+  ~DyckGraph();
 
-    /// The number of vertices in the graph.
-    unsigned int numVertices();
+  /// The number of vertices in the graph.
+  unsigned int numVertices();
 
-    /// The number of equivalent sets.
-    /// Please use it after you call void qirunAlgorithm().
-    unsigned int numEquivalentClasses();
+  /// The number of equivalent sets.
+  /// Please use it after you call void qirunAlgorithm().
+  unsigned int numEquivalentClasses();
 
-    /// Get the set of vertices in the graph.
-    std::set<DyckGraphNode *> &getVertices();
+  /// Get the set of vertices in the graph.
+  std::set<DyckGraphNode *> &getVertices();
 
-    /// You are not recommended to use the function when the graph is big,
-    /// because it is time-consuming.
-    void printAsDot(const char *FileName) const;
+  /// You are not recommended to use the function when the graph is big,
+  /// because it is time-consuming.
+  void printAsDot(const char *FileName) const;
 
-    /// Combine x's rep and y's rep.
-    DyckGraphNode *combine(DyckGraphNode *NodeX, DyckGraphNode *NodeY);
+  /// Combine x's rep and y's rep.
+  DyckGraphNode *combine(DyckGraphNode *NodeX, DyckGraphNode *NodeY);
 
-    /// if value is NULL, a new vertex will be always returned with false.
-    /// if value's vertex has been initialized, it will be returned with true;
-    /// otherwise, it will be initialized and returned with false;
-    /// If a new vertex is initialized, it will be added into the graph.
-    std::pair<DyckGraphNode *, bool> retrieveDyckVertex(void *Val, const char *Name = nullptr);
+  /// if value is NULL, a new vertex will be always returned with false.
+  /// if value's vertex has been initialized, it will be returned with true;
+  /// otherwise, it will be initialized and returned with false;
+  /// If a new vertex is initialized, it will be added into the graph.
+  std::pair<DyckGraphNode *, bool>
+  retrieveDyckVertex(void *Val, const char *Name = nullptr);
 
-    DyckGraphNode *findDyckVertex(void *Val);
+  DyckGraphNode *findDyckVertex(void *Val);
 
-    /// Get reachable nodes
-    /// @{
-    void getReachableVertices(const std::set<DyckGraphNode *> &Sources, std::set<DyckGraphNode *> &Reachable);
+  /// Get reachable nodes
+  /// @{
+  void getReachableVertices(const std::set<DyckGraphNode *> &Sources,
+                            std::set<DyckGraphNode *> &Reachable);
 
-    void getReachableVertices(DyckGraphNode *Source, std::set<DyckGraphNode *> &Reachable);
-    /// @}
+  void getReachableVertices(DyckGraphNode *Source,
+                            std::set<DyckGraphNode *> &Reachable);
+  /// @}
 
-    /// The algorithm proposed by Qirun Zhang.
-    /// Find the paper here: http://dl.acm.org/citation.cfm?id=2491956.2462159&coll=DL&dl=ACM&CFID=379446910&CFTOKEN=65130716 .
-    /// Note that if there are two edges with the same label: a->b and a->c, b and c will be put into the same equivelant class.
-    /// If the function does nothing, return true, otherwise return false.
-    bool qirunAlgorithm();
+  /// The algorithm proposed by Qirun Zhang.
+  /// Find the paper here:
+  /// http://dl.acm.org/citation.cfm?id=2491956.2462159&coll=DL&dl=ACM&CFID=379446910&CFTOKEN=65130716
+  /// . Note that if there are two edges with the same label: a->b and a->c, b
+  /// and c will be put into the same equivelant class. If the function does
+  /// nothing, return true, otherwise return false.
+  bool qirunAlgorithm();
 
-    /// validation
-    void validation(const char *, int);
+  /// validation
+  void validation(const char *, int);
 
-    DyckGraphEdgeLabel *getOrInsertOffsetEdgeLabel(long Offset);
+  DyckGraphEdgeLabel *getOrInsertOffsetEdgeLabel(long Offset);
 
-    DyckGraphEdgeLabel *getOrInsertIndexEdgeLabel(long Offset);
+  DyckGraphEdgeLabel *getOrInsertIndexEdgeLabel(long Offset);
 
-    DyckGraphEdgeLabel *getDereferenceEdgeLabel() const { return DerefEdgeLabel; }
+  DyckGraphEdgeLabel *getDereferenceEdgeLabel() const { return DerefEdgeLabel; }
 
 private:
-    void removeFromWorkList(std::multimap<DyckGraphNode *, void *> &, DyckGraphNode *, void *);
+  void removeFromWorkList(std::multimap<DyckGraphNode *, void *> &,
+                          DyckGraphNode *, void *);
 
-    bool containsInWorkList(std::multimap<DyckGraphNode *, void *> &, DyckGraphNode *, void *);
+  bool containsInWorkList(std::multimap<DyckGraphNode *, void *> &,
+                          DyckGraphNode *, void *);
 };
 
 #endif // DYCKAA_DYCKHALFGRAPH_H
-

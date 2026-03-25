@@ -1,8 +1,8 @@
 #pragma once
+#include "Checker/FiTx/Frontend/StateTransition.h"
+
 #include <string>
 #include <vector>
-
-#include "Checker/FiTx/Frontend/StateTransition.h"
 
 const std::vector<std::string> alloc_funcs = {
     "malloc",        "calloc",           "kzalloc",
@@ -16,13 +16,13 @@ const std::vector<std::string> free_funcs = {
     "free",   "kfree",           "kzfree",         "vfree",
     "kvfree", "kmem_cache_free", "kfree_sensitive"};
 
-const std::vector<framework::FunctionArgTransitionRule::FunctionArg>
+const std::vector<fitx::FunctionArgTransitionRule::FunctionArg>
     store_related = {
-        framework::FunctionArgTransitionRule::FunctionArg(
+        fitx::FunctionArgTransitionRule::FunctionArg(
             "__drm_atomic_helper_crtc_reset", 1, true),
-        framework::FunctionArgTransitionRule::FunctionArg(
+        fitx::FunctionArgTransitionRule::FunctionArg(
             "__drm_atomic_helper_connector_reset", 1, true),
-        framework::FunctionArgTransitionRule::FunctionArg("list_add_tail", 0,
+        fitx::FunctionArgTransitionRule::FunctionArg("list_add_tail", 0,
                                                           true),
-        framework::FunctionArgTransitionRule::FunctionArg("list_add", 0, true),
+        fitx::FunctionArgTransitionRule::FunctionArg("list_add", 0, true),
 };

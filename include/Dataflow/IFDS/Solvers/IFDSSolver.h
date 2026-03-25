@@ -7,9 +7,13 @@
 #pragma once
 
 #include "Dataflow/ControlFlow/InterCFG.h"
-#include "Dataflow/IFDS/IFDSFramework.h"
-#include "Dataflow/IFDS/IFDSIDESolverConfig.h"
+#include "Dataflow/IFDS/Core/IFDSFramework.h"
+#include "Dataflow/IFDS/Core/IFDSIDESolverConfig.h"
+#include "Dataflow/IFDS/Core/SolverGraphContext.h"
+#include "Dataflow/IFDS/Core/SolverRunState.h"
 
+#include <memory>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -17,7 +21,36 @@ namespace ifds {
 
 template <typename T, typename U> struct PairHash {
   size_t operator()(const std::pair<T, U> &p) const {
-    return std::hash<T>{}(p.first) ^ (std::hash<U>{}(p.second) << 1);
+    // Use FNV-1a-style mixing to avoid the collision problems of XOR-shifting
+    // aligned pointer hashes by 1 bit.
+    size_t h = 14695981039346656037ULL;
+    h ^= std::hash<T>{}(p.first);
+    h *= 1099511628211ULL;
+    h ^= std::hash<U>{}(p.second);
+    h *= 1099511628211ULL;
+    return h;
+  }
+};
+
+template <typename A, typename B, typename C> struct TripleHash {
+  size_t operator()(const std::tuple<A, B, C> &t) const {
+    size_t h = 14695981039346656037ULL;
+    h ^= std::hash<A>{}(std::get<0>(t));
+    h *= 1099511628211ULL;
+    h ^= std::hash<B>{}(std::get<1>(t));
+    h *= 1099511628211ULL;
+    h ^= std::hash<C>{}(std::get<2>(t));
+    h *= 1099511628211ULL;
+    return h;
+  }
+};
+
+template <typename A, typename B, typename C> struct TripleEq {
+  bool operator()(const std::tuple<A, B, C> &lhs,
+                  const std::tuple<A, B, C> &rhs) const {
+    return std::get<0>(lhs) == std::get<0>(rhs) &&
+           std::get<1>(lhs) == std::get<1>(rhs) &&
+           std::get<2>(lhs) == std::get<2>(rhs);
   }
 };
 
@@ -33,11 +66,9 @@ public:
   using NodeHash = typename ExplodedSupergraph<Fact>::NodeHash;
 
   IFDSSolver(Problem &problem);
+  ~IFDSSolver();
 
   void solve(const llvm::Module &module);
-
-  // Enable/disable progress bar display during analysis
-  void set_show_progress(bool show) { m_show_progress = show; }
 
   // Solver configuration (return sites, unbalanced returns, etc.)
   void set_solver_config(IFDSIDESolverConfig config) {
@@ -80,10 +111,29 @@ public:
 private:
   using PathEdgeType = PathEdge<Fact>;
   using SummaryEdgeType = SummaryEdge<Fact>;
+  struct ExitSummary {
+    const llvm::Instruction *exit_inst;
+    Fact exit_fact;
+
+    bool operator==(const ExitSummary &other) const {
+      return exit_inst == other.exit_inst && exit_fact == other.exit_fact;
+    }
+  };
+  struct ExitSummaryHash {
+    size_t operator()(const ExitSummary &s) const {
+      size_t h = 14695981039346656037ULL;
+      h ^= std::hash<const llvm::Instruction *>{}(s.exit_inst);
+      h *= 1099511628211ULL;
+      h ^= std::hash<Fact>{}(s.exit_fact);
+      h *= 1099511628211ULL;
+      return h;
+    }
+  };
 
   Problem &m_problem;
-  bool m_show_progress = false;
   IFDSIDESolverConfig m_config;
+  std::unique_ptr<lotus::AliasAnalysisWrapper> m_owned_alias_analysis;
+  bool m_injected_alias_analysis = false;
 
   // Bounded solver state (0 = unbounded)
   size_t m_max_steps = 0;
@@ -91,29 +141,38 @@ private:
   bool m_bound_reached = false;
 
   // Simple sequential data structures (no thread-safety needed)
-  std::set<PathEdgeType> m_path_edges;
-  std::set<SummaryEdgeType> m_summary_edges;
-  std::vector<PathEdgeType> m_worklist;
+  IFDSRunState<Fact> m_state;
   std::unordered_map<const llvm::Instruction *, FactSet> m_entry_facts;
   std::unordered_map<const llvm::Instruction *, FactSet> m_exit_facts;
 
-  // Summary edges: keyed by (callee, entry_fact) -> set of return_fact
+  // Summary edges: keyed by (callee, entry_fact) -> set of (exit inst, exit fact).
   using SummaryKey = std::pair<const llvm::Function *, Fact>;
   struct SummaryKeyHash {
     size_t operator()(const SummaryKey &k) const {
-      return std::hash<const llvm::Function *>{}(k.first) ^
-             (std::hash<Fact>{}(k.second) << 1);
+      // FNV-style combiner to avoid XOR-shift collisions on aligned pointers.
+      size_t h = 14695981039346656037ULL;
+      h ^= std::hash<const llvm::Function *>{}(k.first);
+      h *= 1099511628211ULL;
+      h ^= std::hash<Fact>{}(k.second);
+      h *= 1099511628211ULL;
+      return h;
     }
   };
-  std::unordered_map<SummaryKey, std::set<Fact>, SummaryKeyHash> m_summaries;
+  std::unordered_map<SummaryKey, std::unordered_set<ExitSummary, ExitSummaryHash>,
+                     SummaryKeyHash>
+      m_summaries;
 
   // Track entry facts used when entering each callee: (call, entry_fact) ->
   // true This allows proper retroactive summary application
   using EntryFactKey = std::pair<const llvm::CallBase *, Fact>;
   struct EntryFactKeyHash {
     size_t operator()(const EntryFactKey &k) const {
-      return std::hash<const llvm::CallBase *>{}(k.first) ^
-             (std::hash<Fact>{}(k.second) << 1);
+      size_t h = 14695981039346656037ULL;
+      h ^= std::hash<const llvm::CallBase *>{}(k.first);
+      h *= 1099511628211ULL;
+      h ^= std::hash<Fact>{}(k.second);
+      h *= 1099511628211ULL;
+      return h;
     }
   };
   std::unordered_set<EntryFactKey, EntryFactKeyHash> m_entry_facts_at_call;
@@ -134,54 +193,57 @@ private:
   };
   struct CallEdgeInfoHash {
     size_t operator()(const CallEdgeInfo &k) const {
-      size_t h1 = std::hash<const llvm::CallBase *>{}(k.call_node);
-      size_t h2 = std::hash<Fact>{}(k.call_fact);
-      size_t h3 = std::hash<const llvm::Instruction *>{}(k.source_node);
-      size_t h4 = std::hash<Fact>{}(k.source_fact);
-      return ((h1 ^ (h2 << 1)) ^ (h3 << 2)) ^ (h4 << 3);
+      size_t h = 14695981039346656037ULL;
+      h ^= std::hash<const llvm::CallBase *>{}(k.call_node);
+      h *= 1099511628211ULL;
+      h ^= std::hash<Fact>{}(k.call_fact);
+      h *= 1099511628211ULL;
+      h ^= std::hash<const llvm::Instruction *>{}(k.source_node);
+      h *= 1099511628211ULL;
+      h ^= std::hash<Fact>{}(k.source_fact);
+      h *= 1099511628211ULL;
+      return h;
     }
   };
   using CallEdgeKey = std::pair<const llvm::Function *, Fact>;
   struct CallEdgeKeyHash {
     size_t operator()(const CallEdgeKey &k) const {
-      return std::hash<const llvm::Function *>{}(k.first) ^
-             (std::hash<Fact>{}(k.second) << 1);
+      size_t h = 14695981039346656037ULL;
+      h ^= std::hash<const llvm::Function *>{}(k.first);
+      h *= 1099511628211ULL;
+      h ^= std::hash<Fact>{}(k.second);
+      h *= 1099511628211ULL;
+      return h;
     }
   };
   std::unordered_map<CallEdgeKey, std::vector<CallEdgeInfo>, CallEdgeKeyHash>
       m_call_edge_info;
-
-  std::unordered_map<const llvm::Instruction *, std::set<PathEdgeType>>
-      m_path_edges_at;
+  // Companion set for O(1) deduplication of m_call_edge_info entries.
+  // Keyed identically to m_call_edge_info; stores the set of already-recorded
+  // CallEdgeInfo values so that process_call_edge can avoid the O(n) linear
+  // scan that was previously used.
+  std::unordered_map<CallEdgeKey,
+                     std::unordered_set<CallEdgeInfo, CallEdgeInfoHash>,
+                     CallEdgeKeyHash>
+      m_call_edge_info_seen;
 
   // Flow function result caches (key -> FactSet) to avoid recomputation
-  using NormalFlowKey = std::pair<const llvm::Instruction *, Fact>;
-  using CallToReturnFlowKey = std::pair<const llvm::CallBase *, Fact>;
-  std::unordered_map<NormalFlowKey, FactSet,
-                     PairHash<const llvm::Instruction *, Fact>>
+  using NormalFlowKey =
+      std::tuple<const llvm::Instruction *, const llvm::Instruction *, Fact>;
+  using CallToReturnFlowKey =
+      std::tuple<const llvm::CallBase *, const llvm::Instruction *, Fact>;
+  std::unordered_map<
+      NormalFlowKey, FactSet,
+      TripleHash<const llvm::Instruction *, const llvm::Instruction *, Fact>,
+      TripleEq<const llvm::Instruction *, const llvm::Instruction *, Fact>>
       m_normal_flow_cache;
-  std::unordered_map<CallToReturnFlowKey, FactSet,
-                     PairHash<const llvm::CallBase *, Fact>>
+  std::unordered_map<
+      CallToReturnFlowKey, FactSet,
+      TripleHash<const llvm::CallBase *, const llvm::Instruction *, Fact>,
+      TripleEq<const llvm::CallBase *, const llvm::Instruction *, Fact>>
       m_call_to_return_flow_cache;
 
-  // Call graph information (read-only after initialization)
-  std::unordered_map<const llvm::CallBase *, const llvm::Function *>
-      m_call_to_callee;
-  std::unordered_map<const llvm::Function *,
-                     std::vector<const llvm::CallBase *>>
-      m_callee_to_calls;
-  std::unordered_map<const llvm::Function *,
-                     std::vector<const llvm::ReturnInst *>>
-      m_function_returns;
-
-  // CFG navigation helpers (read-only after initialization)
-  std::unordered_map<const llvm::Instruction *,
-                     std::vector<const llvm::Instruction *>>
-      m_successors;
-  std::unordered_map<const llvm::Instruction *,
-                     std::vector<const llvm::Instruction *>>
-      m_predecessors;
-  std::unique_ptr<::dataflow::controlflow::LLVMInterCFG> m_icfg;
+  SolverGraphContext<Fact, Problem> m_graph_context;
 
   // Core IFDS Tabulation Algorithm Methods
   bool propagate_path_edge(const PathEdgeType &edge);
@@ -209,6 +271,29 @@ private:
   void run_tabulation();
 
   const llvm::Function *get_main_function(const llvm::Module &module);
+
+protected:
+  virtual void on_normal_transition(const Node &source, const Node &target) {
+    (void)source;
+    (void)target;
+  }
+  virtual void on_call_transition(const Node &source, const Node &target) {
+    (void)source;
+    (void)target;
+  }
+  virtual void on_return_transition(const Node &source, const Node &target) {
+    (void)source;
+    (void)target;
+  }
+  virtual void on_call_to_return_transition(const Node &source,
+                                            const Node &target) {
+    (void)source;
+    (void)target;
+  }
+  virtual void on_summary_transition(const Node &source, const Node &target) {
+    (void)source;
+    (void)target;
+  }
 };
 
 } // namespace ifds

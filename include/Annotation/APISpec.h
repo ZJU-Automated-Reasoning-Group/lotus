@@ -9,7 +9,7 @@
 namespace llvm {
 class Function;
 class Module;
-}
+} // namespace llvm
 
 #include <string>
 #include <unordered_map>
@@ -19,31 +19,31 @@ namespace lotus {
 
 // Operation kinds supported across specs
 enum class SpecOpKind {
-  Ignore,   // IGNORE / no effect
-  Alloc,    // ALLOC
-  Dealloc,  // DEALLOC
-  Copy,     // COPY
-  Exit,     // EXIT
-  Mod,      // MOD (modifies memory)
-  Ref       // REF (reads/references memory)
+  Ignore,  // IGNORE / no effect
+  Alloc,   // ALLOC
+  Dealloc, // DEALLOC
+  Copy,    // COPY
+  Exit,    // EXIT
+  Mod,     // MOD (modifies memory)
+  Ref      // REF (reads/references memory)
 };
 
 // Qualifiers as found in specs (we preserve them as-is, but also expose
 // well-known ones via accessors)
 enum class QualifierKind {
-  Value,   // V (value/pointer itself)
-  Region,  // R (pointee region)
-  Data,    // D (data)
-  Unknown  // anything else (including NULL/STATIC handled via selector)
+  Value,  // V (value/pointer itself)
+  Region, // R (pointee region)
+  Data,   // D (data)
+  Unknown // anything else (including NULL/STATIC handled via selector)
 };
 
 // Where a value comes from (e.g., return value or N-th argument)
 enum class SelectorKind {
-  Ret,       // Ret
-  Arg,       // Arg<N>
-  AfterArg,  // AfterArg<N> (position after argument N)
-  Static,    // STATIC (external static address)
-  Null       // NULL (null pointer literal)
+  Ret,      // Ret
+  Arg,      // Arg<N>
+  AfterArg, // AfterArg<N> (position after argument N)
+  Static,   // STATIC (external static address)
+  Null      // NULL (null pointer literal)
 };
 
 struct ValueSelector {
@@ -65,7 +65,8 @@ struct CopyEffect {
 };
 
 struct AllocEffect {
-  // Optional argument index that influences allocation size (if provided by spec)
+  // Optional argument index that influences allocation size (if provided by
+  // spec)
   int sizeArgIndex; // -1 if unspecified
 };
 
@@ -96,14 +97,18 @@ public:
 
   // Load a spec file. Multiple files can be loaded; rules will be merged per
   // function. Later-loaded files can extend or override earlier state.
-  // Returns true on success; false on I/O error (parsing continues best-effort).
+  // Returns true on success; false on I/O error (parsing continues
+  // best-effort).
   bool loadFile(const std::string &path, std::string &errorMessage);
 
   // Convenience: load many files. Returns first error message if any.
-  bool loadFiles(const std::vector<std::string> &paths, std::string &errorMessage);
+  bool loadFiles(const std::vector<std::string> &paths,
+                 std::string &errorMessage);
 
   // Expose raw map for advanced consumers
-  const std::unordered_map<std::string, FunctionSpec> &all() const { return nameToSpec; }
+  const std::unordered_map<std::string, FunctionSpec> &all() const {
+    return nameToSpec;
+  }
 
   // Lookups by function (by name). If multiple overloads/mangled names exist,
   // pass the exact LLVM function name.
@@ -129,29 +134,34 @@ private:
   std::unordered_map<std::string, FunctionSpec> nameToSpec;
 
   // Parsing helpers
-  static bool parseLine(const std::string &line,
-                        std::string &outFunc,
-                        SpecOpKind &outOp,
-                        std::vector<std::string> &outTokens);
+  static bool parseLine(const std::string &line, std::string &outFunc,
+                        SpecOpKind &outOp, std::vector<std::string> &outTokens);
 
   static ValueSelector parseSelector(const std::string &token);
   static QualifierKind parseQualifier(const std::string &token);
 
   void applyAlloc(FunctionSpec &spec, const std::vector<std::string> &tokens);
-  void applyCopy(FunctionSpec &spec, const std::vector<std::string> &tokens);
+  // Returns false (and emits a warning) if tokens are malformed.
+  bool applyCopy(FunctionSpec &spec, const std::vector<std::string> &tokens);
   void applyIgnore(FunctionSpec &spec);
   void applyDealloc(FunctionSpec &spec);
   void applyExit(FunctionSpec &spec);
-  void applyModRef(FunctionSpec &spec, SpecOpKind op, const std::vector<std::string> &tokens);
+  // Returns false (and emits a warning) if tokens are malformed.
+  bool applyModRef(FunctionSpec &spec, SpecOpKind op,
+                   const std::vector<std::string> &tokens);
 };
 
 // Utility helpers
-inline bool isValueQualifier(QualifierKind q) { return q == QualifierKind::Value; }
-inline bool isRegionQualifier(QualifierKind q) { return q == QualifierKind::Region; }
-inline bool isDataQualifier(QualifierKind q) { return q == QualifierKind::Data; }
+inline bool isValueQualifier(QualifierKind q) {
+  return q == QualifierKind::Value;
+}
+inline bool isRegionQualifier(QualifierKind q) {
+  return q == QualifierKind::Region;
+}
+inline bool isDataQualifier(QualifierKind q) {
+  return q == QualifierKind::Data;
+}
 
 } // namespace lotus
 
 #endif // LOTUS_SUPPORT_APISPEC_H
-
-

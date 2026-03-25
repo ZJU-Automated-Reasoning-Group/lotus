@@ -2,18 +2,15 @@
 
 #include "Alias/TPA/PointerAnalysis/FrontEnd/Type/CastMap.h"
 
-namespace llvm
-{
-	class Module;
+namespace llvm {
+class Module;
 } // namespace llvm
 
-namespace tpa
-{
+namespace tpa {
 
-class StructCastAnalysis
-{
+class StructCastAnalysis {
 public:
-	CastMap runOnModule(const llvm::Module&);
+  CastMap runOnModule(const llvm::Module &);
 };
 
 } // namespace tpa

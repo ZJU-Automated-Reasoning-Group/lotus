@@ -28,13 +28,13 @@
 #ifndef LLVM_TRANSFORMS_RANGEANALYSIS_RANGEANALYSIS_H_
 #define LLVM_TRANSFORMS_RANGEANALYSIS_RANGEANALYSIS_H_
 
-#include "llvm/IR/Function.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -42,9 +42,9 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include <chrono>
 
 #include <algorithm>
+#include <chrono>
 #include <deque>
 #include <set>
 #include <sstream>
@@ -54,10 +54,10 @@ using namespace llvm;
 
 // Comment the line below to disable the debug of SCCs and optimize the code
 // generated.
-//#define SCC_DEBUG
+// #define SCC_DEBUG
 
 // Comment the line below to disable the dot printing of Constraint Graphs
-//#define PRINT_DEBUG
+// #define PRINT_DEBUG
 
 // Used to enable the stats computing. Comment the below line to disable it
 #define STATS
@@ -67,7 +67,7 @@ using namespace llvm;
 // running time, so I recommend leaving it activated
 #define JUMPSET
 
-//#define OVERFLOWHANDLER
+// #define OVERFLOWHANDLER
 
 // Used to limit the number of iterations of fixed meet operator.
 // This update runs before widening and is necessary to improve the result of
@@ -107,7 +107,7 @@ using namespace llvm;
 #endif
 
 //************************** Log Transactions ********************************//
-//#define LOG_TRANSACTIONS
+// #define LOG_TRANSACTIONS
 
 #ifdef LOG_TRANSACTIONS
 std::string _log_ErrorInfo;
@@ -586,7 +586,9 @@ public:
       duration -= op.duration;
       return *this;
     }
-    bool operator==(const TimeValue &op) const { return duration == op.duration; }
+    bool operator==(const TimeValue &op) const {
+      return duration == op.duration;
+    }
   };
 
   // Map to store accumulated times
@@ -599,7 +601,9 @@ private:
 public:
   Profile() : memory(0) {}
 
-  TimeValue timenow() { return TimeValue(std::chrono::steady_clock::now().time_since_epoch()); }
+  TimeValue timenow() {
+    return TimeValue(std::chrono::steady_clock::now().time_since_epoch());
+  }
 
   void updateTime(StringRef key, const TimeValue &time) {
     accumulatedtimes[key] += time;
@@ -843,8 +847,7 @@ public:
   virtual APInt getMin() = 0;
   virtual APInt getMax() = 0;
   virtual Range getRange(const Value *v) = 0;
-  virtual ~RangeAnalysis() { /*errs() << "\nRangeAnalysis";*/
-  }
+  virtual ~RangeAnalysis() { /*errs() << "\nRangeAnalysis";*/ }
 };
 
 template <class CGT>
@@ -880,5 +883,9 @@ public:
   virtual APInt getMax();
   virtual Range getRange(const Value *v);
 }; // end of class RangeAnalysis
+
+// Explicit instantiation declarations - definitions are in RangeAnalysis.cpp
+extern template char InterProceduralRA<Cousot>::ID;
+extern template char InterProceduralRA<CropDFS>::ID;
 
 #endif /* LLVM_TRANSFORMS_RANGEANALYSIS_RANGEANALYSIS_H_ */

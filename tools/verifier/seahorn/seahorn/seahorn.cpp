@@ -45,12 +45,10 @@
 #include "Alias/seadsa/DsaAnalysis.hh"
 #include "Alias/seadsa/InitializePasses.hh"
 #include "Alias/seadsa/support/RemovePtrToInt.hh"
-
 #include "Verification/seahorn/Expr/Smt/EZ3.hh"
+#include "Verification/seahorn/Support/GitSHA1.h"
 #include "Verification/seahorn/Support/Stats.hh"
 #include "Verification/seahorn/Transforms/Utils/NameValues.hh"
-
-#include "Verification/seahorn/Support/GitSHA1.h"
 void print_seahorn_version(llvm::raw_ostream &OS) {
   OS << "SeaHorn (http://seahorn.github.io/):\n"
      << "  SeaHorn version " << SEAHORN_VERSION_INFO << "-" << g_GIT_SHA1
@@ -162,10 +160,10 @@ static llvm::cl::opt<BmcEngineKind>
                                           "Based on path enumeration")),
               llvm::cl::init(BmcEngineKind::mono_bmc));
 
-static llvm::cl::opt<bool>
-    KInduction("horn-kinduction",
-               llvm::cl::desc("Run k-induction (PathBMC-based: base + inductive step)"),
-               llvm::cl::init(false));
+static llvm::cl::opt<bool> KInduction(
+    "horn-kinduction",
+    llvm::cl::desc("Run k-induction (PathBMC-based: base + inductive step)"),
+    llvm::cl::init(false));
 
 static llvm::cl::opt<bool>
     BoogieOutput("boogie", llvm::cl::desc("Translate llvm bitcode to boogie"),
@@ -297,7 +295,8 @@ int main(int argc, char **argv) {
   llvm::initializeDsaInfoPassPass(Registry);
   llvm::initializeAllocSiteInfoPass(Registry);
   llvm::initializeCompleteCallGraphPass(Registry);
-  // llvm::initializeSeaAnnotation2MetadataLegacyPass(Registry); // Not available - llvm_seahorn library not present
+  // llvm::initializeSeaAnnotation2MetadataLegacyPass(Registry); // Not
+  // available - llvm_seahorn library not present
   llvm::initializeGeneratePartialFnPassPass(Registry);
   // add an appropriate DataLayout instance for the module
   const llvm::DataLayout *dl = &module->getDataLayout();
@@ -308,7 +307,8 @@ int main(int argc, char **argv) {
 
   assert(dl && "Could not find Data Layout for the module");
 
-  // pass_manager.add(llvm_seahorn::createSeaAnnotation2MetadataLegacyPass()); // Not available - llvm_seahorn library not present
+  // pass_manager.add(llvm_seahorn::createSeaAnnotation2MetadataLegacyPass());
+  // // Not available - llvm_seahorn library not present
   pass_manager.add(seahorn::createSeaBuiltinsWrapperPass());
   // turn all functions internal so that we can inline them if requested
   auto PreserveMain = [=](const llvm::GlobalValue &GV) {
@@ -335,7 +335,7 @@ int main(int argc, char **argv) {
 
   pass_manager.add(llvm::createPromoteMemoryToRegisterPass());
   pass_manager.add(llvm::createDeadCodeEliminationPass());
-  // Superseded by DCE in LLVM12      
+  // Superseded by DCE in LLVM12
   // pass_manager.add(llvm::createDeadInstEliminationPass());
   pass_manager.add(llvm::createLowerSwitchPass());
   // lowers constant expressions to instructions

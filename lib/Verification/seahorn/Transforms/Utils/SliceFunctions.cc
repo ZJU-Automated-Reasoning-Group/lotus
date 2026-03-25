@@ -2,21 +2,21 @@
 
 #include "llvm/ADT/SCCIterator.h"
 //#include "llvm/Analysis/CallGraph.h"
+#include "seahorn/Support/SeaDebug.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Debug.h"
-#include "seahorn/Support/SeaDebug.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <set>
 #include <vector>
 //#include <iostream>
 #include <fstream>
-#include <string>
 #include <sstream>
+#include <string>
 
 static llvm::cl::list<std::string>
 FuncNamesToKeep("slice-function",
@@ -201,4 +201,4 @@ namespace seahorn {
     return new SliceFunctions ();
   }
 
-} // end namespace
+} // namespace seahorn

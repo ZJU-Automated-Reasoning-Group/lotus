@@ -2,9 +2,10 @@
 //
 // Relation checks isEqBottom / isSubsetEq (Ultimate RelationCheckUtil-aligned).
 //
-// Ultimate: isEqBottom_SolverAlphaSolver(tools, domain, pred), isSubsetEq_SolverAlphaSolver(tools, domain, left, right)
-// using SymbolicTools (isFalse, implies) and domain.alpha in a loop. Lotus: no solver;
-// we delegate to domain.isBottom and domain.leq; tools overload for API alignment.
+// Ultimate: isEqBottom_SolverAlphaSolver(tools, domain, pred),
+// isSubsetEq_SolverAlphaSolver(tools, domain, left, right) using SymbolicTools
+// (isFalse, implies) and domain.alpha in a loop. Lotus: no solver; we delegate
+// to domain.isBottom and domain.leq; tools overload for API alignment.
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,31 +19,39 @@
 namespace lotus {
 namespace sifa {
 
-/// Ultimate RelationCheckUtil: static methods isEqBottom_SolverAlphaSolver, isSubsetEq_SolverAlphaSolver.
-template <typename LabelT, typename StateT>
-class RelationCheckUtil {
+/// Ultimate RelationCheckUtil: static methods isEqBottom_SolverAlphaSolver,
+/// isSubsetEq_SolverAlphaSolver.
+template <typename LabelT, typename StateT> class RelationCheckUtil {
 public:
   using Domain = AbstractDomain<LabelT, StateT>;
   using State = StateT;
   using Result = ResultForAlteredInputs<State>;
   using Tools = SymbolicTools<LabelT, StateT>;
 
-  /// Ultimate: isEqBottom_SolverAlphaSolver(tools, domain, pred). Lotus: no solver; one-shot domain.isBottom.
-  static Result isEqBottom_SolverAlphaSolver(const Tools &, const Domain &domain, const State &s) {
+  /// Ultimate: isEqBottom_SolverAlphaSolver(tools, domain, pred). Lotus: no
+  /// solver; one-shot domain.isBottom.
+  static Result isEqBottom_SolverAlphaSolver(const Tools &,
+                                             const Domain &domain,
+                                             const State &s) {
     return isEqBottom_SolverAlphaSolver(domain, s);
   }
-  static Result isEqBottom_SolverAlphaSolver(const Domain &domain, const State &s) {
+  static Result isEqBottom_SolverAlphaSolver(const Domain &domain,
+                                             const State &s) {
     Result r(s, domain.bottom(), domain.isBottom(s), false);
     return r;
   }
 
-  /// Ultimate: isSubsetEq_SolverAlphaSolver(tools, domain, left, right). Lotus: one-shot domain.leq.
-  static Result isSubsetEq_SolverAlphaSolver(const Tools &, const Domain &domain,
-                                            const State &subset, const State &superset) {
+  /// Ultimate: isSubsetEq_SolverAlphaSolver(tools, domain, left, right). Lotus:
+  /// one-shot domain.leq.
+  static Result isSubsetEq_SolverAlphaSolver(const Tools &,
+                                             const Domain &domain,
+                                             const State &subset,
+                                             const State &superset) {
     return isSubsetEq_SolverAlphaSolver(domain, subset, superset);
   }
   static Result isSubsetEq_SolverAlphaSolver(const Domain &domain,
-                                            const State &subset, const State &superset) {
+                                             const State &subset,
+                                             const State &superset) {
     Result r(subset, superset, domain.leq(subset, superset), false);
     return r;
   }
@@ -51,7 +60,8 @@ public:
   static Result isEqBottom(const Domain &domain, const State &s) {
     return isEqBottom_SolverAlphaSolver(domain, s);
   }
-  static Result isSubsetEq(const Domain &domain, const State &subset, const State &superset) {
+  static Result isSubsetEq(const Domain &domain, const State &subset,
+                           const State &superset) {
     return isSubsetEq_SolverAlphaSolver(domain, subset, superset);
   }
 };

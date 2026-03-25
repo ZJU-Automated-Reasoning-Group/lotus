@@ -50,64 +50,68 @@
 #include "Checker/FiTx/Core/Instructions.h"
 #include "Checker/FiTx/Core/ValueTypeAlias.h"
 
-namespace framework {
+namespace fitx {
 
 /// CFG-based typestate analyzer: traverses basic blocks, merges states from
 /// predecessors (paper §4.2), applies transitions, and uses return-code aware
 /// propagation when copying callee summaries (paper §4.3).
 class Analyzer {
 public:
-  Analyzer(llvm::Module &llvm_module, framework::StateManager &state_manager,
-           framework::LoggingClient &client);
+  Analyzer(llvm::Module &llvm_module, fitx::StateManager &state_manager,
+           fitx::LoggingClient &client);
 
   void analyze();
 
   /// Analyze one function (bottom-up summary-based; paper §4.3).
-  void analyzeFunction(std::shared_ptr<framework::Function> F);
-  void analyzeCallInst(std::shared_ptr<framework::Instruction> I);
-  void analyzeStoreInst(std::shared_ptr<framework::Instruction> I);
-  void analyzeLoadInst(std::shared_ptr<framework::Instruction> I);
-  bool analyzeFunctionCall(std::shared_ptr<framework::CallInst> call_inst);
-  void analyzeReturnValue(std::shared_ptr<framework::Function> function);
+  void analyzeFunction(std::shared_ptr<fitx::Function> F);
+  void analyzeCallInst(std::shared_ptr<fitx::Instruction> I);
+  void analyzeStoreInst(std::shared_ptr<fitx::Instruction> I);
+  void analyzeLoadInst(std::shared_ptr<fitx::Instruction> I);
+  bool analyzeFunctionCall(std::shared_ptr<fitx::CallInst> call_inst);
+  void analyzeReturnValue(std::shared_ptr<fitx::Function> function);
 
-  void analyzePrevBlockBranch(std::shared_ptr<framework::BasicBlock> B);
+  void analyzePrevBlockBranch(std::shared_ptr<fitx::BasicBlock> B);
 
   void changeValueState(std::vector<Transition> transitions,
-                        std::shared_ptr<framework::Value> value,
-                        std::shared_ptr<framework::Instruction> inst);
+                        std::shared_ptr<fitx::Value> value,
+                        std::shared_ptr<fitx::Instruction> inst);
 
   void generateError(BugNotificationTiming timing,
-                     const std::set<std::shared_ptr<framework::Value>> values =
-                         std::set<std::shared_ptr<framework::Value>>());
+                     const std::set<std::shared_ptr<fitx::Value>> values =
+                         std::set<std::shared_ptr<fitx::Value>>());
 
-  bool functionInformationExists(std::shared_ptr<framework::Function> function);
-  void copyFunctionValues(std::shared_ptr<framework::Function> called_func,
-                          std::shared_ptr<framework::CallInst> call_inst);
+  bool functionInformationExists(std::shared_ptr<fitx::Function> function);
+  void copyFunctionValues(std::shared_ptr<fitx::Function> called_func,
+                          std::shared_ptr<fitx::CallInst> call_inst);
 
   bool
-  addPendingFunctionValues(std::shared_ptr<framework::Function> called_func,
-                           std::shared_ptr<framework::CallInst> call_inst);
+  addPendingFunctionValues(std::shared_ptr<fitx::Function> called_func,
+                           std::shared_ptr<fitx::CallInst> call_inst);
 
   std::shared_ptr<FunctionInformation> currentFunctionInformation() {
     return function_info_[analyzing_function_.top()];
   };
 
   std::shared_ptr<FunctionInformation>
-  getFunctionInformation(std::shared_ptr<framework::Function> function);
+  getFunctionInformation(std::shared_ptr<fitx::Function> function);
 
-  void checkAlias(std::shared_ptr<framework::StoreInst> store_inst);
+  /// Record store-based may-alias and apply alias transitions (paper §3).
+  void checkAlias(std::shared_ptr<fitx::StoreInst> store_inst);
 
 private:
   llvm::Module &llvm_module_;
-  framework::StateManager &state_manager_;
-  framework::LoggingClient &log_;
+  fitx::StateManager &state_manager_;
+  fitx::LoggingClient &log_;
 
-  std::stack<std::shared_ptr<framework::Function>> analyzing_function_;
+  /// Call stack for current analysis (bottom-up summary; paper §4.3).
+  std::stack<std::shared_ptr<fitx::Function>> analyzing_function_;
 
-  std::map<std::shared_ptr<framework::Function>,
+  /// Per-function analysis state (block info, return_info_, value_collection_).
+  std::map<std::shared_ptr<fitx::Function>,
            std::shared_ptr<FunctionInformation>>
       function_info_;
 
-  std::shared_ptr<framework::BasicBlockInformation> bb_info_;
+  /// Current block being analyzed (set in analyzeFunction).
+  std::shared_ptr<fitx::BasicBlockInformation> bb_info_;
 };
-} // namespace framework
+} // namespace fitx

@@ -1,4 +1,8 @@
 add_library(CanaryParallel STATIC
-    MultiThreading.cpp
-    lockfree/lockfree_hash_table.cpp
+    ThreadPool.cpp
+    Scheduler/Task.cpp
+    Scheduler/PipelineScheduler.cpp
+    Scheduler/ParallelSchedulerPass.cpp
 )
+
+target_link_libraries(CanaryParallel PUBLIC LLVMAnalysis CanarySupport)

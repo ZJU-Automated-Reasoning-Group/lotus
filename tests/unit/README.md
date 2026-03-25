@@ -114,11 +114,3 @@ The `TestUtils/TestConfig.h` file provides common configuration:
 - `PathToTxtTestFiles` - Path to text test files
 - `PathToJSONTestFiles` - Path to JSON test files
 
-## Future Work
-
-Potential areas for expansion:
-- More comprehensive CFG/ICFG query tests
-- Additional ADT tests (VectorSet, OrderedSet, etc.)
-- TypeHierarchy tests if applicable
-- More dataflow analysis problem tests
-- Performance/benchmark tests

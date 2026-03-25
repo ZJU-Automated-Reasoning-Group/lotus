@@ -299,8 +299,10 @@ public:
     3) sem is either Ufo or Bv semantics. For new semantics, this
       code might need to be adapted.
  **/
-class LinConToExprSem : public std::unary_function<Expr, VisitAction> {
+class LinConToExprSem {
 public:
+  using argument_type = Expr;
+  using result_type = VisitAction;
   using BvWidthMap = std::unordered_map<Expr, unsigned>;
 
 private:
@@ -308,7 +310,7 @@ private:
   OpSemContext &m_semCtx;
   BvWidthMap &m_width_map;
 
-  class AdjustType : public std::unary_function<Expr, Expr> {
+  class AdjustType {
     ExprFactory &efac;
     BvWidthMap &width_map;
 
@@ -341,6 +343,9 @@ private:
     }
 
   public:
+    using argument_type = Expr;
+    using result_type = Expr;
+
     AdjustType(ExprFactory &_efac, BvWidthMap &map)
         : efac(_efac), width_map(map) {}
 

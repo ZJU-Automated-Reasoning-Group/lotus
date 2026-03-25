@@ -6,7 +6,10 @@
 
 #include "Alias/AliasAnalysisWrapper/AliasAnalysisWrapper.h"
 #include "Analysis/Concurrency/MHP/HappensBeforeAnalysis.h"
+#include "Analysis/Concurrency/Utils/CppAtomics.h"
 
+#include <deque>
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -25,13 +28,114 @@ using namespace lotus;
 
 namespace concurrency {
 
-DataRaceChecker::DataRaceChecker(Module &module, MHPAnalysis *mhpAnalysis,
+namespace {
+
+bool isPrivateLike(OpenMP::DataSharingAttribute attribute) {
+  switch (attribute) {
+  case OpenMP::DataSharingAttribute::Private:
+  case OpenMP::DataSharingAttribute::Firstprivate:
+  case OpenMP::DataSharingAttribute::Lastprivate:
+  case OpenMP::DataSharingAttribute::Linear:
+    return true;
+  default:
+    return false;
+  }
+}
+
+const Value *stripValue(const Value *value) {
+  return value ? value->stripPointerCasts() : nullptr;
+}
+
+const Value *resolveRegionKey(const Value *value, const DataLayout &DL,
+                              int64_t &offset, bool &has_precise_offset) {
+  offset = 0;
+  has_precise_offset = false;
+  if (!value) {
+    return nullptr;
+  }
+
+  std::deque<const Value *> worklist;
+  std::set<const Value *> visited;
+  worklist.push_back(value);
+  const Value *resolved = nullptr;
+  int64_t resolved_offset = 0;
+  bool resolved_precise = false;
+
+  while (!worklist.empty()) {
+    const Value *current = worklist.front();
+    worklist.pop_front();
+    if (!current || !visited.insert(current).second) {
+      continue;
+    }
+
+    current = stripValue(current);
+    if (const auto *load = dyn_cast<LoadInst>(current)) {
+      worklist.push_back(load->getPointerOperand());
+      continue;
+    }
+    if (const auto *phi = dyn_cast<PHINode>(current)) {
+      for (const Value *incoming : phi->incoming_values()) {
+        worklist.push_back(incoming);
+      }
+      continue;
+    }
+    if (const auto *select = dyn_cast<SelectInst>(current)) {
+      worklist.push_back(select->getTrueValue());
+      worklist.push_back(select->getFalseValue());
+      continue;
+    }
+
+    int64_t current_offset = 0;
+    bool current_precise = false;
+    const Value *base = nullptr;
+    if (current->getType()->isPointerTy()) {
+      if (const Value *base_with_offset =
+              GetPointerBaseWithConstantOffset(current, current_offset, DL)) {
+        base = stripValue(base_with_offset);
+        if (!(isa<GEPOperator>(current) && base == stripValue(current))) {
+          current_precise = true;
+        }
+      }
+    }
+    if (!base && current->getType()->isPointerTy()) {
+      base = stripValue(getUnderlyingObject(current));
+    }
+    if (!base) {
+      base = current;
+    }
+
+    if (!resolved) {
+      resolved = base;
+      resolved_offset = current_offset;
+      resolved_precise = current_precise;
+    } else if (resolved != base) {
+      has_precise_offset = false;
+      offset = 0;
+      return nullptr;
+    } else if (resolved_precise && current_precise &&
+               resolved_offset != current_offset) {
+      resolved_precise = false;
+    }
+  }
+
+  offset = resolved_precise ? resolved_offset : 0;
+  has_precise_offset = resolved_precise;
+  return resolved;
+}
+
+} // namespace
+
+DataRaceChecker::DataRaceChecker(Module &module, IMHPAnalysis *mhpAnalysis,
                                  LockSetAnalysis *locksetAnalysis,
                                  EscapeAnalysis *escapeAnalysis,
+                                 ThreadLocal::ThreadLocalAnalysis *threadLocalAnalysis,
+                                 lotus::StaticThreadSharingAnalysis *staticThreadSharingAnalysis,
                                  AliasAnalysisWrapper *aliasAnalysis,
                                  HappensBeforeAnalysis *happensBeforeAnalysis)
     : m_module(module), m_mhpAnalysis(mhpAnalysis),
       m_locksetAnalysis(locksetAnalysis), m_escapeAnalysis(escapeAnalysis),
+      m_threadLocalAnalysis(threadLocalAnalysis),
+      m_staticThreadSharingAnalysis(staticThreadSharingAnalysis),
       m_aliasAnalysis(aliasAnalysis),
       m_happensBeforeAnalysis(happensBeforeAnalysis),
       m_threadAPI(ThreadAPI::getThreadAPI()) {}
@@ -55,6 +159,7 @@ static bool isIgnorableTypeForRace(const Type *ty) {
   if (name.startswith("\01"))
     name = name.drop_front(1);
   static const char *ignorable[] = {
+      // pthread primitives
       "pthread_mutex_t",
       "pthread_cond_t",
       "pthread_barrier_t",
@@ -64,19 +169,43 @@ static bool isIgnorableTypeForRace(const Type *ty) {
       "__pthread_mutex_s",
       "__pthread_cond_s",
       "__pthread_rwlock_arch_t",
-      "FILE",
-      "__FILE",
-      "_IO_FILE",
-      "atomic_flag",
-      "atomic_t",
-      "spinlock_t",
       "pthread_condattr_t",
       "pthread_mutexattr_t",
       "pthread_barrierattr_t",
-      "__jmp_buf_tag",
       "_pthread_cleanup_buffer",
       "__cancel_jmp_buf_tag",
+      // C++ standard library synchronization primitives
+      "mutex",
+      "recursive_mutex",
+      "shared_mutex",
+      "shared_timed_mutex",
+      "timed_mutex",
+      "lock_guard",
+      "unique_lock",
+      "scoped_lock",
+      "shared_lock",
+      "condition_variable",
+      "condition_variable_any",
+      "once_flag",
+      "promise",
+      "future",
+      "shared_future",
+      "latch",
+      "barrier",
+      "counting_semaphore",
+      "binary_semaphore",
+      "jthread",
+      // Atomic and low-level primitives
+      "atomic_flag",
+      "atomic_t",
+      "atomic",
+      "spinlock_t",
       "lock_class_key",
+      // File I/O
+      "FILE",
+      "__FILE",
+      "_IO_FILE",
+      "__jmp_buf_tag",
   };
   for (const char *ig : ignorable)
     if (name.equals(ig))
@@ -90,6 +219,27 @@ static bool isIgnorableTypeForRace(const Type *ty) {
 // from Goblint MCP idea).
 bool DataRaceChecker::wouldReportDataRace(const Instruction *inst1,
                                           const Instruction *inst2) const {
+  auto isDefinitelyThreadLocalAccess = [this](const Instruction *inst) {
+    if (!inst) {
+      return false;
+    }
+    if (m_threadLocalAnalysis &&
+        m_threadLocalAnalysis->accessesThreadLocalStorage(inst)) {
+      return true;
+    }
+    if (m_staticThreadSharingAnalysis &&
+        m_staticThreadSharingAnalysis->classify(inst) ==
+            lotus::StaticThreadSharingAnalysis::SharingClassification::
+                DefinitelyThreadLocal) {
+      return true;
+    }
+    return false;
+  };
+
+  if (isDefinitelyThreadLocalAccess(inst1) ||
+      isDefinitelyThreadLocalAccess(inst2)) {
+    return false;
+  }
   if (isAtomicOperation(inst1) || isAtomicOperation(inst2))
     return false;
   if (!isWriteAccess(inst1) && !isWriteAccess(inst2))
@@ -103,72 +253,97 @@ bool DataRaceChecker::wouldReportDataRace(const Instruction *inst1,
   if (areIndependent(inst1, inst2))
     return false;
 
-  // Suppress false positives by checking if accesses could be protected by a
-  // common lock. Use MAY-lock analysis (union of paths) rather than MUST-lock
-  // (intersection of paths) because we only need to verify accesses COULD be
-  // protected, not that they're ALWAYS protected. This avoids false positives
-  // when lock acquisition is on a subset of paths.
-  // Also use alias analysis for lock comparison to handle cases where lock
-  // values might be different pointers to the same underlying mutex.
   if (m_locksetAnalysis) {
-    const bool w1 = isWriteAccess(inst1);
-    const bool w2 = isWriteAccess(inst2);
+    if (m_locksetAnalysis->mustHoldCommonLock(inst1, inst2)) {
+      return false;
+    }
 
-    if (w1 || w2) {
-      // Use MAY-lock analysis to check if accesses could share a common lock.
-      // Take union of write-lock set and combined lock set - the combined set
-      // has block-head fallbacks that fix DCL/singleton patterns; the write set
-      // is more precise when populated.
-      const auto mayProtectedSet = [this](const Instruction *I, bool isWrite) {
-        LockSet s = m_locksetAnalysis->getMayLockSetAt(I);
-        if (isWrite) {
-          LockSet ws = m_locksetAnalysis->getMayWriteLockSetAt(I);
-          s.insert(ws.begin(), ws.end());
-        }
-        return s;
-      };
-
-      const LockSet s1 = mayProtectedSet(inst1, w1);
-      const LockSet s2 = mayProtectedSet(inst2, w2);
-
-      // Check if any lock in s1 might alias any lock in s2
-      for (const auto *lock1 : s1) {
-        for (const auto *lock2 : s2) {
-          if (mayAlias(lock1, lock2)) {
-            return false; // Could be protected by common lock - no race
-                          // reported
-          }
-        }
-      }
-
-      // Fallback for DCL/singleton: both in same function - use dominance to
-      // detect critical sections when lock-set lookup is imprecise.
-      const Function *F1 = inst1->getFunction();
-      const Function *F2 = inst2->getFunction();
-      if (F1 && F2 && F1 == F2) {
-        DominatorTree DT(const_cast<Function &>(*F1));
-        PostDominatorTree PDT(const_cast<Function &>(*F1));
-        const BasicBlock *BB1 = inst1->getParent();
-        const BasicBlock *BB2 = inst2->getParent();
-        LockSet funcLocks = m_locksetAnalysis->getAllLocksInFunction(F1);
-        for (LockID lock : funcLocks) {
-          for (const Instruction *Acq :
-               m_locksetAnalysis->getLockAcquires(lock)) {
-            if (Acq->getFunction() != F1) continue;
-            const BasicBlock *AcqBB = Acq->getParent();
-            if (!DT.dominates(AcqBB, BB1) || !DT.dominates(AcqBB, BB2))
+    // Fallback for DCL/singleton: both in same function - use dominance to
+    // detect critical sections when lock-set lookup is imprecise.
+    const Function *F1 = inst1->getFunction();
+    const Function *F2 = inst2->getFunction();
+    if (F1 && F2 && F1 == F2) {
+      DominatorTree DT(const_cast<Function &>(*F1));
+      PostDominatorTree PDT(const_cast<Function &>(*F1));
+      const BasicBlock *BB1 = inst1->getParent();
+      const BasicBlock *BB2 = inst2->getParent();
+      LockSet funcLocks = m_locksetAnalysis->getAllLocksInFunction(F1);
+      for (LockID lock : funcLocks) {
+        for (const Instruction *Acq :
+             m_locksetAnalysis->getLockAcquires(lock)) {
+          if (Acq->getFunction() != F1)
+            continue;
+          const BasicBlock *AcqBB = Acq->getParent();
+          if (!DT.dominates(AcqBB, BB1) || !DT.dominates(AcqBB, BB2))
+            continue;
+          for (const Instruction *Rel :
+               m_locksetAnalysis->getLockReleases(lock)) {
+            if (Rel->getFunction() != F1)
               continue;
-            for (const Instruction *Rel :
-                 m_locksetAnalysis->getLockReleases(lock)) {
-              if (Rel->getFunction() != F1) continue;
-              const BasicBlock *RelBB = Rel->getParent();
-              if (PDT.dominates(RelBB, BB1) && PDT.dominates(RelBB, BB2))
-                return false; // Both in same critical section
-            }
+            const BasicBlock *RelBB = Rel->getParent();
+            if (PDT.dominates(RelBB, BB1) && PDT.dominates(RelBB, BB2))
+              return false;
           }
         }
       }
     }
+  }
+
+  // Fallback for helper-based locking patterns where lockset propagation is
+  // imprecise (e.g., acquire/release split across helper calls).
+  if (inst1->getFunction() == inst2->getFunction()) {
+    auto getAcquireReleaseLock = [this](const CallBase *CB,
+                                        bool wantAcquire) -> const Value * {
+      if (!CB)
+        return nullptr;
+      const Instruction *I = cast<Instruction>(CB);
+      if (wantAcquire && m_threadAPI->isTDAcquire(I))
+        return m_threadAPI->getAnalysisLockIdentity(I);
+      if (!wantAcquire && m_threadAPI->isTDRelease(I))
+        return m_threadAPI->getAnalysisLockIdentity(I);
+      Function *callee = CB->getCalledFunction();
+      if (!callee || callee->isDeclaration())
+        return nullptr;
+      for (const Instruction &CI : instructions(callee)) {
+        if (wantAcquire && m_threadAPI->isTDAcquire(&CI))
+          return m_threadAPI->getAnalysisLockIdentity(&CI);
+        if (!wantAcquire && m_threadAPI->isTDRelease(&CI))
+          return m_threadAPI->getAnalysisLockIdentity(&CI);
+      }
+      return nullptr;
+    };
+
+    auto isSyntacticallyProtected = [&](const Instruction *I) {
+      const BasicBlock *BB = I->getParent();
+      if (!BB)
+        return false;
+      const Value *preLock = nullptr;
+      for (const Instruction *P = I->getPrevNode(); P; P = P->getPrevNode()) {
+        const auto *CB = dyn_cast<CallBase>(P);
+        if (!CB)
+          continue;
+        if (const Value *L = getAcquireReleaseLock(CB, /*wantAcquire=*/true)) {
+          preLock = L->stripPointerCasts();
+          break;
+        }
+      }
+      if (!preLock)
+        return false;
+      for (const Instruction *N = I->getNextNode(); N; N = N->getNextNode()) {
+        const auto *CB = dyn_cast<CallBase>(N);
+        if (!CB)
+          continue;
+        if (const Value *L = getAcquireReleaseLock(CB, /*wantAcquire=*/false)) {
+          const Value *postLock = L ? L->stripPointerCasts() : nullptr;
+          if (postLock && mayAlias(preLock, postLock))
+            return true;
+        }
+      }
+      return false;
+    };
+
+    if (isSyntacticallyProtected(inst1) && isSyntacticallyProtected(inst2))
+      return false;
   }
   return true;
 }
@@ -310,6 +485,18 @@ void DataRaceChecker::collectVariableAccesses(
       if (isMemoryAccess(&*I)) {
         const Value *memLoc = getMemoryLocation(&*I);
         if (memLoc) {
+          if (m_threadLocalAnalysis &&
+              m_threadLocalAnalysis->accessesThreadLocalStorage(&*I)) {
+            continue;
+          }
+          if (m_staticThreadSharingAnalysis &&
+              m_staticThreadSharingAnalysis->classify(&*I) ==
+                  lotus::StaticThreadSharingAnalysis::SharingClassification::
+                      DefinitelyThreadLocal) {
+            continue;
+          }
+          if (isOpenMPPrivateLikeAccess(&*I, memLoc))
+            continue;
           if (isSyncObjectAccess(memLoc))
             continue;
           if (isIgnorableTypeForRace(memLoc->getType()))
@@ -332,38 +519,107 @@ void DataRaceChecker::collectVariableAccesses(
   }
 }
 
+bool DataRaceChecker::isOpenMPPrivateLikeAccess(const Instruction *inst,
+                                                const Value *loc) const {
+  if (!inst || !loc || !m_mhpAnalysis) {
+    return false;
+  }
+  auto *regionMHP = dynamic_cast<const MHPAnalysis *>(m_mhpAnalysis);
+  if (!regionMHP) {
+    return false;
+  }
+  const OpenMP::OpenMPSemantics *semantics = regionMHP->getOpenMPSemantics();
+  if (!semantics) {
+    return false;
+  }
+
+  const Function *func = inst->getFunction();
+  if (!func) {
+    return false;
+  }
+
+  int64_t offset = 0;
+  bool precise = false;
+  const Value *base = resolveRegionKey(loc, m_module.getDataLayout(), offset, precise);
+  if (!base) {
+    base = stripValue(loc);
+  }
+
+  bool saw_matching_task = false;
+  for (const auto &task_uptr : semantics->getTasks()) {
+    const OpenMP::Task *task = task_uptr.get();
+    if (!task || task->task_function != func) {
+      continue;
+    }
+    saw_matching_task = true;
+    for (const OpenMP::DataSharingEntry &entry : task->data_sharing_entries) {
+      if (!isPrivateLike(entry.attribute) || !entry.canonical_base) {
+        continue;
+      }
+      if (entry.canonical_base != base) {
+        continue;
+      }
+      if (entry.has_precise_offset && precise && entry.offset != offset) {
+        continue;
+      }
+      return true;
+    }
+  }
+
+  if (!saw_matching_task) {
+    return false;
+  }
+
+  return false;
+}
+
 // Checks if two instructions may access the same memory location using alias
 // and points-to analysis (so that *alias_ptr and shared_var are recognized when
 // alias_ptr points to shared_var).
 bool DataRaceChecker::mayAccessSameLocation(const Instruction *inst1,
                                             const Instruction *inst2) const {
+  const Instruction *a = inst1 < inst2 ? inst1 : inst2;
+  const Instruction *b = inst1 < inst2 ? inst2 : inst1;
+  if (a && b) {
+    auto cache_it = m_location_overlap_cache.find({a, b});
+    if (cache_it != m_location_overlap_cache.end()) {
+      return cache_it->second;
+    }
+  }
+
   const Value *ptr1 = getMemoryLocation(inst1);
   const Value *ptr2 = getMemoryLocation(inst2);
-  if (mayAlias(ptr1, ptr2))
-    return true;
-  // Points-to: if one pointer may point to the other's object, they may access same location.
+  if (mayAlias(ptr1, ptr2)) {
+    return (a && b) ? (m_location_overlap_cache[{a, b}] = true) : true;
+  }
+  // Points-to: if one pointer may point to the other's object, they may access
+  // same location.
   std::vector<const Value *> pts1, pts2;
   if (m_aliasAnalysis && m_aliasAnalysis->getPointsToSet(ptr1, pts1)) {
     for (const Value *target : pts1) {
-      if (target == ptr2 || (m_aliasAnalysis->mayAlias(target, ptr2)))
-        return true;
+      if (target == ptr2 || (m_aliasAnalysis->mayAlias(target, ptr2))) {
+        return (a && b) ? (m_location_overlap_cache[{a, b}] = true) : true;
+      }
     }
   }
   if (m_aliasAnalysis && m_aliasAnalysis->getPointsToSet(ptr2, pts2)) {
     for (const Value *target : pts2) {
-      if (target == ptr1 || (m_aliasAnalysis->mayAlias(target, ptr1)))
-        return true;
+      if (target == ptr1 || (m_aliasAnalysis->mayAlias(target, ptr1))) {
+        return (a && b) ? (m_location_overlap_cache[{a, b}] = true) : true;
+      }
     }
   }
-  // Conservative fallback: two globals where one is pointer-typed (e.g. alias_ptr = &shared_var).
-  // Alias analysis may not connect *alias_ptr and shared_var; treat as may-access-same.
+  // Conservative fallback: two globals where one is pointer-typed (e.g.
+  // alias_ptr = &shared_var). Alias analysis may not connect *alias_ptr and
+  // shared_var; treat as may-access-same.
   if (ptr1 && ptr2 && ptr1 != ptr2) {
     const auto *g1 = dyn_cast<GlobalValue>(ptr1);
     const auto *g2 = dyn_cast<GlobalValue>(ptr2);
-    if (g1 && g2 && (ptr1->getType()->isPointerTy() || ptr2->getType()->isPointerTy()))
-      return true;
+    if (g1 && g2 &&
+        (ptr1->getType()->isPointerTy() || ptr2->getType()->isPointerTy()))
+      return (a && b) ? (m_location_overlap_cache[{a, b}] = true) : true;
   }
-  return false;
+  return (a && b) ? (m_location_overlap_cache[{a, b}] = false) : false;
 }
 
 // Returns true if two values may alias (point to overlapping memory).
@@ -391,12 +647,22 @@ bool DataRaceChecker::isWriteAccess(const Instruction *inst) const {
 }
 
 bool DataRaceChecker::isAtomicOperation(const Instruction *inst) const {
+  // Use enhanced CppAtomics module for better atomic recognition
+  if (CppAtomics::isAtomic(inst))
+    return true;
+
+  // Legacy check for backward compatibility
   if (isa<AtomicRMWInst>(inst) || isa<AtomicCmpXchgInst>(inst))
     return true;
   if (const auto *L = dyn_cast<LoadInst>(inst))
     return L->isAtomic();
   if (const auto *S = dyn_cast<StoreInst>(inst))
     return S->isAtomic();
+
+  // Check if it's a fence instruction
+  if (CppAtomics::isFence(inst))
+    return true;
+
   return false;
 }
 
@@ -436,14 +702,77 @@ void DataRaceChecker::buildSyncObjectSet() {
       if (!cb || !m_threadAPI->getCallee(inst))
         continue;
       const Value *v = nullptr;
+
+      // Traditional pthread primitives
       if (m_threadAPI->isTDAcquire(inst) || m_threadAPI->isTDRelease(inst))
-        v = m_threadAPI->getLockVal(inst);
+        v = m_threadAPI->getAnalysisLockIdentity(inst);
       else if (m_threadAPI->isTDCondWait(inst) ||
                m_threadAPI->isTDCondSignal(inst) ||
                m_threadAPI->isTDCondBroadcast(inst))
         v = m_threadAPI->getCondVal(inst);
       else if (m_threadAPI->isTDBarWait(inst))
         v = m_threadAPI->getBarrierVal(inst);
+
+      // Modern C++ synchronization primitives
+      else {
+        ThreadAPI::TD_TYPE type = m_threadAPI->getType(cb);
+
+        switch (type) {
+        case ThreadAPI::TD_SHARED_RDLOCK:
+        case ThreadAPI::TD_SHARED_WRLOCK:
+        case ThreadAPI::TD_SHARED_UNLOCK:
+        case ThreadAPI::TD_LOCK_GUARD_CTOR:
+        case ThreadAPI::TD_LOCK_GUARD_DTOR:
+        case ThreadAPI::TD_UNIQUE_LOCK_CTOR:
+        case ThreadAPI::TD_UNIQUE_LOCK_DTOR:
+        case ThreadAPI::TD_UNIQUE_LOCK_LOCK:
+        case ThreadAPI::TD_UNIQUE_LOCK_UNLOCK:
+        case ThreadAPI::TD_SCOPED_LOCK_CTOR:
+        case ThreadAPI::TD_SCOPED_LOCK_DTOR:
+        case ThreadAPI::TD_SHARED_LOCK_CTOR:
+        case ThreadAPI::TD_SHARED_LOCK_DTOR:
+        case ThreadAPI::TD_SEMAPHORE_ACQUIRE:
+        case ThreadAPI::TD_SEMAPHORE_RELEASE:
+          // These take mutex/semaphore as argument
+          if (cb->arg_size() >= 1)
+            v = cb->getArgOperand(0);
+          break;
+
+        case ThreadAPI::TD_CALL_ONCE:
+          // Takes once_flag as first argument
+          if (cb->arg_size() >= 1)
+            v = cb->getArgOperand(0);
+          break;
+
+        case ThreadAPI::TD_FUTURE_GET:
+        case ThreadAPI::TD_FUTURE_WAIT:
+        case ThreadAPI::TD_PROMISE_SET:
+          // Future/promise are synchronization objects themselves
+          if (cb->arg_size() >= 1)
+            v = cb->getArgOperand(0);
+          break;
+
+        case ThreadAPI::TD_LATCH_COUNT_DOWN:
+        case ThreadAPI::TD_LATCH_WAIT:
+        case ThreadAPI::TD_LATCH_ARRIVE_WAIT:
+          // Latch object
+          if (cb->arg_size() >= 1)
+            v = cb->getArgOperand(0);
+          break;
+
+        case ThreadAPI::TD_BARRIER_ARRIVE_WAIT:
+        case ThreadAPI::TD_BARRIER_ARRIVE:
+        case ThreadAPI::TD_BARRIER_WAIT_CPP20:
+          // Barrier object
+          if (cb->arg_size() >= 1)
+            v = cb->getArgOperand(0);
+          break;
+
+        default:
+          break;
+        }
+      }
+
       if (v)
         m_syncObjects.insert(v->stripPointerCasts());
     }

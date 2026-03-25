@@ -9,7 +9,7 @@
 
 namespace seadsa {
 extern void SeaDsaEnableLog(std::string x);
-}
+} // namespace seadsa
 
 using namespace seahorn;
 
@@ -28,7 +28,7 @@ void seahorn::SeaEnableLog(std::string x) {
 
 namespace seadsa {
 void SeaDsaEnableLog(std::string x);
-}
+} // namespace seadsa
 
 namespace seahorn {
 struct LogOpt {

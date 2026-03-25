@@ -19,12 +19,12 @@ namespace sifa {
 
 /// Interface for registering enter-call (callee + input state) during
 /// interpretation. Ported from Ultimate IEnterCallRegistrar.
-template <typename StateT>
-class IEnterCallRegistrar {
+template <typename StateT> class IEnterCallRegistrar {
 public:
   virtual ~IEnterCallRegistrar() = default;
 
-  virtual void registerEnterCall(const std::string &calleeName, const StateT &calleeInput) = 0;
+  virtual void registerEnterCall(const std::string &calleeName,
+                                 const StateT &calleeInput) = 0;
 };
 
 } // namespace sifa

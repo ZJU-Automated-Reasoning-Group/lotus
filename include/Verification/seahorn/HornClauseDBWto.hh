@@ -5,8 +5,8 @@
 
 #include "seahorn/Support/Stats.hh"
 
-#include "seahorn/HornClauseDBBgl.hh"
 #include "seahorn/Analysis/WeakTopologicalOrder.hh"
+#include "seahorn/HornClauseDBBgl.hh"
 
 #include "seahorn/Expr/ExprLlvm.hh"
 #include "seahorn/Support/SeaDebug.h"
@@ -21,7 +21,7 @@ namespace seahorn
       inline void write_graph_vertex(llvm::raw_ostream&o, Expr fdecl) {
         o << *(bind::fname(fdecl));
       }
-   }
+   } // namespace wto_impl
 
   // Build a weak topological ordering from the Horn clause database.
   class HornClauseDBWto {
@@ -98,5 +98,5 @@ namespace seahorn
     }
 
   };
-}
+} // namespace seahorn
 #endif /* _HORN_CLAUSE_DB_WTO__H_ */

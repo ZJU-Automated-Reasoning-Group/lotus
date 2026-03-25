@@ -3,11 +3,13 @@
 // Builds the ArrayLayout for all types in the program.
 //
 // Key Concepts:
-// - Nested Arrays: Recursively flattens nested structures and arrays to identify
+// - Nested Arrays: Recursively flattens nested structures and arrays to
+// identify
 //   linear memory regions that behave as arrays.
 // - Layout Construction:
 //   - For Structs: Recursively processes fields, shifting offsets.
-//   - For Arrays: Creates a single region {0, total_size, elem_size} + recursive sub-layouts.
+//   - For Arrays: Creates a single region {0, total_size, elem_size} +
+//   recursive sub-layouts.
 // - Opaque Types: Treated conservatively as byte arrays.
 //
 // This analysis ensures that the MemoryModel can correctly collapse accesses to
@@ -98,7 +100,7 @@ ArrayLayoutMapBuilder::processArrayType(ArrayType *arrayType) {
   auto arraySize = numElems * elemSize;
   // Create the main triple for this array: [0, total_size, elem_size]
   ArrayLayout::ArrayTripleList arrayTripleList = {{0, arraySize, elemSize}};
-  
+
   // We need to examine the element type here because it may contain additional
   // array triple (e.g., array of structs containing arrays)
   const auto *subLayout = processType(elemType);

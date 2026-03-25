@@ -1,7 +1,8 @@
 #pragma once
 
-#include "llvm/ADT/SmallVector.h"
 #include <memory>
+
+#include "llvm/ADT/SmallVector.h"
 
 /** Perform Class Hierarch Analysis for C++ programs **/
 

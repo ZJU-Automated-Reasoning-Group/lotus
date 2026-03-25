@@ -17,9 +17,16 @@ set(IFDS_CLIENT_SOURCES
   Clients/IDEConstantPropagation.cpp
   Clients/IDETypeState.cpp
   Clients/IDEProtoAnalysis.cpp
+  Clients/IDEExtendedTaintAnalysis.cpp
+  Clients/IDEFeatureTaintAnalysis.cpp
+  Clients/IDESecureHeapPropagation.cpp
+  Clients/IDEInstInteractionAnalysis.cpp
+  Clients/IDEGeneralizedLCA.cpp
   Clients/IFDSUninitializedVariables.cpp
   Clients/IFDSConstAnalysis.cpp
   Clients/IDELinearConstantAnalysis.cpp
+  Clients/IFDSTypeAnalysis.cpp
+  Clients/IFDSSignAnalysis.cpp
 )
 
 set(IFDS_SOURCES ${IFDS_FRAMEWORK_SOURCES} ${IFDS_CLIENT_SOURCES})

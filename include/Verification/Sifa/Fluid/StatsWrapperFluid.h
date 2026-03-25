@@ -1,4 +1,5 @@
-//===-- Verification/Sifa/Fluid/StatsWrapperFluid.h ------------------------===//
+//===-- Verification/Sifa/Fluid/StatsWrapperFluid.h
+//------------------------===//
 //
 // Fluid wrapper that records stats before delegating (Ultimate-aligned).
 //
@@ -19,7 +20,8 @@ namespace sifa {
 template <typename StateT>
 class StatsWrapperFluid final : public IFluid<StateT> {
 public:
-  StatsWrapperFluid(SifaStats &stats, IFluid<StateT> &inner) : stats_(stats), inner_(inner) {}
+  StatsWrapperFluid(SifaStats &stats, IFluid<StateT> &inner)
+      : stats_(stats), inner_(inner) {}
 
   bool shallBeAbstracted(const StateT &state) const override {
     stats_.increment(SifaStats::Key::FLUID_QUERIES);

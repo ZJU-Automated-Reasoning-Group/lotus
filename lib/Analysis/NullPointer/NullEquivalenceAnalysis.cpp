@@ -17,38 +17,37 @@
  */
 
 #include "Analysis/NullPointer/NullEquivalenceAnalysis.h"
+
 #include <llvm/IR/Instructions.h>
 
 NullEquivalenceAnalysis::NullEquivalenceAnalysis(Function *F) {
-    // init
-    for (unsigned K = 0; K < F->arg_size(); ++K) {
-        auto *Arg = F->getArg(K);
-        DisSet.makeSet(Arg);
+  // init
+  for (unsigned K = 0; K < F->arg_size(); ++K) {
+    auto *Arg = F->getArg(K);
+    DisSet.makeSet(Arg);
+  }
+  for (auto &B : *F) {
+    for (auto &I : B) {
+      for (unsigned K = 0; K < I.getNumOperands(); ++K) {
+        auto *Op = I.getOperand(K);
+        DisSet.makeSet(Op);
+      }
+      DisSet.makeSet(&I);
     }
-    for (auto &B: *F) {
-        for (auto &I: B) {
-            for (unsigned K = 0; K < I.getNumOperands(); ++K) {
-                auto *Op = I.getOperand(K);
-                DisSet.makeSet(Op);
-            }
-            DisSet.makeSet(&I);
-        }
-    }
+  }
 
-    // merge
-    for (auto &B: *F) {
-        for (auto &I: B) {
-            if (auto *Cast = dyn_cast<CastInst>(&I)) {
-                DisSet.doUnion(&I, Cast->getOperand(0));
-            } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-                DisSet.doUnion(&I, GEP->getPointerOperand());
-            } else if (isa<PHINode>(&I) && I.getNumOperands() == 1) {
-                DisSet.doUnion(&I, I.getOperand(0));
-            }
-        }
+  // merge
+  for (auto &B : *F) {
+    for (auto &I : B) {
+      if (auto *Cast = dyn_cast<CastInst>(&I)) {
+        DisSet.doUnion(&I, Cast->getOperand(0));
+      } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+        DisSet.doUnion(&I, GEP->getPointerOperand());
+      } else if (isa<PHINode>(&I) && I.getNumOperands() == 1) {
+        DisSet.doUnion(&I, I.getOperand(0));
+      }
     }
+  }
 }
 
-Value *NullEquivalenceAnalysis::get(Value *V) {
-    return DisSet.findSet(V);
-}
+Value *NullEquivalenceAnalysis::get(Value *V) { return DisSet.findSet(V); }

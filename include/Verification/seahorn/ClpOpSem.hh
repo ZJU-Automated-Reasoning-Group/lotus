@@ -2,13 +2,13 @@
 /* Based on a copy-and-paste version of UfoOpSem */
 
 #include "llvm/Pass.h"
-#include "llvm/IR/DataLayout.h"
-#include "seahorn/LegacyOperationalSemantics.hh"
 #include "seahorn/Analysis/CanFail.hh"
+#include "seahorn/LegacyOperationalSemantics.hh"
+#include "llvm/IR/DataLayout.h"
 
 namespace llvm {
   class GetElementPtrInst;
-}
+} // namespace llvm
 
 namespace seahorn
 {
@@ -73,4 +73,4 @@ namespace seahorn
     unsigned fieldOff (const StructType *t, unsigned field);
   };
 
-}
+} // namespace seahorn

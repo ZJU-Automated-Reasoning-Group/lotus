@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "Dataflow/IFDS/IFDSFramework.h"
+#include "Dataflow/IFDS/Core/IFDSFramework.h"
 
 #include <functional>
 #include <map>
@@ -61,12 +61,13 @@ struct UninitVarFact {
   bool is_initialized() const { return type == INITIALIZED; }
 };
 
-// Specialize fact_less so PathEdge<UninitVarFact> and SummaryEdge<UninitVarFact>
-// can be used in std::set without requiring operator< visible at template
-// instantiation. Uses std::less for pointer comparison.
+// Specialize fact_less so PathEdge<UninitVarFact> and
+// SummaryEdge<UninitVarFact> can be used in std::set without requiring
+// operator< visible at template instantiation. Uses std::less for pointer
+// comparison.
 template <>
 inline bool fact_less<UninitVarFact>(const UninitVarFact &a,
-                                    const UninitVarFact &b) {
+                                     const UninitVarFact &b) {
   if (a.type != b.type)
     return a.type < b.type;
   return std::less<const llvm::Value *>{}(a.value, b.value);
@@ -77,8 +78,13 @@ inline bool fact_less<UninitVarFact>(const UninitVarFact &a,
 namespace std {
 template <> struct hash<ifds::UninitVarFact> {
   size_t operator()(const ifds::UninitVarFact &fact) const {
-    return std::hash<int>{}(static_cast<int>(fact.type)) ^
-           (std::hash<const llvm::Value *>{}(fact.value) << 1);
+    // FNV-1a-style mixing to avoid XOR-shift collisions on aligned hashes.
+    size_t h = 14695981039346656037ULL;
+    h ^= std::hash<int>{}(static_cast<int>(fact.type));
+    h *= 1099511628211ULL;
+    h ^= std::hash<const llvm::Value *>{}(fact.value);
+    h *= 1099511628211ULL;
+    return h;
   }
 };
 } // namespace std
@@ -89,7 +95,8 @@ namespace ifds {
 // Uninitialized Variables Analysis
 // ============================================================================
 
-class UninitializedVariablesAnalysis : public DefaultAliasAwareIFDSProblem<UninitVarFact> {
+class UninitializedVariablesAnalysis
+    : public DefaultAliasAwareIFDSProblem<UninitVarFact> {
 public:
   struct UninitResult {
     const llvm::Instruction *use_site;
@@ -110,14 +117,16 @@ public:
   // IFDS interface implementation
   UninitVarFact zero_fact() const override;
   FactSet normal_flow(const llvm::Instruction *stmt,
+                      const llvm::Instruction *succ,
                       const UninitVarFact &fact) override;
-  FactSet call_flow(const llvm::CallBase*call, const llvm::Function *callee,
+  FactSet call_flow(const llvm::CallBase *call, const llvm::Function *callee,
                     const UninitVarFact &fact) override;
-  FactSet return_flow(const llvm::CallBase*call, const llvm::Function *callee,
+  FactSet return_flow(const llvm::CallBase *call, const llvm::Instruction *exit_inst, const llvm::Instruction *return_site, const llvm::Function *callee,
                       const UninitVarFact &exit_fact,
                       const UninitVarFact &call_fact) override;
-  FactSet call_to_return_flow(const llvm::CallBase*call,
-                              const UninitVarFact &fact) override;
+  FactSet call_to_return_flow(const llvm::CallBase *call,
+                              const llvm::Instruction *return_site,
+                              llvm::ArrayRef<const llvm::Function *> callees, const UninitVarFact &fact) override;
   FactSet initial_facts(const llvm::Function *main) override;
 
   // Source detection - uninitialized variable uses are "sources" of bugs

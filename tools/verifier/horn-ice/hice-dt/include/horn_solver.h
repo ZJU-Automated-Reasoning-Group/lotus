@@ -6,11 +6,11 @@
 #define HORN_SOLVER_H_
 
 // C++ includes
-#include <stack>
-#include <vector>
 #include <ctime>
+#include <stack>
 #include <sys/time.h>
 #include <unordered_set>
+#include <vector>
 
 // Project includes
 #include "horn_constraint.h"
@@ -182,5 +182,5 @@ namespace horn_verification {
 				elapsed_time = 0;
 			};
 		};
-};
+} // namespace horn_verification
 #endif /* HORN_SOLVER_H_ */

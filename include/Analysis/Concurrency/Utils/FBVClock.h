@@ -1,10 +1,10 @@
 #ifndef __FBVCLOCK_H__
 #define __FBVCLOCK_H__
  
-#include <llvm/Support/raw_ostream.h>
- 
 #include <string>
 #include <vector>
+
+#include <llvm/Support/raw_ostream.h>
  
  class FBVClock{
  public:

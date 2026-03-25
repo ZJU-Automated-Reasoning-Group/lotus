@@ -1,7 +1,9 @@
 Concurrency Bug Checker
 ========================
 
-Static analysis tool for detecting concurrency bugs in multithreaded programs: data races, deadlocks, and atomicity violations.
+Static analysis tool for detecting concurrency bugs in multithreaded programs,
+including shared-memory threading bugs plus dedicated OpenMP and MPI protocol
+checks.
 
 **Library Location**: ``lib/Checker/Concurrency/``
 
@@ -19,6 +21,8 @@ The concurrency checker analyzes LLVM IR to detect thread safety issues using:
 * **MHP (May Happen in Parallel) Analysis** – Determines which instructions can execute concurrently
 * **Lock Set Analysis** – Tracks which locks protect shared memory accesses
 * **Happens-Before Analysis** – Builds synchronization relationships between threads
+* **OpenMP Task Analysis** – Tracks task creation, taskgroup/taskwait boundaries, and ``depend`` relations
+* **MPI Communication Analysis** – Tracks point-to-point operations, collectives, requests, and RMA synchronization
 
 All detected bugs are reported through the centralized ``BugReportMgr`` system, enabling unified JSON and SARIF output.
 
@@ -49,6 +53,21 @@ Components
 * Identifies non-atomic sequences of operations that should be atomic
 * Checks for interleaving of critical sections
 
+**OpenMPChecker** (``OpenMPChecker.cpp``, ``OpenMPChecker.h``):
+
+* Dedicated checker for OpenMP-specific bug patterns
+* Reports unbalanced taskgroup regions
+* Reports unbalanced atomic runtime regions
+* Warns about partial task synchronization through ``__kmpc_omp_wait_deps``
+
+**MPIChecker** (``MPIChecker.cpp``, ``MPIChecker.h``):
+
+* Dedicated checker for MPI-specific protocol and synchronization bugs
+* Reports orphaned non-blocking requests
+* Reports simple blocking communication deadlocks
+* Reports collective mismatches and conditional collectives
+* Reports unsynchronized RMA operations, RMA races, and leaked windows
+
 Usage
 -----
 
@@ -65,6 +84,15 @@ Usage
    ./build/bin/lotus-concur --check-data-races input.bc
    ./build/bin/lotus-concur --check-deadlocks input.bc
    ./build/bin/lotus-concur --check-atomicity input.bc
+   ./build/bin/lotus-concur --check-openmp input.bc
+   ./build/bin/lotus-concur --check-mpi input.bc
+
+**Select Checks with a Comma-Separated List**:
+
+.. code-block:: bash
+
+   ./build/bin/lotus-concur --checks=race,deadlock,openmp input.bc
+   ./build/bin/lotus-concur --checks=mpi input.bc
 
 **Enable Multiple Checks**:
 
@@ -90,6 +118,12 @@ Command-Line Options
 * ``--check-data-races`` – Enable data race detection (default: true)
 * ``--check-deadlocks`` – Enable deadlock detection (default: true)
 * ``--check-atomicity`` – Enable atomicity violation detection (default: true)
+* ``--check-condvar`` – Enable condition variable misuse detection (default: true)
+* ``--check-lock-mismatch`` – Enable lock/unlock mismatch detection (default: true)
+* ``--check-openmp`` – Enable dedicated OpenMP checks (default: true)
+* ``--check-mpi`` – Enable dedicated MPI checks (default: true)
+* ``--checks=<list>`` – Override individual flags with a comma-separated list such as ``race,deadlock,openmp,mpi``
+* ``--analysis-only`` – Run analyses and dump facts without emitting bug reports
 * ``--report-json=<file>`` – Output JSON report to file
 * ``--report-sarif=<file>`` – Output SARIF report to file
 * ``--min-score=<n>`` – Minimum confidence score for reporting (0-100)
@@ -117,6 +151,21 @@ Bug Types
 * **Detection**: Identifies critical sections that can be interleaved incorrectly
 * **Analysis**: Checks for proper synchronization around related operations
 
+**OpenMP Bugs**:
+
+* **Taskgroup mismatch**: Detects ``__kmpc_taskgroup`` / ``__kmpc_end_taskgroup`` imbalance
+* **Atomic region mismatch**: Detects ``__kmpc_atomic_start`` / ``__kmpc_atomic_end`` imbalance
+* **Partial task synchronization**: Warns when ``__kmpc_omp_wait_deps`` may leave sibling tasks unsynchronized
+
+**MPI Bugs**:
+
+* **Orphaned request**: Non-blocking request without a matching ``Wait/Test/Request_free/Cancel``
+* **Blocking deadlock**: Simple cycles involving blocking send/receive pairs
+* **Collective mismatch**: Incompatible collective operations across ranks
+* **Conditional collective**: Collectives that may execute only on a subset of ranks
+* **Unsynchronized RMA / RMA race**: One-sided accesses without proven synchronization
+* **Leaked window**: Window created but not freed
+
 Analysis Process
 ----------------
 
@@ -124,7 +173,7 @@ Analysis Process
 2. **Build MHP Graph**: Determine which instructions may happen in parallel
 3. **Lock Set Analysis**: Track which locks protect each memory access
 4. **Happens-Before Analysis**: Build synchronization relationships (mutexes, barriers, etc.)
-5. **Pattern Detection**: Identify data races, deadlocks, and atomicity violations
+5. **Pattern Detection**: Identify shared-memory, OpenMP, and MPI-specific bug patterns
 6. **Report Generation**: Generate reports through centralized ``BugReportMgr``
 
 Programmatic Usage
@@ -144,8 +193,12 @@ Programmatic Usage
    checker.enableDataRaceCheck(true);
    checker.enableDeadlockCheck(true);
    checker.enableAtomicityCheck(true);
+   checker.enableOpenMPCheck(true);
+   checker.enableMPICheck(true);
+
+   checker.runAnalyses();
    
-   // Run analysis (automatically reports to BugReportMgr)
+   // Run checks (automatically reports to BugReportMgr)
    checker.runChecks();
    
    // Get statistics
@@ -153,6 +206,8 @@ Programmatic Usage
    outs() << "Data Races Found: " << stats.dataRacesFound << "\n";
    outs() << "Deadlocks Found: " << stats.deadlocksFound << "\n";
    outs() << "Atomicity Violations Found: " << stats.atomicityViolationsFound << "\n";
+   outs() << "OpenMP Bugs Found: " << stats.openMPBugsFound << "\n";
+   outs() << "MPI Bugs Found: " << stats.mpiBugsFound << "\n";
    
    // Access centralized reports
    BugReportMgr& mgr = BugReportMgr::get_instance();
@@ -169,12 +224,16 @@ The checker provides detailed analysis statistics:
 * ``dataRacesFound`` – Number of data races detected
 * ``deadlocksFound`` – Number of deadlocks detected
 * ``atomicityViolationsFound`` – Number of atomicity violations detected
+* ``condVarBugsFound`` – Number of condition-variable misuse bugs detected
+* ``lockMismatchesFound`` – Number of lock mismatch bugs detected
+* ``openMPBugsFound`` – Number of OpenMP bugs detected
+* ``mpiBugsFound`` – Number of MPI bugs detected
 
 Limitations
 -----------
 
 * **Conservative Analysis**: May report false positives due to over-approximation
-* **Limited Synchronization Support**: Primarily supports standard pthread and C++11 synchronization primitives
+* **Protocol Coverage**: OpenMP and MPI support focuses on statically recognizable runtime patterns, not full semantic verification
 * **Context-Insensitive**: Does not distinguish between different call contexts
 * **No Dynamic Analysis**: Static analysis only, cannot detect runtime-specific issues
 

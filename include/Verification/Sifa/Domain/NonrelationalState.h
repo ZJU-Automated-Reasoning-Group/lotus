@@ -10,18 +10,19 @@
 #ifndef LOTUS_VERIFICATION_SIFA_DOMAIN_NONRELATIONALSTATE_H
 #define LOTUS_VERIFICATION_SIFA_DOMAIN_NONRELATIONALSTATE_H
 
-#include "Verification/Sifa/Domain/INonrelationalValue.h"
-
 #include "llvm/ADT/Optional.h"
 #include "llvm/IR/Value.h"
+
+#include "Verification/Sifa/Domain/INonrelationalValue.h"
 
 #include <unordered_map>
 
 namespace lotus {
 namespace sifa {
 
-/// Non-relational state: map from Value* to V. Ultimate NonrelationalState<VALUE>.
-/// V must satisfy INonrelationalValue (join, widen, isTop, isBottom).
+/// Non-relational state: map from Value* to V. Ultimate
+/// NonrelationalState<VALUE>. V must satisfy INonrelationalValue (join, widen,
+/// isTop, isBottom).
 template <typename V>
   requires INonrelationalValue<V>
 class NonrelationalState {
@@ -37,43 +38,52 @@ public:
 
   llvm::Optional<V> get(const llvm::Value *v) const {
     auto it = map_.find(v);
-    if (it == map_.end()) return llvm::None;
+    if (it == map_.end())
+      return llvm::None;
     return it->second;
   }
   void set(const llvm::Value *v, V val) { map_[v] = std::move(val); }
 
   NonrelationalState join(const NonrelationalState &other) const {
     NonrelationalState r;
-    for (const auto &[var, val] : map_) {
+    for (const auto &p : map_) {
+      const auto *var = p.first;
+      const auto &val = p.second;
       auto o = other.map_.find(var);
       if (o == other.map_.end()) {
-        if (!val.isTop()) r.map_[var] = val;
+        if (!val.isTop())
+          r.map_[var] = val;
         continue;
       }
       V j = val.join(o->second);
-      if (!j.isTop()) r.map_[var] = std::move(j);
+      if (!j.isTop())
+        r.map_[var] = std::move(j);
     }
     return r;
   }
 
   NonrelationalState widen(const NonrelationalState &other) const {
     NonrelationalState r;
-    for (const auto &[var, val] : map_) {
+    for (const auto &p : map_) {
+      const auto *var = p.first;
+      const auto &val = p.second;
       auto o = other.map_.find(var);
       if (o == other.map_.end()) {
-        if (!val.isTop()) r.map_[var] = val;
+        if (!val.isTop())
+          r.map_[var] = val;
         continue;
       }
       V w = val.widen(o->second);
-      if (!w.isTop()) r.map_[var] = std::move(w);
+      if (!w.isTop())
+        r.map_[var] = std::move(w);
     }
     return r;
   }
 
   bool isBottom() const {
-    for (const auto &[var, val] : map_) {
-      (void)var;
-      if (val.isBottom()) return true;
+    for (const auto &p : map_) {
+      if (p.second.isBottom())
+        return true;
     }
     return false;
   }

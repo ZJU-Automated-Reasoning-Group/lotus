@@ -1,8 +1,9 @@
 #pragma once
 
-#include <llvm/ADT/StringRef.h>
 #include <array>
 #include <string>
+
+#include <llvm/ADT/StringRef.h>
 
 namespace clam {
 // Simulating an extensible c++ enum

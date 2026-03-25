@@ -7,11 +7,11 @@
 
 // C++ includes
 #include <list>
-#include <memory>
-#include <unordered_set>
-#include <stdexcept>
-#include <vector>
 #include <map>
+#include <memory>
+#include <stdexcept>
+#include <unordered_set>
+#include <vector>
 
 // C includes
 #include <cassert>
@@ -477,24 +477,24 @@ namespace horn_verification
 		{
 
 			// Headline
-			out << headline << std::endl;
+			out << headline << '\n';
 		
 			// Positive data points
-			out << "Positive data points (" << positive_ptrs.size() << "): " << std::endl;
+			out << "Positive data points (" << positive_ptrs.size() << "):\n";
 			for (const auto & dp : positive_ptrs)
 			{
-				out << *dp << std::endl;
+				out << *dp << '\n';
 			}
 			
 			// Negative data points
-			out << "Negative data points (" << negative_ptrs.size() << "): " << std::endl;
+			out << "Negative data points (" << negative_ptrs.size() << "):\n";
 			for (const auto & dp : negative_ptrs)
 			{
-				out << *dp << std::endl;
+				out << *dp << '\n';
 			}
 			
 			// Horn constraints
-			out << "Horn constraints (" << horn_constraints.size() << "):" << std::endl;
+			out << "Horn constraints (" << horn_constraints.size() << "):\n";
 			for (const auto & clause : horn_constraints)
 			{
 				
@@ -512,7 +512,7 @@ namespace horn_verification
 				{
 					out << "(null)";
 				}
-				out << std::endl;
+				out << '\n';
 				
 			}
 			
@@ -1999,7 +1999,7 @@ namespace horn_verification
 			// for i ranging from left_index to cur, loop over premises and conclusion
                         for (std::size_t i = left_index; i <= cur_index; ++i)
                         {
-				for (const auto dp : horn_clause._premises)
+				for (auto *const dp : horn_clause._premises)
 				{
 					if (dp == _datapoint_ptrs[i] && !_datapoint_ptrs[i]->_is_classified)
 					{
@@ -2015,7 +2015,7 @@ namespace horn_verification
 			// for i ranging from cur+1 to right_index, loop over premises and conclusion
                         for (std::size_t i = cur_index+1; i <= right_index; ++i)
                         {
-				for (const auto dp : horn_clause._premises)
+				for (auto *const dp : horn_clause._premises)
 				{
 					if (dp == _datapoint_ptrs[i] && !_datapoint_ptrs[i]->_is_classified)
 					{

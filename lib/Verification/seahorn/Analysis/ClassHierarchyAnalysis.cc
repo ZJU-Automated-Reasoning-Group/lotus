@@ -1,4 +1,5 @@
 #include "seahorn/Analysis/ClassHierarchyAnalysis.hh"
+#include "Utils/LLVM/Demangle.h"
 #include "seahorn/Support/SeaDebug.h"
 #include "seahorn/Support/SeaLog.hh"
 #include "llvm/ADT/DenseMap.h"
@@ -10,7 +11,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
-#include "Utils/LLVM/Demangle.h"
 
 #include <boost/algorithm/string/find.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -429,12 +429,12 @@ void ClassHierarchyAnalysis_Impl::buildCHG(void) {
   // XXX: for now we don't rely on the existence of a constructor in
   // case program has been inlined.
   auto struct_types = m_module.getIdentifiedStructTypes();
-  for (auto st : struct_types) {
+  for (auto *st : struct_types) {
     m_graph.insert({st, SmallSet<const StructType *, 16>()});
     m_num_graph_nodes++;
   }
-  for (auto st : struct_types) {
-    for (auto sub_ty : st->subtypes()) {
+  for (auto *st : struct_types) {
+    for (auto *sub_ty : st->subtypes()) {
       if (const StructType *sub_st_ty = dyn_cast<const StructType>(sub_ty)) {
         addCHGEdge(sub_st_ty, st, m_graph);
         m_num_graph_edges++;
@@ -833,7 +833,7 @@ public:
         } else {
           errs() << "\tpossible callees:\n";
           for (unsigned i = 0, e = callees.size(); i < e; ++i) {
-            auto f = callees[i];
+            const auto *f = callees[i];
             errs() << "\t\t" << DemangleUtils::demangle(f->getName().str()) << " "
                    << *(f->getType()) << "\n";
           }

@@ -19,23 +19,18 @@
  OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
  OR OTHER DEALINGS IN THE SOFTWARE.
  */
- #include "Analysis/DebugInfo/MetadataManager/MetadataEntry.h"
+#include "Analysis/DebugInfo/MetadataManager/MetadataEntry.h"
 
- namespace noelle {
- 
- MetadataEntry::MetadataEntry(const std::string metadataName,
-                              const std::string metadataValue)
-   : name{ metadataName },
-     value{ metadataValue } {
-   return;
- }
- 
- std::string MetadataEntry::getName(void) const {
-   return this->name;
- }
- 
- std::string MetadataEntry::getValue(void) const {
-   return this->value;
- }
- 
- } // namespace noelle
+namespace noelle {
+
+MetadataEntry::MetadataEntry(const std::string metadataName,
+                             const std::string metadataValue)
+    : name{metadataName}, value{metadataValue} {
+  return;
+}
+
+std::string MetadataEntry::getName(void) const { return this->name; }
+
+std::string MetadataEntry::getValue(void) const { return this->value; }
+
+} // namespace noelle

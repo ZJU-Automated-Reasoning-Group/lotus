@@ -48,7 +48,7 @@ void IntraLotusAA::getReturnInst() {
 
   for (BasicBlock &bb : *F) {
     if (ReturnInst *ret = dyn_cast<ReturnInst>(bb.getTerminator())) {
-      ret_insts[ret] = true;
+      ret_insts[ret] = getUnitRegion(ret->getParent());
     }
   }
 }
@@ -75,6 +75,7 @@ void IntraLotusAA::clearIntermediatePtsResult() {
 void IntraLotusAA::clearIntermediateCgResult() {
   // Clear temporary CG data
   lotus_clear_hash(&func_arg);
+  lotus_clear_hash(&thread_arg);
 }
 
 void IntraLotusAA::clearGlobalCgResult() {
@@ -102,13 +103,22 @@ void IntraLotusAA::clearMemObjectResult() {
 void IntraLotusAA::clearInterfaceResult() {
   lotus_clear_hash(&inputs);
   lotus_clear_hash(&inputs_func_level);
+  lotus_clear_hash(&pseudo_input_indices);
   lotus_clear_hash(&escape_obj_path);
   lotus_clear_hash(&escape_ret_path);
+  lotus_clear_hash(&summary_inputs_idx);
 
   for (OutputItem *item : outputs) {
     delete item;
   }
   outputs.clear();
+
+  for (mem_value_t *vals : summary_outputs) {
+    vals->clear();
+  }
+  for (set<Value *, llvm_cmp> *vals : summary_inputs) {
+    vals->clear();
+  }
 }
 
 // Access path utilities
@@ -136,21 +146,47 @@ bool IntraLotusAA::isPseudoInterface(Value *target) {
   return false;
 }
 
+void IntraLotusAA::onTimeOut() {
+  if (timer) {
+    timer->suspend();
+  }
+  is_timeout_found = true;
+  is_considered_as_library = true;
+  clearIntermediatePtsResult();
+  clearIntermediateCgResult();
+  clearGlobalCgResult();
+  clearInterfaceResult();
+}
+
+void IntraLotusAA::setTimer(unsigned duration) {
+  if (is_timeout_found)
+    return;
+  if (timer)
+    delete timer;
+  timer = new Timer(duration, [this]() { onTimeOut(); }, 5);
+}
+
 void IntraLotusAA::getFullAccessPath(
-    Value *target_val, std::vector<std::pair<Value *, int64_t>> &result) {
+    Value *target_val, std::vector<std::pair<Value *, int64_t>> &result,
+    bool *is_from_return) {
   result.clear();
+  if (is_from_return)
+    *is_from_return = false;
 
   if (inputs.count(target_val)) {
     AccessPath ap = inputs[target_val];
-    getFullAccessPath(ap, result);
+    getFullAccessPath(ap, result, is_from_return);
   } else {
     result.push_back({target_val, 0});
   }
 }
 
 void IntraLotusAA::getFullAccessPath(
-    AccessPath &ap, std::vector<std::pair<Value *, int64_t>> &result) {
+    AccessPath &ap, std::vector<std::pair<Value *, int64_t>> &result,
+    bool *is_from_return) {
   result.clear();
+  if (is_from_return)
+    *is_from_return = false;
   AccessPath curr_ap = ap;
 
   while (true) {
@@ -165,6 +201,8 @@ void IntraLotusAA::getFullAccessPath(
     } else if (escape_ret_path.count(base_ptr)) {
       auto &ret_path = escape_ret_path[base_ptr];
       result.push_back({ret_path.first, ret_path.second});
+      if (is_from_return)
+        *is_from_return = true;
       return;
     } else if (escape_obj_path.count(base_ptr)) {
       auto &obj_path = escape_obj_path[base_ptr];
@@ -186,8 +224,11 @@ void IntraLotusAA::getFullAccessPath(
 }
 
 void IntraLotusAA::getFullOutputAccessPath(
-    int output_index, std::vector<std::pair<Value *, int64_t>> &result) {
+    int output_index, std::vector<std::pair<Value *, int64_t>> &result,
+    bool *is_from_return) {
   result.clear();
+  if (is_from_return)
+    *is_from_return = false;
 
   if (output_index <= 0 || (unsigned)output_index >= outputs.size()) {
     return; // Invalid index or common return
@@ -195,7 +236,7 @@ void IntraLotusAA::getFullOutputAccessPath(
 
   OutputItem *output = outputs[output_index];
   AccessPath ap = output->getSymbolicInfo();
-  getFullAccessPath(ap, result);
+  getFullAccessPath(ap, result, is_from_return);
 }
 
 // Get caller object mapping
@@ -223,7 +264,8 @@ void IntraLotusAA::getCallerObj(
 
     PTResultIterator ptr_iter(pts, this);
 
-    for (auto *loc : ptr_iter) {
+    for (auto &point_to_item : ptr_iter) {
+      ObjectLocator *loc = point_to_item.first;
       MemObject *obj = loc->getObj();
       if (!obj->isValid())
         continue;
@@ -256,9 +298,38 @@ bool IntraLotusAA::isSameInterface(IntraLotusAA *to_compare) {
   if (outputs.size() != to_compare->outputs.size())
     return false;
 
-  // TODO: Could do deeper comparison
-  return false;
+  // Compare input access paths
+  for (auto &input_pair : inputs) {
+    Value *arg = input_pair.first;
+    if (!to_compare->inputs.count(arg))
+      return false;
+    AccessPath &ap1 = input_pair.second;
+    AccessPath &ap2 = to_compare->inputs[arg];
+    if (ap1.getParentPtr() != ap2.getParentPtr() ||
+        ap1.getOffset() != ap2.getOffset())
+      return false;
+  }
+
+  // Compare output symbolic info (access paths)
+  for (size_t i = 0; i < outputs.size(); i++) {
+    OutputItem *o1 = outputs[i];
+    OutputItem *o2 = to_compare->outputs[i];
+    if (o1->getType() != o2->getType())
+      return false;
+    AccessPath &ap1 = o1->getSymbolicInfo();
+    AccessPath &ap2 = o2->getSymbolicInfo();
+    if (ap1.getParentPtr() != ap2.getParentPtr() ||
+        ap1.getOffset() != ap2.getOffset())
+      return false;
+  }
+
+  // Compare escaped object count
+  if (escape_objs.size() != to_compare->escape_objs.size())
+    return false;
+
+  return true;
 }
+
 
 bool IntraLotusAA::isPure() {
   // Pure if no side-effect outputs and no escaped objects

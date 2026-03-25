@@ -6,9 +6,9 @@
 #define __API_H__
 
 // C++ includes
-#include <vector>
-#include <iostream>
 #include <algorithm>  
+#include <iostream>
+#include <vector>
 
 // Project includes
 #include "../../hice-dt/include/api_helper.h"
@@ -86,7 +86,7 @@ namespace horn_verification
 
 			std::set<unsigned> consequence;
 
-			for(auto itrator: horn_constraint._premises) {
+			for(auto *itrator: horn_constraint._premises) {
 
 				premises.insert(itrator->_identifier);
 			}
@@ -119,6 +119,6 @@ namespace horn_verification
 		}
 
 	};
-}
+} // namespace horn_verification
 
 #endif

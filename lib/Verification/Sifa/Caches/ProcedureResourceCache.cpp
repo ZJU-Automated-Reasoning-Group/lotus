@@ -9,22 +9,35 @@
 using namespace lotus::sifa;
 
 bool ProcedureResourceCache::Key::operator==(const Key &o) const {
-  if (F != o.F || LOIs.size() != o.LOIs.size()) return false;
+  if (F != o.F || LOIs.size() != o.LOIs.size() ||
+      enterCalls.size() != o.enterCalls.size()) {
+    return false;
+  }
   for (size_t i = 0; i < LOIs.size(); ++i)
-    if (LOIs[i] != o.LOIs[i]) return false;
+    if (LOIs[i] != o.LOIs[i])
+      return false;
+  for (size_t i = 0; i < enterCalls.size(); ++i)
+    if (enterCalls[i] != o.enterCalls[i])
+      return false;
   return true;
 }
 
 std::size_t ProcedureResourceCache::KeyHash::operator()(const Key &k) const {
   std::size_t h = std::hash<const llvm::Function *>()(k.F);
   for (auto *bb : k.LOIs)
-    h ^= (std::hash<llvm::BasicBlock *>()(bb) + 0x9e3779b9 + (h << 6) + (h >> 2));
+    h ^= (std::hash<llvm::BasicBlock *>()(bb) + 0x9e3779b9 + (h << 6) +
+          (h >> 2));
+  for (auto *callee : k.enterCalls)
+    h ^= (std::hash<const llvm::Function *>()(callee) + 0x9e3779b9 + (h << 6) +
+          (h >> 2));
   return h;
 }
 
-const ProcedureResources &ProcedureResourceCache::resourcesOf(const std::string &procedureName) {
+const ProcedureResources &
+ProcedureResourceCache::resourcesOf(const std::string &procedureName) {
   if (!M_ || !callGraph_) {
-    throw std::logic_error("ProcedureResourceCache::resourcesOf(string) requires Module and CallGraph");
+    throw std::logic_error("ProcedureResourceCache::resourcesOf(string) "
+                           "requires Module and CallGraph");
   }
   llvm::Function *F = M_->getFunction(procedureName);
   if (!F) {
@@ -33,7 +46,8 @@ const ProcedureResources &ProcedureResourceCache::resourcesOf(const std::string 
   return resourcesOf(*F);
 }
 
-const ProcedureResources &ProcedureResourceCache::resourcesOf(const llvm::Function &F) {
+const ProcedureResources &
+ProcedureResourceCache::resourcesOf(const llvm::Function &F) {
   if (callGraph_) {
     std::vector<llvm::BasicBlock *> lois;
     for (const llvm::BasicBlock *bb : callGraph_->locationsOfInterest(F))
@@ -44,6 +58,7 @@ const ProcedureResources &ProcedureResourceCache::resourcesOf(const llvm::Functi
     Key k;
     k.F = &F;
     k.LOIs = lois;
+    k.enterCalls = enterCalls;
     auto it = cache_.find(k);
     if (it != cache_.end())
       return it->second;
@@ -56,7 +71,8 @@ const ProcedureResources &ProcedureResourceCache::resourcesOf(const llvm::Functi
   auto it = cache_.find(k);
   if (it != cache_.end())
     return it->second;
-  auto inserted = cache_.emplace(std::move(k), ProcedureResources(stats_, F, {}));
+  auto inserted =
+      cache_.emplace(std::move(k), ProcedureResources(stats_, F, {}));
   return inserted.first->second;
 }
 
@@ -72,6 +88,7 @@ const ProcedureResources &ProcedureResourceCache::resourcesOf(
     return it->second;
   }
 
-  auto inserted = cache_.emplace(std::move(k), ProcedureResources(stats_, F, locationsOfInterest));
+  auto inserted = cache_.emplace(
+      std::move(k), ProcedureResources(stats_, F, locationsOfInterest));
   return inserted.first->second;
 }

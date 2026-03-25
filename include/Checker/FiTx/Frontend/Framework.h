@@ -5,10 +5,6 @@
 /// See docs/source/checker/fitx.rst and the paper Section 4 (FiTx design).
 
 #pragma once
-#include <string>
-#include <vector>
-
-#include "Checker/FiTx/Frontend/State.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
@@ -20,37 +16,43 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
-namespace framework {
+#include "Checker/FiTx/Frontend/State.h"
+
+#include <string>
+#include <vector>
+
+namespace fitx {
 
 /// Main FiTx pass: runs typestate-based bug checkers per compilation unit.
 /// Each checker is defined by a StateManager (typestate FSM); the pass
 /// traverses the CFG path-insensitively with return-code aware propagation
 /// (paper Section 4.2, 4.3).
 class FrameworkPass : public llvm::ModulePass {
- public:
+public:
   static char ID;
-  static std::vector<framework::FrameworkPass*> passes;
+  static std::vector<fitx::FrameworkPass *> passes;
 
   FrameworkPass();
-  virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const override;
+  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
 
-  /// Entry: define typestate checkers (defineStates) and run analysis (paper §4).
-  bool runOnModule(llvm::Module& M) override;
+  /// Entry: define typestate checkers (defineStates) and run analysis (paper
+  /// §4).
+  bool runOnModule(llvm::Module &M) override;
 
-  /// Override to define states and transitions for a bug pattern (paper §4.1, Table 5).
-  virtual void defineStates(){};
-  void createTransitions(framework::StateManager& manager);
+  /// Override to define states and transitions for a bug pattern (paper §4.1,
+  /// Table 5).
+  virtual void defineStates() {};
+  void createTransitions(fitx::StateManager &manager);
 
-  void addStateManager(framework::StateManager manager) {
+  void addStateManager(fitx::StateManager manager) {
     manager_.push_back(manager);
   }
 
- private:
-  std::vector<framework::StateManager> manager_;
-};  // end of struct
-}  // namespace framework
+private:
+  std::vector<fitx::StateManager> manager_;
+}; // end of struct
+} // namespace fitx

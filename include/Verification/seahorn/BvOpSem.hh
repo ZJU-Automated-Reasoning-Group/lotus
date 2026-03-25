@@ -2,13 +2,13 @@
 #define __BV_SYM_EXEC_HH_
 
 #include "llvm/Pass.h"
-#include "llvm/IR/DataLayout.h"
-#include "seahorn/LegacyOperationalSemantics.hh"
 #include "seahorn/Analysis/CanFail.hh"
+#include "seahorn/LegacyOperationalSemantics.hh"
+#include "llvm/IR/DataLayout.h"
 
 namespace llvm {
   class GetElementPtrInst;
-}
+} // namespace llvm
 
 namespace seahorn
 {
@@ -84,6 +84,6 @@ namespace seahorn
     uint64_t sizeInBits (const llvm::Type &t) const;
     unsigned pointerSizeInBits () const;
   };
-}
+} // namespace seahorn
 
 #endif

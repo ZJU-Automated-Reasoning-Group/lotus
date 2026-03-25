@@ -18,6 +18,7 @@ UninitVarFact UninitializedVariablesAnalysis::zero_fact() const {
 
 UninitializedVariablesAnalysis::FactSet
 UninitializedVariablesAnalysis::normal_flow(const llvm::Instruction *stmt,
+                                            const llvm::Instruction *succ,
                                             const UninitVarFact &fact) {
   FactSet result;
 
@@ -79,7 +80,7 @@ UninitializedVariablesAnalysis::normal_flow(const llvm::Instruction *stmt,
 }
 
 UninitializedVariablesAnalysis::FactSet
-UninitializedVariablesAnalysis::call_flow(const llvm::CallBase*call,
+UninitializedVariablesAnalysis::call_flow(const llvm::CallBase *call,
                                           const llvm::Function *callee,
                                           const UninitVarFact &fact) {
   FactSet result;
@@ -89,13 +90,22 @@ UninitializedVariablesAnalysis::call_flow(const llvm::CallBase*call,
     return result;
   }
 
-  // Map actual parameters to formal parameters
+  // Only map facts that correspond to actual arguments of this call into the
+  // callee's formal parameters.  Unconditionally passing all caller-local
+  // facts (the old "Also pass facts that are not parameters" line) was
+  // unsound: it injected caller-local variables into the callee's scope,
+  // causing spurious uninitialized-variable reports inside the callee for
+  // values that have no meaning there.
+  //
+  // Global variables are an exception: they are visible in both caller and
+  // callee, so we propagate them through unchanged.
   if (callee && !callee->isDeclaration()) {
     unsigned arg_idx = 0;
     for (const auto &arg : callee->args()) {
       if (arg_idx < call->arg_size()) {
         const llvm::Value *actual = call->getArgOperand(arg_idx);
         if (fact.value == actual) {
+          // Map the caller's actual argument fact to the callee's formal.
           result.insert(UninitVarFact(fact.type, &arg));
         }
       }
@@ -103,16 +113,21 @@ UninitializedVariablesAnalysis::call_flow(const llvm::CallBase*call,
     }
   }
 
-  // Also pass facts that are not parameters
-  result.insert(fact);
+  // Propagate global-variable facts: globals are shared between caller and
+  // callee, so an uninitialized global must be visible inside the callee too.
+  if (fact.value && llvm::isa<llvm::GlobalVariable>(fact.value)) {
+    result.insert(fact);
+  }
 
   return result;
 }
 
 UninitializedVariablesAnalysis::FactSet
 UninitializedVariablesAnalysis::return_flow(
-    const llvm::CallBase*call, const llvm::Function *callee,
+    const llvm::CallBase *call, const llvm::Instruction *exit_inst,
+    const llvm::Instruction *return_site, const llvm::Function *callee,
     const UninitVarFact &exit_fact, const UninitVarFact & /*call_fact*/) {
+  (void)exit_inst;
   FactSet result;
 
   if (exit_fact.is_zero()) {
@@ -120,14 +135,16 @@ UninitializedVariablesAnalysis::return_flow(
     return result;
   }
 
-  // Map return value back to call site
-  if (exit_fact.value && exit_fact.value->getType()->isPointerTy()) {
-    // Check if it's the return value
-    if (const auto *ret_inst =
-            llvm::dyn_cast<llvm::ReturnInst>(exit_fact.value)) {
-      if (ret_inst->getReturnValue()) {
-        result.insert(UninitVarFact(exit_fact.type, call));
-      }
+  // Map return value back to call site.
+  // The old code checked exit_fact.value->getType()->isPointerTy() before
+  // attempting the dyn_cast<ReturnInst>.  A ReturnInst is an Instruction, not
+  // a pointer-typed value, so that type check always evaluated to false and
+  // the return value was never mapped back.  The correct check is simply
+  // whether exit_fact.value is a ReturnInst with a non-void return value.
+  if (const auto *ret_inst =
+          llvm::dyn_cast_or_null<llvm::ReturnInst>(exit_fact.value)) {
+    if (ret_inst->getReturnValue()) {
+      result.insert(UninitVarFact(exit_fact.type, call));
     }
   }
 
@@ -149,8 +166,9 @@ UninitializedVariablesAnalysis::return_flow(
 }
 
 UninitializedVariablesAnalysis::FactSet
-UninitializedVariablesAnalysis::call_to_return_flow(const llvm::CallBase*call,
-                                                    const UninitVarFact &fact) {
+UninitializedVariablesAnalysis::call_to_return_flow(const llvm::CallBase *call,
+                                                    const llvm::Instruction *return_site,
+                                                    llvm::ArrayRef<const llvm::Function *> callees, const UninitVarFact &fact) {
   FactSet result;
 
   // For most facts, pass them through
@@ -168,12 +186,16 @@ UninitializedVariablesAnalysis::call_to_return_flow(const llvm::CallBase*call,
     result.insert(fact);
   }
 
-  // Check for sources at the call site (e.g., malloc returns uninitialized)
+  // Check for sources at the call site.
+  // malloc/alloca return uninitialized memory.
+  // calloc zero-initializes its allocation, so it must NOT be treated as
+  // uninitialized — the old code incorrectly included it here.
   if (fact.is_zero() && call->getCalledFunction()) {
     llvm::StringRef name = call->getCalledFunction()->getName();
-    if (name == "malloc" || name == "calloc" || name == "alloca") {
+    if (name == "malloc" || name == "alloca") {
       result.insert(UninitVarFact::uninitialized(call));
     }
+    // calloc is intentionally excluded: it guarantees zero-initialization.
   }
 
   return result;

@@ -1,15 +1,14 @@
-#include <Dataflow/IFDS/Clients/IFDSTaintAnalysis.h>
-#include <Dataflow/IFDS/IFDSFramework.h>
-#include <gtest/gtest.h>
-#include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constants.h>
-#include <llvm/IR/Function.h>
-#include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/raw_ostream.h>
+#include <gtest/gtest.h>
+#include <Dataflow/IFDS/Clients/IFDSTaintAnalysis.h>
+#include <Dataflow/IFDS/Core/IFDSFramework.h>
+#include <Dataflow/IFDS/Core/SolverGraphContext.h>
+#include <TestUtils/LLVMHelpers.h>
 
 namespace ifds {
 
@@ -39,6 +38,7 @@ public:
   SimpleIntFact zero_fact() const override { return SimpleIntFact(0); }
 
   FactSet normal_flow(const llvm::Instruction *stmt,
+                      const llvm::Instruction *succ,
                       const SimpleIntFact &fact) override {
     (void)stmt;
     FactSet result;
@@ -46,7 +46,7 @@ public:
     return result;
   }
 
-  FactSet call_flow(const llvm::CallBase*call, const llvm::Function *callee,
+  FactSet call_flow(const llvm::CallBase *call, const llvm::Function *callee,
                     const SimpleIntFact &fact) override {
     (void)call;
     (void)callee;
@@ -55,7 +55,7 @@ public:
     return result;
   }
 
-  FactSet return_flow(const llvm::CallBase*call, const llvm::Function *callee,
+  FactSet return_flow(const llvm::CallBase *call, const llvm::Instruction *exit_inst, const llvm::Instruction *return_site, const llvm::Function *callee,
                       const SimpleIntFact &exit_fact,
                       const SimpleIntFact &call_fact) override {
     (void)call;
@@ -66,8 +66,9 @@ public:
     return result;
   }
 
-  FactSet call_to_return_flow(const llvm::CallBase*call,
-                              const SimpleIntFact &fact) override {
+  FactSet call_to_return_flow(const llvm::CallBase *call,
+                              const llvm::Instruction *return_site,
+                              llvm::ArrayRef<const llvm::Function *> callees, const SimpleIntFact &fact) override {
     (void)call;
     FactSet result;
     result.insert(fact);
@@ -102,69 +103,48 @@ protected:
   std::unique_ptr<llvm::LLVMContext> context;
 
   std::unique_ptr<llvm::Module> createSimpleModule() {
-    auto module = std::make_unique<llvm::Module>("test_module", *context);
-    auto *i32 = llvm::Type::getInt32Ty(*context);
-    auto *mainTy = llvm::FunctionType::get(i32, {}, false);
-    auto *main = llvm::Function::Create(mainTy, llvm::Function::ExternalLinkage,
-                                        "main", module.get());
-
-    auto *entry = llvm::BasicBlock::Create(*context, "entry", main);
-    llvm::IRBuilder<> builder(entry);
-    builder.CreateRet(llvm::ConstantInt::get(i32, 0));
-
+    auto module = lotus::unittest::parseModuleChecked(*context, R"(
+      define i32 @main() {
+      entry:
+        ret i32 0
+      }
+    )", "test_module");
+    module->setModuleIdentifier("test_module");
     return module;
   }
 
   std::unique_ptr<llvm::Module> createModuleWithTwoBlocks() {
-    auto module = std::make_unique<llvm::Module>("two_block_module", *context);
-    auto *i32 = llvm::Type::getInt32Ty(*context);
-    auto *mainTy = llvm::FunctionType::get(i32, {}, false);
-    auto *main = llvm::Function::Create(mainTy, llvm::Function::ExternalLinkage,
-                                        "main", module.get());
+    auto module = lotus::unittest::parseModuleChecked(*context, R"(
+      define i32 @main() {
+      entry:
+        br i1 true, label %then, label %merge
 
-    auto *entry = llvm::BasicBlock::Create(*context, "entry", main);
-    auto *thenBB = llvm::BasicBlock::Create(*context, "then", main);
-    auto *mergeBB = llvm::BasicBlock::Create(*context, "merge", main);
+      then:
+        br label %merge
 
-    llvm::IRBuilder<> entryBuilder(entry);
-    auto *cmp = entryBuilder.CreateICmpNE(llvm::ConstantInt::get(i32, 0),
-                                          llvm::ConstantInt::get(i32, 1));
-    entryBuilder.CreateCondBr(cmp, thenBB, mergeBB);
-
-    llvm::IRBuilder<> thenBuilder(thenBB);
-    thenBuilder.CreateBr(mergeBB);
-
-    llvm::IRBuilder<> mergeBuilder(mergeBB);
-    auto *phi = mergeBuilder.CreatePHI(i32, 2);
-    phi->addIncoming(llvm::ConstantInt::get(i32, 1), entry);
-    phi->addIncoming(llvm::ConstantInt::get(i32, 2), thenBB);
-    mergeBuilder.CreateRet(phi);
-
+      merge:
+        %phi = phi i32 [ 1, %entry ], [ 2, %then ]
+        ret i32 %phi
+      }
+    )", "two_block_module");
+    module->setModuleIdentifier("two_block_module");
     return module;
   }
 
   std::unique_ptr<llvm::Module> createModuleWithCall() {
-    auto module = std::make_unique<llvm::Module>("call_module", *context);
-    auto *i32 = llvm::Type::getInt32Ty(*context);
+    auto module = lotus::unittest::parseModuleChecked(*context, R"(
+      define i32 @callee(i32 %arg) {
+      entry:
+        ret i32 %arg
+      }
 
-    auto *calleeTy = llvm::FunctionType::get(i32, {i32}, false);
-    auto *callee = llvm::Function::Create(
-        calleeTy, llvm::Function::ExternalLinkage, "callee", module.get());
-
-    auto *mainTy = llvm::FunctionType::get(i32, {}, false);
-    auto *main = llvm::Function::Create(mainTy, llvm::Function::ExternalLinkage,
-                                        "main", module.get());
-
-    auto *entry = llvm::BasicBlock::Create(*context, "entry", main);
-    llvm::IRBuilder<> builder(entry);
-    auto *arg = llvm::ConstantInt::get(i32, 42);
-    auto *callInst = builder.CreateCall(callee, {arg});
-    builder.CreateRet(callInst);
-
-    auto *calleeEntry = llvm::BasicBlock::Create(*context, "entry", callee);
-    llvm::IRBuilder<> calleeBuilder(calleeEntry);
-    calleeBuilder.CreateRet(callee->getArg(0));
-
+      define i32 @main() {
+      entry:
+        %call = call i32 @callee(i32 42)
+        ret i32 %call
+      }
+    )", "call_module");
+    module->setModuleIdentifier("call_module");
     return module;
   }
 };
@@ -188,7 +168,7 @@ TEST_F(IFDSFrameworkCoreTest, SimpleProblemNormalFlow) {
   SimpleIFDSProblem problem;
   SimpleIntFact fact(5);
 
-  auto result = problem.normal_flow(inst, fact);
+  auto result = problem.normal_flow(inst, nullptr, fact);
 
   EXPECT_EQ(result.size(), 1u);
   EXPECT_TRUE(result.count(SimpleIntFact(5)));
@@ -208,7 +188,8 @@ TEST_F(IFDSFrameworkCoreTest, SimpleProblemInitialFacts) {
 
 TEST_F(IFDSFrameworkCoreTest, ProblemFactSetType) {
   SimpleIFDSProblem problem;
-  using FactSet = decltype(problem.normal_flow(nullptr, SimpleIntFact()));
+  using FactSet = decltype(problem.normal_flow(nullptr, nullptr,
+                                               SimpleIntFact()));
 
   FactSet facts;
   facts.insert(SimpleIntFact(1));
@@ -450,21 +431,16 @@ TEST_F(TaintAnalysisTest, TaintAnalysisMultipleSinks) {
 }
 
 TEST_F(TaintAnalysisTest, TaintAnalysisSourceDetection) {
-  auto module = std::make_unique<llvm::Module>("source_sink", *context);
-  auto *i32 = llvm::Type::getInt32Ty(*context);
+  auto module = lotus::unittest::parseModule(*context, R"(
+    declare i32 @source()
 
-  auto *sourceTy = llvm::FunctionType::get(i32, {}, false);
-  auto *source = llvm::Function::Create(
-      sourceTy, llvm::Function::ExternalLinkage, "source", module.get());
-
-  auto *mainTy = llvm::FunctionType::get(i32, {}, false);
-  auto *main = llvm::Function::Create(mainTy, llvm::Function::ExternalLinkage,
-                                      "main", module.get());
-
-  auto *entry = llvm::BasicBlock::Create(*context, "entry", main);
-  llvm::IRBuilder<> builder(entry);
-  builder.CreateCall(sourceTy, source, {});
-  builder.CreateRet(llvm::ConstantInt::get(i32, 0));
+    define i32 @main() {
+    entry:
+      %source_call = call i32 @source()
+      ret i32 0
+    }
+  )", "IFDSFrameworkCoreTest");
+  auto *main = module->getFunction("main");
 
   TaintAnalysis analysis;
   analysis.add_source_function("source");
@@ -484,23 +460,16 @@ TEST_F(TaintAnalysisTest, TaintAnalysisSourceDetection) {
 }
 
 TEST_F(TaintAnalysisTest, TaintAnalysisSinkDetection) {
-  auto module = std::make_unique<llvm::Module>("source_sink", *context);
-  auto *i32 = llvm::Type::getInt32Ty(*context);
-  auto *voidTy = llvm::Type::getVoidTy(*context);
+  auto module = lotus::unittest::parseModule(*context, R"(
+    declare void @sink(i32)
 
-  auto *sinkTy = llvm::FunctionType::get(voidTy, {i32}, false);
-  auto *sink = llvm::Function::Create(sinkTy, llvm::Function::ExternalLinkage,
-                                      "sink", module.get());
-
-  auto *mainTy = llvm::FunctionType::get(i32, {}, false);
-  auto *main = llvm::Function::Create(mainTy, llvm::Function::ExternalLinkage,
-                                      "main", module.get());
-
-  auto *entry = llvm::BasicBlock::Create(*context, "entry", main);
-  llvm::IRBuilder<> builder(entry);
-  auto *val = llvm::ConstantInt::get(i32, 0);
-  builder.CreateCall(sinkTy, sink, {val});
-  builder.CreateRet(llvm::ConstantInt::get(i32, 0));
+    define i32 @main() {
+    entry:
+      call void @sink(i32 0)
+      ret i32 0
+    }
+  )", "IFDSFrameworkCoreTest");
+  auto *main = module->getFunction("main");
 
   TaintAnalysis analysis;
   analysis.add_sink_function("sink");
@@ -520,26 +489,18 @@ TEST_F(TaintAnalysisTest, TaintAnalysisSinkDetection) {
 }
 
 TEST_F(TaintAnalysisTest, NonSourceCallNotDetected) {
-  auto module = std::make_unique<llvm::Module>("source_sink", *context);
-  auto *i32 = llvm::Type::getInt32Ty(*context);
-  auto *voidTy = llvm::Type::getVoidTy(*context);
+  auto module = lotus::unittest::parseModule(*context, R"(
+    declare i32 @source()
+    declare void @sink(i32)
 
-  auto *sourceTy = llvm::FunctionType::get(i32, {}, false);
-  auto *source = llvm::Function::Create(
-      sourceTy, llvm::Function::ExternalLinkage, "source", module.get());
-  auto *sinkTy = llvm::FunctionType::get(voidTy, {i32}, false);
-  auto *sink = llvm::Function::Create(sinkTy, llvm::Function::ExternalLinkage,
-                                      "sink", module.get());
-
-  auto *mainTy = llvm::FunctionType::get(i32, {}, false);
-  auto *main = llvm::Function::Create(mainTy, llvm::Function::ExternalLinkage,
-                                      "main", module.get());
-
-  auto *entry = llvm::BasicBlock::Create(*context, "entry", main);
-  llvm::IRBuilder<> builder(entry);
-  auto *sourceCall = builder.CreateCall(sourceTy, source, {});
-  builder.CreateCall(sinkTy, sink, {sourceCall});
-  builder.CreateRet(llvm::ConstantInt::get(i32, 0));
+    define i32 @main() {
+    entry:
+      %source_call = call i32 @source()
+      call void @sink(i32 %source_call)
+      ret i32 0
+    }
+  )", "IFDSFrameworkCoreTest");
+  auto *main = module->getFunction("main");
 
   TaintAnalysis analysis;
   analysis.add_source_function("source");
@@ -557,26 +518,18 @@ TEST_F(TaintAnalysisTest, NonSourceCallNotDetected) {
 }
 
 TEST_F(TaintAnalysisTest, NonSinkCallNotDetected) {
-  auto module = std::make_unique<llvm::Module>("source_sink", *context);
-  auto *i32 = llvm::Type::getInt32Ty(*context);
-  auto *voidTy = llvm::Type::getVoidTy(*context);
+  auto module = lotus::unittest::parseModule(*context, R"(
+    declare i32 @source()
+    declare void @sink(i32)
 
-  auto *sourceTy = llvm::FunctionType::get(i32, {}, false);
-  auto *source = llvm::Function::Create(
-      sourceTy, llvm::Function::ExternalLinkage, "source", module.get());
-  auto *sinkTy = llvm::FunctionType::get(voidTy, {i32}, false);
-  auto *sink = llvm::Function::Create(sinkTy, llvm::Function::ExternalLinkage,
-                                      "sink", module.get());
-
-  auto *mainTy = llvm::FunctionType::get(i32, {}, false);
-  auto *main = llvm::Function::Create(mainTy, llvm::Function::ExternalLinkage,
-                                      "main", module.get());
-
-  auto *entry = llvm::BasicBlock::Create(*context, "entry", main);
-  llvm::IRBuilder<> builder(entry);
-  auto *sourceCall = builder.CreateCall(sourceTy, source, {});
-  builder.CreateCall(sinkTy, sink, {sourceCall});
-  builder.CreateRet(llvm::ConstantInt::get(i32, 0));
+    define i32 @main() {
+    entry:
+      %source_call = call i32 @source()
+      call void @sink(i32 %source_call)
+      ret i32 0
+    }
+  )", "IFDSFrameworkCoreTest");
+  auto *main = module->getFunction("main");
 
   TaintAnalysis analysis;
   analysis.add_sink_function("sink");
@@ -604,11 +557,33 @@ protected:
   std::unique_ptr<llvm::LLVMContext> context;
 };
 
+class EmptySeedIFDSProblem : public SimpleIFDSProblem {
+public:
+  InitialSeeds initial_seeds(const llvm::Module &) override { return {}; }
+};
+
 TEST_F(IFDSProblemInterfaceTest, InitialSeedsEmptyByDefault) {
   auto module = std::make_unique<llvm::Module>("test", *context);
   SimpleIFDSProblem problem;
 
   auto seeds = problem.initial_seeds(*module);
+  EXPECT_TRUE(seeds.empty());
+}
+
+TEST_F(IFDSProblemInterfaceTest, CustomEmptyInitialSeedsRemainEmpty) {
+  auto module = lotus::unittest::parseModule(*context, R"(
+    define i32 @main() {
+    entry:
+      ret i32 0
+    }
+  )", "IFDSFrameworkCoreTest");
+
+  EmptySeedIFDSProblem problem;
+  SolverGraphContext<SimpleIntFact, EmptySeedIFDSProblem> graph_context;
+
+  graph_context.initialize(*module);
+  auto seeds = graph_context.build_initial_seeds(problem, *module);
+
   EXPECT_TRUE(seeds.empty());
 }
 
@@ -632,7 +607,9 @@ TEST_F(IFDSProblemInterfaceTest, IsZeroFactDefault) {
 
 } // namespace ifds
 
+#ifndef LOTUS_GTEST_NO_MAIN
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
+#endif

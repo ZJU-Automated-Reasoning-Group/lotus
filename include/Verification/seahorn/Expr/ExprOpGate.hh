@@ -1,9 +1,9 @@
 /// Mutable Boolean gates
 #pragma once
 #include "seahorn/Expr/ExprCore.hh"
-#include "seahorn/Expr/ExprOpCore.hh"
 #include "seahorn/Expr/ExprApi.hh"
 #include "seahorn/Expr/ExprOpBool.hh"
+#include "seahorn/Expr/ExprOpCore.hh"
 namespace expr {
 
 namespace op {
@@ -62,4 +62,4 @@ inline Expr lneg(Expr e1) {
 }
 } // namespace gate
 } // namespace op
-}
+} // namespace expr

@@ -36,7 +36,8 @@ public:
   void add(W work, I newInput) override {
     const auto it = workToIdx_.find(work);
     if (it == workToIdx_.end()) {
-      throw std::invalid_argument("Tried to insert element unknown in custom order");
+      throw std::invalid_argument(
+          "Tried to insert element unknown in custom order");
     }
     const int idx = it->second;
 
@@ -76,7 +77,8 @@ public:
 
   /// Ultimate-aligned: toString() — string representation (e.g. for logging).
   std::string toString() const {
-    return "PriorityWorklist(size=" + std::to_string(pq_.size() + (hasCurrent_ ? 1u : 0u)) + ")";
+    return "PriorityWorklist(size=" +
+           std::to_string(pq_.size() + (hasCurrent_ ? 1u : 0u)) + ")";
   }
 
 private:
@@ -102,15 +104,17 @@ private:
 } // namespace sifa
 } // namespace lotus
 
+#include "llvm/IR/Function.h"
+
 #include "Verification/Sifa/Cfg/Transition.h"
 #include "Verification/Sifa/RegexDag/RegexDagNode.h"
 #include "Verification/Sifa/SifaSymAbs.h"
-#include "llvm/IR/Function.h"
 extern template class lotus::sifa::PriorityWorklist<
     lotus::sifa::RegexDagNode<lotus::sifa::Transition> *, bool>;
 extern template class lotus::sifa::PriorityWorklist<
-    lotus::sifa::RegexDagNode<lotus::sifa::Transition> *, lotus::sifa::SymAbsState>;
-extern template class lotus::sifa::PriorityWorklist<const llvm::Function *, bool>;
+    lotus::sifa::RegexDagNode<lotus::sifa::Transition> *,
+    lotus::sifa::SymAbsState>;
+extern template class lotus::sifa::PriorityWorklist<const llvm::Function *,
+                                                    bool>;
 
 #endif // LOTUS_VERIFICATION_SIFA_WORKLIST_PRIORITYWORKLIST_H
-

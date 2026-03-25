@@ -5,9 +5,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Verification/Sifa/Log/SifaLogger.h"
-#include "Verification/Sifa/Statistics/SifaStats.h"
 
 #include "llvm/Support/raw_ostream.h"
+
+#include "Verification/Sifa/Statistics/SifaStats.h"
 
 #include <set>
 #include <string>

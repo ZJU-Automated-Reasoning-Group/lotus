@@ -57,6 +57,6 @@ set(SIFA_SOURCES
 )
 
 add_library(SifaAnalysis STATIC ${SIFA_SOURCES})
-target_link_libraries(SifaAnalysis PUBLIC SymbolicAbstractionAnalysis)
+target_link_libraries(SifaAnalysis PUBLIC SymAbsAIAnalysis)
 
 install(TARGETS SifaAnalysis DESTINATION lib)

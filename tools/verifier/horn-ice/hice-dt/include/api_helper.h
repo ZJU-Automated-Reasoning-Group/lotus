@@ -8,10 +8,10 @@
 // C++ includes
 #include <algorithm>
 #include <iostream>
-#include <unordered_set>
+#include <sstream>
 #include <stdexcept>
 #include <string>
-#include <sstream>
+#include <unordered_set>
 
 // C includes
 #include <unistd.h>
@@ -19,12 +19,12 @@
 // Project includes
 #include "boogie_io.h"
 #include "bound.h"
-#include "simple_job_manager.h"
 #include "debug_job_manager.h"
-#include "horndini.h"
 #include "horn_solver.h"
+#include "horndini.h"
 #include "learner.h"
 #include "pretty_print_visitor.h" // DEBUG
+#include "simple_job_manager.h"
 
 
 namespace horn_verification
@@ -133,10 +133,10 @@ decision_tree horndini_prephase(const attributes_metadata & metadata, const std:
 void print_help(std::ostream & out, const char * name)
 {
 
-	out << "Usage: " << name << " [options] file_stem" << std::endl;
-	out << "Options are:" << std::endl;
-	out << "  -b\t\tBound the learner" << std::endl;
-	out << "  -h\t\tRun Horndini pre-phase" << std::endl;
+	out << "Usage: " << name << " [options] file_stem\n";
+	out << "Options are:\n";
+	out << "  -b\t\tBound the learner\n";
+	out << "  -h\t\tRun Horndini pre-phase\n";
 
 }
 
@@ -380,11 +380,11 @@ decision_tree learn_decision_tree (bool do_horndini_prephase, bool use_bounds) {
 	//
 	catch (const std::exception & ex)
 	{
-		std::cerr << ex.what() << std::endl;
+		std::cerr << ex.what() << '\n';
 	}
 	catch (...)
 	{
-		std::cerr << "The learner crashed due to an unknown reason" << std::endl;
+		std::cerr << "The learner crashed due to an unknown reason\n";
 	}
 	
 	// Default return value for error cases
@@ -392,6 +392,6 @@ decision_tree learn_decision_tree (bool do_horndini_prephase, bool use_bounds) {
 }
 
 	};
-}
+} // namespace horn_verification
 
 #endif

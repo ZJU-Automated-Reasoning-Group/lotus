@@ -17,11 +17,9 @@
 #include "Alias/seadsa/Mapper.hh"
 #include "Alias/seadsa/support/Debug.h"
 
-#include "boost/range/algorithm/set_algorithm.hpp"
-#include "boost/range/iterator_range.hpp"
-#include "boost/unordered_set.hpp"
-#include "boost/version.hpp"
-#include <boost/pool/pool.hpp>
+#include "llvm/ADT/STLExtras.h"
+#include <algorithm>
+#include <unordered_set>
 
 using namespace llvm;
 
@@ -36,30 +34,16 @@ static llvm::cl::opt<bool, true> XTypeAware(
 namespace seadsa {
 
 class DsaAllocator {
-  boost::pool<> m_pool;
-  bool m_use_pool;
-
 public:
-  // XXX: by default, memory pool is disabled.
-  DsaAllocator(bool use_pool = false)
-      : m_pool(256 /* size of chunk */,
-               65536 /* number of chunks to grow by */),
-        m_use_pool(use_pool){};
+  DsaAllocator() = default;
   DsaAllocator(const DsaAllocator &o) = delete;
+  
   void *alloc(size_t n) {
-    if (m_use_pool) {
-      if (n <= m_pool.get_requested_size()) { return m_pool.malloc(); }
-    }
-
     return static_cast<void *>(new char[n]);
   }
 
   void free(void *block) {
-    if (m_use_pool && m_pool.is_from(block)) {
-      m_pool.free(block);
-    } else {
-      delete[] static_cast<char *const>(block);
-    }
+    delete[] static_cast<char *const>(block);
   }
 
   DsaAllocatorDeleter getDeleter() { return DsaAllocatorDeleter(*this); }
@@ -554,7 +538,7 @@ void Node::unifyAt(Node &n, unsigned o) {
 
 /// pre: this simulated by n
 unsigned Node::mergeUniqueScalar(Node &n) {
-  boost::unordered_set<Node *> seen;
+  std::unordered_set<Node *> seen;
   return mergeUniqueScalar(n, seen);
 }
 
@@ -598,23 +582,12 @@ void Node::addAllocSite(const DsaAllocSite &v) {
 }
 
 void Node::joinAllocSites(const AllocaSet &s) {
-  using namespace boost;
-#if BOOST_VERSION / 100 % 100 < 68
   m_alloca_sites.insert(s.begin(), s.end());
-#else
-  // At least with boost 1.65 this code does not compile due to an
-  // ambiguity problem when make_reverse_iterator is called. There are
-  // two found candidates: one in boost and the other one in llvm.
-  // With boost 1.68 the ambiguity problem is gone. We don't know with
-  // 1.66 and 1.67.
-  m_alloca_sites.insert(container::ordered_unique_range_t(), s.begin(),
-                        s.end());
-#endif
 }
 
 // pre: this simulated by n
 unsigned Node::mergeAllocSites(Node &n) {
-  boost::unordered_set<Node *> seen;
+  std::unordered_set<Node *> seen;
   return mergeAllocSites(n, seen);
 }
 
@@ -830,19 +803,19 @@ Node &Graph::cloneNode(const Node &n, bool cpAllocSites) {
 }
 
 Graph::iterator Graph::begin() {
-  return boost::make_indirect_iterator(m_nodes.begin());
+  return seadsa::make_indirect_iterator(m_nodes.begin());
 }
 
 Graph::iterator Graph::end() {
-  return boost::make_indirect_iterator(m_nodes.end());
+  return seadsa::make_indirect_iterator(m_nodes.end());
 }
 
 Graph::const_iterator Graph::begin() const {
-  return boost::make_indirect_iterator(m_nodes.begin());
+  return seadsa::make_indirect_iterator(m_nodes.begin());
 }
 
 Graph::const_iterator Graph::end() const {
-  return boost::make_indirect_iterator(m_nodes.end());
+  return seadsa::make_indirect_iterator(m_nodes.end());
 }
 
 Graph::scalar_const_iterator Graph::scalar_begin() const {
@@ -874,13 +847,13 @@ bool Graph::IsGlobal::operator()(const ValueMap::value_type &kv) const {
 }
 
 Graph::global_const_iterator Graph::globals_begin() const {
-  return boost::make_filter_iterator(IsGlobal(), m_values.begin(),
-                                     m_values.end());
+  return seadsa::make_filter_iterator(IsGlobal(), m_values.begin(),
+                                      m_values.end());
 }
 
 Graph::global_const_iterator Graph::globals_end() const {
-  return boost::make_filter_iterator(IsGlobal(), m_values.end(),
-                                     m_values.end());
+  return seadsa::make_filter_iterator(IsGlobal(), m_values.end(),
+                                      m_values.end());
 }
 
 void Graph::compress() {
@@ -1028,18 +1001,16 @@ void Graph::removeLinks(Node *n, std::function<bool(const Node *)> p) {
 
   std::set<unsigned> removed_offsets;
   auto &links = n->getLinks();
-  links.erase(std::remove_if(
-                  links.begin(), links.end(),
-                  [p, &removed_offsets](const std::pair<Field, CellRef> &link) {
-                    const CellRef &next = link.second;
-                    if (p(&*(next->getNode()))) {
-                      removed_offsets.insert(link.first.getOffset());
-                      return true;
-                    } else {
-                      return false;
-                    }
-                  }),
-              links.end());
+  // std::map doesn't work with std::remove_if, so we iterate and erase
+  for (auto it = links.begin(); it != links.end();) {
+    const CellRef &next = it->second;
+    if (p(&*(next->getNode()))) {
+      removed_offsets.insert(it->first.getOffset());
+      it = links.erase(it);
+    } else {
+      ++it;
+    }
+  }
 
   // Remove accessed types, not link types.
   auto &types = n->types();
@@ -1232,8 +1203,8 @@ bool Graph::computeCalleeCallerMapping(const DsaCallSite &cs, Graph &calleeG,
   // XXX: to be removed
   const bool onlyModified = false;
 
-  for (auto &kv : boost::make_iterator_range(calleeG.globals_begin(),
-                                             calleeG.globals_end())) {
+  for (auto &kv : llvm::make_range(calleeG.globals_begin(),
+                                    calleeG.globals_end())) {
     Cell &c = *kv.second;
     if (!onlyModified || c.isModified()) {
       Cell &nc = callerG.mkCell(*kv.first, Cell());

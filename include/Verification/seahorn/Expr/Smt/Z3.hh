@@ -35,14 +35,21 @@
 #include <fstream>
 
 namespace z3 {
-struct ast_ptr_hash : public std::unary_function<ast, std::size_t> {
+struct ast_ptr_hash {
+  using argument_type = ast;
+  using result_type = std::size_t;
+
   std::size_t operator()(const ast &ast) const {
     std::hash<Z3_ast> hasher;
     return hasher(static_cast<Z3_ast>(ast));
   }
 };
 
-struct ast_ptr_equal_to : public std::binary_function<ast, ast, bool> {
+struct ast_ptr_equal_to {
+  using first_argument_type = ast;
+  using second_argument_type = ast;
+  using result_type = bool;
+
   bool operator()(const ast &a1, const ast &a2) const {
     return static_cast<Z3_ast>(a1) == static_cast<Z3_ast>(a2);
   }
@@ -318,10 +325,15 @@ public:
   friend std::string z3_to_smtlib<this_type>(this_type &z3, Expr e);
 };
 
-template <typename Z> class ZModel : public std::unary_function<Expr, Expr> {
+template <typename Z> class ZModel {
 private:
   typedef ZModel<Z> this_type;
 
+public:
+  using argument_type = Expr;
+  using result_type = Expr;
+
+private:
   Z &z3;
   z3::context &ctx;
   Z3_model model;

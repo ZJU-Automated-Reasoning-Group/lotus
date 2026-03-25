@@ -388,7 +388,7 @@ Instruction* getLoadInst(const statement_t &s) {
   if (s.is_arr_read()) {
     const array_load_t *load_stmt = static_cast<const array_load_t *>(&s);
     if (auto v = load_stmt->lhs().name().get()) {
-      if (auto LI = dyn_cast<const LoadInst>(*v)) {
+      if (const auto *LI = dyn_cast<const LoadInst>(*v)) {
 	return const_cast<LoadInst*>(LI);
       }
     }
@@ -396,7 +396,7 @@ Instruction* getLoadInst(const statement_t &s) {
     const load_from_ref_t *load_stmt =
       static_cast<const load_from_ref_t *>(&s);
     if (auto v = load_stmt->lhs().name().get()) {
-      if (auto LI = dyn_cast<const LoadInst>(*v)) {
+      if (const auto *LI = dyn_cast<const LoadInst>(*v)) {
 	return const_cast<LoadInst*>(LI);
       } 
     }
@@ -740,7 +740,7 @@ bool Optimizer::runOnFunction(Function &F) {
       const bool keep_ghost = true;
       llvm::Optional<clam_abstract_domain> pre = m_clam.getPre(&B, keep_ghost);
       if (pre.hasValue()) {
-	auto cfg_builder_ptr = m_clam.getCfgBuilderMan().getCfgBuilder(F);
+	auto *cfg_builder_ptr = m_clam.getCfgBuilderMan().getCfgBuilder(F);
 	assert(cfg_builder_ptr);
 	basic_block_label_t bb_label = cfg_builder_ptr->getCrabBasicBlock(&B);
 	change |= instrumentLoadInst(pre.getValue(), cfg.get_node(bb_label),
@@ -752,7 +752,7 @@ bool Optimizer::runOnFunction(Function &F) {
       const bool keep_ghost = false;
       llvm::Optional<clam_abstract_domain> pre = m_clam.getPre(&B, keep_ghost);
       if (pre.hasValue()) {
-	auto cfg_builder_ptr = m_clam.getCfgBuilderMan().getCfgBuilder(F);
+	auto *cfg_builder_ptr = m_clam.getCfgBuilderMan().getCfgBuilder(F);
 	assert(cfg_builder_ptr);	
 	basic_block_label_t bb_label = cfg_builder_ptr->getCrabBasicBlock(&B);
 	change |= constantReplacement(cfg_builder_ptr, pre.getValue(), cfg.get_node(bb_label));

@@ -24,7 +24,7 @@ terms.
 
 namespace llvm {
 class LoopPass;
-}
+} // namespace llvm
 namespace seahorn {
 llvm::Pass *createMarkInternalInlinePass();
 llvm::Pass *createMarkInternalAllocOrDeallocInlinePass();

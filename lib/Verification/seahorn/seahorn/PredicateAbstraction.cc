@@ -1,8 +1,8 @@
 #include "seahorn/PredicateAbstraction.hh"
-#include "seahorn/HornifyModule.hh"
-#include "seahorn/HornClauseDBTransf.hh"
-#include "seahorn/HornClauseDB.hh"
 #include "seahorn/GuessCandidates.hh"
+#include "seahorn/HornClauseDB.hh"
+#include "seahorn/HornClauseDBTransf.hh"
+#include "seahorn/HornifyModule.hh"
 
 #include "seahorn/HornDbModel.hh"
 #include "seahorn/HornModelConverter.hh"
@@ -12,10 +12,10 @@
 
 #include "seahorn/Expr/Expr.hh"
 #include "seahorn/Expr/Smt/EZ3.hh"
-#include <vector>
-#include <boost/logic/tribool.hpp>
 #include "seahorn/HornClauseDBWto.hh"
 #include <algorithm>
+#include <boost/logic/tribool.hpp>
+#include <vector>
 
 #include "seahorn/Support/Stats.hh"
 
@@ -502,4 +502,4 @@ namespace seahorn
     }
     return true;
   }
-}
+} // namespace seahorn

@@ -18,12 +18,13 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Pass.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 // include STL
+#include "Checker/FiTx/Frontend/StateTransition.h"
+
 #include <algorithm>
 #include <ctime>
 #include <iostream>
@@ -35,13 +36,11 @@
 #include <string>
 #include <vector>
 
-#include "Checker/FiTx/Frontend/StateTransition.h"
-
-namespace framework {
+namespace fitx {
 // TransitionRule Class
 TransitionRule::TransitionRule(TransitionTrigger trigger) : trigger_(trigger) {}
 
-TransitionRule::TransitionRule(const TransitionRule& rule)
+TransitionRule::TransitionRule(const TransitionRule &rule)
     : trigger_(rule.trigger_) {}
 TransitionTrigger TransitionRule::Trigger() { return trigger_; }
 
@@ -64,21 +63,23 @@ FunctionArgTransitionRule::FunctionArgTransitionRule(std::string name)
 }
 
 FunctionArgTransitionRule::FunctionArgTransitionRule(
-    const FunctionArgTransitionRule& rule)
+    const FunctionArgTransitionRule &rule)
     : TransitionRule(rule) {
   function_args_ = rule.function_args_;
 }
 
 StoreValueTransitionRule::StoreValueTransitionRule(
     StoreValueType type, std::vector<std::string> funcs)
-    : TransitionRule(TransitionTrigger::STORE_VALUE),
-      type_(type),
+    : TransitionRule(TransitionTrigger::STORE_VALUE), type_(type),
       function_names_(funcs),
-      consider_null_branch_(true) {}
+      // Bug fix: default to false so detectors must explicitly opt-in to
+      // branch-variant transitions. Previously always true, causing every
+      // store rule to silently register NULL_BRANCH_CONSIDERED_* variants.
+      consider_null_branch_(false) {}
 
 UseValueTransitionRule::UseValueTransitionRule()
     : TransitionRule(TransitionTrigger::USE_VALUE) {}
 
 AliasValueTransitionRule::AliasValueTransitionRule()
     : TransitionRule(TransitionTrigger::ALIASED_VALUE) {}
-}  // namespace framework
+} // namespace fitx

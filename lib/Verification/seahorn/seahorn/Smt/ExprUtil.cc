@@ -8,7 +8,10 @@
 namespace expr {
 
 namespace {
-struct CIRCSIZE : public std::unary_function<Expr, VisitAction> {
+struct CIRCSIZE {
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   unsigned ands;
   unsigned ors;
   unsigned inputs;
@@ -50,7 +53,10 @@ unsigned circSize(const ExprVector &vec) {
 } // namespace op
 
 namespace {
-struct SIZE : public std::unary_function<Expr, VisitAction> {
+struct SIZE {
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   size_t count;
 
   SIZE() : count(0) {}
@@ -83,7 +89,10 @@ size_t treeSize(Expr e) {
 }
 
 namespace {
-struct CV : public std::unary_function<Expr, VisitAction> {
+struct CV {
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   Expr e;
   bool found;
   ExprSet seen;
@@ -113,7 +122,10 @@ bool contains(Expr e1, Expr e2) {
 }
 
 namespace {
-struct RAV : public std::unary_function<Expr, VisitAction> {
+struct RAV {
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   Expr s;
   Expr t;
 
@@ -131,7 +143,10 @@ Expr replaceAll(Expr exp, Expr s, Expr t) {
 }
 
 namespace {
-struct RAVSIMP : public std::unary_function<Expr, VisitAction> {
+struct RAVSIMP {
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   Expr s;
   Expr t;
 
@@ -168,7 +183,10 @@ Expr simplify(Expr exp) {
 
 namespace {
 /** Rewriter that normalizes AND/OR operators */
-struct NormalizeOps : public std::unary_function<Expr, Expr> {
+struct NormalizeOps {
+  using argument_type = Expr;
+  using result_type = Expr;
+
   Expr trueE;
   Expr falseE;
 
@@ -319,7 +337,10 @@ Expr norm(Expr exp) {
 
 namespace {
 /** Rewriter that gathers Boolean operators into n-ary ones */
-struct GatherOps : public std::unary_function<Expr, Expr> {
+struct GatherOps {
+  using argument_type = Expr;
+  using result_type = Expr;
+
   Expr trueE;
   Expr falseE;
 
@@ -385,7 +406,10 @@ Expr gather(Expr exp) {
 
 namespace {
 /** puts an expression into NNF */
-struct NNF : public std::unary_function<Expr, VisitAction> {
+struct NNF {
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   ExprFactory &efac;
   std::shared_ptr<TrivialSimplifier> r;
 

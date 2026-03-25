@@ -1,8 +1,8 @@
 #ifndef __DSA_STATS_HH_
 #define __DSA_STATS_HH_
 
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 
 /* Print statistics about dsa */

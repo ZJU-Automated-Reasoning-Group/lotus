@@ -3,16 +3,16 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
+
 #include <functional>
 #include <memory>
 #include <system_error>
 #include <vector>
 
-
-typedef std::function<
-    int(const std::vector<std::string> &Args, llvm::StringRef RedirectIn,
-        llvm::StringRef RedirectOut, llvm::StringRef RedirectErr,
-        unsigned Timeout)> SolverProgram;
+typedef std::function<int(
+    const std::vector<std::string> &Args, llvm::StringRef RedirectIn,
+    llvm::StringRef RedirectOut, llvm::StringRef RedirectErr, unsigned Timeout)>
+    SolverProgram;
 
 class SMTLIBSolver {
 public:

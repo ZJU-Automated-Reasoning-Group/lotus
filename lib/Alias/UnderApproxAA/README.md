@@ -1,183 +1,80 @@
-# Under-Approximation Alias Analysis
+# UnderApproxAA V2
 
-Sound but incomplete alias analysis for identifying **must-alias** relationships.
+`UnderApproxAA` is a sound under-approximation for **must-alias** queries.
 
-## Overview
+- `MustAlias` means the analysis proved the two pointer values denote the same
+  address.
+- `false` from `EquivDB::mustAlias()` means unknown.
+- `MayAlias` is returned from the LLVM AA interface whenever the analysis cannot
+  prove `MustAlias`.
 
-This analysis computes pointer equivalence using union-find with congruence closure. If two pointers are in the same equivalence class, they are **guaranteed** to alias (sound under-approximation). We never produce false positives, but may miss some true aliases.
+## Semantic Core
 
-## Algorithm
+The V2 engine is a forward dataflow analysis over three domains:
 
-### Phase 1: SEED with Atomic Rules
-Scan all instructions and apply local syntactic rules to identify must-alias pairs. Each matching pair is added to a worklist. All pointer-producing instructions register "watches" on their operand classes.
+- `AliasGraph`: the CC'18-style access-path graph used as the semantic base
+  for canonical pointer references.
+- `expr_env`: a per-block environment mapping SSA pointer values to exact
+  canonical references.
+- `must_store`: a per-block map from singleton memory slots
+  `(object, constant byte offset)` to exact canonical references.
 
-### Phase 2: PROPAGATE with Semantic Rules
-Process the worklist, unifying equivalence classes. When classes merge, revisit watched instructions to check if semantic rules can now fire (e.g., a PHI becomes "closed" when all operands unify).
+Block joins are **intersections**. A fact survives only if it is present in
+every predecessor.
 
-## Data Structures
+## Canonical Pointer References
 
-- **Val2Id**: `DenseMap<const Value*, IdTy>` - value → ID mapping
-- **Id2Val**: `vector<const Value*>` - ID → value mapping  
-- **Nodes**: `vector<{Parent, Rank}>` - union-find forest with path compression
-- **Watches**: `vector<SmallVector<Inst*>>` - per-class watch lists for incremental updates
+Internally the solver uses canonical pointer references of four kinds:
+
+- `Value`: root SSA values such as function arguments.
+- `AccessPath`: a root reference plus a structural GEP path.
+- `Fixed`: null and globals.
+- `Fresh`: allocation-producing roots such as `alloca`, recognized allocation
+  calls, and `noalias` pointer returns.
+
+The same structural reference is interned to the same `VarId`, which lets the
+analysis use `AliasGraph::intersect()` directly at control-flow joins.
+
+## Transfer Semantics
+
+The solver handles pointer-producing instructions with exact transfer rules:
+
+- Casts and all-zero GEPs forward the operand reference unchanged.
+- Constant and symbolic GEPs extend the base reference with a structural path.
+- `phi` and `select` produce a reference only when all incoming references are
+  identical after predecessor intersection.
+- Loads produce a reference only when the current `must_store` contains a fact
+  for the singleton slot being loaded. If the slot fact is absent, optional
+  `MemorySSA` and `DominatorTree` hooks may still recover a unique stored value.
+- Stores update `must_store` only for singleton slots; otherwise the relevant
+  fact is killed.
+
+## Calls and Summaries
+
+Direct callees may contribute a conservative summary:
+
+- `ReturnRef`: `Arg(i)`, `ArgPath(i, path)`, `Null`, `Global`, or `Fresh`.
+- `StrongStoreEffects`: exact strong updates to singleton argument-relative
+  slots.
+
+If a call has no exact summary:
+
+- `readnone` / `readonly` preserve `must_store`.
+- `argmemonly` kills only slots reachable from pointer arguments.
+- other calls kill all caller-visible facts except unrelated non-escaping local
+  alloca slots.
+
+## Public Contract
+
+- `UnderApproxAA::mustAlias()` remains function-scoped and boolean.
+- `UnderApproxAA::alias()` returns `MustAlias` when proven, `MayAlias`
+  otherwise.
+- `UnderApproxAA::query()` is a deprecated wrapper with the same behavior as
+  `alias()` on raw values.
 
 ## Files
 
-- `UnderApproxAA.cpp` - AAResult interface, per-function caching
-- `EquivDB.cpp` - Equivalence database with union-find
-- `Canonical.cpp` - Pointer canonicalization helpers
-
-## Rules
-
-### Atomic Rules (Phase 1)
-Local, syntactic patterns applied during seeding:
-
-| # | Rule Name | Description | Example |
-|---|-----------|-------------|---------|
-| 1 | Identity | Same SSA value | `%p` and `%p` |
-| 2 | Cast Equivalence | Bitcast or no-op addrspace cast | `%p` and `bitcast %p to i8*` |
-| 3 | Constant Offset GEP | Same base + identical offsets | `GEP(%base, 0, i)` and `GEP(%base, 0, i)` |
-| 4 | Zero GEP | All-zero indices same as base | `GEP(%p, 0, 0)` and `%p` |
-| 5 | Round-Trip Cast | ptr→int→ptr with no arithmetic | `inttoptr(ptrtoint(%p))` and `%p` |
-| 6 | Same Underlying Object | Same alloca/global via casts/GEPs | `bitcast(%alloca)` and `GEP(%alloca, 0)` |
-| 7 | Constant Null | Null pointers in same address space | `null` and `null` |
-| 8 | Trivial PHI | All incoming values are identical | `phi [%p, %bb1], [%p, %bb2]` and `%p` |
-| 9 | Trivial Select | Both branches produce same value | `select %c, %p, %p` and `%p` |
-
-### Semantic Rules (Phase 2)
-Inductive patterns checked during propagation:
-
-| Rule | Description | When It Fires |
-|------|-------------|---------------|
-| **Closed PHI** | `phi [p₁, bb₁], ..., [pₙ, bbₙ]` where `p₁ ≡ ... ≡ pₙ` | All incoming values unify → PHI equals common class |
-| **Closed Select** | `select cond, pTrue, pFalse` where `pTrue ≡ pFalse` | Both branches unify → Select equals common class |
-
-## Query Interface
-
-After construction, query must-alias relationships in **O(α(N))** time:
-
-```cpp
-EquivDB db(function);
-bool result = db.mustAlias(pointerA, pointerB);
-// result = true  → A and B are guaranteed to alias
-// result = false → unknown (may or may not alias)
-```
-
-## Adding New Rules
-
-### Adding an Atomic Rule
-
-1. Create checker in `EquivDB.cpp`:
-```cpp
-/// Rule X: Brief Description
-/// Example: concrete LLVM IR
-static bool checkNewRule(const Value *S1, const Value *S2) {
-  // Return true if must-alias, false otherwise
-}
-```
-
-2. Call from `atomicMustAlias()`:
-```cpp
-if (checkNewRule(S1, S2))  return true;
-```
-
-3. Update atomic rules table above
-
-**Requirements**: Sound (no false positives), local, syntactic, fast
-
-### Adding a Semantic Rule
-
-1. Create rule function:
-```cpp
-static bool ruleNewPattern(const Instruction *I,
-                          const EquivDB &DB, const Value *&Rep) {
-  // Check if pattern applies and all operands are in same class
-  // Set Rep to the representative value
-  // Return true if rule fires
-}
-```
-
-2. Add to `SemanticRules[]` table
-
-3. Update semantic rules table above
-
-**Requirements**: Check `DB.mustAlias()` for operand classes, set `Rep` on success
-
-## Example
-
-### Simple Case: Atomic Rules Only
-```llvm
-%a = alloca i32
-%b = bitcast i32* %a to i8*
-%p = getelementptr i8, i8* %b, 0
-```
-
-**Phase 1 (Seed):**
-- Rule 2: `%a ≡ %b` (bitcast)
-- Rule 4: `%b ≡ %p` (zero-offset GEP)
-
-**Phase 2 (Propagate):** Unify classes → `%a ≡ %b ≡ %p`
-
-**Query:** `mustAlias(%a, %p)` → **true**
-
-### Complex Case: Semantic Rules
-```llvm
-entry:
-  %x = alloca i32
-  br i1 %cond, label %then, label %else
-then:
-  %y1 = bitcast i32* %x to i8*    ; %x ≡ %y1
-  br label %merge
-else:
-  %y2 = bitcast i32* %x to i8*    ; %x ≡ %y2
-  br label %merge
-merge:
-  %phi = phi i8* [%y1, %then], [%y2, %else]
-  %z = select i1 %cond, i8* %phi, i8* %phi
-```
-
-**Phase 1 (Seed):**
-- Rule 2: `%x ≡ %y1`, `%x ≡ %y2`
-- Watch: `%phi` watches classes of `%y1` and `%y2`
-- Watch: `%z` watches class of `%phi`
-
-**Phase 2 (Propagate):**
-1. Unify `%x ≡ %y1` → revisit `%phi`
-2. Unify `%x ≡ %y2` → now `%y1 ≡ %y2`!
-3. **Closed PHI rule fires**: all operands of `%phi` are in same class
-   - Add `(%phi, %x)` to worklist
-4. Unify `%phi ≡ %x` → revisit `%z`
-5. **Closed Select rule fires**: both branches of `%z` are `%phi`
-   - Add `(%z, %phi)` to worklist
-6. Unify `%z ≡ %phi`
-
-**Result:** `%x ≡ %y1 ≡ %y2 ≡ %phi ≡ %z`
-
-**Query:** `mustAlias(%x, %z)` → **true**
-
-## Limitations
-
-- **Intra-procedural only**: No reasoning across function boundaries
-- **Stack/global allocations only**: Heap objects from `malloc`/`new` are not tracked
-- **Syntactic patterns**: No deep arithmetic reasoning (e.g., `GEP(p, i)` vs `GEP(p, i+1-1)`)
-- **Conservative**: Under-approximation means we may miss true aliases
-- **Context-insensitive**: No path-sensitive or flow-sensitive reasoning
-
-## Performance
-
-- **Construction**: O(N·α(N)) where N = number of values, α is inverse Ackermann
-- **Query**: O(α(N)) ≈ O(1) in practice
-- **Memory**: O(N) for union-find + watch lists
-
-## Related Work
-
-- CC 18: An Efficient Data Structure for Must-Alias Analysis. https://yanniss.github.io/must-datastruct-cc18.pdf
-- ICTAC 12: Definite expression aliasing analysis for Java bytecode.
-- ISoLA 08:  Computing must and may alias to detect null pointer dereference.
-- ISSTA 06: Effective typestate verification in the presence of aliasing.
-- TOPLAS 02: Parametric shape analysis via 3-valued logic.
-- TOPLAS 99: Interprocedural pointer alias analysis
-- POPL 98: Single and loving it: Must-alias analysis for higher-order languages
-- POPL 95: An extended form of must alias analysis for dynamic allocation. 
-- PLDI 94: Context-sensitive interprocedural points-to analysis in the presence of function pointers. I
-
+- `AliasGraph.cpp` / `AliasGraph.h`: access-path graph and intersection logic
+- `EquivDB.cpp` / `EquivDB.h`: V2 fixed-point solver and query database
+- `UnderApproxAA.cpp` / `UnderApproxAA.h`: LLVM AA wrapper and per-function
+  cache

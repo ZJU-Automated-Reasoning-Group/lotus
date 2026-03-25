@@ -6,12 +6,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 
-#include "boost/container/flat_set.hpp"
-#include <boost/bimap.hpp>
-#include <boost/iterator/filter_iterator.hpp>
-#include <boost/iterator/transform_iterator.hpp>
-#include <boost/range/iterator_range.hpp>
-#include <boost/unordered_map.hpp>
+#include <map>
+#include <set>
+#include <unordered_map>
 
 /* Precompute queries for dsa clients */
 
@@ -69,66 +66,116 @@ public:
 
 class DsaInfo {
 
-  typedef boost::unordered_map<const Node *, NodeInfo> NodeInfoMap;
-  typedef boost::bimap<const llvm::Value *, unsigned int> AllocSiteBiMap;
-  typedef boost::container::flat_set<const llvm::Value *> ValueSet;
-  typedef boost::container::flat_set<unsigned int> IdSet;
-  typedef boost::container::flat_set<NodeInfo> NodeInfoSet;
-  typedef boost::container::flat_set<Graph *> GraphSet;
-  typedef boost::unordered_map<const llvm::Value *, std::string> NamingMap;
+  typedef std::unordered_map<const Node *, NodeInfo> NodeInfoMap;
+  // Replacement for boost::bimap - use two maps
+  typedef std::map<const llvm::Value *, unsigned int> AllocSiteToIdMap;
+  typedef std::map<unsigned int, const llvm::Value *> IdToAllocSiteMap;
+  typedef std::set<const llvm::Value *> ValueSet;
+  typedef std::set<unsigned int> IdSet;
+  typedef std::set<NodeInfo> NodeInfoSet;
+  typedef std::set<Graph *> GraphSet;
+  typedef std::unordered_map<const llvm::Value *, std::string> NamingMap;
 
   const llvm::DataLayout &m_dl;
   llvm::TargetLibraryInfoWrapperPass &m_tliWrapper;
   GlobalAnalysis &m_dsa;
   NodeInfoMap m_nodes_map;            // map Node to NodeInfo
-  AllocSiteBiMap m_alloc_sites_bimap; // bimap allocation sites to id
+  AllocSiteToIdMap m_alloc_site_to_id; // map allocation sites to id
+  IdToAllocSiteMap m_id_to_alloc_site; // reverse map id to allocation sites
   IdSet m_alloc_sites_set;
   NamingMap m_names; // map Value to string name
   GraphSet m_seen_graphs;
 
-  typedef typename NodeInfoMap::value_type binding_t;
-  struct get_second {
-    typedef binding_t argument_type;
-    typedef NodeInfo result_type;
+  // Custom transform iterator
+  template <typename MapIterator>
+  class transform_second_iterator {
+    MapIterator m_iter;
+  public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = NodeInfo;
+    using difference_type = std::ptrdiff_t;
+    using pointer = const NodeInfo*;
+    using reference = const NodeInfo&;
     
-    NodeInfo operator()(const binding_t &p) const { return p.second; }
+    transform_second_iterator() = default;
+    explicit transform_second_iterator(MapIterator iter) : m_iter(iter) {}
+    
+    reference operator*() const { return m_iter->second; }
+    pointer operator->() const { return &m_iter->second; }
+    
+    transform_second_iterator& operator++() { ++m_iter; return *this; }
+    transform_second_iterator operator++(int) { auto tmp = *this; ++m_iter; return tmp; }
+    
+    bool operator==(const transform_second_iterator& other) const { return m_iter == other.m_iter; }
+    bool operator!=(const transform_second_iterator& other) const { return m_iter != other.m_iter; }
   };
 
-  typedef boost::transform_iterator<get_second,
-                                    typename NodeInfoMap::const_iterator>
-      nodes_const_iterator;
-  typedef boost::iterator_range<nodes_const_iterator> nodes_const_range;
+  typedef transform_second_iterator<typename NodeInfoMap::const_iterator> nodes_const_iterator;
+  typedef llvm::iterator_range<nodes_const_iterator> nodes_const_range;
 
   nodes_const_iterator nodes_begin() const {
-    return boost::make_transform_iterator(m_nodes_map.begin(), get_second());
+    return nodes_const_iterator(m_nodes_map.begin());
   }
 
   nodes_const_iterator nodes_end() const {
-    return boost::make_transform_iterator(m_nodes_map.end(), get_second());
+    return nodes_const_iterator(m_nodes_map.end());
   }
 
   nodes_const_range nodes() const {
-    return boost::make_iterator_range(nodes_begin(), nodes_end());
+    return llvm::make_range(nodes_begin(), nodes_end());
   }
 
   struct is_alive_node {
     bool operator()(const NodeInfo &);
   };
-  typedef boost::filter_iterator<is_alive_node, nodes_const_iterator>
-      live_nodes_const_iterator;
+  
+  // Custom filter iterator
+  template <typename Iterator>
+  class filter_alive_iterator {
+    Iterator m_iter;
+    Iterator m_end;
+    is_alive_node m_pred;
+    
+    void skip_to_next() {
+      while (m_iter != m_end && !m_pred(*m_iter))
+        ++m_iter;
+    }
+    
+  public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = NodeInfo;
+    using difference_type = std::ptrdiff_t;
+    using pointer = const NodeInfo*;
+    using reference = const NodeInfo&;
+    
+    filter_alive_iterator() = default;
+    filter_alive_iterator(Iterator iter, Iterator end) : m_iter(iter), m_end(end) {
+      skip_to_next();
+    }
+    
+    reference operator*() const { return *m_iter; }
+    pointer operator->() const { return m_iter.operator->(); }
+    
+    filter_alive_iterator& operator++() { ++m_iter; skip_to_next(); return *this; }
+    filter_alive_iterator operator++(int) { auto tmp = *this; ++(*this); return tmp; }
+    
+    bool operator==(const filter_alive_iterator& other) const { return m_iter == other.m_iter; }
+    bool operator!=(const filter_alive_iterator& other) const { return m_iter != other.m_iter; }
+  };
+  
+  typedef filter_alive_iterator<nodes_const_iterator> live_nodes_const_iterator;
 
 public:
-  typedef boost::iterator_range<live_nodes_const_iterator>
-      live_nodes_const_range;
+  typedef llvm::iterator_range<live_nodes_const_iterator> live_nodes_const_range;
   typedef IdSet alloc_sites_set;
 
 private:
   live_nodes_const_iterator live_nodes_begin() const {
-    return boost::make_filter_iterator(is_alive_node(), nodes_begin());
+    return live_nodes_const_iterator(nodes_begin(), nodes_end());
   }
 
   live_nodes_const_iterator live_nodes_end() const {
-    return boost::make_filter_iterator(is_alive_node(), nodes_end());
+    return live_nodes_const_iterator(nodes_end(), nodes_end());
   }
 
   std::string getName(const llvm::Function &fn, const llvm::Value &v);
@@ -155,7 +202,7 @@ public:
 
   // Iterate over all non-trival Dsa nodes
   live_nodes_const_range live_nodes() const {
-    return boost::make_iterator_range(live_nodes_begin(), live_nodes_end());
+    return llvm::make_range(live_nodes_begin(), live_nodes_end());
   }
 
   // Return the set of all allocation sites

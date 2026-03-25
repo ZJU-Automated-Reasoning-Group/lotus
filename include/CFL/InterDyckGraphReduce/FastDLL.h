@@ -65,7 +65,7 @@ public:
     cout << "==begin print list" << '\n';
     for (typename list<T1>::iterator iter = dll.begin(); iter != dll.end();
          ++iter) {
-      cout << *iter << endl;
+      cout << *iter << '\n';
     }
     cout << "==end" << '\n';
   }

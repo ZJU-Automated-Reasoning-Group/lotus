@@ -2,9 +2,10 @@
  * @file QualifierAnalysis.h
  * @brief Qualifier analysis for uninitialized/undefined data detection
  *
- * This analysis performs qualifier inference to detect uninitialized
- * and undefined data usage in programs. It includes constraint collection,
- * qualifier inference, and warning generation for potential bugs.
+ * This opt-in analysis performs flow-sensitive qualifier inference to detect
+ * uninitialized and undefined data usage in programs. It is implemented as a
+ * specialized checker over a fixed qualifier domain rather than as a generic
+ * qualifier framework.
  *
  * @author Lotus Analysis Framework
  */
@@ -16,10 +17,12 @@
 #include <llvm/IR/BasicBlock.h>
 
 // #include "Alias/TypeQualifier/UBIAnalysis.h"
+#include "Alias/TypeQualifier/Config.h"
 #include "Alias/TypeQualifier/FunctionSummary.h"
 #include "Alias/TypeQualifier/IntGlobal.h"
 #include "Alias/TypeQualifier/NodeFactory.h"
 #include "Alias/TypeQualifier/PtsSet.h"
+#include "Alias/TypeQualifier/QualifierTypes.h"
 
 #include <map>
 #include <set>
@@ -27,17 +30,15 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#define _ID 1
-#define _UD 0
-#define _UNKNOWN -1
-#define UNDEFINE -2
-
 #define _CH 1
 
 typedef std::map<NodeIndex, AndersPtsSet> PtsGraph;
 typedef std::map<const llvm::Instruction *, PtsGraph> NodeToPtsGraph;
-typedef std::map<const llvm::Instruction *, std::vector<int>> NodeToQualifier;
-typedef std::map<const llvm::BasicBlock *, std::vector<int>> BBToQualifier;
+typedef std::map<const llvm::Instruction *, QualifierArray> NodeToQualifier;
+typedef std::map<const llvm::BasicBlock *, QualifierArray> BBToQualifier;
+typedef std::map<const llvm::Instruction *, RequirednessArray>
+    NodeToRequiredness;
+typedef std::map<const llvm::BasicBlock *, RequirednessArray> BBToRequiredness;
 
 // alias set
 typedef std::set<NodeIndex> NodeSet;
@@ -48,7 +49,7 @@ enum WarnType { FUNCTION_PTR, NORMAL_PTR, DATA, OTHER };
 /// @brief Main qualifier analysis pass
 ///
 /// Performs qualifier analysis to detect uninitialized/undefined data usage.
-/// Uses constraint collection and iterative refinement to infer qualifiers.
+/// Uses iterative refinement over a typed qualifier domain to infer states.
 class QualifierAnalysis : public IterativeModulePass {
 private:
   const llvm::DataLayout *DL;
@@ -58,20 +59,8 @@ private:
   // if flag = true then we runn till check, else we run till inference to
   // converge
   bool runOnFunction(llvm::Function *, bool flag);
-  void collectConstraintsForGlobals(llvm::Function *, AndersNodeFactory &,
-                                    PtsGraph &);
-
-  void collectConstraintsForInstruction(const llvm::Instruction *);
-  void addConstraintForKMalloc(const llvm::CallInst *, int, int);
 
   void ptsJoin(PtsGraph &, PtsGraph &);
-  // Used by qualifier inference
-  void setGlobalQualies(llvm::Function *, AndersNodeFactory &, NodeToPtsGraph &,
-                        int *);
-  // void qualiJoin(int *, int *, unsigned);
-  // void updateJoin(int *, int *, unsigned);
-  // void computeAASet(llvm::Function *, AndersNodeFactory &, NodeToPtsGraph &,
-  // NodeToAAMap &, NodeIndex); void updateJoin(int *, int *, unsigned);
 
 public:
   QualifierAnalysis(GlobalContext *Ctx_)
@@ -113,7 +102,11 @@ private:
 
   NodeToQualifier nQualiArray;
   NodeToQualifier nQualiUpdate;
-  std::vector<int> qualiReq;
+  NodeToRequiredness nRequiredIn;
+  NodeToRequiredness nRequiredOut;
+  BBToRequiredness inRequiredArray;
+  BBToRequiredness outRequiredArray;
+  RequirednessArray requiredAtEntry;
   BBToQualifier inQualiArray;
   BBToQualifier outQualiArray;
 
@@ -136,6 +129,9 @@ private:
 
   void buildPtsGraph();
   void qualiInference();
+  void runBackwardRequirednessAnalysis();
+  void runForwardQualifierAnalysis();
+  void buildFunctionSummary(llvm::ReturnInst *);
   void QualifierCheck();
   void computeAASet();
   void calStackVar();
@@ -167,33 +163,45 @@ private:
   void addTerminationBB(llvm::BasicBlock *bb);
   bool isTerminationBB(llvm::BasicBlock *bb) { return terminationBB.count(bb); }
   // Used by qualifier inference
-  void computeQualifier(llvm::Instruction *, std::vector<int> &,
-                        std::vector<int> &);
-  void setGlobalQualies(std::vector<int> &);
-  void qualiJoin(std::vector<int> &, std::vector<int> &, unsigned);
-  void updateJoin(std::vector<int> &, std::vector<int> &, unsigned);
+  void computeRequiredness(llvm::Instruction *, const RequirednessArray &,
+                           RequirednessArray &);
+  void computeQualifier(llvm::Instruction *, QualifierArray &,
+                        QualifierArray &);
+  void setGlobalQualies(QualifierArray &);
+  void qualiJoin(QualifierArray &, QualifierArray &, unsigned);
+  void updateJoin(QualifierArray &, QualifierArray &, unsigned);
+  void requiredJoin(RequirednessArray &, const RequirednessArray &, unsigned);
+  void markRequired(NodeIndex, RequirednessArray &);
+  void markRequiredForValue(const llvm::Instruction *, const llvm::Value *,
+                            RequirednessArray &);
+  void materializeRequiredState(const llvm::Instruction *,
+                                QualifierArray &) const;
   void insertUninit(const llvm::Instruction *, NodeIndex,
                     std::set<NodeIndex> &);
   // used for manually summaries functions
   void processInitFuncs(llvm::Instruction *, llvm::Function *, bool,
-                        std::vector<int> &, std::vector<int> &);
+                        QualifierArray &, QualifierArray &);
   void processCopyFuncs(llvm::Instruction *, llvm::Function *, bool,
-                        std::vector<int> &, std::vector<int> &);
+                        QualifierArray &, QualifierArray &);
   void processTransferFuncs(llvm::Instruction *, llvm::Function *, bool,
-                            std::vector<int> &, std::vector<int> &);
+                            QualifierArray &, QualifierArray &);
   void processFuncs(llvm::Instruction *, llvm::Function *, bool,
-                    std::vector<int> &, std::vector<int> &);
+                    QualifierArray &, QualifierArray &);
 
   // used for requirement propagation
-  void backPropagateReq(llvm::Instruction *, llvm::Value *, std::vector<int> &);
+  void backPropagateReq(llvm::Instruction *, llvm::Value *, QualifierArray &);
   void setReqFor(const llvm::Instruction *, const llvm::Value *,
-                 std::vector<int> &, std::set<const llvm::Value *> &);
+                 QualifierArray &, std::set<const llvm::Value *> &);
+  std::vector<llvm::Function *> resolveCallTargets(llvm::CallInst *CI) const;
+  void applyResolvedCallTarget(llvm::Instruction *I, llvm::CallInst *CI,
+                               llvm::Function *Func, QualifierArray &in,
+                               QualifierArray &out, bool memsetUse);
   void DFS(llvm::Instruction *, NodeIndex);
   void summarizeFuncs(llvm::ReturnInst *);
-  void propInitFuncs(llvm::Instruction *, int *);
-  void propCopyFuncs(llvm::Instruction *, int *);
-  void propTransferFuncs(llvm::Instruction *, int *);
-  void propFuncs(llvm::Instruction *, llvm::Function *, int *);
+  void propInitFuncs(llvm::Instruction *, RequirednessArray &);
+  void propCopyFuncs(llvm::Instruction *, RequirednessArray &);
+  void propTransferFuncs(llvm::Instruction *, RequirednessArray &);
+  void propFuncs(llvm::Instruction *, llvm::Function *, RequirednessArray &);
   // used for function checking.
   void checkCopyFuncs(llvm::Instruction *, llvm::Function *);
   void checkTransferFuncs(llvm::Instruction *, llvm::Function *);
@@ -215,6 +223,7 @@ private:
 public:
   FuncAnalysis(llvm::Function *F_, GlobalContext *Ctx_, bool flag)
       : F(F_), Ctx(Ctx_) {
+    initializeFunctionModelSets(*Ctx_);
     M = F->getParent();
     if (M) {
       errs() << "FuncAnalysis for F :" << F->getName().str()
@@ -234,6 +243,13 @@ public:
   int getUninitArg() { return uninitArg.size(); }
   int getUninitOutArg() { return uninitOutArg.size(); }
   int getIgnoreOutArg() { return ignoreOutArg.size(); }
+  const RequirednessArray &getRequiredAtEntry() const { return requiredAtEntry; }
+  const Summary &getSummary() const { return fSummary; }
+  bool isArgumentRequiredAtEntry(const llvm::Argument *arg) {
+    NodeIndex idx = nodeFactory.getValueNodeFor(arg);
+    return idx != AndersNodeFactory::InvalidIndex &&
+           requiredAtEntry.at(idx) == RequirednessState::Required;
+  }
 };
 class Tarjan {
 private:

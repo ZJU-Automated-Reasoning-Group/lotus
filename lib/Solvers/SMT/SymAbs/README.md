@@ -4,11 +4,11 @@
 
 This module implements algorithms from "Automatic Abstraction of Bit-Vector Formulae" for computing symbolic abstractions of **SMT formulas** (specifically bit-vector formulas). 
 
-**⚠️ Important Distinction**: This library is **NOT** the same as `lib/Verification/SymbolicAbstraction`, which is a complete program analysis framework for LLVM IR.
+**⚠️ Important Distinction**: This library is **NOT** the same as `lib/Verification/SymAbsAI`, which is a complete program analysis framework for LLVM IR.
 
 ### Key Differences
 
-| Aspect | `lib/Solvers/SMT/SymAbs` (this library) | `lib/Verification/SymbolicAbstraction` |
+| Aspect | `lib/Solvers/SMT/SymAbs` (this library) | `lib/Verification/SymAbsAI` |
 |--------|------------------------------------------|----------------------------------------|
 | **Input** | SMT bit-vector formulas (Z3 expressions) | LLVM IR (program code) |
 | **Output** | Abstract constraints (intervals, octagons, etc.) | Abstract domain values for LLVM values |
@@ -83,7 +83,7 @@ Use `lib/Solvers/SMT/SymAbs` when:
 - You need to approximate bit-vector constraints with linear integer constraints
 - You're working at the formula/solver level, not the program level
 
-Use `lib/Verification/SymbolicAbstraction` when:
+Use `lib/Verification/SymAbsAI` when:
 - You're analyzing LLVM IR programs
 - You need a complete abstract interpretation framework
 - You want to integrate analysis into LLVM optimization passes

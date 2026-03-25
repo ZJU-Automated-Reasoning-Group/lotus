@@ -1,36 +1,36 @@
-//#include "llvm/IR/BasicBlock.h"
+// #include "llvm/IR/BasicBlock.h"
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Analysis/LoopInfo.h"
-//#include "llvm/IR/Argument.h"
-//#include "llvm/IR/CFG.h"
-//#include "llvm/IR/Constant.h"
-//#include "llvm/IR/DataLayout.h"
-//#include "llvm/IR/DebugInfoMetadata.h"
+// #include "llvm/IR/Argument.h"
+// #include "llvm/IR/CFG.h"
+// #include "llvm/IR/Constant.h"
+// #include "llvm/IR/DataLayout.h"
+// #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
-//#include "llvm/IR/DerivedTypes.h"
+// #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-//#include "llvm/IR/InstrTypes.h"
-//#include "llvm/IR/Instruction.h"
-//#include "llvm/IR/Instructions.h"
-//#include "llvm/IR/LegacyPassManager.h"
-//#include "llvm/IR/PassManager.h"
+// #include "llvm/IR/InstrTypes.h"
+// #include "llvm/IR/Instruction.h"
+// #include "llvm/IR/Instructions.h"
+// #include "llvm/IR/LegacyPassManager.h"
+// #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
-//#include "llvm/IR/ValueSymbolTable.h"
+// #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-//#include "llvm/Transforms/IPO/PassManagerBuilder.h"
+// #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 #include "Checker/FiTx/Core/BasicBlock.h"
 #include "Checker/FiTx/Core/Instructions/BranchInstruction.h"
 #include "Checker/FiTx/Core/Value.h"
-//#include "Checker/FiTx/Frontend/Utils.h"
+// #include "Checker/FiTx/Frontend/Utils.h"
 
 // include STL
 #include "Checker/FiTx/Core/Casting.h"
-//#include "Checker/FiTx/Core/Function.h"
+// #include "Checker/FiTx/Core/Function.h"
 #include "Checker/FiTx/Frontend/BasicBlock.h"
 
 #include <algorithm>
@@ -46,9 +46,9 @@
 
 #include <llvm/IR/Instructions.h>
 
-namespace framework {
+namespace fitx {
 BasicBlockInformation::BasicBlockInformation(
-    std::shared_ptr<framework::BasicBlock> basic_block,
+    std::shared_ptr<fitx::BasicBlock> basic_block,
     const std::set<State> &states)
     : basic_block_(basic_block), is_partial_states_(false),
       predecessor_partial_(false), states_(states),
@@ -66,17 +66,24 @@ BasicBlockInformation::BasicBlockInformation(
 }
 
 BasicBlockInformation::BasicBlockInformation(const BasicBlockInformation &info)
-    : basic_block_(info.basic_block_) {
-  /* arg_value_states_ = info.arg_value_states_; */
-  /* value_states_ = info.value_states_; */
-}
+    : basic_block_(info.basic_block_), value_states_(info.value_states_),
+      arg_value_states_(info.arg_value_states_),
+      return_values_(info.return_values_), alias_info_(info.alias_info_),
+      pending_values_(info.pending_values_), states_(info.states_),
+      is_partial_states_(info.is_partial_states_),
+      predecessor_partial_(info.predecessor_partial_),
+      time_to_live_(info.time_to_live_), status_(info.status_),
+      same_line_predecessors_(info.same_line_predecessors_) {}
 
+// Apply transitions to value (and optionally its alias set). Caller (Analyzer)
+// already expands to related + aliased values before calling; here we only
+// apply to the single value (per-block alias expansion is done in Analyzer).
 bool BasicBlockInformation::changeValueState(
     std::vector<Transition> &transitions,
-    std::shared_ptr<framework::Value> value,
-    std::shared_ptr<framework::Instruction> instruction) {
+    std::shared_ptr<fitx::Value> value,
+    std::shared_ptr<fitx::Instruction> instruction) {
   bool changed = false;
-  std::vector<std::shared_ptr<framework::Value>> aliased_value;
+  std::vector<std::shared_ptr<fitx::Value>> aliased_value;
   aliased_value.push_back(value);
 
   /* if (auto collection = getAliasInfoForValue(value)) */
@@ -85,7 +92,7 @@ bool BasicBlockInformation::changeValueState(
   /*                        collection->Values().end()); */
 
   for (auto alias : aliased_value) {
-    if (framework::shared_isa<Argument>(alias)) {
+    if (fitx::shared_isa<Argument>(alias)) {
       bool pending_changed = false;
       if (!pending_values_.empty()) {
         for (auto &pending_values : pending_values_) {
@@ -107,7 +114,7 @@ bool BasicBlockInformation::valueHasState(std::shared_ptr<Value> value) {
 
 void BasicBlockInformation::removeValueFromState(
     std::shared_ptr<Value> value,
-    std::shared_ptr<framework::Instruction> instruction) {
+    std::shared_ptr<fitx::Instruction> instruction) {
   if (!value_states_.valueExists(value))
     return;
 
@@ -119,7 +126,7 @@ void BasicBlockInformation::removeValueFromState(
 
 void BasicBlockInformation::resetValueState(
     std::shared_ptr<Value> value,
-    std::shared_ptr<framework::Instruction> instruction) {
+    std::shared_ptr<fitx::Instruction> instruction) {
   if (!value_states_.valueExists(value))
     return;
   Transition log = value_states_.getTransitionLog(value).ReducedTransition();
@@ -129,8 +136,8 @@ void BasicBlockInformation::resetValueState(
 }
 
 void BasicBlockInformation::setPendingValueStates(
-    std::weak_ptr<framework::BasicBlock> basic_block,
-    framework::ArgValueStates arg_value_state) {
+    std::weak_ptr<fitx::BasicBlock> basic_block,
+    fitx::ArgValueStates arg_value_state) {
   if (pending_values_.find(basic_block) == pending_values_.end()) {
     pending_values_[basic_block] = {
         ArgValueStates(arg_value_state.Size(), states_)};
@@ -138,7 +145,7 @@ void BasicBlockInformation::setPendingValueStates(
   pending_values_[basic_block].arg_states.addArgValueState(arg_value_state);
 }
 
-std::vector<std::pair<std::shared_ptr<framework::Value>, TransitionLogs *>>
+std::vector<std::pair<std::shared_ptr<fitx::Value>, TransitionLogs *>>
 BasicBlockInformation::getValueTransitionStates(const State &state) {
   auto value_transition_states = value_states_.getValueTransitionStates(state);
   if (state.EarlyNotification()) {
@@ -153,32 +160,38 @@ BasicBlockInformation::getValueTransitionStates(const State &state) {
 }
 
 void BasicBlockInformation::setPendingReturnValues(
-    std::weak_ptr<framework::BasicBlock> basic_block,
-    std::shared_ptr<framework::ConstValue> arg_value_state) {
+    std::weak_ptr<fitx::BasicBlock> basic_block,
+    std::shared_ptr<fitx::ConstValue> arg_value_state) {
   pending_values_[basic_block].return_values.insert(arg_value_state);
 }
 
-std::pair<framework::BasicBlockValueStates, framework::ArgValueStates>
+std::pair<fitx::BasicBlockValueStates, fitx::ArgValueStates>
 BasicBlockInformation::ValueStatesForSuccessor(
-    std::shared_ptr<framework::BasicBlock> successor) {
-  std::pair<framework::BasicBlockValueStates, framework::ArgValueStates> states(
+    std::shared_ptr<fitx::BasicBlock> successor) {
+  std::pair<fitx::BasicBlockValueStates, fitx::ArgValueStates> states(
       value_states_, arg_value_states_);
 
   if (pending_values_.find(successor) == pending_values_.end()) {
     return states;
   }
 
-  std::shared_ptr<framework::CallInst> call_inst =
-      framework::shared_dyn_cast<framework::CallInst>(
+  std::shared_ptr<fitx::CallInst> call_inst =
+      fitx::shared_dyn_cast<fitx::CallInst>(
           basic_block_->getBranchInst()->Condition());
 
-  if (auto compare_inst = framework::shared_dyn_cast<framework::CompareInst>(
+  if (auto compare_inst = fitx::shared_dyn_cast<fitx::CompareInst>(
           basic_block_->getBranchInst()->Condition())) {
     auto operand = std::find_if(
         compare_inst->Operands().begin(), compare_inst->Operands().end(),
-        [](auto operand) { return framework::shared_isa<CallInst>(operand); });
-    call_inst = framework::shared_dyn_cast<CallInst>(*operand);
+        [](auto operand) { return fitx::shared_isa<CallInst>(operand); });
+    // Bug fix: guard against end() before dereferencing.
+    if (operand == compare_inst->Operands().end())
+      return states;
+    call_inst = fitx::shared_dyn_cast<CallInst>(*operand);
   }
+
+  if (!call_inst)
+    return states;
 
   auto operands = call_inst->Arguments();
   for (int i = 0; i < operands.size(); i++) {
@@ -186,7 +199,7 @@ BasicBlockInformation::ValueStatesForSuccessor(
     for (auto value :
          pending_values_[successor].arg_states.getValueStateForArg(i)) {
       auto new_value = Value::CreateAppend(operand, value.first);
-      if (!framework::shared_isa<Argument>(new_value))
+      if (!fitx::shared_isa<Argument>(new_value))
         states.first.transitionState(value.second, new_value, call_inst);
       else
         states.second.transitionState(value.second, new_value, call_inst);
@@ -196,15 +209,15 @@ BasicBlockInformation::ValueStatesForSuccessor(
   return states;
 }
 
-std::set<std::shared_ptr<framework::Value>>
+std::set<std::shared_ptr<fitx::Value>>
 BasicBlockInformation::ReturnCodeForSuccessor(
-    std::shared_ptr<framework::BasicBlock> successor) {
-  std::set<std::shared_ptr<framework::Value>> return_values = return_values_;
+    std::shared_ptr<fitx::BasicBlock> successor) {
+  std::set<std::shared_ptr<fitx::Value>> return_values = return_values_;
   auto branch_inst = basic_block_->getBranchInst();
   if (!branch_inst || !branch_inst->Condition())
     return return_values;
 
-  auto compare_inst = framework::shared_dyn_cast<framework::CompareInst>(
+  auto compare_inst = fitx::shared_dyn_cast<fitx::CompareInst>(
       branch_inst->Condition());
   if (!compare_inst)
     return return_values;
@@ -214,15 +227,17 @@ BasicBlockInformation::ReturnCodeForSuccessor(
 
     auto operand = std::find_if(
         compare_inst->Operands().begin(), compare_inst->Operands().end(),
-        [](auto operand) { return framework::shared_isa<CallInst>(operand); });
+        [](auto operand) { return fitx::shared_isa<CallInst>(operand); });
 
-    return_values.erase(*operand);
+    // Bug fix: guard against end() before dereferencing.
+    if (operand != compare_inst->Operands().end())
+      return_values.erase(*operand);
   }
 
   /* for (auto return_value : return_values) { */
   /*   generateWarning(compare_inst.get(), "Return Value"); */
   /*   if (auto const_int =
-   * shared_dyn_cast<framework::ConstValue>(return_value)) */
+   * shared_dyn_cast<fitx::ConstValue>(return_value)) */
   /*     llvm::errs() << const_int->getConstValue() << "(From Pred)\n"; */
   /* } */
   return return_values;
@@ -237,29 +252,29 @@ bool BasicBlockValueStates::operator==(const BasicBlockValueStates &states) {
 }
 
 bool BasicBlockValueStates::valueExists(
-    std::shared_ptr<framework::Value> value) {
+    std::shared_ptr<fitx::Value> value) {
   return value_states_.find(value) != value_states_.end();
 }
 
 void BasicBlockValueStates::setValueState(
-    std::shared_ptr<framework::Value> value, framework::Transition &transition,
-    std::shared_ptr<framework::Instruction> instruction) {
+    std::shared_ptr<fitx::Value> value, fitx::Transition &transition,
+    std::shared_ptr<fitx::Instruction> instruction) {
   value_states_[value].addTransition(transition, instruction);
 }
 
 void BasicBlockValueStates::setValueState(
-    std::shared_ptr<framework::Value> value, framework::TransitionLogs &logs) {
+    std::shared_ptr<fitx::Value> value, fitx::TransitionLogs &logs) {
   value_states_[value] = logs;
 }
 
 TransitionLogs &BasicBlockValueStates::getTransitionLog(
-    std::shared_ptr<framework::Value> value) {
+    std::shared_ptr<fitx::Value> value) {
   return value_states_[value];
 }
 
-std::vector<std::shared_ptr<framework::Value>>
-BasicBlockValueStates::getStateValues(const framework::State &state) {
-  std::vector<std::shared_ptr<framework::Value>> values;
+std::vector<std::shared_ptr<fitx::Value>>
+BasicBlockValueStates::getStateValues(const fitx::State &state) {
+  std::vector<std::shared_ptr<fitx::Value>> values;
   for (auto value = value_states_.begin(); value != value_states_.end();
        value++) {
     if (value->second.CurrentState() == state)
@@ -268,9 +283,9 @@ BasicBlockValueStates::getStateValues(const framework::State &state) {
   return values;
 }
 
-std::vector<std::pair<std::shared_ptr<framework::Value>, TransitionLogs *>>
-BasicBlockValueStates::getValueTransitionStates(const framework::State &state) {
-  std::vector<std::pair<std::shared_ptr<framework::Value>, TransitionLogs *>>
+std::vector<std::pair<std::shared_ptr<fitx::Value>, TransitionLogs *>>
+BasicBlockValueStates::getValueTransitionStates(const fitx::State &state) {
+  std::vector<std::pair<std::shared_ptr<fitx::Value>, TransitionLogs *>>
       values;
   for (auto value = value_states_.begin(); value != value_states_.end();
        value++) {
@@ -282,8 +297,8 @@ BasicBlockValueStates::getValueTransitionStates(const framework::State &state) {
 
 bool BasicBlockValueStates::transitionState(
     std::vector<Transition> &transitions,
-    std::shared_ptr<framework::Value> value,
-    std::shared_ptr<framework::Instruction> instruction) {
+    std::shared_ptr<fitx::Value> value,
+    std::shared_ptr<fitx::Instruction> instruction) {
   generateWarning(instruction.get(), "Transition State Called");
   if (valueExists(value)) {
     generateWarning(instruction.get(), "value exists");
@@ -306,7 +321,7 @@ bool BasicBlockValueStates::transitionState(
     return false;
   }
 
-  framework::Transition *transition = nullptr;
+  fitx::Transition *transition = nullptr;
   auto init_transition = transitions.begin();
 
   while (init_transition != transitions.end()) {
@@ -336,7 +351,7 @@ void BasicBlockValueStates::print() {
 /* ArgTransitions Class */
 ArgTransitions::ArgTransitions() : transition_per_state_() {}
 
-ArgTransitions::ArgTransitions(std::set<framework::State> states) {
+ArgTransitions::ArgTransitions(std::set<fitx::State> states) {
   for (auto state : states)
     transition_per_state_[state] = TransitionLogs();
 }
@@ -363,7 +378,7 @@ void ArgTransitions::addArgTransitions(const ArgTransitions &arg_transitions) {
 
 bool ArgTransitions::addTransition(
     std::vector<Transition> &transitions,
-    std::shared_ptr<framework::Instruction> inst) {
+    std::shared_ptr<fitx::Instruction> inst) {
   bool changed = false;
   for (auto &state : transition_per_state_) {
     State current_state = state.first;
@@ -409,9 +424,9 @@ ArgValueStates::operator=(const ArgValueStates &arg_value_states) {
   return *this;
 }
 
-const std::map<std::shared_ptr<framework::Value>, std::vector<Transition>>
+const std::map<std::shared_ptr<fitx::Value>, std::vector<Transition>>
 ArgValueStates::getValueStateForArg(int64_t index) const {
-  std::map<std::shared_ptr<framework::Value>, std::vector<Transition>> new_map;
+  std::map<std::shared_ptr<fitx::Value>, std::vector<Transition>> new_map;
 
   if (value_states_.size() <= index)
     return new_map;
@@ -429,26 +444,26 @@ ArgValueStates::getValueStateForArg(int64_t index) const {
   return new_map;
 }
 
-/* const std::map<std::shared_ptr<framework::Value>,
+/* const std::map<std::shared_ptr<fitx::Value>,
  * std::vector<TransitionLogs>> */
 /* ArgValueStates::getValueTransitionLogsForArg(int64_t index) const { */
 /*   if (value_states_.size() <= index) */
-/*     return std::map<std::shared_ptr<framework::Value>, */
+/*     return std::map<std::shared_ptr<fitx::Value>, */
 /*                     std::vector<TransitionLogs>>(); */
 
 /*   return value_states_[index]; */
 /* } */
 
-const std::map<std::shared_ptr<framework::Value>, ArgTransitions>
+const std::map<std::shared_ptr<fitx::Value>, ArgTransitions>
 ArgValueStates::getArgTransitions(int64_t index) const {
   if (value_states_.size() <= index)
-    return std::map<std::shared_ptr<framework::Value>, ArgTransitions>();
+    return std::map<std::shared_ptr<fitx::Value>, ArgTransitions>();
   return value_states_[index];
 }
 
-std::vector<std::pair<std::shared_ptr<framework::Value>, TransitionLogs *>>
-ArgValueStates::getValueTransitionStates(const framework::State &state) {
-  std::vector<std::pair<std::shared_ptr<framework::Value>, TransitionLogs *>>
+std::vector<std::pair<std::shared_ptr<fitx::Value>, TransitionLogs *>>
+ArgValueStates::getValueTransitionStates(const fitx::State &state) {
+  std::vector<std::pair<std::shared_ptr<fitx::Value>, TransitionLogs *>>
       values;
   for (auto &value_states : value_states_) {
     for (auto value = value_states.begin(); value != value_states.end();
@@ -465,7 +480,7 @@ ArgValueStates::getValueTransitionStates(const framework::State &state) {
         }
       }
       /* std::vector<TransitionLogs*> new_logs; */
-      /* for (framework::TransitionLogs& log : value->second) { */
+      /* for (fitx::TransitionLogs& log : value->second) { */
       /*   if (log.LeastSignificantSource().isInitState()) { */
       /*     if (log.MostSignificantTarget() == state) { */
       /*       new_logs.push_back(&log); */
@@ -540,9 +555,9 @@ void ArgValueStates::addArgValueState(const ArgValueStates &states) {
 
 bool ArgValueStates::transitionState(
     std::vector<Transition> &transitions,
-    std::shared_ptr<framework::Value> value,
-    std::shared_ptr<framework::Instruction> instruction) {
-  if (auto argument = framework::shared_dyn_cast<framework::Argument>(value)) {
+    std::shared_ptr<fitx::Value> value,
+    std::shared_ptr<fitx::Instruction> instruction) {
+  if (auto argument = fitx::shared_dyn_cast<fitx::Argument>(value)) {
     uint64_t arg_index = argument->ArgNum();
     if (value_states_.size() <= arg_index)
       return false;
@@ -597,19 +612,19 @@ bool ArgValueStates::operator==(const ArgValueStates &states) {
 }
 
 bool BasicBlockInformation::operator==(
-    const framework::BasicBlockInformation &prev_block_info) {
+    const fitx::BasicBlockInformation &prev_block_info) {
   return value_states_ == prev_block_info.value_states_ &&
          arg_value_states_ == prev_block_info.arg_value_states_ &&
          return_values_ == prev_block_info.return_values_;
 }
 
 void BasicBlockInformation::addReturnValues(
-    const std::set<std::shared_ptr<framework::Value>> &return_values) {
+    const std::set<std::shared_ptr<fitx::Value>> &return_values) {
   return_values_.insert(return_values.begin(), return_values.end());
 }
 
 void BasicBlockInformation::addReturnValue(
-    std::shared_ptr<framework::Value> value) {
+    std::shared_ptr<fitx::Value> value) {
   return_values_.insert(value);
 }
 
@@ -632,12 +647,13 @@ bool BasicBlockInformation::ReturnValueSatisfiable(long value) {
 void BasicBlockInformation::removeReturnvalue(int value) {
   auto found_value = std::find_if(
       return_values_.begin(), return_values_.end(), [value](auto ret_val) {
-        if (auto const_ret = framework::shared_dyn_cast<ConstValue>(ret_val))
+        if (auto const_ret = fitx::shared_dyn_cast<ConstValue>(ret_val))
           return value == const_ret->getConstValue();
         return false;
       });
-  if (*found_value)
-    return_values_.erase(*found_value);
+  // Bug fix: guard against end() before dereferencing.
+  if (found_value != return_values_.end())
+    return_values_.erase(found_value);
 }
 
 void BasicBlockInformation::setPartialStates(bool partial_states) {
@@ -645,7 +661,7 @@ void BasicBlockInformation::setPartialStates(bool partial_states) {
 }
 
 bool BasicBlockInformation::IsInSamelinePredecessor(
-    std::shared_ptr<framework::BasicBlock> block) {
+    std::shared_ptr<fitx::BasicBlock> block) {
   return std::find_if(same_line_predecessors_.begin(),
                       same_line_predecessors_.end(), [block](auto predecessor) {
                         return block == predecessor.lock();
@@ -653,12 +669,12 @@ bool BasicBlockInformation::IsInSamelinePredecessor(
 }
 
 void BasicBlockInformation::addSameLinePredecessor(
-    std::shared_ptr<framework::BasicBlock> block) {
+    std::shared_ptr<fitx::BasicBlock> block) {
   same_line_predecessors_.push_back(block);
 }
 
 void BasicBlockInformation::addSameLinePredecessor(
-    std::vector<std::weak_ptr<framework::BasicBlock>> blocks) {
+    std::vector<std::weak_ptr<fitx::BasicBlock>> blocks) {
   same_line_predecessors_.insert(same_line_predecessors_.end(), blocks.begin(),
                                  blocks.end());
 }
@@ -671,4 +687,4 @@ void BasicBlockInformation::readCurrentStates() {
   arg_value_states_.print();
 }
 
-} // namespace framework
+} // namespace fitx

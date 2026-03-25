@@ -255,7 +255,7 @@ createCexHarness(BmcTraceWrapper<Trace> &trace, const DataLayout &dl,
   // Build harness functions
   for (auto CFV : FuncValueMap) {
 
-    auto CF = CFV.first;
+    const auto *CF = CFV.first;
     auto &values = CFV.second;
 
     // This is where we will build the harness function

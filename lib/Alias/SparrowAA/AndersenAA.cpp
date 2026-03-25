@@ -1,6 +1,7 @@
 /**
  * @file AndersenAA.cpp
- * @brief LLVM AliasAnalysis interface implementation for Andersen's pointer analysis.
+ * @brief LLVM AliasAnalysis interface implementation for Andersen's pointer
+ * analysis.
  *
  * This file implements the AliasAnalysis interface that LLVM uses to query
  * alias information. It wraps the underlying Andersen pointer analysis engine
@@ -28,29 +29,24 @@ static inline bool isSetContainingOnly(const AndersPtsSet &set, NodeIndex i) {
 }
 
 /**
- * @brief Determine the alias relationship between two LLVM values using Andersen's analysis.
+ * @brief Determine the alias relationship between two LLVM values using
+ * Andersen's analysis.
  *
  * First checks if the values are merged to the same node (MustAlias).
  * Then retrieves points-to sets and checks for null pointers (NoAlias).
- * Finally compares points-to sets for intersection (MayAlias/MustAlias/NoAlias).
+ * Finally compares points-to sets for intersection
+ * (MayAlias/MustAlias/NoAlias).
  *
  * @param v1 First value to check
  * @param v2 Second value to check
  * @return AliasResult indicating the alias relationship
  */
 AliasResult AndersenAAResult::andersenAlias(const Value *v1, const Value *v2) {
-  std::vector<NodeIndex> n1List, n2List;
-  (anders.nodeFactory).getValueNodesFor(v1, n1List);
-  (anders.nodeFactory).getValueNodesFor(v2, n2List);
-
-  for (auto n1 : n1List) {
-    NodeIndex rep1 = (anders.nodeFactory).getMergeTarget(n1);
-    for (auto n2 : n2List) {
-      NodeIndex rep2 = (anders.nodeFactory).getMergeTarget(n2);
-      if (rep1 == rep2)
-        return AliasResult::MustAlias;
-    }
-  }
+  // NOTE: We intentionally do NOT return MustAlias based on merged node
+  // representatives.  Two nodes are merged when they have the same points-to
+  // set (pointer equivalence), not because they refer to the same memory
+  // location.  Returning MustAlias for merged nodes is unsound and can cause
+  // incorrect optimizations.
 
   AndersPtsSet s1, s2;
   if (!anders.getPointsToSet(v1, s1) || !anders.getPointsToSet(v2, s2))
@@ -62,6 +58,7 @@ AliasResult AndersenAAResult::andersenAlias(const Value *v1, const Value *v2) {
   if (isNull1 || isNull2)
     return AliasResult::NoAlias;
 
+  // MustAlias only when both sets are singletons pointing to the same object.
   if (s1.getSize() == 1 && s2.getSize() == 1 && *s1.begin() == *s2.begin())
     return AliasResult::MustAlias;
 

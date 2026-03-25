@@ -22,25 +22,24 @@
 namespace lotus {
 namespace sifa {
 
-template <typename L>
-struct RegexRefHash {
+template <typename L> struct RegexRefHash {
   std::size_t operator()(const lotus::pathexpressions::RegexRef<L> &r) const {
     return r ? r->hashCode() : 0;
   }
 };
 
-template <typename L>
-struct RegexRefEq {
+template <typename L> struct RegexRefEq {
   bool operator()(const lotus::pathexpressions::RegexRef<L> &a,
                   const lotus::pathexpressions::RegexRef<L> &b) const {
-    if (a == b) return true;
-    if (!a || !b) return false;
+    if (a == b)
+      return true;
+    if (!a || !b)
+      return false;
     return a->equals(*b);
   }
 };
 
-template <typename L>
-class RegexDagCompressor final {
+template <typename L> class RegexDagCompressor final {
 public:
   using Node = RegexDagNode<L>;
   using Dag = RegexDag<L>;
@@ -70,7 +69,8 @@ private:
 
       mergeInDirection(predator, forward);
 
-      const auto &next = forward ? predator->getOutgoingNodes() : predator->getIncomingNodes();
+      const auto &next =
+          forward ? predator->getOutgoingNodes() : predator->getIncomingNodes();
       for (Node *n : next) {
         if (visited.insert(n).second) {
           work.push(n);
@@ -82,7 +82,8 @@ private:
 
   void mergeInDirection(Node *baseNode, bool forward) {
     mergeTable_.clear();
-    const std::unordered_set<Node *> candidates = safeCandidates(baseNode, forward);
+    const std::unordered_set<Node *> candidates =
+        safeCandidates(baseNode, forward);
     for (Node *c : candidates) {
       mergeTable_[c->getContent()].insert(c);
     }
@@ -93,7 +94,8 @@ private:
 
   std::unordered_set<Node *> safeCandidates(Node *base, bool forward) {
     std::unordered_set<Node *> candidates;
-    const auto &direct = forward ? base->getOutgoingNodes() : base->getIncomingNodes();
+    const auto &direct =
+        forward ? base->getOutgoingNodes() : base->getIncomingNodes();
     for (Node *n : direct) {
       candidates.insert(n);
     }
@@ -108,7 +110,8 @@ private:
       while (!q.empty()) {
         Node *cur = q.front();
         q.pop();
-        const auto &nbrs = forward ? cur->getOutgoingNodes() : cur->getIncomingNodes();
+        const auto &nbrs =
+            forward ? cur->getOutgoingNodes() : cur->getIncomingNodes();
         for (Node *n : nbrs) {
           if (seen.insert(n).second) {
             if (candidates.count(n)) {
@@ -126,7 +129,8 @@ private:
     return candidates;
   }
 
-  Node *groupToSingleNode(const RegexRef &label, const std::unordered_set<Node *> &mergeGroup) {
+  Node *groupToSingleNode(const RegexRef &label,
+                          const std::unordered_set<Node *> &mergeGroup) {
     if (mergeGroup.size() <= 1) {
       return *mergeGroup.begin();
     }
@@ -160,7 +164,8 @@ private:
 
     // Copy outgoing edges to predator.
     ignore.clear();
-    ignore.insert(predator->getOutgoingNodes().begin(), predator->getOutgoingNodes().end());
+    ignore.insert(predator->getOutgoingNodes().begin(),
+                  predator->getOutgoingNodes().end());
     ignore.insert(predator);
     for (Node *out : prey->getOutgoingNodes()) {
       if (!ignore.count(out)) {
@@ -217,11 +222,12 @@ private:
   Dag *dag_ = nullptr;
   bool mergedFlag_ = false;
 
-  std::unordered_map<RegexRef, std::unordered_set<Node *>, RegexRefHash<L>, RegexRefEq<L>> mergeTable_;
+  std::unordered_map<RegexRef, std::unordered_set<Node *>, RegexRefHash<L>,
+                     RegexRefEq<L>>
+      mergeTable_;
 };
 
 } // namespace sifa
 } // namespace lotus
 
 #endif // LOTUS_VERIFICATION_SIFA_REGEXDAG_REGEXDAGCOMPRESSOR_H
-

@@ -14,12 +14,14 @@
 
 #pragma once
 
+#include <list>
 #include <map>
 #include <set>
 #include <string>
 #include <vector>
 
 #include <llvm/IR/Argument.h>
+#include <llvm/IR/Constants.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Value.h>
 #include <llvm/Support/Casting.h>
@@ -43,13 +45,24 @@ void lotus_clear_hash(T *to_clear) {
   to_clear->swap(empty);
 }
 
-// Memory value item (without path conditions)
+// Memory value item with path conditions and confidence.
 struct mem_value_item_t {
+  path_cond_t cond;
   Instruction *pos;  // Where value was assigned (nullptr = from caller)
   Value *val;        // The actual value
+  float confidence;
 
-  mem_value_item_t(Instruction *pos, Value *val)
-      : pos(pos), val(val) {}
+  mem_value_item_t(path_cond_t cond, Instruction *pos, Value *val,
+                   float confidence = 1.0f)
+      : cond(cond), pos(pos), val(val), confidence(confidence) {}
+
+  static float compute_and_confidence(float conf1, float conf2) {
+    return conf1 * conf2;
+  }
+
+  static float compute_or_confidence(float conf1, float conf2) {
+    return 1.0f - ((1.0f - conf1) * (1.0f - conf2));
+  }
 };
 
 using mem_value_t = std::vector<mem_value_item_t>;
@@ -123,7 +136,7 @@ public:
 };
 
 /*
- * LocValue - Value at a memory location (simplified without conditions)
+ * LocValue - Value at a memory location with path conditions.
  */
 class LocValue {
 public:
@@ -132,6 +145,7 @@ public:
 private:
   Value *val;
   Instruction *pos_inst;
+  path_cond_t cond;
   UpdateType update_type;
 
 public:
@@ -141,11 +155,14 @@ public:
   static Value *UNDEF_VALUE;
   static Value *SUMMARY_VALUE;
 
-  LocValue(Value *val, Instruction *from_inst, UpdateType update_type = STRONG)
-      : val(val), pos_inst(from_inst), update_type(update_type) {}
+  LocValue(Value *val, Instruction *from_inst, path_cond_t cond,
+           UpdateType update_type = STRONG)
+      : val(val), pos_inst(from_inst), cond(cond), update_type(update_type) {}
 
   bool isStrongUpdate() { return update_type == UpdateType::STRONG; }
   void resetUpdateType(UpdateType type) { update_type = type; }
+  path_cond_t getCond() { return cond; }
+  void setCond(path_cond_t new_cond) { cond = new_cond; }
   Instruction *getPos() { return pos_inst; }
   Value *getVal() { return val; }
   void dump();
@@ -207,14 +224,17 @@ public:
   void dump();
 
   ObjectLocator *offsetBy(int64_t extra_off);
-  LocValue *storeValue(Value *val, Instruction *inst,
+  LocValue *storeValue(Value *val, Instruction *inst, path_cond_t cond,
                        int function_level = FUNC_LEVEL_UNDEFINED);
   
-  // Get values from locator (simplified without conditions)
-  Argument *getValues(Instruction *pos_inst, mem_value_t &res, 
+  // Get values from locator with path and summary bookkeeping.
+  Argument *getValues(Instruction *pos_inst, path_cond_t pre_cond,
+                      mem_value_t &res,
                       Type *symbol_type = nullptr,
                       int function_level = FUNC_LEVEL_UNDEFINED,
-                      bool enable_strong_update = true);
+                      bool enable_strong_update = true,
+                      ObjectLocator *func_call_cache = nullptr,
+                      bool is_include_func_summary = false);
 
   Value *getInitializerForGlobalValue();
   LocValue *getVersion(Instruction *pos_inst);
@@ -274,4 +294,3 @@ public:
 };
 
 } // namespace llvm
-

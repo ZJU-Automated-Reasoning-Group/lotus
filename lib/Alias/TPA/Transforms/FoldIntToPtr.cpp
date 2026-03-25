@@ -7,8 +7,8 @@
  * - inttoptr(ptrtoint(X)) -> X (pointer copy)
  * - inttoptr(ptrtoint(X) + offset) -> gep(X, offset) (pointer arithmetic)
  *
- * This simplifies the IR and makes pointer analysis more accurate by eliminating
- * unnecessary integer conversions.
+ * This simplifies the IR and makes pointer analysis more accurate by
+ * eliminating unnecessary integer conversions.
  *
  * @author rainoftime
  */
@@ -29,7 +29,8 @@ namespace transform {
  *
  * Recognizes two patterns:
  * 1. inttoptr(ptrtoint(X)) -> X (with type cast if needed)
- * 2. inttoptr(ptrtoint(X) + offset) -> gep(X, offset) (with type/offset casts if needed)
+ * 2. inttoptr(ptrtoint(X) + offset) -> gep(X, offset) (with type/offset casts
+ * if needed)
  *
  * @param inst The inttoptr instruction to fold
  * @return true if the instruction was folded and removed, false otherwise
@@ -83,7 +84,8 @@ static bool foldInstruction(IntToPtrInst *inst) {
  *
  * @param F The function to transform
  * @param analysisManager Function analysis manager (unused)
- * @return PreservedAnalyses::none() if modified, PreservedAnalyses::all() otherwise
+ * @return PreservedAnalyses::none() if modified, PreservedAnalyses::all()
+ * otherwise
  */
 PreservedAnalyses
 FoldIntToPtrPass::run(llvm::Function &F,

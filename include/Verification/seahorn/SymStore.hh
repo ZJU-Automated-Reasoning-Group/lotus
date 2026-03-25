@@ -18,7 +18,10 @@ class SymStore;
 namespace detail {
 using namespace expr;
 
-struct SymStoreEvalVisitor : public std::unary_function<Expr, VisitAction> {
+struct SymStoreEvalVisitor {
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   SymStore &m_store;
 
   SymStoreEvalVisitor(SymStore &s) : m_store(s) {}
@@ -34,10 +37,13 @@ struct scoped_track_use {
 };
 } // namespace detail
 
-class SymStore : public std::unary_function<Expr, Expr> {
+class SymStore {
   friend struct detail::scoped_track_use;
 
 public:
+  using argument_type = Expr;
+  using result_type = Expr;
+
   typedef std::shared_ptr<SymStore> SymStorePtr;
   typedef std::unordered_map<Expr, Expr> ExprExprMap;
 

@@ -1,3 +1,5 @@
+*.dot
+telemetry-id
 .sisyphus
 .agent
 .agents
@@ -95,3 +97,4 @@ callgrind.out.*
 dist/*
 docs/build
 /.vs
+.worktrees/

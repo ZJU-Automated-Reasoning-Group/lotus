@@ -119,7 +119,7 @@ std::pair<bool, bool> SMTModel::getBoolValue(const SMTExpr &E,
  sol.getSMTModel().getPartialModel(all_vars.setDifference(interface_vars));
 
  SMTExpr ff = y * x == 0;
- std::cout << par_mol.getBoolValue(ff).second << std::endl;
+ std::cout << par_mol.getBoolValue(ff).second << '\n';
  *
  */
 

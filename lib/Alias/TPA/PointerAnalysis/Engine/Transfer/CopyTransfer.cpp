@@ -21,15 +21,17 @@ void TransferFunction::evalCopyNode(const ProgramPoint &pp,
     // This must happen in a PHI node, where one operand must be defined after
     // the CopyNode itself. We need to proceed because the operand may depend on
     // the rhs of this CopyNode and if we give up here, the analysis will reach
-    // an immature fixpoint
+    // an immature fixpoint.
     if (srcPtr == nullptr)
       continue;
 
     auto pSet = env.lookup(srcPtr);
-    if (pSet.empty())
-      // Operand not ready
-      return;
-
+    // Bug fix (same class as CallTransfer Bug 7): previously an empty
+    // points-to set caused an early return, which could cause a premature
+    // fixpoint if the operand's set is computed later in the iteration.
+    // Now we include the empty set as a placeholder and continue; the
+    // merge will simply contribute nothing for this operand, and the node
+    // will be re-evaluated when the operand's set changes.
     srcPtsSets.emplace_back(pSet);
   }
 

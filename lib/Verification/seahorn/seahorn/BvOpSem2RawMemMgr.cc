@@ -15,7 +15,7 @@
 namespace seahorn {
 namespace details {
 enum class MemAllocatorKind { NORMAL_ALLOCATOR, STATIC_ALLOCATOR };
-}
+} // namespace details
 } // namespace seahorn
 
 static llvm::cl::opt<enum seahorn::details::MemAllocatorKind> MemAllocatorOpt(
@@ -665,7 +665,7 @@ RawMemManagerCore::MemValTy RawMemManagerCore::MemSet(PtrTy ptr, Expr _val,
         ERR << "Unexpected instruction found: " << m_ctx.getCurrentInst()
             << "\n";
       });
-  auto lenValue = memset->getArgOperand(2);
+  auto *lenValue = memset->getArgOperand(2);
   auto lenBitWidth = lenValue->getType()->getIntegerBitWidth();
 
   makeMemAligned({simplifiedLength, lenBitWidth});
@@ -711,7 +711,7 @@ RawMemManagerCore::MemValTy RawMemManagerCore::MemCpy(PtrTy dPtr, PtrTy sPtr,
         ERR << "Unexpected instruction found: " << m_ctx.getCurrentInst()
             << "\n";
       });
-  auto lenValue = memcpy->getArgOperand(2);
+  auto *lenValue = memcpy->getArgOperand(2);
   auto lenBitWidth = lenValue->getType()->getIntegerBitWidth();
 
   makeMemAligned({simplifiedLength, lenBitWidth});

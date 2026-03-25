@@ -1,11 +1,11 @@
 #include "seahorn/ClpWrite.hh"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/IR/Value.h"
-#include "llvm/IR/Constants.h"
-#include "seahorn/Expr/ExprLlvm.hh"
-#include "boost/algorithm/string/replace.hpp"
 #include "boost/algorithm/string/predicate.hpp"
+#include "boost/algorithm/string/replace.hpp"
+#include "seahorn/Expr/ExprLlvm.hh"
 #include "seahorn/Support/SeaDebug.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/CommandLine.h"
 #include <unordered_map>
 
 static llvm::cl::opt<bool>
@@ -426,4 +426,4 @@ namespace seahorn
     for (auto &rule : m_rules) { rule.print (oss); }
     return oss.str ();
   }
-}
+} // namespace seahorn

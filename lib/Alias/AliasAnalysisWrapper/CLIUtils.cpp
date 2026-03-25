@@ -53,7 +53,7 @@ std::vector<std::string> collectConfigFilePaths() {
     
     // Collect config files from -config option (comma-separated)
     if (!ConfigFile.empty()) {
-        std::string config = ConfigFile;
+        std::string config = ConfigFile.getValue();
         size_t pos = 0;
         while ((pos = config.find(',')) != std::string::npos) {
             std::string path = config.substr(0, pos);

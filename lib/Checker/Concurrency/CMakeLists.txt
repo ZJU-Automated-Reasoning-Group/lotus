@@ -7,6 +7,8 @@ add_library(ConcurrencyChecker STATIC
     AtomicityChecker.cpp
     ConditionVariableChecker.cpp
     LockMismatchChecker.cpp
+    OpenMPChecker.cpp
+    MPIChecker.cpp
 )
 
 target_link_libraries(ConcurrencyChecker

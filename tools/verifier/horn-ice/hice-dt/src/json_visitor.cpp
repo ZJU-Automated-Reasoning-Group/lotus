@@ -8,61 +8,48 @@
 // Project includes
 #include "json_visitor.h"
 
-namespace horn_verification
-{
+namespace horn_verification {
 
-	void json_visitor::visit(categorical_node & node)
-	{
-		
-		_out << "{\"attribute\":\"" << _metadata.categorical_names()[node.attribute()] << "\",\"cut\":0,\"classification\":true,\"children\":[";
-		
-		bool first = true;
-		for (auto & child : node.children())
-		{
+void json_visitor::visit(categorical_node &node) {
 
-			if (first)
-			{
-				first = false;
-			}
-			else
-			{
-				_out << ",";
-			}
-			
-			
-			if (child)
-			{
-				child->accept(*this);
-			}
-			else
-			{
-				_out << "null";
-			}
-			
-		}
-		
-		_out << "]}";
-		
-	}
-	
+  _out << "{\"attribute\":\"" << _metadata.categorical_names()[node.attribute()]
+       << "\",\"cut\":0,\"classification\":true,\"children\":[";
 
-	void json_visitor::visit(int_node & node)
-	{
-		
-		_out << "{\"attribute\":\"" << _metadata.int_names()[node.attribute()] << "\",\"cut\":" << node.threshold() << ",\"classification\":true,\"children\":[";
-		
-		node.children()[0]->accept(*this);
-		_out << ",";
-		node.children()[1]->accept(*this);
+  bool first = true;
+  for (auto &child : node.children()) {
 
-		_out << "]}";
-		
-	}
-	
+    if (first) {
+      first = false;
+    } else {
+      _out << ",";
+    }
 
-	void json_visitor::visit(leaf_node & node)
-	{
-		_out << "{\"attribute\":\"\",\"cut\":0,\"classification\":" << (node.output() ? "true" : "false") << ",\"children\":null}";
-	}
+    if (child) {
+      child->accept(*this);
+    } else {
+      _out << "null";
+    }
+  }
+
+  _out << "]}";
+}
+
+void json_visitor::visit(int_node &node) {
+
+  _out << "{\"attribute\":\"" << _metadata.int_names()[node.attribute()]
+       << "\",\"cut\":" << node.threshold()
+       << ",\"classification\":true,\"children\":[";
+
+  node.children()[0]->accept(*this);
+  _out << ",";
+  node.children()[1]->accept(*this);
+
+  _out << "]}";
+}
+
+void json_visitor::visit(leaf_node &node) {
+  _out << "{\"attribute\":\"\",\"cut\":0,\"classification\":"
+       << (node.output() ? "true" : "false") << ",\"children\":null}";
+}
 
 }; // End namespace horn_verification

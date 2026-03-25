@@ -1,10 +1,12 @@
 /**
  * @file LowerGlobalCtor.cpp
- * @brief Lowers global constructor/destructor arrays into explicit function calls.
+ * @brief Lowers global constructor/destructor arrays into explicit function
+ * calls.
  *
  * This pass converts LLVM's @llvm.global_ctors and @llvm.global_dtors arrays
- * into explicit function calls inserted at the beginning of main(). This simplifies
- * the IR for analysis passes that don't need to handle these special global arrays.
+ * into explicit function calls inserted at the beginning of main(). This
+ * simplifies the IR for analysis passes that don't need to handle these special
+ * global arrays.
  *
  * @author rainoftime
  */
@@ -29,7 +31,8 @@ namespace transform {
  *
  * @param ctor The @llvm.global_ctors global variable
  * @param module The module containing the variable
- * @return true if the transformation was applied, false if main() not found or array invalid
+ * @return true if the transformation was applied, false if main() not found or
+ * array invalid
  */
 static bool lowerGlobalCtor(GlobalVariable &ctor, Module &module) {
   auto *mainFunc = module.getFunction("main");
@@ -89,7 +92,8 @@ static bool lowerGlobalDtor(GlobalVariable &dtor, Module &module) {
  *
  * @param module The module to transform
  * @param analysisManager Module analysis manager (unused)
- * @return PreservedAnalyses::none() if modified, PreservedAnalyses::all() otherwise
+ * @return PreservedAnalyses::none() if modified, PreservedAnalyses::all()
+ * otherwise
  */
 PreservedAnalyses
 LowerGlobalCtorPass::run(Module &module,

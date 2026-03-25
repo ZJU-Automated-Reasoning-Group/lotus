@@ -1,11 +1,11 @@
 #pragma once
 
+#include "Solvers/SMT/LIBSMT/SMTObject.h"
+#include "z3++.h"
+
 #include <iostream>
 #include <map>
 #include <memory>
-
-#include "Solvers/SMT/LIBSMT/SMTObject.h"
-#include "z3++.h"
 
 class SMTFactory;
 class SMTExprVec;

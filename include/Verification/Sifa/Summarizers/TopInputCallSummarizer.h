@@ -1,14 +1,18 @@
 //===-- Verification/Sifa/Summarizers/TopInputCallSummarizer.h ------------===//
 //
-// Call summarizer that interprets callee with top input and caches (Ultimate-aligned).
+// Call summarizer that interprets callee with top input and caches
+// (Ultimate-aligned).
 //
 // Ultimate's TopInputCallSummarizer: per-callee cache; summarize(callee, input)
-// returns cached summary or interpretForSingleMarker(dag, pathToReturn, tools.top()).
+// returns cached summary or interpretForSingleMarker(dag, pathToReturn,
+// tools.top()).
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LOTUS_VERIFICATION_SIFA_SUMMARIZERS_TOPINPUTCALLSUMMARIZER_H
 #define LOTUS_VERIFICATION_SIFA_SUMMARIZERS_TOPINPUTCALLSUMMARIZER_H
+
+#include "llvm/ADT/Optional.h"
 
 #include "Verification/Sifa/Caches/ProcedureResourceCache.h"
 #include "Verification/Sifa/Cfg/Transition.h"
@@ -18,7 +22,6 @@
 #include "Verification/Sifa/Statistics/SifaStats.h"
 #include "Verification/Sifa/Summarizers/ICallSummarizer.h"
 
-#include "llvm/ADT/Optional.h"
 #include <string>
 #include <unordered_map>
 
@@ -30,12 +33,14 @@ class TopInputCallSummarizer final : public ICallSummarizer<StateT> {
 public:
   using Domain = AbstractDomain<Transition, StateT>;
 
-  /// Stub: always returns the given top state (e.g. for tests or intraprocedural only).
+  /// Stub: always returns the given top state (e.g. for tests or
+  /// intraprocedural only).
   explicit TopInputCallSummarizer(StateT topState)
       : useStub_(true), topState_(std::move(topState)) {}
 
   /// Ultimate-aligned: interpret callee with domain.top(), cache per callee.
-  /// Requires ProcedureResourceCache built with Module and CallGraph for resourcesOf(name).
+  /// Requires ProcedureResourceCache built with Module and CallGraph for
+  /// resourcesOf(name).
   TopInputCallSummarizer(SifaStats &stats, const Domain &domain,
                          ProcedureResourceCache &cache,
                          DagInterpreter<Transition, StateT> &dagIpr)

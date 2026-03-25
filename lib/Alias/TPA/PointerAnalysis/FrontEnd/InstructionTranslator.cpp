@@ -5,8 +5,10 @@
 // Key Responsibilities:
 // 1. Identify relevant instructions (Alloca, Load, Store, Call, GEP, etc.).
 // 2. Filter irrelevant instructions (arithmetic, etc.).
-// 3. Handle complicated logic like PHI nodes and Selects (translating them to Copy).
-// 4. Handle "extraction" patterns (ExtractValue, ExtractElement) to recover pointers.
+// 3. Handle complicated logic like PHI nodes and Selects (translating them to
+// Copy).
+// 4. Handle "extraction" patterns (ExtractValue, ExtractElement) to recover
+// pointers.
 
 #include "Alias/TPA/PointerAnalysis/FrontEnd/CFG/InstructionTranslator.h"
 
@@ -33,12 +35,13 @@ tpa::CFGNode *InstructionTranslator::visitAllocaInst(AllocaInst &allocaInst) {
   // Only interested in allocas of pointer types (pointer to pointer),
   // OR allocas of anything if we track address-taken?
   // Actually, TPA tracks allocations of memory blocks.
-  // Wait, `allocaInst.getType()` is `T*`. `allocaInst.getAllocatedType()` is `T`.
-  // The check below says `isPointerTy()`. This implies we only track stack
-  // allocations if the *result* is treated as a pointer (always true) 
+  // Wait, `allocaInst.getType()` is `T*`. `allocaInst.getAllocatedType()` is
+  // `T`. The check below says `isPointerTy()`. This implies we only track stack
+  // allocations if the *result* is treated as a pointer (always true)
   // or maybe it means we only care if we allocate a pointer on the stack?
   //
-  // Re-reading code: `visitAllocaInst` assumes `getType()->isPointerTy()`, which is always true.
+  // Re-reading code: `visitAllocaInst` assumes `getType()->isPointerTy()`,
+  // which is always true.
   assert(allocaInst.getType()->isPointerTy());
 
   const auto *allocType = typeMap.lookup(allocaInst.getAllocatedType());
@@ -48,7 +51,8 @@ tpa::CFGNode *InstructionTranslator::visitAllocaInst(AllocaInst &allocaInst) {
 }
 
 tpa::CFGNode *InstructionTranslator::visitLoadInst(LoadInst &loadInst) {
-  // We only care about loading POINTERS. Data flow of non-pointers is irrelevant.
+  // We only care about loading POINTERS. Data flow of non-pointers is
+  // irrelevant.
   if (!loadInst.getType()->isPointerTy())
     return nullptr;
 
@@ -129,6 +133,13 @@ tpa::CFGNode *InstructionTranslator::visitPHINode(PHINode &phiInst) {
     if (isa<UndefValue>(value))
       continue;
     srcs.insert(value);
+  }
+
+  // Bug fix: if all incoming values are UndefValue (or the PHI has no
+  // incoming values), srcs will be empty and createCopyNode would assert.
+  // Model an all-undef PHI as a copy from UndefValue (unknown pointer).
+  if (srcs.empty()) {
+    srcs.insert(UndefValue::get(phiInst.getType()));
   }
 
   return createCopyNode(&phiInst, srcs);
@@ -248,12 +259,34 @@ InstructionTranslator::visitExtractValueInst(ExtractValueInst &inst) {
 }
 tpa::CFGNode *
 InstructionTranslator::visitInsertValueInst(InsertValueInst &inst) {
-  if (!inst.getType()->isPointerTy())
-    return nullptr;
-  return handleUnsupportedInst(inst);
+  // InsertValueInst produces an aggregate type, not a pointer type directly.
+  // The pointer analysis only models pointer-typed SSA values, so we can
+  // safely ignore insertvalue instructions here. Any pointer-typed fields
+  // inside the aggregate are recovered at their use sites via
+  // visitExtractValueInst().
+  //
+  // Bug fix: previously this called handleUnsupportedInst() (which calls
+  // llvm_unreachable) whenever the aggregate type happened to be a pointer
+  // type (which is unusual but valid, e.g. a pointer-to-struct aggregate).
+  // This caused an analysis crash on valid IR. Since we handle the extraction
+  // side conservatively, we can safely return nullptr here.
+  (void)inst;
+  return nullptr;
 }
 tpa::CFGNode *InstructionTranslator::visitVAArgInst(VAArgInst &inst) {
-  return handleUnsupportedInst(inst);
+  // Bug fix: previously this called handleUnsupportedInst() which calls
+  // llvm_unreachable, crashing the analysis on any program that uses variadic
+  // functions (va_arg). The va_arg instruction reads the next argument from a
+  // va_list. For pointer analysis purposes:
+  //   - If the result is not a pointer type, it is irrelevant — return nullptr.
+  //   - If the result is a pointer type, we conservatively model it as an
+  //     unknown pointer (UndefValue), since we cannot statically determine
+  //     which variadic argument is being read.
+  if (!inst.getType()->isPointerTy())
+    return nullptr;
+
+  std::vector<const llvm::Value *> srcs = {UndefValue::get(inst.getType())};
+  return cfg.create<tpa::CopyCFGNode>(&inst, std::move(srcs));
 }
 tpa::CFGNode *
 InstructionTranslator::visitExtractElementInst(ExtractElementInst &inst) {

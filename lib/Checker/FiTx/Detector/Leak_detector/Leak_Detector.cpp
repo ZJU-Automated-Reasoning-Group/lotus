@@ -3,9 +3,9 @@
 #include "Checker/FiTx/Frontend/State.h"
 
 namespace {
-class LeakDetector : public framework::FrameworkPass {
+class LeakDetector : public fitx::FrameworkPass {
   virtual void defineStates() override {
-    framework::StateManager manager;
+    fitx::StateManager manager;
     MemoryLeak::defineStates(manager);  
     addStateManager(manager);
   }
@@ -13,5 +13,5 @@ class LeakDetector : public framework::FrameworkPass {
 
 }  // namespace
 
-std::vector<framework::FrameworkPass *> framework::FrameworkPass::passes = {
+std::vector<fitx::FrameworkPass *> fitx::FrameworkPass::passes = {
     new LeakDetector()};

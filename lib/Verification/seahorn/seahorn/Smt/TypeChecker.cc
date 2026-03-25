@@ -124,10 +124,13 @@ public:
 };
 
 //==-- Adapts visitor for pre- and post- traversal --==/
-class TCV : public std::unary_function<Expr, VisitAction> {
+class TCV {
   std::shared_ptr<TCVR> m_rw;
 
 public:
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   TCV(TypeChecker *tc) : m_rw(std::make_shared<TCVR>(tc)) {}
   VisitAction operator()(Expr exp) {
     if (m_rw->preVisit(exp))

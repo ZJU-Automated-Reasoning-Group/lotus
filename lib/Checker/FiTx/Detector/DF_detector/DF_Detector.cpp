@@ -7,9 +7,9 @@
 #include "Checker/FiTx/Frontend/State.h"
 
 namespace {
-class DoubleFreeDetector : public framework::FrameworkPass {
+class DoubleFreeDetector : public fitx::FrameworkPass {
   virtual void defineStates() override {
-    framework::StateManager manager;
+    fitx::StateManager manager;
     DoubleFree::define_states(manager);
     addStateManager(manager);
   }
@@ -17,5 +17,5 @@ class DoubleFreeDetector : public framework::FrameworkPass {
 
 }  // namespace
 
-std::vector<framework::FrameworkPass *> framework::FrameworkPass::passes = {
+std::vector<fitx::FrameworkPass *> fitx::FrameworkPass::passes = {
     new DoubleFreeDetector()};

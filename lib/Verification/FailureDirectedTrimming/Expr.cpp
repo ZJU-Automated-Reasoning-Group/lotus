@@ -16,7 +16,8 @@ using namespace llvm;
 //     pragmatic "stability" check during CFG iteration.
 //
 // Notes on quantified variables:
-//   - BoundVarManager assigns stable numeric ids to quantifier binders, keyed by
+//   - BoundVarManager assigns stable numeric ids to quantifier binders, keyed
+//   by
 //     (instruction, tag, type). These ids are later used to map binders to
 //     nondeterministic witness values during instrumentation.
 
@@ -139,8 +140,9 @@ ExprRef ExprFactory::and_(ArrayRef<ExprRef> Children) const {
   if (Norm.size() == 1)
     return Norm[0];
 
-  std::sort(Norm.begin(), Norm.end(),
-            [](const ExprRef &A, const ExprRef &B) { return A.get() < B.get(); });
+  std::sort(Norm.begin(), Norm.end(), [](const ExprRef &A, const ExprRef &B) {
+    return A.get() < B.get();
+  });
   Norm.erase(std::unique(Norm.begin(), Norm.end(),
                          [](const ExprRef &A, const ExprRef &B) {
                            return A.get() == B.get();
@@ -178,8 +180,9 @@ ExprRef ExprFactory::or_(ArrayRef<ExprRef> Children) const {
   if (Norm.size() == 1)
     return Norm[0];
 
-  std::sort(Norm.begin(), Norm.end(),
-            [](const ExprRef &A, const ExprRef &B) { return A.get() < B.get(); });
+  std::sort(Norm.begin(), Norm.end(), [](const ExprRef &A, const ExprRef &B) {
+    return A.get() < B.get();
+  });
   Norm.erase(std::unique(Norm.begin(), Norm.end(),
                          [](const ExprRef &A, const ExprRef &B) {
                            return A.get() == B.get();
@@ -309,7 +312,8 @@ ExprRef ExprFactory::deref(ExprRef Ptr, Type *ValueTy) const {
   return E;
 }
 
-ExprRef ExprFactory::cast(Instruction::CastOps Op, Type *DstTy, ExprRef Src) const {
+ExprRef ExprFactory::cast(Instruction::CastOps Op, Type *DstTy,
+                          ExprRef Src) const {
   if (!Src || !DstTy)
     return nullptr;
   auto E = std::make_shared<Expr>();
@@ -600,7 +604,8 @@ bool mayAliasPtrExpr(const ExprRef &A, const ExprRef &B,
 }
 
 // -----------------------------------------------------------------------------
-// substitute (with memo), collectDeref*, collectPointerVars, negate, boundConjuncts
+// substitute (with memo), collectDeref*, collectPointerVars, negate,
+// boundConjuncts
 // -----------------------------------------------------------------------------
 static ExprRef substituteImpl(const ExprFactory &F, const ExprRef &E,
                               const Subst &S,
@@ -763,9 +768,11 @@ void collectPointerVars(const ExprRef &E, SmallVectorImpl<const Value *> &Out) {
 }
 
 // Paper §5: trimming condition = ¬(safety condition). De Morgan for ∧/∨;
-// quantifier flip: ¬∀x.φ → ∃x.¬φ, ¬∃x.φ → ∀x.¬φ (safety uses ∀ for havoc; negation yields ∃).
+// quantifier flip: ¬∀x.φ → ∃x.¬φ, ¬∃x.φ → ∀x.¬φ (safety uses ∀ for havoc;
+// negation yields ∃).
 ExprRef negateForTrimming(const ExprFactory &F, const ExprRef &E) {
-  // Turn SC(π) into TC(π) = ¬SC(π). Existentials must be eliminated before codegen (QE or nondet).
+  // Turn SC(π) into TC(π) = ¬SC(π). Existentials must be eliminated before
+  // codegen (QE or nondet).
   if (!E)
     return nullptr;
   switch (E->Kind) {
@@ -798,10 +805,12 @@ ExprRef negateForTrimming(const ExprFactory &F, const ExprRef &E) {
   }
 }
 
-// Paper §6 Bounding the instrumentation: cap conjuncts so simplified formula is weaker than
-// original (subset of conjuncts ⇒ weaker trimming condition ⇒ prune fewer paths, still sound).
+// Paper §6 Bounding the instrumentation: cap conjuncts so simplified formula is
+// weaker than original (subset of conjuncts ⇒ weaker trimming condition ⇒ prune
+// fewer paths, still sound).
 ExprRef boundConjuncts(const ExprFactory &F, const ExprRef &E, unsigned Max) {
-  // Keep at most Max conjuncts (lex order of exprToString). Smaller assumes, less pruning.
+  // Keep at most Max conjuncts (lex order of exprToString). Smaller assumes,
+  // less pruning.
   if (!E || Max == 0)
     return E;
   if (E->Kind != ExprKind::And)

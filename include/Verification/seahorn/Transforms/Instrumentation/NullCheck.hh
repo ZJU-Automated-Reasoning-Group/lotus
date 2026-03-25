@@ -2,12 +2,12 @@
 #define __NULL_DEREFERENCE_CHECK__HH__
 
 #include "llvm/Pass.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 
 namespace llvm {
    class CallGraph;
-}
+} // namespace llvm
 
 namespace seahorn
 {
@@ -46,5 +46,5 @@ namespace seahorn
     virtual StringRef getPassName () const override {return "NullCheck";}
     
   };
-} // end namespace
+} // namespace seahorn
 #endif

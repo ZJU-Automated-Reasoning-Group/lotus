@@ -1,7 +1,7 @@
-#include <clam/config.h>
+#include "split_oct.hh"
 #include <clam/CrabDomain.hh>
 #include <clam/RegisterAnalysis.hh>
-#include "split_oct.hh"
+#include <clam/config.h>
 
 namespace clam {
 #ifdef INCLUDE_ALL_DOMAINS

@@ -20,7 +20,6 @@ namespace seadsa {
 class CallGraphWrapper {
 public:
   // XXX: use a vector to have more control about the ordering
-  // typedef boost::container::flat_set<const llvm::Instruction*> CallSiteSet;
   typedef std::vector<DsaCallSite> CallSiteSet;
   
 private:

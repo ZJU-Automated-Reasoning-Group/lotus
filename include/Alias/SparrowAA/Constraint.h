@@ -40,12 +40,16 @@ public:
 
   bool operator!=(const AndersConstraint &RHS) const { return !(*this == RHS); }
 
+  // B6 Fix: the original comparisons were all `RHS.field < this->field`,
+  // producing a descending order instead of the ascending order required by
+  // std::set and other sorted containers.  Corrected to `this->field <
+  // RHS.field`.
   bool operator<(const AndersConstraint &RHS) const {
-    if (RHS.type != type)
-      return RHS.type < type;
-    else if (RHS.dest != dest)
-      return RHS.dest < dest;
-    return RHS.src < src;
+    if (type != RHS.type)
+      return type < RHS.type;
+    else if (dest != RHS.dest)
+      return dest < RHS.dest;
+    return src < RHS.src;
   }
 };
 

@@ -127,20 +127,22 @@ namespace aser {
 // get the step size of the getelementptr (which uses variable index)
 size_t getGEPStepSize(const GetElementPtrInst *GEP, const DataLayout &DL) {
     assert(!GEP->hasAllConstantIndices());
-    // since we canonicalized the getelementptr instruction before, the
-    // getelementptr that uses variable to index object can only two different forms
-    assert(GEP->getNumOperands() == 2 || GEP->getNumOperands() == 3);
+    // Iterate through GEP indices to find the first variable index.
+    // The function handles GEPs with any number of operands by skipping
+    // constant indices and returning the step size for the first variable index.
 
     for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP); GTI != GTE; GTI++) {
-        // 1st, the first idx is zero, and the second idx is a variable
-        // getelementptr [type], [type *] %obj, 0, %var
+        // Skip all constant indices (both zero and non-zero). We're looking for
+        // the first variable index to determine the step size.
+        // Examples:
+        //   getelementptr [type], [type *] %obj, 0, %var
+        //   getelementptr [type], [type *] %obj, 0, 1, %var
+        //   getelementptr [type], [type *] %obj, %var
         if (isa<Constant>(GTI.getOperand())) {
-            assert(dyn_cast<Constant>(GTI.getOperand())->isZeroValue());
             continue;
         }
 
-        // 2nd, the first idx is variable
-        // getelementptr [type], [type *] %obj, %var
+        // Found the first variable index - return the step size for this indexed type
         assert(!isa<Constant>(GTI.getOperand()));
         return DL.getTypeAllocSize(GTI.getIndexedType());
     }

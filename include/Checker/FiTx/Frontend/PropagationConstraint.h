@@ -19,12 +19,16 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Pass.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 // include STL
+#include "Checker/FiTx/Core/Instructions.h"
+#include "Checker/FiTx/Core/Utils.h"
+#include "Checker/FiTx/Core/Value.h"
+#include "Checker/FiTx/Frontend/StateTransition.h"
+
 #include <algorithm>
 #include <ctime>
 #include <iostream>
@@ -37,23 +41,17 @@
 #include <string>
 #include <vector>
 
-#include "Checker/FiTx/Core/Instructions.h"
-#include "Checker/FiTx/Core/Utils.h"
-#include "Checker/FiTx/Core/Value.h"
-#include "Checker/FiTx/Frontend/StateTransition.h"
-
-namespace framework {
+namespace fitx {
 // An interface class to be used to restrict the state propagtion on
 // certain situations. Should be overwritten by developers if necessary.
 class StatefulConstraint {
- public:
+public:
   StatefulConstraint() = default;
-  virtual bool shouldPropagateOnCallInst(
-      std::shared_ptr<framework::CallInst> inst) {
+  virtual bool
+  shouldPropagateOnCallInst(std::shared_ptr<fitx::CallInst> inst) {
     return true;
   }
 
   virtual void propagate() {}
-
 };
-};  // namespace framework
+}; // namespace fitx

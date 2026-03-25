@@ -4,8 +4,9 @@
 #include "Checker/KINT/Options.h"
 #include "Checker/KINT/RangeAnalysis.h"
 #include "Checker/Report/SARIF.h"
-#include "Utils/General/range.h"
+#include "Utils/Types/range.h"
 
+#include <llvm/ADT/SmallString.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Metadata.h>
@@ -15,6 +16,18 @@
 using namespace llvm;
 
 namespace kint {
+
+namespace {
+
+static z3::expr bvValFromAPInt(z3::context &ctx, const llvm::APInt &value) {
+  llvm::SmallString<64> decimal;
+  value.toString(decimal, 10, /*Signed=*/false, /*formatAsCLiteral=*/false);
+  Z3_sort sort = Z3_mk_bv_sort(ctx, value.getBitWidth());
+  Z3_ast ast = Z3_mk_numeral(ctx, decimal.c_str(), sort);
+  return z3::to_expr(ctx, ast);
+}
+
+} // namespace
 
 template <interr err, typename StrRet = const char *> constexpr StrRet mkstr() {
   if (err == interr::NONE) {
@@ -103,10 +116,19 @@ bool BugDetection::add_range_cons(
     v = v.extract(rbw - 1, 0);
   }
 
-  const auto upper =
-      z3::ule(v, solver.ctx().bv_val(rng.getUnsignedMax().getZExtValue(), rbw));
-  const auto lower =
-      z3::uge(v, solver.ctx().bv_val(rng.getUnsignedMin().getZExtValue(), rbw));
+  // Use signed comparisons when the range is a signed range (i.e. the signed
+  // min is negative), and unsigned comparisons otherwise.  Using unsigned
+  // bounds for a signed range causes the solver to accept values that are
+  // actually out of range (e.g. treating -1 as 2^32-1).
+  const bool isSigned = rng.getSignedMin().isNegative();
+  z3::expr upper(solver.ctx()), lower(solver.ctx());
+  if (isSigned) {
+    upper = z3::sle(v, bvValFromAPInt(solver.ctx(), rng.getSignedMax()));
+    lower = z3::sge(v, bvValFromAPInt(solver.ctx(), rng.getSignedMin()));
+  } else {
+    upper = z3::ule(v, bvValFromAPInt(solver.ctx(), rng.getUnsignedMax()));
+    lower = z3::uge(v, bvValFromAPInt(solver.ctx(), rng.getUnsignedMin()));
+  }
   if (addConstraint) {
     addConstraint(upper);
     addConstraint(lower);
@@ -147,10 +169,14 @@ void BugDetection::binary_check(
           return;
         }
         bool sat = false;
+        std::unique_ptr<z3::model> model;
         if (!robust_mode) {
           solver.push();
           solver.add(bugCond);
           sat = (solver.check() == z3::sat);
+          if (sat) {
+            model = std::make_unique<z3::model>(solver.get_model());
+          }
           solver.pop();
         } else {
           auto &ctx = solver.ctx();
@@ -187,12 +213,11 @@ void BugDetection::binary_check(
                        << rang::style::reset;
 
           if (!robust_mode) {
-            // Safely get the model - Z3 may not have a model even if SAT
+            // Evaluate the model captured under the bug condition.
             try {
-              if (solver.check() == z3::sat) {
-                z3::model m = solver.get_model();
-                auto lhs_bin = m.eval(lhs_bv, true);
-                auto rhs_bin = m.eval(rhs_bv, true);
+              if (model) {
+                auto lhs_bin = model->eval(lhs_bv, true);
+                auto rhs_bin = model->eval(rhs_bv, true);
                 MKINT_WARN()
                     << "Counter example: " << rang::bg::black << rang::fg::red
                     << op->getOpcodeName() << '(' << lhs_bin << ", " << rhs_bin
@@ -306,8 +331,6 @@ void BugDetection::binary_check(
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
-    break;
-
   default:
     break;
   }
@@ -364,8 +387,7 @@ z3::expr BugDetection::v2sym(
 
   auto *lconst = dyn_cast<ConstantInt>(v);
   if (lconst != nullptr) {
-    return solver.ctx().bv_val(lconst->getZExtValue(),
-                               lconst->getType()->getIntegerBitWidth());
+    return bvValFromAPInt(solver.ctx(), lconst->getValue());
   }
 
   // Fallback: create a stable fresh symbol instead of aborting.
@@ -390,7 +412,7 @@ void BugDetection::recordBugWithPath(const Instruction *inst, interr type) {
   bugPath.path = m_current_path;
 
   // Store it in the map
-  m_bug_paths[inst] = bugPath;
+  m_bug_paths[BugKey(inst, type)] = bugPath;
 }
 
 void BugDetection::recordBug(const Instruction *inst, interr type) {
@@ -401,25 +423,49 @@ z3::expr BugDetection::cast_op_propagate(
     CastInst *op,
     const DenseMap<const Value *, llvm::Optional<z3::expr>> &v2sym,
     z3::solver &solver) {
-  const auto src = this->v2sym(op->getOperand(0), v2sym, solver);
   const uint32_t bits = op->getType()->getIntegerBitWidth();
-  switch (op->getOpcode()) {
-  case CastInst::Trunc:
-    return src.extract(bits - 1, 0);
-  case CastInst::ZExt:
-    return z3::zext(src,
-                    bits - op->getOperand(0)->getType()->getIntegerBitWidth());
-  case CastInst::SExt:
-    return z3::sext(src,
-                    bits - op->getOperand(0)->getType()->getIntegerBitWidth());
-  default:
-    MKINT_WARN() << "Unhandled Cast Instruction " << op->getOpcodeName()
-                 << ". Using original range.";
+  const std::string fallback_sym = "%cast." + std::to_string(op->getValueID());
+
+  // Guard: source operand must be an integer type for Trunc/ZExt/SExt.
+  // Non-integer sources (e.g. FPToSI, PtrToInt, BitCast) are handled by
+  // returning a fresh unconstrained symbol rather than crashing.
+  auto *srcOp = op->getOperand(0);
+  if (!srcOp || !srcOp->getType()->isIntegerTy()) {
+    MKINT_WARN() << "cast_op_propagate: non-integer source for "
+                 << op->getOpcodeName() << "; using fresh symbol.";
+    return solver.ctx().bv_const(fallback_sym.c_str(), bits);
   }
 
-  const std::string new_sym_str = "\%cast" + std::to_string(op->getValueID());
-  return v2sym.begin()->second.getValue().ctx().bv_const(new_sym_str.c_str(),
-                                                         bits); // new expr
+  const auto src = this->v2sym(srcOp, v2sym, solver);
+  const uint32_t src_bits = srcOp->getType()->getIntegerBitWidth();
+
+  switch (op->getOpcode()) {
+  case CastInst::Trunc:
+    if (bits >= src_bits) {
+      // Defensive: should not happen in well-formed IR, but avoid UB in
+      // extract.
+      MKINT_WARN() << "Trunc to wider/equal type; using fresh symbol.";
+      return solver.ctx().bv_const(fallback_sym.c_str(), bits);
+    }
+    return src.extract(bits - 1, 0);
+  case CastInst::ZExt:
+    if (bits <= src_bits) {
+      MKINT_WARN() << "ZExt to narrower/equal type; using fresh symbol.";
+      return solver.ctx().bv_const(fallback_sym.c_str(), bits);
+    }
+    return z3::zext(src, bits - src_bits);
+  case CastInst::SExt:
+    if (bits <= src_bits) {
+      MKINT_WARN() << "SExt to narrower/equal type; using fresh symbol.";
+      return solver.ctx().bv_const(fallback_sym.c_str(), bits);
+    }
+    return z3::sext(src, bits - src_bits);
+  default:
+    MKINT_WARN() << "Unhandled Cast Instruction " << op->getOpcodeName()
+                 << ". Using fresh symbol.";
+  }
+
+  return solver.ctx().bv_const(fallback_sym.c_str(), bits);
 }
 
 void BugDetection::mark_errors(
@@ -533,7 +579,7 @@ void BugDetection::generateSarifReport(
     }
 
     // Add execution path as code flow if available
-    auto pathIt = m_bug_paths.find(inst);
+    auto pathIt = m_bug_paths.find(BugKey(inst, bugType));
     if (pathIt != m_bug_paths.end() && !pathIt->second.path.empty()) {
       sarif::CodeFlow codeFlow;
       codeFlow.message =

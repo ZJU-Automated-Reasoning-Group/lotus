@@ -4,10 +4,11 @@
 #ifndef ASER_PTA_SCCITERATOR_H
 #define ASER_PTA_SCCITERATOR_H
 
-#include <llvm/ADT/BitVector.h>
 #include <utility>
 
 #include "Alias/AserPTA/PointerAnalysis/Graph/ConstraintGraph/ConstraintGraph.h"
+
+#include <llvm/ADT/BitVector.h>
 
 // #define DEBUG_OUTPUT
 

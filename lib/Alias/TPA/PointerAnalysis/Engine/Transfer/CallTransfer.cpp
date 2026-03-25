@@ -1,12 +1,17 @@
 // Implementation of Call transfer functions.
 //
-// This file handles the evaluation of function calls, which is the most complex part
-// of the pointer analysis. It handles:
-// 1. Call Graph Construction: Dynamic discovery of callee functions (for indirect calls).
-// 2. Argument Passing: Mapping actual arguments (caller) to formal parameters (callee).
-// 3. Return Value Passing: Mapping return values (callee) to call sites (caller).
-// 4. Context Sensitivity: Creating new contexts for callees (via KLimitContext).
-// 5. External Calls: Handling calls to external/library functions using annotations.
+// This file handles the evaluation of function calls, which is the most complex
+// part of the pointer analysis. It handles:
+// 1. Call Graph Construction: Dynamic discovery of callee functions (for
+// indirect calls).
+// 2. Argument Passing: Mapping actual arguments (caller) to formal parameters
+// (callee).
+// 3. Return Value Passing: Mapping return values (callee) to call sites
+// (caller).
+// 4. Context Sensitivity: Creating new contexts for callees (via
+// KLimitContext).
+// 5. External Calls: Handling calls to external/library functions using
+// annotations.
 
 #include "Alias/TPA/Context/ContextPolicy.h"
 #include "Alias/TPA/PointerAnalysis/Engine/GlobalState.h"
@@ -34,9 +39,9 @@ static inline size_t countPointerArguments(const llvm::Function *f) {
   return ret;
 };
 
-// Resolves potential target functions from a points-to set of a function pointer.
-// Handles the case where the function pointer points to the "Universal Object"
-// by conservatively matching signatures of all address-taken functions.
+// Resolves potential target functions from a points-to set of a function
+// pointer. Handles the case where the function pointer points to the "Universal
+// Object" by conservatively matching signatures of all address-taken functions.
 std::vector<const llvm::Function *>
 TransferFunction::findFunctionInPtsSet(PtsSet pSet,
                                        const CallCFGNode &callNode) {
@@ -69,7 +74,8 @@ TransferFunction::findFunctionInPtsSet(PtsSet pSet,
 }
 
 // Top-level resolver for call targets.
-// Fetches the points-to set of the called value and delegates to findFunctionInPtsSet.
+// Fetches the points-to set of the called value and delegates to
+// findFunctionInPtsSet.
 std::vector<const llvm::Function *>
 TransferFunction::resolveCallTarget(const context::Context *ctx,
                                     const CallCFGNode &callNode) {
@@ -87,6 +93,10 @@ TransferFunction::resolveCallTarget(const context::Context *ctx,
 }
 
 // Collects the points-to sets of all actual arguments at the call site.
+// Returns a vector of PtsSet, one per pointer parameter. If an argument's
+// points-to set is not yet available (empty), we use the empty set as a
+// placeholder rather than aborting early. This prevents premature fixpoints
+// where a callee is never analyzed because one argument is not yet resolved.
 std::vector<PtsSet>
 TransferFunction::collectArgumentPtsSets(const context::Context *ctx,
                                          const CallCFGNode &callNode,
@@ -102,13 +112,21 @@ TransferFunction::collectArgumentPtsSets(const context::Context *ctx,
     if (argItr == argEnd)
       break;
     const auto *argPtr = ptrManager.getPointer(ctx, *argItr);
-    if (argPtr == nullptr)
-      break;
+    if (argPtr == nullptr) {
+      // Argument not yet registered in the pointer manager; use empty set as
+      // placeholder so we still attempt to analyze the callee.
+      result.emplace_back(PtsSet::getEmptySet());
+      ++argItr;
+      continue;
+    }
 
     auto const &pSet = env.lookup(argPtr);
-    if (pSet.empty())
-      break;
-
+    // Bug fix: previously an empty points-to set caused early termination of
+    // the loop, which made evalCallArguments return (false, false) and skip
+    // the entire call. This could cause premature fixpoints if the argument's
+    // set is computed later. Now we include the empty set as a placeholder;
+    // updateParameterPtsSets will simply perform a no-op weak update for it,
+    // and the call will be re-evaluated when the argument's set changes.
     result.emplace_back(pSet);
     ++argItr;
   }
@@ -162,9 +180,11 @@ TransferFunction::evalCallArguments(const context::Context *ctx,
 
 // Handling for internal (defined in the module) function calls.
 // 1. Evaluates argument passing.
-// 2. Prunes the store (optimizes by removing irrelevant objects for the callee).
+// 2. Prunes the store (optimizes by removing irrelevant objects for the
+// callee).
 // 3. Propagates execution to the callee's Entry node.
-// 4. Also propagates to the "next" instruction in the caller (to handle return flow
+// 4. Also propagates to the "next" instruction in the caller (to handle return
+// flow
 //    or parallel execution assumption).
 void TransferFunction::evalInternalCall(const context::Context *ctx,
                                         const CallCFGNode &callNode,
@@ -180,7 +200,7 @@ void TransferFunction::evalInternalCall(const context::Context *ctx,
   std::tie(isValid, envChanged) = evalCallArguments(ctx, callNode, fc);
   if (!isValid)
     return;
-    
+
   // If the environment changed (new args) or it's a new edge, we must
   // re-evaluate the callee's entry point.
   if (envChanged || callGraphUpdated) {
@@ -214,8 +234,27 @@ void TransferFunction::evalCallNode(const ProgramPoint &pp,
   auto const &callNode = static_cast<const CallCFGNode &>(*pp.getCFGNode());
 
   const auto callees = resolveCallTarget(ctx, callNode);
-  if (callees.empty())
+  if (callees.empty()) {
+    // Fix #9: if the callee set is empty the function pointer's points-to set
+    // has not been resolved yet (it will be populated later in the fixpoint
+    // iteration). Call nodes are mem-level nodes and are only re-enqueued when
+    // the store changes. But the function pointer's points-to set lives in the
+    // Env (top-level), so a store-only re-enqueue may never happen.
+    //
+    // To avoid a premature fixpoint we need two things:
+    // 1. Propagate the current store to mem-level successors so that when the
+    //    function pointer is resolved (triggering a top-level re-evaluation of
+    //    this node via the def-use chain), the store state at the successors is
+    //    already up-to-date.
+    // 2. Also enqueue the top-level successors (def-use users of the call's
+    //    return value). Without this, if the call has a pointer-typed return
+    //    value, its users will never be evaluated because they are only
+    //    triggered by top-level changes, and no top-level change is recorded
+    //    here (the return value's points-to set is empty/unknown).
+    addMemLevelSuccessors(pp, *localState, evalResult);
+    addTopLevelSuccessors(pp, evalResult);
     return;
+  }
 
   for (const auto *f : callees) {
     // Update call graph first.

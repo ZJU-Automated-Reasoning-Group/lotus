@@ -3,10 +3,10 @@
 #include "Checker/FiTx/Frontend/State.h"
 
 namespace {
-class AllDetector : public framework::FrameworkPass {
+class AllDetector : public fitx::FrameworkPass {
   virtual void defineStates() override {
     for (auto& define_states : def_funcs) {
-      framework::StateManager manager;
+      fitx::StateManager manager;
       define_states(manager);
       addStateManager(manager);
     }
@@ -14,5 +14,5 @@ class AllDetector : public framework::FrameworkPass {
 };
 }  // namespace
 
-std::vector<framework::FrameworkPass*> framework::FrameworkPass::passes = {
+std::vector<fitx::FrameworkPass*> fitx::FrameworkPass::passes = {
     new AllDetector()};

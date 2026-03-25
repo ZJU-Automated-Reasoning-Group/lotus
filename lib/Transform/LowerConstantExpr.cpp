@@ -29,6 +29,7 @@
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/Support/ErrorHandling.h>
 
 #define DEBUG_TYPE "lower-constant-expr"
 
@@ -44,7 +45,7 @@ static bool transform(Instruction &I) {
     if (Phi) {
       std::map<std::pair<Value *, BasicBlock *>, Instruction *> IncomeMap;
       for (unsigned K = 0; K < Phi->getNumIncomingValues(); ++K) {
-        auto *OpK = I.getOperand(K);
+        auto *OpK = Phi->getIncomingValue(K);
         if (!OpK)
           continue; // Skip null operands
 
@@ -67,7 +68,7 @@ static bool transform(Instruction &I) {
             }
           }
           transform(*CEInst);
-          I.setOperand(K, CEInst);
+          Phi->setIncomingValue(K, CEInst);
           if (!Changed)
             Changed = true;
         }
@@ -287,14 +288,11 @@ PreservedAnalyses LowerConstantExprPass::run(Module &M,
       }
     }
 
-    // Verify the module, but don't crash if verification fails
+    // Verify the module and stop if the transformation produced invalid IR.
     if (verifyModule(M, &errs())) {
-      // Don't crash the program, just emit a warning
-      errs() << "WARNING: Module verification failed after lowering constant "
-                "expressions.\n";
-      errs()
-          << "Some constant expressions may not have been properly lowered.\n";
-      errs() << "Continuing with analysis, but results may be incomplete.\n";
+      report_fatal_error(
+          "LowerConstantExpr produced invalid IR; aborting optimization "
+          "pipeline");
     }
     return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
   } catch (const std::exception &e) {

@@ -76,7 +76,8 @@ static bool expandInstruction(Instruction *inst) {
  *
  * @param F The function to transform
  * @param analysisManager Function analysis manager (unused)
- * @return PreservedAnalyses::none() if modified, PreservedAnalyses::all() otherwise
+ * @return PreservedAnalyses::none() if modified, PreservedAnalyses::all()
+ * otherwise
  */
 PreservedAnalyses
 ExpandConstantExprPass::run(Function &F,

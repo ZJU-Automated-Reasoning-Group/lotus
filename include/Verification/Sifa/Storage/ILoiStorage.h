@@ -14,8 +14,7 @@
 namespace lotus {
 namespace sifa {
 
-template <typename LocationT, typename StateT>
-class ILoiStorage {
+template <typename LocationT, typename StateT> class ILoiStorage {
 public:
   virtual ~ILoiStorage() = default;
   virtual void store(LocationT location, const StateT &state) = 0;
@@ -25,4 +24,3 @@ public:
 } // namespace lotus
 
 #endif // LOTUS_VERIFICATION_SIFA_STORAGE_ILOISTORAGE_H
-

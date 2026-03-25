@@ -3,7 +3,8 @@
 // Backward-closed overlay (ported from Ultimate Library-Sifa).
 //
 // predecessorsOf() always returns all predecessors included in the overlay.
-// The overlay has exactly one source (the DAG source) but can have multiple sinks.
+// The overlay has exactly one source (the DAG source) but can have multiple
+// sinks.
 //
 //===----------------------------------------------------------------------===//
 
@@ -53,7 +54,9 @@ public:
     return lookup(predecessors_, node);
   }
 
-  std::vector<Node *> sources(const Dag &dag) const override { return {dag.getSource()}; }
+  std::vector<Node *> sources(const Dag &dag) const override {
+    return {dag.getSource()};
+  }
 
   std::vector<Node *> sinks(const Dag &dag) const override {
     (void)dag;
@@ -62,7 +65,8 @@ public:
 
 private:
   static std::vector<Node *>
-  lookup(const std::unordered_map<Node *, std::unordered_set<Node *>> &rel, Node *n) {
+  lookup(const std::unordered_map<Node *, std::unordered_set<Node *>> &rel,
+         Node *n) {
     auto it = rel.find(n);
     if (it == rel.end()) {
       return {};
@@ -70,7 +74,8 @@ private:
     return std::vector<Node *>(it->second.begin(), it->second.end());
   }
 
-  bool addPair(std::unordered_map<Node *, std::unordered_set<Node *>> &rel, Node *a, Node *b) {
+  bool addPair(std::unordered_map<Node *, std::unordered_set<Node *>> &rel,
+               Node *a, Node *b) {
     return rel[a].insert(b).second;
   }
 
@@ -93,7 +98,7 @@ private:
 } // namespace lotus
 
 #include "Verification/Sifa/Cfg/Transition.h"
-extern template class lotus::sifa::BackwardClosedOverlay<lotus::sifa::Transition>;
+extern template class lotus::sifa::BackwardClosedOverlay<
+    lotus::sifa::Transition>;
 
 #endif // LOTUS_VERIFICATION_SIFA_REGEXDAG_BACKWARDCLOSEDOVERLAY_H
-

@@ -8,5 +8,5 @@ namespace path_bmc {
 
 void boolAbstraction(ExprVector &side, ExprVector &abs_side);
 
-}
+} // namespace path_bmc
 } // namespace seahorn

@@ -43,44 +43,48 @@
 
 class CSProgressBar {
 
-    public:
-      // default destructor
-      ~CSProgressBar()                             = default;
+public:
+  // default destructor
+  ~CSProgressBar() = default;
 
-      // delete everything else
-      CSProgressBar           (CSProgressBar const&) = delete;
-      CSProgressBar& operator=(CSProgressBar const&) = delete;
-      CSProgressBar           (CSProgressBar&&)      = delete;
-      CSProgressBar& operator=(CSProgressBar&&)      = delete;
+  // delete everything else
+  CSProgressBar(CSProgressBar const &) = delete;
+  CSProgressBar &operator=(CSProgressBar const &) = delete;
+  CSProgressBar(CSProgressBar &&) = delete;
+  CSProgressBar &operator=(CSProgressBar &&) = delete;
 
-      // default constructor, must call set_niter later
-      CSProgressBar();
-      CSProgressBar(int n, bool showbar=true);
+  // default constructor, must call set_niter later
+  CSProgressBar();
+  CSProgressBar(int n, bool showbar = true);
 
-      // reset bar to use it again
-      void reset();
-     // set number of loop iterations
-      void set_niter(int iter);
-      // chose your style
-      void set_done_char(const std::string& sym) {done_char = sym;}
-      void set_todo_char(const std::string& sym) {todo_char = sym;}
-      void set_opening_bracket_char(const std::string& sym) {opening_bracket_char = sym;}
-      void set_closing_bracket_char(const std::string& sym) {closing_bracket_char = sym;}
-      // to show only the percentage
-      void show_bar(bool flag = true) {do_show_bar = flag;}
-      // main function
-      void update();
+  // reset bar to use it again
+  void reset();
+  // set number of loop iterations
+  void set_niter(int iter);
+  // chose your style
+  void set_done_char(const std::string &sym) { done_char = sym; }
+  void set_todo_char(const std::string &sym) { todo_char = sym; }
+  void set_opening_bracket_char(const std::string &sym) {
+    opening_bracket_char = sym;
+  }
+  void set_closing_bracket_char(const std::string &sym) {
+    closing_bracket_char = sym;
+  }
+  // to show only the percentage
+  void show_bar(bool flag = true) { do_show_bar = flag; }
+  // main function
+  void update();
 
-    private:
-      int progress;
-      int n_cycles;
-      int last_perc;
-      bool do_show_bar;
-      bool update_is_called;
+private:
+  int progress;
+  int n_cycles;
+  int last_perc;
+  bool do_show_bar;
+  bool update_is_called;
 
-      std::string done_char;
-      std::string todo_char;
-      std::string opening_bracket_char;
-      std::string closing_bracket_char;
+  std::string done_char;
+  std::string todo_char;
+  std::string opening_bracket_char;
+  std::string closing_bracket_char;
 };
 #endif

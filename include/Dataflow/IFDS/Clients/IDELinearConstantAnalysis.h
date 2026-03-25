@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Dataflow/IFDS/IFDSFramework.h"
+#include "Dataflow/IFDS/Core/IFDSFramework.h"
 
 #include <map>
 #include <set>
@@ -100,25 +100,36 @@ struct LCAResult {
 // Linear Constant Analysis (IDE)
 // ============================================================================
 
-class IDELinearConstantAnalysis : public DefaultNoAliasIDEProblem<LCAFact, LCALattice> {
+class IDELinearConstantAnalysis
+    : public DefaultNoAliasIDEProblem<LCAFact, LCALattice> {
 public:
   using Fact = LCAFact;
   using Value = LCALattice;
   using FactSet = typename DefaultNoAliasIDEProblem<Fact, Value>::FactSet;
-  using EdgeFunction = typename DefaultNoAliasIDEProblem<Fact, Value>::EdgeFunction;
+  using EdgeFunction =
+      typename DefaultNoAliasIDEProblem<Fact, Value>::EdgeFunction;
 
   IDELinearConstantAnalysis();
 
   // IFDS interface - flow functions
   Fact zero_fact() const override;
-  FactSet normal_flow(const llvm::Instruction *stmt, const Fact &fact) override;
-  FactSet call_flow(const llvm::CallBase*call, const llvm::Function *callee,
+  FactSet normal_flow(const llvm::Instruction *stmt,
+                      const llvm::Instruction *succ, const Fact &fact) override;
+  FactSet call_flow(const llvm::CallBase *call, const llvm::Function *callee,
                     const Fact &fact) override;
-  FactSet return_flow(const llvm::CallBase*call, const llvm::Function *callee,
-                      const Fact &exit_fact, const Fact &call_fact) override;
-  FactSet call_to_return_flow(const llvm::CallBase*call,
+  FactSet return_flow(const llvm::CallBase *call,
+                      const llvm::Instruction *exit_inst,
+                      const llvm::Instruction *return_site,
+                      const llvm::Function *callee, const Fact &exit_fact,
+                      const Fact &call_fact) override;
+  FactSet call_to_return_flow(const llvm::CallBase *call,
+                              const llvm::Instruction *return_site,
+                              llvm::ArrayRef<const llvm::Function *> callees,
                               const Fact &fact) override;
   FactSet initial_facts(const llvm::Function *main) override;
+  IDEInitialSeeds initial_ide_seeds(const llvm::Module &module) override {
+    return this->lift_ifds_initial_seeds(module, bottom_value());
+  }
 
   // Value domain operations
   Value top_value() const override { return Value::top(); }
@@ -127,17 +138,23 @@ public:
 
   // Edge functions
   EdgeFunction normal_edge_function(const llvm::Instruction *stmt,
+                                    const llvm::Instruction *succ,
                                     const Fact &src_fact,
                                     const Fact &tgt_fact) override;
-  EdgeFunction call_edge_function(const llvm::CallBase*call,
+  EdgeFunction call_edge_function(const llvm::CallBase *call,
+                                  const llvm::Function *callee,
                                   const Fact &src_fact,
                                   const Fact &tgt_fact) override;
-  EdgeFunction return_edge_function(const llvm::CallBase*call,
+  EdgeFunction return_edge_function(const llvm::CallBase *call,
+                                    const llvm::Function *callee,
+                                    const llvm::Instruction *exit_inst,
+                                    const llvm::Instruction *return_site,
                                     const Fact &exit_fact,
                                     const Fact &ret_fact) override;
-  EdgeFunction call_to_return_edge_function(const llvm::CallBase*call,
-                                            const Fact &src_fact,
-                                            const Fact &tgt_fact) override;
+  EdgeFunction call_to_return_edge_function(
+      const llvm::CallBase *call, const llvm::Instruction *return_site,
+      llvm::ArrayRef<const llvm::Function *> callees, const Fact &src_fact,
+      const Fact &tgt_fact) override;
 
   // Result processing
   std::map<std::string, std::map<unsigned, LCAResult>> get_lca_results(

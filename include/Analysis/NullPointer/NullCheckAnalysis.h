@@ -21,8 +21,9 @@
 
 #include <llvm/IR/Function.h>
 #include <llvm/Pass.h>
-//#include <list>
-//#include <set>
+// #include <list>
+// #include <set>
+#include <mutex>
 #include <unordered_map>
 
 using namespace llvm;
@@ -31,23 +32,24 @@ class LocalNullCheckAnalysis;
 
 class NullCheckAnalysis : public ModulePass {
 private:
-    std::unordered_map<Function *, LocalNullCheckAnalysis *> AnalysisMap;
+  std::unordered_map<Function *, LocalNullCheckAnalysis *> AnalysisMap;
+  mutable std::mutex AnalysisMapMutex;
 
 public:
-    static char ID;
+  static char ID;
 
-    NullCheckAnalysis() : ModulePass(ID) {}
+  NullCheckAnalysis() : ModulePass(ID) {}
 
-    ~NullCheckAnalysis() override;
+  ~NullCheckAnalysis() override;
 
-    bool runOnModule(Module &M) override;
+  bool runOnModule(Module &M) override;
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 public:
-    /// \p Ptr must be an operand of \p Inst
-    /// return true if \p Ptr at \p Inst may be a null pointer
-    bool mayNull(Value *Ptr, Instruction *Inst);
+  /// \p Ptr must be an operand of \p Inst
+  /// return true if \p Ptr at \p Inst may be a null pointer
+  bool mayNull(Value *Ptr, Instruction *Inst);
 };
 
 #endif // NULLPOINTER_NULLCHECKANALYSIS_H

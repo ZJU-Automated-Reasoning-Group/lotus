@@ -1,10 +1,5 @@
 #include "llvm/IR/Function.h"
 
-#include "Checker/FiTx/Core/AnalysisHelper.h"
-#include "Checker/FiTx/Core/BasicBlock.h"
-#include "Checker/FiTx/Core/Casting.h"
-#include "Checker/FiTx/Core/Function.h"
-#include "Checker/FiTx/Core/Value.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Argument.h"
@@ -24,12 +19,21 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Pass.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
+#include "Checker/FiTx/Core/AnalysisHelper.h"
+#include "Checker/FiTx/Core/BasicBlock.h"
+#include "Checker/FiTx/Core/Casting.h"
+#include "Checker/FiTx/Core/Function.h"
+#include "Checker/FiTx/Core/Value.h"
+
 // include STL
+#include "Checker/FiTx/Frontend/Analyzer.h"
+#include "Checker/FiTx/Frontend/BasicBlock.h"
+#include "Checker/FiTx/Frontend/Function.h"
+
 #include <algorithm>
 #include <ctime>
 #include <iostream>
@@ -41,13 +45,9 @@
 #include <string>
 #include <vector>
 
-#include "Checker/FiTx/Frontend/Analyzer.h"
-#include "Checker/FiTx/Frontend/BasicBlock.h"
-#include "Checker/FiTx/Frontend/Function.h"
-
-namespace framework {
+namespace fitx {
 FunctionInformation::FunctionInformation(
-    std::shared_ptr<framework::Function> function, AnalysisStat stat)
+    std::shared_ptr<fitx::Function> function, AnalysisStat stat)
     : framework_function_(function), stat_(stat) {}
 
 void FunctionInformation::setAnalysisStat(
@@ -56,7 +56,7 @@ void FunctionInformation::setAnalysisStat(
 }
 
 void FunctionInformation::setAnayzingBasicBlock(
-    std::shared_ptr<framework::BasicBlock> basic_block) {
+    std::shared_ptr<fitx::BasicBlock> basic_block) {
   current_basicblock_ = basic_block;
 }
 
@@ -67,8 +67,8 @@ FunctionInformation::getCurrentBasicBlockInformation() {
 
 std::shared_ptr<BasicBlockInformation>
 FunctionInformation::createBasicBlockInfo(
-    std::shared_ptr<framework::BasicBlock> basic_block,
-    const std::set<State>& states) {
+    std::shared_ptr<fitx::BasicBlock> basic_block,
+    const std::set<State> &states) {
   int time_to_live = BasicBlockInformation::kMaxTimeToLive;
 
   if (basicBlockInfoExists(basic_block)) {
@@ -81,9 +81,11 @@ FunctionInformation::createBasicBlockInfo(
 
   current_block_info->setTimeToLive(time_to_live);
 
-  if (basic_block->isCleanupBlock()) return current_block_info;
+  if (basic_block->isCleanupBlock())
+    return current_block_info;
 
   bool return_value_assigned = !current_block_info->ReturnValues().empty();
+  // Merge typestate and arg summaries from all predecessors (paper §4.2).
   for (auto pred_reference : basic_block->Predecessors()) {
     if (auto preds = pred_reference.lock()) {
       if (!basicBlockInfoExists(preds)) {
@@ -91,15 +93,16 @@ FunctionInformation::createBasicBlockInfo(
         continue;
       }
       auto passthrough_blocks =
-          std::vector<std::shared_ptr<framework::BasicBlock>>();
+          std::vector<std::shared_ptr<fitx::BasicBlock>>();
 
       auto weak_blocks = preds->getPassthroughBlock(basic_block);
       std::transform(weak_blocks.begin(), weak_blocks.end(),
                      std::back_inserter(passthrough_blocks),
-                     [](const std::weak_ptr<framework::BasicBlock> block) {
+                     [](const std::weak_ptr<fitx::BasicBlock> block) {
                        return block.lock();
                      });
-      if (!passthrough_blocks.size()) passthrough_blocks.push_back(preds);
+      if (!passthrough_blocks.size())
+        passthrough_blocks.push_back(preds);
 
       for (auto block : passthrough_blocks) {
         if (!basicBlockInfoExists(block)) {
@@ -119,22 +122,27 @@ FunctionInformation::createBasicBlockInfo(
         // TODO: Fix this rough check of error code propagation
         BasicBlockInformation::BlockStatus status =
             pred_block_info->getBlockStatus();
-        const auto& branch_inst =
+        const auto &branch_inst =
             pred_block_info->BasicBlock()->getBranchInst();
         if (branch_inst && branch_inst->Condition() &&
             branch_inst->returnValueOperandExists()) {
           status = BasicBlockInformation::ERROR;
           if (auto condition =
                   shared_dyn_cast<CompareInst>(branch_inst->Condition())) {
+            // Bug fix: add missing break statements to prevent fall-through.
+            // Previously ICMP_EQ and ICMP_SGT fell through to set ERROR,
+            // making the SUCCESS assignment unreachable.
             switch (condition->GetPredicate()) {
-              case llvm::CmpInst::Predicate::ICMP_EQ:
-              case llvm::CmpInst::Predicate::ICMP_SGT:
-                status = BasicBlockInformation::SUCCESS;
-              case llvm::CmpInst::Predicate::ICMP_NE:
-              case llvm::CmpInst::Predicate::ICMP_SLT:
-                status = BasicBlockInformation::ERROR;
-              default:
-                break;
+            case llvm::CmpInst::Predicate::ICMP_EQ:
+            case llvm::CmpInst::Predicate::ICMP_SGT:
+              status = BasicBlockInformation::SUCCESS;
+              break;
+            case llvm::CmpInst::Predicate::ICMP_NE:
+            case llvm::CmpInst::Predicate::ICMP_SLT:
+              status = BasicBlockInformation::ERROR;
+              break;
+            default:
+              break;
             }
           }
         }
@@ -143,7 +151,7 @@ FunctionInformation::createBasicBlockInfo(
         auto pred_value_states =
             pred_block_info->ValueStatesForSuccessor(basic_block);
         for (auto val_states : pred_value_states.first.ValueStates()) {
-          auto& value = val_states.first;
+          auto &value = val_states.first;
           if (!current_block_info->ValueStates().valueExists(value)) {
             current_block_info->ValueStates().setValueState(
                 value, pred_value_states.first.getTransitionLog(value));
@@ -176,13 +184,14 @@ FunctionInformation::createBasicBlockInfo(
 
         /* generateWarning(pred_block_info->BasicBlock().get() ,"---"); */
         /* for (auto ret_val : current_block_info->ReturnValues()) { */
-        /*   if (auto cv = framework::shared_dyn_cast<ConstValue>(ret_val)) { */
+        /*   if (auto cv = fitx::shared_dyn_cast<ConstValue>(ret_val)) { */
         /*     generateWarning(current_block_info->BasicBlock().get(),
          * std::to_string(cv->getConstValue())); */
         /*   } */
         /* } */
         /* generateWarning("---"); */
 
+        // Alias info is not merged across predecessors (intra-block only).
         // TODO: Experimental: Enable when in use
         /* current_block_info->getAliasValues().addAlias( */
         /*     pred_block_info->getAliasValues()); */
@@ -200,63 +209,68 @@ void FunctionInformation::addValue(std::shared_ptr<Value> value) {
   value_collection_.add(value);
 }
 
-void FunctionInformation::addValues(const ValueCollection& collection) {
+void FunctionInformation::addValues(const ValueCollection &collection) {
   value_collection_.add(collection);
 }
 
 std::shared_ptr<BasicBlockInformation>
 FunctionInformation::getBasicBlockInformation(
-    std::shared_ptr<framework::BasicBlock> basic_block) {
-  if (basicBlockInfoExists(basic_block)) return basic_block_info_[basic_block];
+    std::shared_ptr<fitx::BasicBlock> basic_block) {
+  if (basicBlockInfoExists(basic_block))
+    return basic_block_info_[basic_block];
   return nullptr;
 }
 
 std::shared_ptr<BasicBlockInformation>
 FunctionInformation::getBasicBlockPrevInformation(
-    std::shared_ptr<framework::BasicBlock> basic_block) {
+    std::shared_ptr<fitx::BasicBlock> basic_block) {
   if (basicBlockPrevInfoExists(basic_block))
     return prev_basic_block_info_[basic_block];
   return nullptr;
 }
 
 bool FunctionInformation::basicBlockInfoExists(
-    std::shared_ptr<framework::BasicBlock> basic_block) {
+    std::shared_ptr<fitx::BasicBlock> basic_block) {
   return basic_block_info_.find(basic_block) != basic_block_info_.end();
 }
 
 bool FunctionInformation::basicBlockPrevInfoExists(
-    std::shared_ptr<framework::BasicBlock> basic_block) {
+    std::shared_ptr<fitx::BasicBlock> basic_block) {
   return prev_basic_block_info_.find(basic_block) !=
          prev_basic_block_info_.end();
 }
 
-const FunctionInformation::WeakBasicBlockSet&
+const FunctionInformation::WeakBasicBlockSet &
 FunctionInformation::getErrorBlocks(int64_t error_code) {
   return return_info_[error_code];
 }
 
-const FunctionInformation::WeakBasicBlockSet&
+const FunctionInformation::WeakBasicBlockSet &
 FunctionInformation::getSuccessBlock() {
   return return_info_[kSuccessCode];
 }
 
 bool FunctionInformation::basicBlockInfoChanged(
-    std::shared_ptr<framework::BasicBlock> block) {
+    std::shared_ptr<fitx::BasicBlock> block) {
   auto current_info = getBasicBlockInformation(block);
   auto prev_info = getBasicBlockPrevInformation(block);
-  if (!current_info || !prev_info) return true;
+  if (!current_info || !prev_info)
+    return true;
 
-  if (current_info->PartialStates()) return true;
+  if (current_info->PartialStates())
+    return true;
 
-  if (current_info->TimeToLive() <= 0) return false;
+  if (current_info->TimeToLive() <= 0)
+    return false;
 
   /* if (*current_info == *prev_info || !current_info->TimeToLive()) */
-  if (*current_info == *prev_info) return false;
+  if (*current_info == *prev_info)
+    return false;
   return true;
 }
 
 void FunctionInformation::addReturnValueInfo(
-    int64_t value, std::weak_ptr<framework::BasicBlock> block) {
+    int64_t value, std::weak_ptr<fitx::BasicBlock> block) {
   /* auto block_info = getBasicBlockInformation(block.lock()); */
   /* if (!block_info) return; */
   /* if (block_info->ReturnValueSatisfiable(value)) */
@@ -273,15 +287,15 @@ void FunctionInformation::addReturnValueInfo(int64_t value,
 }
 
 bool FunctionInformation::existsInRefcountFunctions(
-    std::shared_ptr<framework::Function> function) {
+    std::shared_ptr<fitx::Function> function) {
   return std::find(called_refcount_functions_.begin(),
                    called_refcount_functions_.end(),
                    function) != called_refcount_functions_.end();
 }
 
 void FunctionInformation::addRefcountFunction(
-    std::shared_ptr<framework::Function> function) {
+    std::shared_ptr<fitx::Function> function) {
   called_refcount_functions_.push_back(function);
 }
 
-};  // namespace framework
+}; // namespace fitx

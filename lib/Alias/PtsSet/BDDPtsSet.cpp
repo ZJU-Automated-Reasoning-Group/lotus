@@ -73,9 +73,8 @@ Cudd_ReorderingType toCuddReordering(BDDAndersPtsSet::ReorderingMethod method) {
 
 void applyReorderingConfig(DdManager *mgr) {
   if (reorderEnabled.load(std::memory_order_relaxed)) {
-    Cudd_AutodynEnable(mgr,
-                       toCuddReordering(reorderMethod.load(
-                           std::memory_order_relaxed)));
+    Cudd_AutodynEnable(
+        mgr, toCuddReordering(reorderMethod.load(std::memory_order_relaxed)));
   } else {
     Cudd_AutodynDisable(mgr);
   }
@@ -379,7 +378,8 @@ void BDDAndersPtsSet::refreshCache() const {
     // "don't-care" bits (encoded as 2 in CUDD).
     Index base = 0;
     unsigned dcCount = 0;
-    unsigned dcPositions[kIndexBits]; // kIndexBits is small (≤64), stack-allocate.
+    unsigned
+        dcPositions[kIndexBits]; // kIndexBits is small (≤64), stack-allocate.
 
     for (unsigned bit = 0; bit < kIndexBits; ++bit) {
       if (cube[bit] == 0) {

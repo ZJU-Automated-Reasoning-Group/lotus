@@ -75,7 +75,7 @@ void EvalBranchSentinelPass::printLoweredSentinels() {
     INFO << "Conditional branch became true " << keyT;
   }
   for (auto e : m_unknown) {
-    auto result = e.second ? "true" : "false";
+    const auto *result = e.second ? "true" : "false";
     INFO << "(flaky) Conditional branch became " << result << ": "
          << *(e.first);
   }
@@ -97,7 +97,7 @@ void EvalBranchSentinelPass::processSentinels(
         SmallString<256> key;
         raw_svector_ostream out(key);
         if (dloc) {
-          auto result = !isFalse ? "true" : "false";
+          const auto *result = !isFalse ? "true" : "false";
           out << dloc->getFilename() << ":" << dloc->getLine() << ":"
               << dloc->getColumn();
           LOG("branch.sentinel",

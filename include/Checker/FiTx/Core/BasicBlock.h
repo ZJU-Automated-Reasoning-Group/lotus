@@ -10,7 +10,7 @@
 #include <set>
 #include <vector>
 
-namespace framework {
+namespace fitx {
 // TODO: remove this prototype from here
 class Function;
 class BranchInst;
@@ -20,61 +20,61 @@ public:
   BasicBlock(llvm::BasicBlock *basic_block);
 
   bool operator==(llvm::BasicBlock *basic_block);
-  bool operator==(const framework::BasicBlock &basic_block);
+  bool operator==(const fitx::BasicBlock &basic_block);
 
-  bool operator<(const framework::BasicBlock &basic_block);
-
-  friend bool
-  operator<(const std::weak_ptr<framework::BasicBlock> basic_block,
-            const std::weak_ptr<framework::BasicBlock> target_block);
+  bool operator<(const fitx::BasicBlock &basic_block);
 
   friend bool
-  operator==(const std::shared_ptr<framework::BasicBlock> basic_block,
+  operator<(const std::weak_ptr<fitx::BasicBlock> basic_block,
+            const std::weak_ptr<fitx::BasicBlock> target_block);
+
+  friend bool
+  operator==(const std::shared_ptr<fitx::BasicBlock> basic_block,
              const llvm::BasicBlock *llvm_block);
 
-  void addSuccessor(std::shared_ptr<framework::BasicBlock> block);
-  void addPredecessor(std::shared_ptr<framework::BasicBlock> block);
-  bool isInPredecessor(std::shared_ptr<framework::BasicBlock> block);
+  void addSuccessor(std::shared_ptr<fitx::BasicBlock> block);
+  void addPredecessor(std::shared_ptr<fitx::BasicBlock> block);
+  bool isInPredecessor(std::shared_ptr<fitx::BasicBlock> block);
 
-  const std::set<std::weak_ptr<framework::BasicBlock>> &Predecessors() {
+  const std::set<std::weak_ptr<fitx::BasicBlock>> &Predecessors() {
     return predecessors_;
   }
 
-  const std::set<std::weak_ptr<framework::BasicBlock>> &Successors() {
+  const std::set<std::weak_ptr<fitx::BasicBlock>> &Successors() {
     return successors_;
   }
 
-  void addInstruction(std::shared_ptr<framework::Instruction> inst);
-  const std::vector<std::shared_ptr<framework::Instruction>> Instructions() {
+  void addInstruction(std::shared_ptr<fitx::Instruction> inst);
+  const std::vector<std::shared_ptr<fitx::Instruction>> Instructions() {
     return instructions_;
   }
 
   llvm::BasicBlock *LLVMBasicBlock() { return llvm_basic_block_; }
   const std::string &Name() { return name_; }
 
-  std::weak_ptr<framework::Function> Parent() { return parent_; };
+  std::weak_ptr<fitx::Function> Parent() { return parent_; };
 
   bool isCleanupBlock() { return !pass_through_.empty(); };
   bool collectPassthroughBlock();
-  const std::vector<std::weak_ptr<framework::BasicBlock>>
-  getPassthroughBlock(std::weak_ptr<framework::BasicBlock> succ_block);
+  const std::vector<std::weak_ptr<fitx::BasicBlock>>
+  getPassthroughBlock(std::weak_ptr<fitx::BasicBlock> succ_block);
 
-  void addDeadValue(std::shared_ptr<framework::Value> value);
+  void addDeadValue(std::shared_ptr<fitx::Value> value);
   /// Compare by pointer address only to avoid invoking Value::operator<
   /// during set operations (can crash with default comparator).
   struct ValuePtrCompare {
-    bool operator()(const std::shared_ptr<framework::Value>& a,
-                    const std::shared_ptr<framework::Value>& b) const {
+    bool operator()(const std::shared_ptr<fitx::Value> &a,
+                    const std::shared_ptr<fitx::Value> &b) const {
       return a.get() < b.get();
     }
   };
-  const std::set<std::shared_ptr<framework::Value>> DeadValues() const;
+  const std::set<std::shared_ptr<fitx::Value>> DeadValues() const;
 
-  void setBranchInst(std::shared_ptr<framework::BranchInst> branch_inst) {
+  void setBranchInst(std::shared_ptr<fitx::BranchInst> branch_inst) {
     branch_inst_ = branch_inst;
   }
 
-  std::shared_ptr<framework::BranchInst> getBranchInst() {
+  std::shared_ptr<fitx::BranchInst> getBranchInst() {
     return branch_inst_;
   }
 
@@ -91,23 +91,23 @@ private:
   unsigned int line_;
 
   // Contained Instructions
-  std::vector<std::shared_ptr<framework::Instruction>> instructions_;
-  std::weak_ptr<framework::Function> parent_;
+  std::vector<std::shared_ptr<fitx::Instruction>> instructions_;
+  std::weak_ptr<fitx::Function> parent_;
 
-  std::shared_ptr<framework::BranchInst> branch_inst_;
+  std::shared_ptr<fitx::BranchInst> branch_inst_;
 
   bool is_cleanup_block_;
 
-  std::map<std::weak_ptr<framework::BasicBlock>,
-           std::vector<std::weak_ptr<framework::BasicBlock>>,
-           std::owner_less<std::weak_ptr<framework::BasicBlock>>>
+  std::map<std::weak_ptr<fitx::BasicBlock>,
+           std::vector<std::weak_ptr<fitx::BasicBlock>>,
+           std::owner_less<std::weak_ptr<fitx::BasicBlock>>>
       pass_through_;
 
   // Values to be dead by the end of this BB
-  std::set<std::shared_ptr<framework::Value>, ValuePtrCompare> dead_values_;
+  std::set<std::shared_ptr<fitx::Value>, ValuePtrCompare> dead_values_;
 
   // Interactions
-  std::set<std::weak_ptr<framework::BasicBlock>> predecessors_;
-  std::set<std::weak_ptr<framework::BasicBlock>> successors_;
+  std::set<std::weak_ptr<fitx::BasicBlock>> predecessors_;
+  std::set<std::weak_ptr<fitx::BasicBlock>> successors_;
 };
-} // namespace framework
+} // namespace fitx

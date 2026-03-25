@@ -1,12 +1,12 @@
 #include "seahorn/Analysis/CutPointGraph.hh"
-#include "llvm/Support/raw_ostream.h"
+
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/CommandLine.h"
-
-#include "seahorn/Support/CFG.hh"
+#include "llvm/Support/raw_ostream.h"
 
 #include "boost/range.hpp"
+#include "seahorn/Support/CFG.hh"
 #include "seahorn/Support/SeaDebug.h"
 
 enum ExtraCpHeuristics { H0, H1, H2};
@@ -306,6 +306,6 @@ namespace seahorn
     return (it->second)[id];
   }
 
-}
+} // namespace seahorn
 static llvm::RegisterPass<seahorn::CutPointGraph> X ("cpg", "Construct Cut Point Graph",
                                                      true, true);

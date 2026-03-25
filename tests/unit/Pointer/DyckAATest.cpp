@@ -8,28 +8,15 @@
  */
 
 #include "Alias/DyckAA/DyckAliasAnalysis.h"
+#include "TestUtils/LLVMHelpers.h"
 
-#include <gtest/gtest.h>
-#include <llvm/AsmParser/Parser.h>
 #include <llvm/IR/Instructions.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
-#include <llvm/Support/SourceMgr.h>
+#include <gtest/gtest.h>
 
 using namespace llvm;
+using namespace lotus::unittest;
 
-class DyckAATest : public ::testing::Test {
-protected:
-  LLVMContext context;
-  std::unique_ptr<Module> parseModule(const char *source) {
-    SMDiagnostic err;
-    auto module = parseAssemblyString(source, err, context);
-    if (!module) {
-      err.print("DyckAATest", errs());
-    }
-    return module;
-  }
-};
+class DyckAATest : public LlvmModuleTest {};
 
 // ============================================================================
 // Basic Alias Tests

@@ -7,8 +7,9 @@
  *   solution of the \e linearized system Df|ν^(i)(X) + δ^(i) = X.
  *
  * The linearized system is an LCFL equation system when extend (⊗) is
- * non-commutative; it can be solved by worklist, SCC, or tensor-product
- * regularization (paired semiring → left-linear → project back).
+ * non-commutative; it can be solved by SCC decomposition with local worklists,
+ * or by tensor-product regularization (paired semiring → left-linear →
+ * project back).
  *
  * References:
  * - Esparza et al., "Newtonian Program Analysis" (JACM): differential Df|ν,
@@ -24,8 +25,8 @@
  *   - Core/Fixpoint.h         : fix / fix_vec (Kleene-like iteration)
  *   - Core/Eval.h             : I0 (Exp0) / I1 (Exp1) evaluators
  *   - Core/Diff.h              : differential Df|ν construction
- *   - Core/LCFLDetector.h     : detect LCFL structure (Concat/InfClos)
- *   - Core/LinearSolvers.h    : worklist, SCC, tensor linear solvers
+ *   - Core/LCFLDetector.h     : detect LCFL structure (Concat/Star)
+ *   - Core/LinearSolvers.h    : SCC-based and tensor linear solvers
  *   - Core/TensorLinearSolve.h: tensor-product solver (Alg. 3.4)
  *   - Core/Solver.h           : KleeneIter / NewtonIter, Solver<D,ITER>
  *********************************************************************/

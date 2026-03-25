@@ -1,0 +1,1 @@
+add_lotus_fuzzing_test(fuzz_target_generation_test FuzzTargetGenerationTest.cpp)

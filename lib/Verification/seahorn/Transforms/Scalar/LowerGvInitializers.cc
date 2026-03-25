@@ -228,7 +228,7 @@ bool LowerGvInitializers::runOnModule(Module &M) {
       if (!CtorFns.empty())
         change = true;
 
-      for (auto Fn : CtorFns) {
+      for (auto *Fn : CtorFns) {
         // -- create a call with non-deterministic parameters
         SmallVector<Value *, 16> Args;
         for (auto &A : Fn->args()) {

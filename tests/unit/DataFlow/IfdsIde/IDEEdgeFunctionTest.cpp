@@ -1,5 +1,8 @@
-#include <Dataflow/IFDS/Solvers/IDESolver.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
 #include <gtest/gtest.h>
+#include <Dataflow/IFDS/Solvers/IDESolver.h>
+#include <TestUtils/LLVMHelpers.h>
 
 namespace ifds {
 namespace {
@@ -12,50 +15,82 @@ public:
 
   Fact zero_fact() const override { return 0; }
 
-  FactSet normal_flow(const llvm::Instruction* /*stmt*/,
-                      const Fact& fact) override {
+  FactSet normal_flow(const llvm::Instruction * /*stmt*/,
+                      const llvm::Instruction * /*succ*/,
+                      const Fact &fact) override {
     return {fact};
   }
-  FactSet call_flow(const llvm::CallBase* /*call*/,
-                    const llvm::Function* /*callee*/,
-                    const Fact& fact) override {
+  FactSet call_flow(const llvm::CallBase * /*call*/,
+                    const llvm::Function * /*callee*/,
+                    const Fact &fact) override {
     return {fact};
   }
-  FactSet return_flow(const llvm::CallBase* /*call*/,
-                      const llvm::Function* /*callee*/,
-                      const Fact& exit_fact,
-                      const Fact& /*call_fact*/) override {
+  FactSet return_flow(const llvm::CallBase * /*call*/,
+                      const llvm::Instruction * /*exit_inst*/,
+                      const llvm::Instruction * /*return_site*/,
+                      const llvm::Function * /*callee*/, const Fact &exit_fact,
+                      const Fact & /*call_fact*/) override {
     return {exit_fact};
   }
-  FactSet call_to_return_flow(const llvm::CallBase* /*call*/,
-                              const Fact& fact) override {
+  FactSet
+  call_to_return_flow(const llvm::CallBase * /*call*/,
+                      const llvm::Instruction * /*return_site*/,
+                      llvm::ArrayRef<const llvm::Function *> /*callees*/,
+                      const Fact &fact) override {
     return {fact};
   }
-  FactSet initial_facts(const llvm::Function* /*main*/) override { return {}; }
+  FactSet initial_facts(const llvm::Function * /*main*/) override { return {}; }
+  IDEInitialSeeds initial_ide_seeds(const llvm::Module &module) override {
+    return this->lift_ifds_initial_seeds(module, bottom_value());
+  }
 
   Value top_value() const override { return 0; }
   Value bottom_value() const override { return 0; }
-  Value join(const Value& /*v1*/, const Value& v2) const override { return v2; }
+  Value join(const Value & /*v1*/, const Value &v2) const override {
+    return v2;
+  }
 
-  EdgeFunction normal_edge_function(const llvm::Instruction* /*stmt*/,
-                                    const Fact& /*src_fact*/,
-                                    const Fact& /*tgt_fact*/) override {
+  EdgeFunction normal_edge_function(const llvm::Instruction * /*stmt*/,
+                                    const llvm::Instruction * /*succ*/,
+                                    const Fact & /*src_fact*/,
+                                    const Fact & /*tgt_fact*/) override {
     return identity();
   }
-  EdgeFunction call_edge_function(const llvm::CallBase* /*call*/,
-                                  const Fact& /*src_fact*/,
-                                  const Fact& /*tgt_fact*/) override {
+  EdgeFunction call_edge_function(const llvm::CallBase * /*call*/,
+                                  const llvm::Function * /*callee*/,
+                                  const Fact & /*src_fact*/,
+                                  const Fact & /*tgt_fact*/) override {
     return identity();
   }
-  EdgeFunction return_edge_function(const llvm::CallBase* /*call*/,
-                                    const Fact& /*exit_fact*/,
-                                    const Fact& /*ret_fact*/) override {
+  EdgeFunction return_edge_function(const llvm::CallBase * /*call*/,
+                                    const llvm::Function * /*callee*/,
+                                    const llvm::Instruction * /*exit_inst*/,
+                                    const llvm::Instruction * /*return_site*/,
+                                    const Fact & /*exit_fact*/,
+                                    const Fact & /*ret_fact*/) override {
     return identity();
   }
-  EdgeFunction call_to_return_edge_function(const llvm::CallBase* /*call*/,
-                                            const Fact& /*src_fact*/,
-                                            const Fact& /*tgt_fact*/) override {
+  EdgeFunction call_to_return_edge_function(
+      const llvm::CallBase * /*call*/,
+      const llvm::Instruction * /*return_site*/,
+      llvm::ArrayRef<const llvm::Function *> /*callees*/,
+      const Fact & /*src_fact*/, const Fact & /*tgt_fact*/) override {
     return identity();
+  }
+};
+
+class SeedValueProblem : public DummyIDEProblem {
+public:
+  IDEInitialSeeds initial_ide_seeds(const llvm::Module &module) override {
+    IDEInitialSeeds seeds;
+    auto *main = module.getFunction("main");
+    auto *entry = main == nullptr || main->empty()
+                      ? nullptr
+                      : &main->getEntryBlock().front();
+    if (entry != nullptr) {
+      seeds.add_seed(entry, zero_fact(), 42);
+    }
+    return seeds;
   }
 };
 
@@ -91,11 +126,36 @@ TEST(IDEEdgeFunctionTest, ComposeOrderMatchesSolverUsage) {
   EXPECT_EQ(addThenMulThenAdd(3), 12);
 }
 
+TEST(IDEEdgeFunctionTest, EquivalenceIsConservativeWhenTopEqualsBottom) {
+  DummyIDEProblem P;
+  auto plus1 = [](int x) { return x + 1; };
+  auto plus2 = [](int x) { return x + 2; };
+  EXPECT_FALSE(P.edge_function_equivalent(plus1, plus2));
+}
+
+TEST(IDEEdgeFunctionTest, ExplicitSeedValuesPropagate) {
+  llvm::LLVMContext Ctx;
+  auto M = lotus::unittest::parseModule(Ctx, R"(
+    define i32 @main() {
+    entry:
+      ret i32 0
+    }
+  )", "IDEEdgeFunctionTest");
+  auto *Ret = M->getFunction("main")->back().getTerminator();
+
+  SeedValueProblem Problem;
+  IDESolver<SeedValueProblem> Solver(Problem);
+  Solver.solve(*M);
+
+  EXPECT_EQ(Solver.get_value_at(Ret, 0), 42);
+}
+
 } // namespace
 } // namespace ifds
 
-int main(int argc, char** argv) {
+#ifndef LOTUS_GTEST_NO_MAIN
+int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
-
+#endif

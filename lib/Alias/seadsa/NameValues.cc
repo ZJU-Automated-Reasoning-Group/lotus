@@ -6,8 +6,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/tokenizer.hpp>
+#include <sstream>
+#include <string>
 
 using namespace llvm;
 
@@ -22,6 +22,27 @@ bool NameValues::runOnModule(Module &M) {
   return change;
 }
 
+// Helper function to tokenize a string
+static std::vector<std::string> tokenize(const std::string &str, const std::string &delimiters) {
+  std::vector<std::string> tokens;
+  size_t start = 0;
+  size_t end = str.find_first_of(delimiters);
+  
+  while (end != std::string::npos) {
+    if (end != start) {
+      tokens.push_back(str.substr(start, end - start));
+    }
+    start = end + 1;
+    end = str.find_first_of(delimiters, start);
+  }
+  
+  if (start < str.length()) {
+    tokens.push_back(str.substr(start));
+  }
+  
+  return tokens;
+}
+
 bool NameValues::runOnFunction(Function &F) {
   bool change = false;
 
@@ -31,15 +52,18 @@ bool NameValues::runOnFunction(Function &F) {
   out << F;
   out.flush();
 
-  typedef boost::tokenizer<boost::char_separator<char>> tokenizer;
-  boost::char_separator<char> nl_sep("\n");
-  boost::char_separator<char> sp_sep(" :\t%@");
-
-  tokenizer lines(funcAsm, nl_sep);
-  tokenizer::iterator line_iter = lines.begin();
+  // Tokenize by newlines
+  std::vector<std::string> lines;
+  std::istringstream stream(funcAsm);
+  std::string line;
+  while (std::getline(stream, line)) {
+    lines.push_back(line);
+  }
+  
+  auto line_iter = lines.begin();
 
   // -- skip function attributes
-  if (boost::starts_with(*line_iter, "; Function Attrs:"))
+  if (line_iter != lines.end() && line_iter->find("; Function Attrs:") == 0)
     ++line_iter;
 
   unsigned ArgIdx = 0;
@@ -50,7 +74,8 @@ bool NameValues::runOnFunction(Function &F) {
   }
 
   // -- skip function definition line
-  ++line_iter;
+  if (line_iter != lines.end())
+    ++line_iter;
 
   for (Function::iterator BI = F.begin(), BE = F.end();
        BI != BE && line_iter != lines.end(); ++BI) {
@@ -58,8 +83,8 @@ bool NameValues::runOnFunction(Function &F) {
 
     if (!BB.hasName()) {
       std::string bb_line = *line_iter;
-      tokenizer names(bb_line, sp_sep);
-      std::string bb_name = *names.begin();
+      auto names = tokenize(bb_line, " :\t%@");
+      std::string bb_name = names.empty() ? "bb" : names[0];
       if (bb_name == ";")
         bb_name = "bb";
       BB.setName("_" + bb_name);
@@ -72,8 +97,8 @@ bool NameValues::runOnFunction(Function &F) {
       Instruction &I = *II;
       if (!I.hasName() && !(I.getType()->isVoidTy())) {
         std::string inst_line = *line_iter;
-        tokenizer names(inst_line, sp_sep);
-        std::string inst_name = *names.begin();
+        auto names = tokenize(inst_line, " :\t%@");
+        std::string inst_name = names.empty() ? "tmp" : names[0];
         I.setName("_" + inst_name);
         change = true;
       }

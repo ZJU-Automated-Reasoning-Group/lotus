@@ -23,22 +23,22 @@
 #include <llvm/IR/Dominators.h>
 #include <llvm/IR/Function.h>
 #include <llvm/Pass.h>
-//#include <set>
-//#include <unordered_map>
+// #include <set>
+// #include <unordered_map>
 
-#include "Utils/General/ADT/DisjointSet.h"
+#include "Utils/ADT/DisjointSet.h"
 
 using namespace llvm;
 
 /// a ptr in a group is nonnull, then all ptrs in the group are nonnull
 class NullEquivalenceAnalysis {
 private:
-    DisjointSet<Value *> DisSet;
+  DisjointSet<Value *> DisSet;
 
 public:
-    explicit NullEquivalenceAnalysis(Function *);
+  explicit NullEquivalenceAnalysis(Function *);
 
-    Value *get(Value *);
+  Value *get(Value *);
 };
 
-#endif //NULLPOINTER_NULLEQUIVALENCEANALYSIS_H
+#endif // NULLPOINTER_NULLEQUIVALENCEANALYSIS_H

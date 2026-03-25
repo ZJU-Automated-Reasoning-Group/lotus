@@ -48,7 +48,7 @@ using namespace llvm;
 
 namespace seahorn {
 enum MemAbsLevel { ONLY_LOAD, ONLY_STORE, LOAD_AND_STORE };
-}
+} // namespace seahorn
 
 static llvm::cl::opt<enum seahorn::MemAbsLevel>
     MAL("abstract-memory-level",

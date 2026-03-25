@@ -66,8 +66,9 @@ public:
   iterator begin() const;
   iterator end() const;
 
-  static void configureReordering(bool enable,
-                                  ReorderingMethod method = ReorderingMethod::Sift);
+  static void
+  configureReordering(bool enable,
+                      ReorderingMethod method = ReorderingMethod::Sift);
   static bool parseReorderingMethod(const std::string &name,
                                     ReorderingMethod &out);
 

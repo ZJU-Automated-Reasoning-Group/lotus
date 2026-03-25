@@ -1,11 +1,12 @@
 #pragma once
 
-#include "Dataflow/ControlFlow/IntraCFG.h"
-
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 
+#include "Dataflow/ControlFlow/IntraCFG.h"
+
 #include <functional>
+#include <map>
 #include <vector>
 
 namespace dataflow {
@@ -36,6 +37,10 @@ public:
 };
 
 /// Default LLVM-backed interprocedural CFG with pluggable callee resolution.
+///
+/// getCallersOf() now uses a pre-built caller index (O(1) per
+/// query) instead of scanning every instruction in the module on every call
+/// (O(N) per query → O(N²) overall for context-insensitive analyses).
 class LLVMInterCFG final : public InterCFG {
 public:
   using GetCalleesFn = std::function<std::vector<f_t>(n_t)>;
@@ -56,7 +61,7 @@ public:
   std::vector<n_t> getStartPointsOf(f_t Function,
                                     FlowDirection Dir) const override;
   std::vector<n_t> getExitPointsOf(f_t Function,
-                                  FlowDirection Dir) const override;
+                                   FlowDirection Dir) const override;
   bool isStartPoint(n_t Inst, FlowDirection Dir) const override;
   bool isExitInst(n_t Inst, FlowDirection Dir) const override;
 
@@ -73,9 +78,15 @@ public:
 private:
   static std::vector<n_t> continuationInstructions(n_t CallInst);
 
+  /// Build the caller index: Callee → list of call-site instructions.
+  /// Called once in the constructor so getCallersOf() is O(1).
+  void buildCallerIndex();
+
   m_t Mod = nullptr;
   GetCalleesFn GetCallees;
   LLVMIntraCFG Intra;
+  /// Pre-built caller index for O(1) getCallersOf() queries.
+  std::map<f_t, std::vector<n_t>> CallerIndex;
 };
 
 } // namespace controlflow
@@ -100,6 +111,32 @@ inline LLVMInterCFG::LLVMInterCFG(m_t M, GetCalleesFn GetCallees)
       }
       return Callees;
     };
+  }
+  // build the caller index once at construction time.
+  buildCallerIndex();
+}
+
+inline void LLVMInterCFG::buildCallerIndex() {
+  CallerIndex.clear();
+  if (Mod == nullptr) {
+    return;
+  }
+  for (auto &F : *Mod) {
+    if (F.isDeclaration()) {
+      continue;
+    }
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        if (!isCallSite(&I)) {
+          continue;
+        }
+        for (auto *Callee : getCalleesOfCallAt(&I)) {
+          if (Callee != nullptr) {
+            CallerIndex[Callee].push_back(&I);
+          }
+        }
+      }
+    }
   }
 }
 
@@ -212,29 +249,15 @@ LLVMInterCFG::getCalleesOfCallAt(n_t CallSite) const {
 
 inline std::vector<LLVMInterCFG::n_t>
 LLVMInterCFG::getCallersOf(f_t Callee) const {
-  std::vector<n_t> Callers;
-  if (Mod == nullptr || Callee == nullptr) {
-    return Callers;
+  // O(1) lookup via pre-built index instead of O(N) scan.
+  if (Callee == nullptr) {
+    return {};
   }
-  for (auto &F : *Mod) {
-    if (F.isDeclaration()) {
-      continue;
-    }
-    for (auto &BB : F) {
-      for (auto &I : BB) {
-        if (!isCallSite(&I)) {
-          continue;
-        }
-        for (auto *C : getCalleesOfCallAt(&I)) {
-          if (C == Callee) {
-            Callers.push_back(&I);
-            break;
-          }
-        }
-      }
-    }
+  auto It = CallerIndex.find(Callee);
+  if (It == CallerIndex.end()) {
+    return {};
   }
-  return Callers;
+  return It->second;
 }
 
 } // namespace controlflow

@@ -4,27 +4,23 @@
 
 #include <vector>
 
-namespace annotation
-{
+namespace annotation {
 
-class PointerEffectSummary
-{
+class PointerEffectSummary {
 private:
-	using EffectList = std::vector<PointerEffect>;
-	EffectList list;
+  using EffectList = std::vector<PointerEffect>;
+  EffectList list;
+
 public:
-	using const_iterator = EffectList::const_iterator;
+  using const_iterator = EffectList::const_iterator;
 
-	PointerEffectSummary() = default;
+  PointerEffectSummary() = default;
 
-	void addEffect(PointerEffect&& e)
-	{
-		list.emplace_back(std::move(e));
-	}
+  void addEffect(PointerEffect &&e) { list.emplace_back(std::move(e)); }
 
-	const_iterator begin() const { return list.begin(); }
-	const_iterator end() const { return list.end(); }
-	bool empty() const { return list.empty(); }
+  const_iterator begin() const { return list.begin(); }
+  const_iterator end() const { return list.end(); }
+  bool empty() const { return list.empty(); }
 };
 
 } // namespace annotation

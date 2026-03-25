@@ -32,6 +32,14 @@ public:
             return true;
         }
 
+        if (CB->getCalledFunction() != nullptr) {
+            return false;
+        }
+
+        if (resolveTargetFunction(CB->getCalledOperand()) != nullptr) {
+            return false;
+        }
+
         auto *V = CB->getCalledOperand();
         if (auto *C = llvm::dyn_cast<llvm::Constant>(V)) {
             if (C->isNullValue()) {
@@ -39,7 +47,7 @@ public:
             }
         }
 
-        return false;
+        return true;
     }
 
     [[nodiscard]] inline const llvm::Value* getCalledValue() const { 

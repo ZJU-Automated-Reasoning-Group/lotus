@@ -22,10 +22,10 @@ Interactive and batch query engine for the Program Dependence Graph (PDG).
 Key features:
 
 - Forward/backward slicing
+- Property-based slicing via ``--property-file``
 - Information flow queries
 - Security policy checks
 - Subgraph export (DOT)
 
 See :doc:`../../user_guide/pdg_query_language` and ``examples/pdg-queries/`` for a complete
 language reference and examples.
-

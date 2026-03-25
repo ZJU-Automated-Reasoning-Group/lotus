@@ -229,7 +229,7 @@ void CallSiteResolverByTypes::populateTypeAliasSets() {
     AliasSet &Targets = m_targets_map[devirt_impl::typeAliasId(F)];
     // XXX: ordered by pointer addresses. Ideally we should use
     // something more deterministic.
-    auto it = std::upper_bound(Targets.begin(), Targets.end(), &F);
+    auto *it = std::upper_bound(Targets.begin(), Targets.end(), &F);
     Targets.insert(it, &F);
   }
 }

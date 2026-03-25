@@ -1,7 +1,7 @@
 // Implementation of TypeCollector.
 //
-// The TypeCollector is responsible for scanning the entire LLVM Module to gather
-// the set of all Types that are relevant to the pointer analysis.
+// The TypeCollector is responsible for scanning the entire LLVM Module to
+// gather the set of all Types that are relevant to the pointer analysis.
 //
 // Relevance:
 // - It visits Global Variables, Functions, and Instructions.
@@ -9,7 +9,8 @@
 // - It ignores non-relevant types like `void` or `vector` (partially).
 //
 // Output:
-// - A `TypeSet` containing all unique types found. This set is used by subsequent
+// - A `TypeSet` containing all unique types found. This set is used by
+// subsequent
 //   phases (ArrayLayoutAnalysis, PointerLayoutAnalysis) to build type metadata.
 
 #include "Alias/TPA/PointerAnalysis/FrontEnd/Type/TypeCollector.h"
@@ -74,7 +75,7 @@ void TypeSetBuilder::incorporateInstruction(const Instruction *inst) {
   // Check the return type of the instruction
   incorporateType(inst->getType());
 
-  // Special handling for Alloca: we need the type *being allocated*, 
+  // Special handling for Alloca: we need the type *being allocated*,
   // which is distinct from the instruction type (pointer to it).
   if (const auto *allocInst = dyn_cast<AllocaInst>(inst))
     incorporateType(allocInst->getAllocatedType());

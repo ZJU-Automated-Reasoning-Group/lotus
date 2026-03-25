@@ -2,21 +2,13 @@
  * @file ConstraintSolving.cpp
  * @brief Constraint solving phase using worklist-based propagation.
  *
- * This file implements the constraint solving algorithm that propagates points-to
- * information through the constraint graph. Uses a worklist algorithm with
- * cycle detection (HCD: Hybrid Cycle Detection, LCD: Lazy Cycle Detection)
+ * This file implements the constraint solving algorithm that propagates
+ * points-to information through the constraint graph. Uses a worklist algorithm
+ * with cycle detection (HCD: Hybrid Cycle Detection, LCD: Lazy Cycle Detection)
  * to handle strongly connected components efficiently.
  *
  * @author rainoftime
  */
-#include <llvm/ADT/DenseMap.h>
-#include <llvm/ADT/DenseSet.h>
-#include <llvm/ADT/SmallSet.h>
-#include <llvm/ADT/Statistic.h>
-#include <llvm/ADT/iterator_range.h>
-#include <llvm/Support/CommandLine.h>
-#include <llvm/Support/raw_ostream.h>
-
 #include "Alias/SparrowAA/Andersen.h"
 #include "Alias/SparrowAA/CycleDetector.h"
 #include "Alias/SparrowAA/Log.h"
@@ -24,6 +16,14 @@
 
 #include <map>
 #include <queue>
+
+#include <llvm/ADT/DenseMap.h>
+#include <llvm/ADT/DenseSet.h>
+#include <llvm/ADT/SmallSet.h>
+#include <llvm/ADT/Statistic.h>
+#include <llvm/ADT/iterator_range.h>
+#include <llvm/Support/CommandLine.h>
+#include <llvm/Support/raw_ostream.h>
 
 #define DEBUG_TYPE "andersen"
 
@@ -43,10 +43,9 @@ STATISTIC(AvgPtsSetSize, "Average points-to set size");
 // Use extern to reference the category defined in Andersen.cpp
 extern cl::OptionCategory AndersenCategory;
 
-cl::opt<bool>
-    EnableHCD("enable-hcd",
-              cl::desc("Enable the hybrid cycle detection algorithm"),
-              cl::cat(AndersenCategory));
+cl::opt<bool> EnableHCD("enable-hcd",
+                        cl::desc("Enable the hybrid cycle detection algorithm"),
+                        cl::cat(AndersenCategory));
 cl::opt<bool> EnableLCD("enable-lcd",
                         cl::desc("Enable the lazy cycle detection algorithm"),
                         cl::cat(AndersenCategory));
@@ -125,7 +124,7 @@ private:
   NodeMapTy graph;
 
 public:
-  using iterator =   NodeMapTy::iterator;
+  using iterator = NodeMapTy::iterator;
   using const_iterator = NodeMapTy::const_iterator;
 
   ConstraintGraph() {}
@@ -164,17 +163,24 @@ public:
   }
 
   void mergeNodes(NodeIndex dst, NodeIndex src) {
-    auto itr = graph.find(src);
-    if (itr == graph.end())
+    auto srcItr = graph.find(src);
+    if (srcItr == graph.end())
       return;
 
-    const ConstraintGraphNode &srcNode = itr->second;
-    itr = graph.find(dst);
-    if (itr == graph.end()) {
+    // Take a copy of the source edges before potentially invalidating the
+    // iterator by inserting a new dst node below.
+    ConstraintGraphNode srcNodeCopy = srcItr->second;
+
+    auto dstItr = graph.find(dst);
+    if (dstItr == graph.end()) {
+      // Create a fresh node for dst (not a copy of src — src has the wrong
+      // index).  Then merge src's edges into it.
       ConstraintGraphNode dstNode(dst);
-      graph.insert(std::make_pair(dst, srcNode));
-    } else
-      (itr->second).mergeEdges(srcNode);
+      dstNode.mergeEdges(srcNodeCopy);
+      graph.insert(std::make_pair(dst, std::move(dstNode)));
+    } else {
+      (dstItr->second).mergeEdges(srcNodeCopy);
+    }
   }
 
   void deleteNode(NodeIndex idx) { graph.erase(idx); }
@@ -226,68 +232,28 @@ public:
 
 namespace {
 
-// Template version of collapseNodes function to support different PtsSet types
-template<typename PtsSetType>
-void collapseNodes(NodeIndex dst, NodeIndex src, AndersNodeFactory &nodeFactory,
-                   std::map<NodeIndex, PtsSetType> &ptsGraph,
-                   ConstraintGraph &constraintGraph) {
+// B4 Fix: Consolidate collapseNodes into a single static template function.
+// The previous code had multiple overloads with external linkage (ODR
+// violation) and dead __attribute__((unused)) wrappers.  All call sites use
+// DefaultPtsSet, so we keep only the template + one explicit instantiation,
+// both with internal linkage (static).
+template <typename PtsSetType>
+static void collapseNodes(NodeIndex dst, NodeIndex src,
+                          AndersNodeFactory &nodeFactory,
+                          std::map<NodeIndex, PtsSetType> &ptsGraph,
+                          ConstraintGraph &constraintGraph) {
   if (dst == src)
     return;
 
-  // Track node collapsing
   ++NumNodesCollapsed;
 
-  // Node merge
   nodeFactory.mergeNode(dst, src);
   if (ptsGraph.count(src))
     ptsGraph[dst].unionWith(ptsGraph[src]);
   constraintGraph.mergeNodes(dst, src);
 
-  // We don't need the node cycleIdx any more
   ptsGraph.erase(src);
   constraintGraph.deleteNode(src);
-}
-
-// Backward compatibility for the original version
-__attribute__((unused))
-static void collapseNodes(NodeIndex dst, NodeIndex src, AndersNodeFactory &nodeFactory,
-                   std::map<NodeIndex, AndersPtsSet> &ptsGraph,
-                   ConstraintGraph &constraintGraph) {
-  collapseNodes<AndersPtsSet>(dst, src, nodeFactory, ptsGraph, constraintGraph);
-}
-
-// Add overload for DefaultPtsSet
-void collapseNodes(NodeIndex dst, NodeIndex src, AndersNodeFactory &nodeFactory,
-                   std::map<NodeIndex, DefaultPtsSet> &ptsGraph,
-                   ConstraintGraph &constraintGraph) {
-  collapseNodes<DefaultPtsSet>(dst, src, nodeFactory, ptsGraph, constraintGraph);
-}
-
-// Template versions with CCG parameter
-template<typename PtsSetType>
-void collapseNodes(NodeIndex dst, NodeIndex src, AndersNodeFactory &nodeFactory,
-                   std::map<NodeIndex, PtsSetType> &ptsGraph,
-                   ConstraintGraph &constraintGraph, CCG &copyGraph) {
-  (void)copyGraph; // Unused in this version
-  collapseNodes<PtsSetType>(dst, src, nodeFactory, ptsGraph, constraintGraph);
-}
-
-// Backward compatibility for the original version with CCG parameter
-__attribute__((unused))
-static void collapseNodes(NodeIndex dst, NodeIndex src, AndersNodeFactory &nodeFactory,
-                   std::map<NodeIndex, AndersPtsSet> &ptsGraph,
-                   ConstraintGraph &constraintGraph, CCG &copyGraph) {
-  (void)copyGraph; // Unused in this version
-  collapseNodes<AndersPtsSet>(dst, src, nodeFactory, ptsGraph, constraintGraph);
-}
-
-// Add overload for DefaultPtsSet with CCG parameter
-__attribute__((unused))
-static void collapseNodes(NodeIndex dst, NodeIndex src, AndersNodeFactory &nodeFactory,
-                   std::map<NodeIndex, DefaultPtsSet> &ptsGraph,
-                   ConstraintGraph &constraintGraph, CCG &copyGraph) {
-  (void)copyGraph; // Unused in this version
-  collapseNodes<DefaultPtsSet>(dst, src, nodeFactory, ptsGraph, constraintGraph);
 }
 
 // The worklist for our analysis
@@ -388,13 +354,31 @@ private:
 
     scc.set(node->getNodeIndex());
 
-    // The representative is the first non-ref node
-    NodeIndex repNode = scc.find_first();
-    assert(repNode < nodeFactory.getNumNodes() &&
-           "The SCC didn't have a non-Ref node!");
-    for (auto itr = ++scc.begin(), ite = scc.end(); itr != ite; ++itr) {
+    // B2 Fix: find the first VAR node (index < getNumNodes()) as the
+    // representative.  scc.find_first() returns the numerically smallest
+    // index, which may be a REF node (index >= getNumNodes()).  Iterating
+    // to find the first VAR node is correct and safe.
+    NodeIndex repNode = AndersNodeFactory::InvalidIndex;
+    for (auto idx : scc) {
+      if (idx < nodeFactory.getNumNodes()) {
+        repNode = idx;
+        break;
+      }
+    }
+    // If the SCC contains only REF nodes there is no VAR node to serve as
+    // the representative; skip it (no merge/collapse is possible).
+    if (repNode == AndersNodeFactory::InvalidIndex) {
+      scc.clear();
+      return;
+    }
+
+    for (auto itr = scc.begin(), ite = scc.end(); itr != ite; ++itr) {
       NodeIndex cycleNode = *itr;
-      if (cycleNode > nodeFactory.getNumNodes())
+      if (cycleNode == repNode)
+        continue;
+      // REF nodes start at exactly getNumNodes(), so use >= (not >) to
+      // correctly classify the first REF node (index == getNumNodes()).
+      if (cycleNode >= nodeFactory.getNumNodes())
         // For REF nodes, insert it to the collapse map
         collapseMap[cycleNode - nodeFactory.getNumNodes()] = repNode;
       else
@@ -438,8 +422,9 @@ public:
   }
 };
 
-// Template version of buildConstraintGraph function to support different PtsSet types
-template<typename PtsSetType>
+// Template version of buildConstraintGraph function to support different PtsSet
+// types
+template <typename PtsSetType>
 void buildConstraintGraph(ConstraintGraph &cGraph,
                           const std::vector<AndersConstraint> &constraints,
                           AndersNodeFactory &nodeFactory,
@@ -471,25 +456,19 @@ void buildConstraintGraph(ConstraintGraph &cGraph,
   }
 }
 
-// Backward compatibility for the original version
-__attribute__((unused))
-static void buildConstraintGraph(ConstraintGraph &cGraph,
-                          const std::vector<AndersConstraint> &constraints,
-                          AndersNodeFactory &nodeFactory,
-                          std::map<NodeIndex, AndersPtsSet> &ptsGraph) {
-  buildConstraintGraph<AndersPtsSet>(cGraph, constraints, nodeFactory, ptsGraph);
-}
-
-// Add overload for DefaultPtsSet
-void buildConstraintGraph(ConstraintGraph &cGraph,
-                          const std::vector<AndersConstraint> &constraints,
-                          AndersNodeFactory &nodeFactory,
-                          std::map<NodeIndex, DefaultPtsSet> &ptsGraph) {
-  buildConstraintGraph<DefaultPtsSet>(cGraph, constraints, nodeFactory, ptsGraph);
+// Explicit instantiation for the DefaultPtsSet used by solveConstraints.
+// (B4 Fix: keep internal linkage; no duplicate non-static overloads.)
+static void
+buildConstraintGraph(ConstraintGraph &cGraph,
+                     const std::vector<AndersConstraint> &constraints,
+                     AndersNodeFactory &nodeFactory,
+                     std::map<NodeIndex, DefaultPtsSet> &ptsGraph) {
+  buildConstraintGraph<DefaultPtsSet>(cGraph, constraints, nodeFactory,
+                                      ptsGraph);
 }
 
 // Template version of OnlineCycleDetector class
-template<typename PtsSetType>
+template <typename PtsSetType>
 class OnlineCycleDetectorT : public CycleDetector<ConstraintGraph> {
 private:
   AndersNodeFactory &nodeFactory;
@@ -500,7 +479,7 @@ private:
   NodeType *getRep(NodeIndex idx) override {
     return constraintGraph.getOrInsertNode(nodeFactory.getMergeTarget(idx));
   }
-  
+
   // Specify how to process the non-rep nodes if a cycle is found
   void processNodeOnCycle(const NodeType *node,
                           const NodeType *repNode) override {
@@ -511,7 +490,7 @@ private:
 
     collapseNodes(repIdx, cycleIdx, nodeFactory, ptsGraph, constraintGraph);
   }
-  
+
   // Specify how to process the rep nodes if a cycle is found
   void processCycleRepNode(const NodeType *node) override {
     (void)node; // Unused parameter
@@ -520,13 +499,14 @@ private:
 
 public:
   OnlineCycleDetectorT(AndersNodeFactory &n, ConstraintGraph &co,
-                      std::map<NodeIndex, PtsSetType> &p,
-                      std::queue<std::pair<NodeIndex, NodeIndex>> &cc)
+                       std::map<NodeIndex, PtsSetType> &p,
+                       std::queue<std::pair<NodeIndex, NodeIndex>> &cc)
       : nodeFactory(n), constraintGraph(co), ptsGraph(p), cycleCandidates(cc) {}
 
   void run() override {
     // Perform cycle detection on for nodes on the candidate list
-    std::queue<std::pair<NodeIndex, NodeIndex>> tempCandidates = cycleCandidates;
+    std::queue<std::pair<NodeIndex, NodeIndex>> tempCandidates =
+        cycleCandidates;
     while (!tempCandidates.empty()) {
       auto candidate = tempCandidates.front();
       tempCandidates.pop();
@@ -588,7 +568,8 @@ void Andersen::solveConstraints() {
 
   // Scan the node list, add it to work list if the node a representative and
   // can contribute to the calculation right now.
-  LOG_INFO("Initializing work list from {} points-to graph entries...", ptsGraph.size());
+  LOG_INFO("Initializing work list from {} points-to graph entries...",
+           ptsGraph.size());
   for (auto const &mapping : ptsGraph) {
     NodeIndex node = mapping.first;
     if (nodeFactory.getMergeTarget(node) == node &&
@@ -607,21 +588,29 @@ void Andersen::solveConstraints() {
 
     // First we've got to check if there is any cycle candidates in the last
     // iteration. If there is, detect and collapse cycle
-    if (iterCount == 1) LOG_INFO("  - Checking cycle candidates...");
+    if (iterCount == 1)
+      LOG_INFO("  - Checking cycle candidates...");
     if (EnableLCD && !cycleCandidates.empty()) {
       // Detect and collapse cycles online
       NumCyclesDetected += cycleCandidates.size();
-      DefaultOnlineCycleDetector cycleDetector(nodeFactory, constraintGraph, ptsGraph,
-                                      cycleCandidates);
+      DefaultOnlineCycleDetector cycleDetector(nodeFactory, constraintGraph,
+                                               ptsGraph, cycleCandidates);
       cycleDetector.run();
-      
-      // Empty the queue
-      while (!cycleCandidates.empty()) {
+
+      // Empty the candidate queue.
+      while (!cycleCandidates.empty())
         cycleCandidates.pop();
-      }
+
+      // B9 Fix: After collapsing cycles, node indices in checkedEdges may
+      // refer to nodes that have been merged into their representatives.
+      // Stale entries would prevent re-checking edges that now involve the
+      // merged representative, causing missed cycle detections.  Clear the
+      // entire set so that all edges are eligible for re-checking.
+      checkedEdges.clear();
     }
 
-    if (iterCount == 1) LOG_INFO("  - Processing worklist...");
+    if (iterCount == 1)
+      LOG_INFO("  - Processing worklist...");
     unsigned nodeCount = 0;
     while (!currWorkList->isEmpty()) {
       NodeIndex node = currWorkList->dequeue();
@@ -762,14 +751,14 @@ void Andersen::solveConstraints() {
     // Swap the current and the next worklist
     std::swap(currWorkList, nextWorkList);
   }
-  
+
   LOG_INFO("Constraint solving loop completed, calculating statistics...");
-  
+
   // Calculate points-to set statistics
   unsigned long long totalPtsSetSize = 0;
   unsigned maxSize = 0;
   unsigned numNonEmptyPtsSets = 0;
-  
+
   for (const auto &mapping : ptsGraph) {
     unsigned size = mapping.second.getSize();
     if (size > 0) {
@@ -779,7 +768,7 @@ void Andersen::solveConstraints() {
         maxSize = size;
     }
   }
-  
+
   MaxPtsSetSize = maxSize;
   if (numNonEmptyPtsSets > 0)
     AvgPtsSetSize = totalPtsSetSize / numNonEmptyPtsSets;

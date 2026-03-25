@@ -5,56 +5,56 @@
 #include "Checker/FiTx/Core/Instructions.h"
 #include "Checker/FiTx/Core/Utils.h"
 
-namespace framework {
+namespace fitx {
 BasicBlock::BasicBlock(llvm::BasicBlock *basic_block)
     : llvm_basic_block_(basic_block), line_(0), id_(kNoId) {
   name_ = basic_block->getName().str();
   line_ = getLine(basic_block->getFirstNonPHIOrDbgOrLifetime());
   parent_ =
-      framework::Function::createManagedFunction(basic_block->getParent());
+      fitx::Function::createManagedFunction(basic_block->getParent());
 }
 
 bool BasicBlock::operator==(llvm::BasicBlock *basic_block) {
   return basic_block == llvm_basic_block_;
 }
 
-bool BasicBlock::operator==(const framework::BasicBlock &basic_block) {
+bool BasicBlock::operator==(const fitx::BasicBlock &basic_block) {
   return basic_block.llvm_basic_block_ == llvm_basic_block_;
 }
 
-bool BasicBlock::operator<(const framework::BasicBlock &basic_block) {
+bool BasicBlock::operator<(const fitx::BasicBlock &basic_block) {
   return llvm_basic_block_ < basic_block.llvm_basic_block_;
 }
 
-bool operator<(const std::weak_ptr<framework::BasicBlock> source_block,
-               const std::weak_ptr<framework::BasicBlock> target_block) {
+bool operator<(const std::weak_ptr<fitx::BasicBlock> source_block,
+               const std::weak_ptr<fitx::BasicBlock> target_block) {
   auto source = source_block.lock();
   auto target = target_block.lock();
 
   return source->llvm_basic_block_ < target->llvm_basic_block_;
 }
 
-bool operator==(const std::shared_ptr<framework::BasicBlock> basic_block,
+bool operator==(const std::shared_ptr<fitx::BasicBlock> basic_block,
                 const llvm::BasicBlock *llvm_block) {
   return basic_block->llvm_basic_block_ == llvm_block;
 }
 
-void BasicBlock::addSuccessor(std::shared_ptr<framework::BasicBlock> block) {
+void BasicBlock::addSuccessor(std::shared_ptr<fitx::BasicBlock> block) {
   successors_.insert(block);
 }
 
-void BasicBlock::addPredecessor(std::shared_ptr<framework::BasicBlock> block) {
+void BasicBlock::addPredecessor(std::shared_ptr<fitx::BasicBlock> block) {
   predecessors_.insert(block);
 }
 
-bool BasicBlock::isInPredecessor(std::shared_ptr<framework::BasicBlock> block) {
+bool BasicBlock::isInPredecessor(std::shared_ptr<fitx::BasicBlock> block) {
   return std::find_if(predecessors_.begin(), predecessors_.end(),
-                      [block](std::weak_ptr<framework::BasicBlock> pred) {
+                      [block](std::weak_ptr<fitx::BasicBlock> pred) {
                         return pred.lock() == block;
                       }) != predecessors_.end();
 }
 
-void BasicBlock::addInstruction(std::shared_ptr<framework::Instruction> inst) {
+void BasicBlock::addInstruction(std::shared_ptr<fitx::Instruction> inst) {
   instructions_.push_back(inst);
 }
 
@@ -63,9 +63,9 @@ bool BasicBlock::collectPassthroughBlock() {
   if (!transition_inst)
     return false;
 
-  std::map<std::weak_ptr<framework::BasicBlock>,
-           std::vector<std::weak_ptr<framework::BasicBlock>>,
-           std::owner_less<std::weak_ptr<framework::BasicBlock>>>
+  std::map<std::weak_ptr<fitx::BasicBlock>,
+           std::vector<std::weak_ptr<fitx::BasicBlock>>,
+           std::owner_less<std::weak_ptr<fitx::BasicBlock>>>
       succ_to_preds;
 
   if (auto *branch_inst = llvm::dyn_cast<llvm::BranchInst>(transition_inst)) {
@@ -105,7 +105,7 @@ bool BasicBlock::collectPassthroughBlock() {
 
             if (succ_to_preds.find(succ_block) == succ_to_preds.end())
               succ_to_preds[succ_block] =
-                  std::vector<std::weak_ptr<framework::BasicBlock>>();
+                  std::vector<std::weak_ptr<fitx::BasicBlock>>();
             succ_to_preds[succ_block].push_back(pred_block);
           }
         }
@@ -131,7 +131,7 @@ bool BasicBlock::collectPassthroughBlock() {
               function->getBasicBlock(phi_node->getIncomingBlock(i));
           if (succ_to_preds.find(succ_block) == succ_to_preds.end())
             succ_to_preds[succ_block] =
-                std::vector<std::weak_ptr<framework::BasicBlock>>();
+                std::vector<std::weak_ptr<fitx::BasicBlock>>();
 
           succ_to_preds[succ_block].push_back(pred_block);
         }
@@ -163,7 +163,7 @@ bool BasicBlock::collectPassthroughBlock() {
             auto pred_block = function->getBasicBlock(store_inst->getParent());
             if (succ_to_preds.find(succ_block) == succ_to_preds.end())
               succ_to_preds[succ_block] =
-                  std::vector<std::weak_ptr<framework::BasicBlock>>();
+                  std::vector<std::weak_ptr<fitx::BasicBlock>>();
 
             succ_to_preds[succ_block].push_back(pred_block);
           }
@@ -176,22 +176,22 @@ bool BasicBlock::collectPassthroughBlock() {
   return false;
 }
 
-const std::vector<std::weak_ptr<framework::BasicBlock>>
+const std::vector<std::weak_ptr<fitx::BasicBlock>>
 BasicBlock::getPassthroughBlock(
-    std::weak_ptr<framework::BasicBlock> succ_block) {
+    std::weak_ptr<fitx::BasicBlock> succ_block) {
   auto prev_block = pass_through_.find(succ_block);
   if (prev_block != pass_through_.end())
     return prev_block->second;
-  return std::vector<std::weak_ptr<framework::BasicBlock>>();
+  return std::vector<std::weak_ptr<fitx::BasicBlock>>();
 }
 
-void BasicBlock::addDeadValue(std::shared_ptr<framework::Value> value) {
+void BasicBlock::addDeadValue(std::shared_ptr<fitx::Value> value) {
   dead_values_.insert(value);
 }
 
-const std::set<std::shared_ptr<framework::Value>>
+const std::set<std::shared_ptr<fitx::Value>>
 BasicBlock::DeadValues() const {
-  return std::set<std::shared_ptr<framework::Value>>(dead_values_.begin(),
+  return std::set<std::shared_ptr<fitx::Value>>(dead_values_.begin(),
                                                      dead_values_.end());
 }
-} // namespace framework
+} // namespace fitx

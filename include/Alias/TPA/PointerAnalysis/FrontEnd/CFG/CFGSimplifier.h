@@ -4,31 +4,29 @@
 
 #include <llvm/ADT/DenseMap.h>
 
-namespace llvm
-{
-	class Value;
+namespace llvm {
+class Value;
 } // namespace llvm
 
-namespace tpa
-{
+namespace tpa {
 
 class CFG;
 class CFGNode;
 
-class CFGSimplifier
-{
+class CFGSimplifier {
 private:
-	llvm::DenseMap<const llvm::Value*, const llvm::Value*> eqMap;
+  llvm::DenseMap<const llvm::Value *, const llvm::Value *> eqMap;
 
-	std::vector<CFGNode*> findRedundantNodes(CFG&);
-	void flattenEquivalentMap();
-	void adjustCFG(CFG&, const util::VectorSet<CFGNode*>&);
-	void adjustDefUseChain(const util::VectorSet<CFGNode*>&);
-	void removeNodes(CFG&, const util::VectorSet<CFGNode*>&);
+  std::vector<CFGNode *> findRedundantNodes(CFG &);
+  void flattenEquivalentMap();
+  void adjustCFG(CFG &, const util::VectorSet<CFGNode *> &);
+  void adjustDefUseChain(CFG &, const util::VectorSet<CFGNode *> &);
+  void removeNodes(CFG &, const util::VectorSet<CFGNode *> &);
+
 public:
-	CFGSimplifier() {}
+  CFGSimplifier() {}
 
-	void simplify(CFG&);
+  void simplify(CFG &);
 };
 
 } // namespace tpa

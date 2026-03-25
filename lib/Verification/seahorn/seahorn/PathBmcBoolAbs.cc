@@ -7,7 +7,10 @@ namespace path_bmc {
 using namespace expr;
 
 // Remove all boolean operators except AND/OR/NEG
-struct PreNNF : public std::unary_function<Expr, Expr> {
+struct PreNNF {
+  using argument_type = Expr;
+  using result_type = Expr;
+
   PreNNF() {}
 
   Expr operator()(Expr exp) {
@@ -49,7 +52,9 @@ struct PreNNF : public std::unary_function<Expr, Expr> {
 };
 
 // Perform boolean abstraction
-struct BA : public std::unary_function<Expr, VisitAction> {
+struct BA {
+  using argument_type = Expr;
+  using result_type = VisitAction;
 
   bool is_pos_bool_lit(Expr e) const {
     return (isOpX<TRUE>(e) || isOpX<FALSE>(e) || bind::isBoolConst(e));

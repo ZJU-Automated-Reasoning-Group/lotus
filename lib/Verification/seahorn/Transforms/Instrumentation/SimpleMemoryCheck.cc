@@ -713,7 +713,7 @@ Value *CreateGlobalBool(Module &M, bool Val, Twine Name = "") {
 }
 
 Value *CreateGlobalPtr(Module &M, Twine Name = "") {
-  auto NullPtr = cast<ConstantPointerNull>(CreateNullptr(M.getContext()));
+  auto *NullPtr = cast<ConstantPointerNull>(CreateNullptr(M.getContext()));
   GlobalVariable *GV =
       new GlobalVariable(M, GetI8PtrTy(M.getContext()), false, /*non-constant*/
                          GlobalValue::InternalLinkage, NullPtr);

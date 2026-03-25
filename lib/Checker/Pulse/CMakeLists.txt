@@ -1,35 +1,40 @@
 set(PulseChecker_SOURCES
-  PulseDomain.cpp
-  PulseOperations.cpp
-  PulseChecker.cpp
-  PulseCheckerUtils.cpp
-  PulseCheckerInstructions.cpp
-  PulseCheckerSummary.cpp
-  PulseFormula.cpp
-  PulseSummary.cpp
-  PulseSubstitution.cpp
-  PulseSummaryApplication.cpp
-  PulseDisjunctiveDomain.cpp
-  PulseLoopAbstraction.cpp
-  PulseLatentIssue.cpp
-  PulseNonDisjunctiveDomain.cpp
-  PulseTransitiveInfo.cpp
-  PulseContradiction.cpp
-  PulseTaint.cpp
-  PulseTaintConfig.cpp
-  PulseModels.cpp
-  PulseDiagnostic.cpp
-  PulseReport.cpp
-  PulseSpecialization.cpp
-  PulseJoin.cpp
-  PulseCallState.cpp
-  PulseLogger.cpp
+  Checker/PulseChecker.cpp
+  Checker/PulseCheckerInstructions.cpp
+  Checker/PulseCheckerSummary.cpp
+  Checker/PulseCheckerUtils.cpp
+
+  Core/PulseCallState.cpp
+  Core/PulseFormula.cpp
+  Core/PulseSubstitution.cpp
+
+  Domain/PulseContradiction.cpp
+  Domain/PulseDisjunctiveDomain.cpp
+  Domain/PulseDomain.cpp
+  Domain/PulseJoin.cpp
+  Domain/PulseLoopAbstraction.cpp
+  Domain/PulseNonDisjunctiveDomain.cpp
+  Domain/PulseOperations.cpp
+  Domain/PulseTaint.cpp
+  Domain/PulseTaintConfig.cpp
+
+  Interproc/PulseModels.cpp
+  Interproc/PulseSpecialization.cpp
+  Interproc/PulseSummary.cpp
+  Interproc/PulseSummaryApplication.cpp
+  Interproc/PulseTransitiveInfo.cpp
+
+  Report/PulseDiagnostic.cpp
+  Report/PulseLatentIssue.cpp
+  Report/PulseLogger.cpp
+  Report/PulseReport.cpp
 )
 
 add_library(PulseChecker STATIC ${PulseChecker_SOURCES})
 
 target_link_libraries(PulseChecker
-  CanaryReport
-  CanaryAliasAnalysisWrapper
-  ${Z3_LIBRARIES}
+  PUBLIC
+    CanaryAliasAnalysisWrapper
+    CanaryReport
+    ${Z3_LIBRARIES}
 )

@@ -129,6 +129,22 @@ LTCallGraphNode *LTCallGraph::getOrInsertFunction(const Function *F) {
   return CGN.get();
 }
 
+void LTCallGraph::addResolvedCallEdge(const Instruction *CS,
+                                      const Function *Caller,
+                                      const Function *Callee) {
+  if (!CS || !Caller || !Callee)
+    return;
+
+  LTCallGraphNode *callerNode = getOrInsertFunction(Caller);
+  LTCallGraphNode *calleeNode = getOrInsertFunction(Callee);
+  if (!callerNode || !calleeNode)
+    return;
+  if (callerNode->hasCallEdge(CS, calleeNode))
+    return;
+
+  callerNode->addCalledFunction(CS, calleeNode);
+}
+
 /// removeCallEdgeFor - This method removes the edge in the node for the
 /// specified call site.  Note that this method takes linear time, so it
 /// should be used sparingly.

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <vector>
-
 #include "Solvers/SMT/LIBSMT/SMTObject.h"
 #include "z3++.h"
+
+#include <vector>
 
 class SMTFactory;
 class SMTModel;

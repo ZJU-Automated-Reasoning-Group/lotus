@@ -16,8 +16,8 @@
 #include <llvm/IR/LegacyPassManager.h>
 
 #include "Alias/AserPTA/PointerAnalysis/Models/MemoryModel/FieldInsensitive/FICanonicalizer.h"
-#include "Alias/AserPTA/PointerAnalysis/Models/MemoryModel/FieldInsensitive/FIObject.h"
 #include "Alias/AserPTA/PointerAnalysis/Graph/ConstraintGraph/ConstraintGraph.h"
+#include "Alias/AserPTA/PointerAnalysis/Models/MemoryModel/FieldInsensitive/FIObject.h"
 #include "Alias/AserPTA/PointerAnalysis/Models/MemoryModel/MemModelTrait.h"
 #include "Alias/AserPTA/PointerAnalysis/Program/Pointer.h"
 #include "Alias/AserPTA/PreProcessing/Passes/CanonicalizeGEPPass.h"
@@ -99,7 +99,7 @@ public:
     inline void processScalarGlobals(const llvm::GlobalVariable *gVar, const llvm::Constant *C) {
         if (llvm::isa<llvm::PointerType>(C->getType())) {
             // strip the offset+alias
-            auto value = Canonicalizer::canonicalize(C);
+            const auto *value = Canonicalizer::canonicalize(C);
             auto obj = this->get(CT::getGlobalCtx(), value, AllocType::Globals);
             auto ptr = this->get(CT::getGlobalCtx(), gVar, AllocType::Globals);
 

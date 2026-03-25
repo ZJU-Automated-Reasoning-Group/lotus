@@ -9,4 +9,4 @@ template
 expr::Expr ZToExpr::unmarshal<typename EZ3::z_cache_type>(
         const z3::ast &, expr::ExprFactory &, typename EZ3::z_cache_type &,
         ast_expr_map &);
-}
+} // namespace seahorn

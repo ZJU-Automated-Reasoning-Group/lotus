@@ -17,12 +17,12 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 
-#include "Dataflow/Elimination/Analyses/Intraprocedural/EliminationAvailableExpressions.h"
-#include "Dataflow/Elimination/Analyses/Intraprocedural/EliminationConstantPropagation.h"
-#include "Dataflow/Elimination/Analyses/Intraprocedural/EliminationLiveVariables.h"
-#include "Dataflow/Elimination/Analyses/Intraprocedural/EliminationReachable.h"
-#include "Dataflow/Elimination/Analyses/Intraprocedural/EliminationReachingDefinitions.h"
-#include "Dataflow/Elimination/Analyses/Intraprocedural/EliminationUninitVariables.h"
+#include "Dataflow/APA/Clients/LLVM/Intra/AvailableExpressions.h"
+#include "Dataflow/APA/Clients/LLVM/Intra/ConstantPropagation.h"
+#include "Dataflow/APA/Clients/LLVM/Intra/LiveVariables.h"
+#include "Dataflow/APA/Clients/LLVM/Intra/Reachability.h"
+#include "Dataflow/APA/Clients/LLVM/Intra/ReachingDefinitions.h"
+#include "Dataflow/APA/Clients/LLVM/Intra/UninitializedVariables.h"
 
 #include <algorithm>
 #include <memory>
@@ -43,34 +43,44 @@ static cl::opt<std::string> AnalysisOpt(
     cl::desc("Analysis: liveness (default), reaching_defs, uninitialized, "
              "constant_prop, available_exprs, reachable"),
     cl::init("liveness"));
+static cl::opt<std::string> ElimMethodOpt(
+    "elim-method",
+    cl::desc("Elimination solver method: state|adt-simple|adt-delayed"),
+    cl::init("state"));
 
 namespace {
 
-void buildValueIds(
-    llvm::Function *F,
-    std::unordered_map<const llvm::Value *, std::string> &ValueToId,
-    std::vector<llvm::Instruction *> &OrderedInsts) {
-  ValueToId.clear();
-  OrderedInsts.clear();
+elimination::EliminationOptions getElimOptions() {
+  elimination::EliminationOptions Opts;
+  if (ElimMethodOpt == "adt-simple")
+    Opts.Method = elimination::EliminationMethod::ADTSimple;
+  else if (ElimMethodOpt == "adt-delayed")
+    Opts.Method = elimination::EliminationMethod::ADTDelayed;
+  else
+    Opts.Method = elimination::EliminationMethod::StateElimination;
+  return Opts;
+}
+
+void buildValueIds(Function *F,
+                   std::unordered_map<const Value *, std::string> &ValueToId,
+                   std::vector<Instruction *> &OrderedInsts) {
   unsigned ArgIdx = 0;
-  for (auto &Arg : F->args()) {
+  for (auto &Arg : F->args())
     ValueToId[&Arg] = "arg" + std::to_string(ArgIdx++);
-  }
   unsigned InstIdx = 0;
-  for (auto &BB : *F) {
+  for (auto &BB : *F)
     for (auto &I : BB) {
       OrderedInsts.push_back(&I);
       ValueToId[&I] = "i" + std::to_string(InstIdx++);
     }
-  }
 }
 
 template <typename T>
 void formatValueSet(
     raw_ostream &OS, const std::set<T> &S,
-    const std::unordered_map<const llvm::Value *, std::string> &ValueToId) {
+    const std::unordered_map<const Value *, std::string> &ValueToId) {
   std::vector<std::string> ids;
-  for (const llvm::Value *V : S) {
+  for (const Value *V : S) {
     auto It = ValueToId.find(V);
     if (It != ValueToId.end())
       ids.push_back(It->second);
@@ -95,7 +105,7 @@ std::string formatExpressionKey(const elimination::ExpressionKey &Key) {
   return ss.str();
 }
 
-std::string formatValueLatticeElement(const llvm::ValueLatticeElement &Val) {
+std::string formatValueLatticeElement(const ValueLatticeElement &Val) {
   std::ostringstream ss;
   if (Val.isUndef())
     ss << "undef";
@@ -117,9 +127,8 @@ std::string formatValueLatticeElement(const llvm::ValueLatticeElement &Val) {
 
 template <typename ValueType>
 void formatConstPropMap(
-    raw_ostream &OS,
-    const std::unordered_map<const llvm::Value *, ValueType> &M,
-    const std::unordered_map<const llvm::Value *, std::string> &ValueToId) {
+    raw_ostream &OS, const std::unordered_map<const Value *, ValueType> &M,
+    const std::unordered_map<const Value *, std::string> &ValueToId) {
   std::vector<std::string> entries;
   for (const auto &p : M) {
     std::ostringstream ss;
@@ -133,6 +142,71 @@ void formatConstPropMap(
     if (i)
       OS << ",";
     OS << entries[i];
+  }
+}
+
+void dumpFunctionAnalysis(raw_ostream &OS, Function &F,
+                          const std::string &Analysis,
+                          const elimination::EliminationOptions &ElimOpts) {
+  std::unordered_map<const Value *, std::string> ValueToId;
+  std::vector<Instruction *> OrderedInsts;
+  buildValueIds(&F, ValueToId, OrderedInsts);
+  OS << "FUNC " << F.getName().str() << "\n";
+
+  if (Analysis == "liveness") {
+    auto Result = elimination::runIntraElimLiveVariables(&F, ElimOpts);
+    for (auto *I : OrderedInsts) {
+      OS << "  " << ValueToId.at(I) << " IN: ";
+      formatValueSet(OS, Result.IN(I), ValueToId);
+      OS << "\n";
+    }
+  } else if (Analysis == "reaching_defs") {
+    auto Result =
+        elimination::runIntraElimReachingDefinitions(&F, nullptr, ElimOpts);
+    for (auto *I : OrderedInsts) {
+      OS << "  " << ValueToId.at(I) << " IN: ";
+      formatValueSet(OS, Result.IN(I), ValueToId);
+      OS << "\n";
+    }
+  } else if (Analysis == "uninitialized") {
+    auto Result =
+        elimination::runIntraElimUninitVariables(&F, nullptr, ElimOpts);
+    for (auto *I : OrderedInsts) {
+      OS << "  " << ValueToId.at(I) << " IN: ";
+      formatValueSet(OS, Result.IN(I), ValueToId);
+      OS << "\n";
+    }
+  } else if (Analysis == "constant_prop") {
+    auto Result =
+        elimination::runIntraElimConstantPropagation(&F, nullptr, ElimOpts);
+    for (auto *I : OrderedInsts) {
+      OS << "  " << ValueToId.at(I) << " IN: ";
+      formatConstPropMap(OS, Result.IN(I), ValueToId);
+      OS << "\n";
+    }
+  } else if (Analysis == "available_exprs") {
+    auto Result =
+        elimination::runIntraElimAvailableExpressions(&F, nullptr, ElimOpts);
+    for (auto *I : OrderedInsts) {
+      OS << "  " << ValueToId.at(I) << " IN: ";
+      std::vector<std::string> exprs;
+      for (const auto &expr : Result.IN(I))
+        exprs.push_back(formatExpressionKey(expr));
+      std::sort(exprs.begin(), exprs.end());
+      for (size_t i = 0; i < exprs.size(); ++i) {
+        if (i)
+          OS << ",";
+        OS << exprs[i];
+      }
+      OS << "\n";
+    }
+  } else if (Analysis == "reachable") {
+    auto Result = elimination::runIntraElimReachable(&F, ElimOpts);
+    for (auto *I : OrderedInsts) {
+      OS << "  " << ValueToId.at(I) << " IN: ";
+      OS << (Result.IN(I) ? "true" : "false");
+      OS << "\n";
+    }
   }
 }
 
@@ -168,78 +242,13 @@ int main(int argc, char **argv) {
     OutOS = FileOS.get();
   }
   raw_ostream &OS = *OutOS;
+  const auto ElimOpts = getElimOptions();
 
   OS << "[elim:" << AnalysisOpt << "]\n";
 
-  for (auto &F : *M) {
-    if (F.isDeclaration())
-      continue;
-
-    std::unordered_map<const llvm::Value *, std::string> ValueToId;
-    std::vector<llvm::Instruction *> OrderedInsts;
-    buildValueIds(&F, ValueToId, OrderedInsts);
-
-    OS << "FUNC " << F.getName().str() << "\n";
-
-    if (AnalysisOpt == "liveness") {
-      auto Res = elimination::runIntraElimLiveVariables(&F);
-      for (auto *I : OrderedInsts) {
-        const auto &InSet = Res.IN(I);
-        OS << "  " << ValueToId.at(I) << " IN: ";
-        formatValueSet(OS, InSet, ValueToId);
-        OS << "\n";
-      }
-    } else if (AnalysisOpt == "reaching_defs") {
-      auto Res = elimination::runIntraElimReachingDefinitions(&F, nullptr);
-      for (auto *I : OrderedInsts) {
-        const auto &InSet = Res.IN(I);
-        OS << "  " << ValueToId.at(I) << " IN: ";
-        formatValueSet(OS, InSet, ValueToId);
-        OS << "\n";
-      }
-    } else if (AnalysisOpt == "uninitialized") {
-      auto Res = elimination::runIntraElimUninitVariables(&F, nullptr);
-      for (auto *I : OrderedInsts) {
-        const auto &InSet = Res.IN(I);
-        OS << "  " << ValueToId.at(I) << " IN: ";
-        formatValueSet(OS, InSet, ValueToId);
-        OS << "\n";
-      }
-    } else if (AnalysisOpt == "constant_prop") {
-      auto Res = elimination::runIntraElimConstantPropagation(&F, nullptr);
-      for (auto *I : OrderedInsts) {
-        const auto &InMap = Res.IN(I);
-        OS << "  " << ValueToId.at(I) << " IN: ";
-        formatConstPropMap(OS, InMap, ValueToId);
-        OS << "\n";
-      }
-    } else if (AnalysisOpt == "available_exprs") {
-      auto Res = elimination::runIntraElimAvailableExpressions(&F, nullptr);
-      for (auto *I : OrderedInsts) {
-        const auto &InSet = Res.IN(I);
-        OS << "  " << ValueToId.at(I) << " IN: ";
-        std::vector<std::string> exprs;
-        for (const auto &expr : InSet) {
-          exprs.push_back(formatExpressionKey(expr));
-        }
-        std::sort(exprs.begin(), exprs.end());
-        for (size_t i = 0; i < exprs.size(); ++i) {
-          if (i)
-            OS << ",";
-          OS << exprs[i];
-        }
-        OS << "\n";
-      }
-    } else if (AnalysisOpt == "reachable") {
-      auto Res = elimination::runIntraElimReachable(&F);
-      for (auto *I : OrderedInsts) {
-        const auto &InSet = Res.IN(I);
-        OS << "  " << ValueToId.at(I) << " IN: ";
-        OS << (InSet ? "true" : "false");
-        OS << "\n";
-      }
-    }
-  }
+  for (auto &F : *M)
+    if (!F.isDeclaration())
+      dumpFunctionAnalysis(OS, F, AnalysisOpt, ElimOpts);
 
   return 0;
 }

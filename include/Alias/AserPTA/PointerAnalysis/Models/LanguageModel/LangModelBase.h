@@ -243,6 +243,13 @@ private:
         return INVALID_NODE_ID;
     }
 
+public:
+    /// Expose object indexing for clients outside PTA (e.g., SVFGBuilder).
+    static inline CGNodeTy *indexObjectForClients(LangModelTy *model, ObjNodeTy *objNode,
+                                                  const llvm::GetElementPtrInst *gep) {
+        return model->indexObject(objNode, gep);
+    }
+
     template<typename L, typename S>
     friend class SolverBase; // every SolverBase
 };

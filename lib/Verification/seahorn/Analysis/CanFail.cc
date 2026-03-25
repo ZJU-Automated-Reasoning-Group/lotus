@@ -1,8 +1,8 @@
 #include "seahorn/Analysis/CanFail.hh"
 #include "seahorn/Transforms/Scalar/PromoteVerifierCalls.hh"
 
-#include "llvm/Analysis/CallGraph.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "seahorn/Support/SeaDebug.h"
@@ -67,7 +67,7 @@ namespace seahorn
   }
 
     Pass* createCanFailPass(){return new CanFail();}
-}
+} // namespace seahorn
 
 
 

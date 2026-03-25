@@ -2,10 +2,9 @@
 #define HORNMODEL_CONVERTER__HH_
 
 #include "seahorn/HornClauseDB.hh"
-#include "seahorn/HornifyModule.hh"
 #include "seahorn/HornDbModel.hh"
+#include "seahorn/HornifyModule.hh"
 
-#include "seahorn/Expr/Expr.hh"
 #include "seahorn/Expr/Smt/EZ3.hh"
 
 namespace seahorn
@@ -17,6 +16,6 @@ namespace seahorn
     virtual bool convert (HornDbModel &in, HornDbModel &out) = 0;
     virtual ~HornModelConverter() {}
   };
-}
+} // namespace seahorn
 
 #endif

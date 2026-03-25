@@ -3,5 +3,5 @@
 #include "Checker/FiTx/Frontend/State.h"
 
 namespace DoubleUnlock {
-  void defineStates(framework::StateManager& manager);
+void defineStates(fitx::StateManager &manager);
 } // namespace DoubleUnlock

@@ -9,7 +9,7 @@
 #pragma once
 
 #include "Alias/AliasAnalysisWrapper/AliasAnalysisWrapper.h"
-#include "Dataflow/IFDS/IFDSFramework.h"
+#include "Dataflow/IFDS/Core/IFDSFramework.h"
 
 #include <set>
 
@@ -42,6 +42,8 @@ struct ConstFact {
     return type == other.type && value == other.value;
   }
 
+  bool operator!=(const ConstFact &other) const { return !(*this == other); }
+
   bool operator<(const ConstFact &other) const {
     if (type != other.type)
       return type < other.type;
@@ -58,8 +60,13 @@ struct ConstFact {
 namespace std {
 template <> struct hash<ifds::ConstFact> {
   size_t operator()(const ifds::ConstFact &fact) const {
-    return std::hash<int>{}(static_cast<int>(fact.type)) ^
-           (std::hash<const llvm::Value *>{}(fact.value) << 1);
+    // FNV-1a-style mixing to avoid XOR-shift collisions on aligned hashes.
+    size_t h = 14695981039346656037ULL;
+    h ^= std::hash<int>{}(static_cast<int>(fact.type));
+    h *= 1099511628211ULL;
+    h ^= std::hash<const llvm::Value *>{}(fact.value);
+    h *= 1099511628211ULL;
+    return h;
   }
 };
 } // namespace std
@@ -73,14 +80,16 @@ public:
 
   ConstFact zero_fact() const override;
   FactSet normal_flow(const llvm::Instruction *stmt,
+                      const llvm::Instruction *succ,
                       const ConstFact &fact) override;
-  FactSet call_flow(const llvm::CallBase*call, const llvm::Function *callee,
+  FactSet call_flow(const llvm::CallBase *call, const llvm::Function *callee,
                     const ConstFact &fact) override;
-  FactSet return_flow(const llvm::CallBase*call, const llvm::Function *callee,
+  FactSet return_flow(const llvm::CallBase *call, const llvm::Instruction *exit_inst, const llvm::Instruction *return_site, const llvm::Function *callee,
                       const ConstFact &exit_fact,
                       const ConstFact &call_fact) override;
-  FactSet call_to_return_flow(const llvm::CallBase*call,
-                              const ConstFact &fact) override;
+  FactSet call_to_return_flow(const llvm::CallBase *call,
+                              const llvm::Instruction *return_site,
+                              llvm::ArrayRef<const llvm::Function *> callees, const ConstFact &fact) override;
   FactSet initial_facts(const llvm::Function *main) override;
 
   void set_alias_analysis(lotus::AliasAnalysisWrapper *aa) override;
@@ -96,7 +105,7 @@ private:
   std::set<const llvm::Value *> all_memory_locations;
 
   bool is_vtable_store(const llvm::StoreInst *store) const;
-  bool is_memory_intrinsic(const llvm::CallBase*call) const;
+  bool is_memory_intrinsic(const llvm::CallBase *call) const;
   std::set<const llvm::Value *>
   get_context_relevant_aliases(const std::set<const llvm::Value *> &aliases,
                                const llvm::Function *context) const;

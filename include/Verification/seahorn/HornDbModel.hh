@@ -22,6 +22,6 @@ namespace seahorn
 
   /// Extract HornDbModel of a given horn db from a ZFixedPoint. 
   void initDBModelFromFP(HornDbModel &dbModel, HornClauseDB &db, ZFixedPoint<EZ3> &fp);
-}
+} // namespace seahorn
 
 #endif

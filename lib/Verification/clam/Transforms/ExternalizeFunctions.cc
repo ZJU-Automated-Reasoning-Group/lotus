@@ -1,6 +1,6 @@
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "Utils/LLVM/Demangle.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -33,10 +33,10 @@ namespace clam {
 
 class ExternalizeFunctions : public ModulePass {
 
-  struct MatchRegex : public std::unary_function<Function *, bool> {
+  struct MatchRegex {
     llvm::Optional<llvm::Regex> m_re;
-    MatchRegex(std::string s) {
-      if (s != "") {
+    explicit MatchRegex(const std::string &s) {
+      if (!s.empty()) {
         m_re = llvm::Regex(s);
         std::string Error;
         if (!m_re->isValid(Error)) {
@@ -44,7 +44,7 @@ class ExternalizeFunctions : public ModulePass {
         }
       }
     }
-    bool operator()(Function *F) {
+    bool operator()(Function *F) const {
       return m_re && m_re->match(F->getName());
     }
   };

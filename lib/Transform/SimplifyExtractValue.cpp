@@ -22,7 +22,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
-
 using namespace llvm;
 
 // Pass statistic
@@ -45,22 +44,24 @@ STATISTIC(numErased, "Number of Instructions Deleted");
 // true  - The module was modified.
 // false - The module was not modified.
 //
-bool SimplifyEV::runOnModule(Module& M) {
+bool SimplifyEV::runOnModule(Module &M) {
+  bool erased_this_run = false;
   // Repeat till no change
   bool changed;
   do {
     changed = false;
     for (Module::iterator F = M.begin(); F != M.end(); ++F) {
-      for (Function::iterator B = F->begin(), FE = F->end(); B != FE; ++B) {      
+      for (Function::iterator B = F->begin(), FE = F->end(); B != FE; ++B) {
         for (BasicBlock::iterator I = B->begin(), BE = B->end(); I != BE;) {
           ExtractValueInst *EV = dyn_cast<ExtractValueInst>(I++);
-          if(!EV)
+          if (!EV)
             continue;
           Value *Agg = EV->getAggregateOperand();
           if (!EV->hasIndices()) {
             EV->replaceAllUsesWith(Agg);
             EV->eraseFromParent();
             numErased++;
+            erased_this_run = true;
             changed = true;
             continue;
           }
@@ -69,6 +70,7 @@ bool SimplifyEV::runOnModule(Module& M) {
               EV->replaceAllUsesWith(UndefValue::get(EV->getType()));
               EV->eraseFromParent();
               numErased++;
+              erased_this_run = true;
               changed = true;
               continue;
             }
@@ -76,92 +78,99 @@ bool SimplifyEV::runOnModule(Module& M) {
               EV->replaceAllUsesWith(Constant::getNullValue(EV->getType()));
               EV->eraseFromParent();
               numErased++;
+              erased_this_run = true;
               changed = true;
               continue;
             }
             if (isa<ConstantArray>(C) || isa<ConstantStruct>(C)) {
-              // Extract the element indexed by the first index out of the constant
+              // Extract the element indexed by the first index out of the
+              // constant
               Value *V = C->getOperand(*EV->idx_begin());
               if (EV->getNumIndices() > 1) {
-                // Extract the remaining indices out of the constant indexed by the
-                // first index
-                ExtractValueInst *EV_new = ExtractValueInst::Create(V, 
-                                                                    EV->getIndices().slice(1), 
-                                                                    "", EV);
+                // Extract the remaining indices out of the constant indexed by
+                // the first index
+                ExtractValueInst *EV_new = ExtractValueInst::Create(
+                    V, EV->getIndices().slice(1), "", EV);
                 EV->replaceAllUsesWith(EV_new);
                 EV->eraseFromParent();
                 numErased++;
+                erased_this_run = true;
                 changed = true;
                 continue;
-              }  else {
+              } else {
                 EV->replaceAllUsesWith(V);
                 EV->eraseFromParent();
                 numErased++;
+                erased_this_run = true;
                 changed = true;
                 continue;
               }
             }
             continue;
           }
-          if (LoadInst * LI = dyn_cast<LoadInst>(Agg)) {
+          if (LoadInst *LI = dyn_cast<LoadInst>(Agg)) {
             // if the Agg value came from a load instruction
             // replace the extract value intruction with
             // a gep and a load.
-            SmallVector<Value*, 8> Indices;
+            SmallVector<Value *, 8> Indices;
             Type *Int32Ty = Type::getInt32Ty(M.getContext());
             Indices.push_back(Constant::getNullValue(Int32Ty));
-            for (ExtractValueInst::idx_iterator I = EV->idx_begin(), E = EV->idx_end();
+            for (ExtractValueInst::idx_iterator I = EV->idx_begin(),
+                                                E = EV->idx_end();
                  I != E; ++I) {
               Indices.push_back(ConstantInt::get(Int32Ty, *I));
             }
 
-            Type *PtrElemTy = cast<PointerType>(LI->getOperand(0)->getType())->getPointerElementType();
-            GetElementPtrInst *GEP = GetElementPtrInst::CreateInBounds(PtrElemTy, LI->getOperand(0), Indices,
-                                                                       LI->getName(), LI) ;
-            LoadInst *LINew = new LoadInst(GEP->getResultElementType(), GEP, "", LI);
+            Type *PtrElemTy = cast<PointerType>(LI->getOperand(0)->getType())
+                                  ->getPointerElementType();
+            GetElementPtrInst *GEP = GetElementPtrInst::CreateInBounds(
+                PtrElemTy, LI->getOperand(0), Indices, LI->getName(), LI);
+            LoadInst *LINew =
+                new LoadInst(GEP->getResultElementType(), GEP, "", LI);
             EV->replaceAllUsesWith(LINew);
             EV->eraseFromParent();
             changed = true;
             numErased++;
+            erased_this_run = true;
             continue;
           }
           if (InsertValueInst *IV = dyn_cast<InsertValueInst>(Agg)) {
             bool done = false;
-            // We're extracting from an insertvalue instruction, compare the indices
+            // We're extracting from an insertvalue instruction, compare the
+            // indices
             const unsigned *exti, *exte, *insi, *inse;
             for (exti = EV->idx_begin(), insi = IV->idx_begin(),
-                 exte = EV->idx_end(), inse = IV->idx_end();
-                 exti != exte && insi != inse;
-                 ++exti, ++insi) {
+                exte = EV->idx_end(), inse = IV->idx_end();
+                 exti != exte && insi != inse; ++exti, ++insi) {
               if (*insi != *exti) {
-                // The insert and extract both reference distinctly different elements.
-                // This means the extract is not influenced by the insert, and we can
-                // replace the aggregate operand of the extract with the aggregate
-                // operand of the insert. i.e., replace
-                // %I = insertvalue { i32, { i32 } } %A, { i32 } { i32 42 }, 1
-                // %E = extractvalue { i32, { i32 } } %I, 0
-                // with
-                // %E = extractvalue { i32, { i32 } } %A, 0
-                ExtractValueInst *EV_new = ExtractValueInst::Create(IV->getAggregateOperand(),
-                                                                    EV->getIndices(), "", EV);
+                // The insert and extract both reference distinctly different
+                // elements. This means the extract is not influenced by the
+                // insert, and we can replace the aggregate operand of the
+                // extract with the aggregate operand of the insert. i.e.,
+                // replace %I = insertvalue { i32, { i32 } } %A, { i32 } { i32
+                // 42 }, 1 %E = extractvalue { i32, { i32 } } %I, 0 with %E =
+                // extractvalue { i32, { i32 } } %A, 0
+                ExtractValueInst *EV_new = ExtractValueInst::Create(
+                    IV->getAggregateOperand(), EV->getIndices(), "", EV);
                 EV->replaceAllUsesWith(EV_new);
                 EV->eraseFromParent();
                 numErased++;
+                erased_this_run = true;
                 done = true;
                 changed = true;
                 break;
               }
             }
-            if(done)
+            if (done)
               continue;
             if (exti == exte && insi == inse) {
-              // Both iterators are at the end: Index lists are identical. Replace
-              // %B = insertvalue { i32, { i32 } } %A, i32 42, 1, 0
-              // %C = extractvalue { i32, { i32 } } %B, 1, 0
-              // with "i32 42"
+              // Both iterators are at the end: Index lists are identical.
+              // Replace %B = insertvalue { i32, { i32 } } %A, i32 42, 1, 0 %C =
+              // extractvalue { i32, { i32 } } %B, 1, 0 with "i32 42"
               EV->replaceAllUsesWith(IV->getInsertedValueOperand());
               EV->eraseFromParent();
               numErased++;
+              erased_this_run = true;
               changed = true;
               continue;
             }
@@ -176,28 +185,30 @@ bool SimplifyEV::runOnModule(Module& M) {
               // insertvalue should be left in, since it may have other uses).
               Value *NewEV = ExtractValueInst::Create(IV->getAggregateOperand(),
                                                       EV->getIndices(), "", EV);
-              Value *NewIV = InsertValueInst::Create(NewEV, IV->getInsertedValueOperand(),
-                                                     makeArrayRef(insi, inse), "", EV);
+              Value *NewIV =
+                  InsertValueInst::Create(NewEV, IV->getInsertedValueOperand(),
+                                          makeArrayRef(insi, inse), "", EV);
               EV->replaceAllUsesWith(NewIV);
               EV->eraseFromParent();
               numErased++;
+              erased_this_run = true;
               changed = true;
               continue;
             }
             if (insi == inse) {
               // The insert list is a prefix of the extract list
-              // We can simply remove the common indices from the extract and make it
-              // operate on the inserted value instead of the insertvalue result.
-              // i.e., replace
-              // %I = insertvalue { i32, { i32 } } %A, { i32 } { i32 42 }, 1
-              // %E = extractvalue { i32, { i32 } } %I, 1, 0
-              // with
-              // %E extractvalue { i32 } { i32 42 }, 0
-              ExtractValueInst *EV_new = ExtractValueInst::Create(IV->getInsertedValueOperand(),
-                                                                  makeArrayRef(exti, exte), "", EV);
+              // We can simply remove the common indices from the extract and
+              // make it operate on the inserted value instead of the
+              // insertvalue result. i.e., replace %I = insertvalue { i32, { i32
+              // } } %A, { i32 } { i32 42 }, 1 %E = extractvalue { i32, { i32 }
+              // } %I, 1, 0 with %E extractvalue { i32 } { i32 42 }, 0
+              ExtractValueInst *EV_new =
+                  ExtractValueInst::Create(IV->getInsertedValueOperand(),
+                                           makeArrayRef(exti, exte), "", EV);
               EV->replaceAllUsesWith(EV_new);
               EV->eraseFromParent();
               numErased++;
+              erased_this_run = true;
               changed = true;
               continue;
             }
@@ -205,13 +216,13 @@ bool SimplifyEV::runOnModule(Module& M) {
         }
       }
     }
-  } while(changed);
-  return (numErased > 0);
+  } while (changed);
+  return erased_this_run;
 }
 
 // Pass ID variable
 char SimplifyEV::ID = 0;
 
 // Register the pass
-static RegisterPass<SimplifyEV>
-X("simplify-ev", "Simplify extract/insert value insts");
+static RegisterPass<SimplifyEV> X("simplify-ev",
+                                  "Simplify extract/insert value insts");

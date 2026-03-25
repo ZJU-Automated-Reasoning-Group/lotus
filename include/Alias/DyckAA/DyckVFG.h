@@ -20,12 +20,14 @@
 #define ALIAS_DyckAA_DYCKVFG_H
 
 #include "Analysis/CFG/CFGReachability.h"
-#include "Utils/General/ADT/MapIterators.h"
-#include <llvm/IR/Function.h>
-#include <llvm/IR/Module.h>
+#include "Utils/ADT/MapIterators.h"
+
 #include <map>
 #include <set>
 #include <unordered_map>
+
+#include <llvm/IR/Function.h>
+#include <llvm/IR/Module.h>
 
 using namespace llvm;
 
@@ -37,64 +39,71 @@ class Call;
 
 class DyckVFGNode {
 private:
-    /// the value this node represents
-    Value *V;
+  /// the value this node represents
+  Value *V;
 
-    /// labeled edge, 0 - epsilon, pos - call, neg - return
-    /// @{
-    using EdgeSetTy = std::set<std::pair<DyckVFGNode *, int>>;
-    EdgeSetTy Targets;
-    EdgeSetTy Sources;
-    /// @}
+  /// labeled edge, 0 - epsilon, pos - call, neg - return
+  /// @{
+  using EdgeSetTy = std::set<std::pair<DyckVFGNode *, int>>;
+  EdgeSetTy Targets;
+  EdgeSetTy Sources;
+  /// @}
 
 public:
-    explicit DyckVFGNode(Value *V) : V(V) {}
+  explicit DyckVFGNode(Value *V) : V(V) {}
 
-    void addTarget(DyckVFGNode *N, int L = 0) {
-        assert(N);
-        this->Targets.emplace(N, L);
-        N->Sources.emplace(this, L);
-    }
+  void addTarget(DyckVFGNode *N, int L = 0) {
+    assert(N);
+    this->Targets.emplace(N, L);
+    N->Sources.emplace(this, L);
+  }
 
-    Value *getValue() const { return V; }
+  Value *getValue() const { return V; }
 
-    Function *getFunction() const;
+  Function *getFunction() const;
 
-    EdgeSetTy::const_iterator begin() const { return Targets.begin(); }
+  EdgeSetTy::const_iterator begin() const { return Targets.begin(); }
 
-    EdgeSetTy::const_iterator end() const { return Targets.end(); }
+  EdgeSetTy::const_iterator end() const { return Targets.end(); }
 
-    EdgeSetTy::const_iterator in_begin() const { return Sources.begin(); }
+  EdgeSetTy::const_iterator in_begin() const { return Sources.begin(); }
 
-    EdgeSetTy::const_iterator in_end() const { return Sources.end(); }
+  EdgeSetTy::const_iterator in_end() const { return Sources.end(); }
 };
 
 class DyckVFG {
 private:
-    std::unordered_map<Value *, DyckVFGNode *> ValueNodeMap;
+  std::unordered_map<Value *, DyckVFGNode *> ValueNodeMap;
 
 public:
-    DyckVFG(DyckAliasAnalysis *DAA, DyckModRefAnalysis *DMRA, Module *M);
+  DyckVFG(DyckAliasAnalysis *DAA, DyckModRefAnalysis *DMRA, Module *M);
 
-    ~DyckVFG();
+  ~DyckVFG();
 
-    DyckVFGNode *getVFGNode(Value *) const;
+  DyckVFGNode *getVFGNode(Value *) const;
 
-    value_iterator<std::unordered_map<Value *, DyckVFGNode *>::iterator> node_begin() { return {ValueNodeMap.begin()}; }
+  value_iterator<std::unordered_map<Value *, DyckVFGNode *>::iterator>
+  node_begin() {
+    return {ValueNodeMap.begin()};
+  }
 
-    value_iterator<std::unordered_map<Value *, DyckVFGNode *>::iterator> node_end() { return {ValueNodeMap.end()}; }
+  value_iterator<std::unordered_map<Value *, DyckVFGNode *>::iterator>
+  node_end() {
+    return {ValueNodeMap.end()};
+  }
 
-    /// Dump the Value Flow Graph to a DOT file for visualization
-    void dumpToDot(const std::string &FileName) const;
+  /// Dump the Value Flow Graph to a DOT file for visualization
+  void dumpToDot(const std::string &FileName) const;
 
 private:
-    DyckVFGNode *getOrCreateVFGNode(Value *);
+  DyckVFGNode *getOrCreateVFGNode(Value *);
 
-    void connect(DyckModRefAnalysis *, Call *, Function *, CFGReachability *);
+  void connect(DyckModRefAnalysis *, Call *, Function *, CFGReachability *);
 
-    void buildLocalVFG(DyckAliasAnalysis *DAA, CFGReachability *DMRA, Function *F) const;
+  void buildLocalVFG(DyckAliasAnalysis *DAA, CFGReachability *DMRA,
+                     Function *F) const;
 
-    void buildLocalVFG(Function &);
+  void buildLocalVFG(Function &);
 };
 
-#endif //ALIAS_DyckAA_DYCKVFG_H
+#endif // ALIAS_DyckAA_DYCKVFG_H

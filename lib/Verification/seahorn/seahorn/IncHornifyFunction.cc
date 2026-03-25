@@ -3,15 +3,15 @@
 #include "seahorn/LiveSymbols.hh"
 #include "seahorn/Support/CFG.hh"
 #include "seahorn/Support/ExprSeahorn.hh"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/CommandLine.h"
 
 
-#include <boost/lexical_cast.hpp>
-#include <llvm/IR/DebugInfo.h>
 #include "seahorn/Support/SeaDebug.h"
+#include <llvm/IR/DebugInfo.h>
+#include <boost/lexical_cast.hpp>
 
 
 
@@ -321,4 +321,4 @@ void IncSmallHornifyFunction::runOnFunction(Function &F) {
   }
 }
 
-} // end namespace
+} // namespace seahorn

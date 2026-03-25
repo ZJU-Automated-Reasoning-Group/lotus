@@ -5,7 +5,7 @@
 #include "gtest/gtest.h"
 #include <string>
 
-namespace lotus::unittest {
+namespace lotus { namespace unittest {
 
 // Path to LLVM test files (used for regression tests with .ll files)
 static const std::string PathToLLTestFiles = 
@@ -29,6 +29,7 @@ static const std::string PathToJSONTestFiles =
 #define LOTUS_SKIP_TEST(...)
 #endif
 
-} // namespace lotus::unittest
+} // namespace unittest
+ } // namespace lotus
 
 #endif // LOTUS_UNITTEST_TESTUTILS_TESTCONFIG_H_

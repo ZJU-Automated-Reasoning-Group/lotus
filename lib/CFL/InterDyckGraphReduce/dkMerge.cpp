@@ -237,7 +237,7 @@ void arrayreach(CFLHashMap &cm, unordered_map<string, unsigned> &edgeStrToID,
         } else {
           // yuanbo modify
           // cout << "merge " << y << "->" << y << " to " << x << "->" << x <<
-          // endl;
+          // '\n';
           MergedEdges mEdges(y, y, x, x, c->first);
           mergeEdges.push(mEdges);
         }
@@ -314,7 +314,7 @@ void arrayreach(CFLHashMap &cm, unordered_map<string, unsigned> &edgeStrToID,
         } else {
           // yuanbo
           // cout << "Merge " << w << "->" << y << " to " << w << "->" << x <<
-          // endl;
+          // '\n';
           MergedEdges mEdges(w, y, w, x, c->first);
           mergeEdges.push(mEdges);
         }
@@ -400,7 +400,7 @@ void arrayreach(CFLHashMap &cm, unordered_map<string, unsigned> &edgeStrToID,
         } else {
           // yuanbo
           // cout << "Merge " << y << "->" << w << " to " << x << "->" << w <<
-          // endl;
+          // '\n';
           MergedEdges mEdges(y, w, x, w, c->first);
           mergeEdges.push(mEdges);
         }

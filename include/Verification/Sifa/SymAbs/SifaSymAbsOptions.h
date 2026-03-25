@@ -1,6 +1,6 @@
 //===-- Verification/Sifa/SymAbs/SifaSymAbsOptions.h ----------------------===//
 //
-// Configuration options for Sifa + SymbolicAbstraction-backed domain.
+// Configuration options for Sifa + SymAbsAI-backed domain.
 //
 //===----------------------------------------------------------------------===//
 
@@ -8,6 +8,7 @@
 #define LOTUS_VERIFICATION_SIFA_SYMABS_SIFASYMABSOPTIONS_H
 
 #include "Verification/Sifa/Log/SifaLogger.h"
+
 #include <string>
 
 namespace llvm {
@@ -18,16 +19,17 @@ namespace lotus {
 namespace sifa {
 
 struct SifaSymAbsOptions {
-  /// SymbolicAbstraction domain specification string.
+  /// SymAbsAI domain specification string.
   ///
-  /// Examples (domain names come from SymbolicAbstraction registrations):
+  /// Examples (domain names come from SymAbsAI registrations):
   /// - "Interval"
   /// - "Octagon"
   /// - "Interval, Octagon"
   std::string abstractDomain = "Interval, Octagon";
 
-  /// SymbolicAbstraction analyzer variant to use.
-  /// Supported values include "UnilateralAnalyzer", "BilateralAnalyzer", "OMTAnalyzer".
+  /// SymAbsAI analyzer variant to use.
+  /// Supported values include "UnilateralAnalyzer", "BilateralAnalyzer",
+  /// "OMTAnalyzer".
   std::string analyzerVariant = "UnilateralAnalyzer";
 
   /// Whether to recursively analyze callees when encoding call semantics.
@@ -53,7 +55,7 @@ struct SifaSymAbsOptions {
 
   /// Delay before first widening in the SMT strongest-consequence loop.
   /// Higher values allow more models to be joined before widening, often
-  /// yielding non-top intervals. Set to -1 to use SymbolicAbstraction default.
+  /// yielding non-top intervals. Set to -1 to use SymAbsAI default.
   int wideningDelay = -1;
 
   /// Frequency of widening after the delay. Set to -1 to use default.

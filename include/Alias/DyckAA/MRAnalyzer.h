@@ -19,35 +19,37 @@
 #ifndef DYCKAA_MRANALYZER_H
 #define DYCKAA_MRANALYZER_H
 
-#include <llvm/IR/Module.h>
-#include <llvm/Support/CommandLine.h>
-
 #include "Alias/DyckAA/DyckCallGraph.h"
 #include "Alias/DyckAA/DyckGraph.h"
 #include "Alias/DyckAA/DyckModRefAnalysis.h"
+
+#include <llvm/IR/Module.h>
+#include <llvm/Support/CommandLine.h>
 
 using namespace llvm;
 
 class MRAnalyzer {
 private:
-    Module *M;
-    DyckGraph *DG;
-    DyckCallGraph *DCG;
-    std::map<Function *, ModRef> Func2MR;
+  Module *M;
+  DyckGraph *DG;
+  DyckCallGraph *DCG;
+  std::map<Function *, ModRef> Func2MR;
 
 public:
-    MRAnalyzer(Module *, DyckGraph *, DyckCallGraph *);
+  MRAnalyzer(Module *, DyckGraph *, DyckCallGraph *);
 
-    ~MRAnalyzer();
+  ~MRAnalyzer();
 
-    void intraProcedureAnalysis();
+  void intraProcedureAnalysis();
 
-    void interProcedureAnalysis();
+  void interProcedureAnalysis();
 
-    void swap(std::map<Function *, ModRef> &Result) { Result.swap(Func2MR); }
+  void swap(std::map<Function *, ModRef> &Result) noexcept {
+    Result.swap(Func2MR);
+  }
 
 private:
-    void runOnFunction(DyckCallGraphNode *);
+  void runOnFunction(DyckCallGraphNode *);
 };
 
-#endif //DYCKAA_MRANALYZER_H
+#endif // DYCKAA_MRANALYZER_H

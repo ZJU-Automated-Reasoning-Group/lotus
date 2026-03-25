@@ -4,25 +4,24 @@
 
 #include <vector>
 
-namespace tpa
-{
+namespace tpa {
 
 class GlobalState;
 class Pointer;
 
-class PrecisionLossTracker
-{
+class PrecisionLossTracker {
 private:
-	using PointerList = std::vector<const Pointer*>;
-	using ProgramPointList = std::vector<ProgramPoint>;
+  using PointerList = std::vector<const Pointer *>;
+  using ProgramPointList = std::vector<ProgramPoint>;
 
-	const GlobalState& globalState;
+  const GlobalState &globalState;
 
-	ProgramPointList getProgramPointsFromPointers(const PointerList&);
+  ProgramPointList getProgramPointsFromPointers(const PointerList &);
+
 public:
-	PrecisionLossTracker(const GlobalState& g): globalState(g) {}
+  PrecisionLossTracker(const GlobalState &g) : globalState(g) {}
 
-	ProgramPointSet trackImprecision(const PointerList&);
+  ProgramPointSet trackImprecision(const PointerList &);
 };
 
 } // namespace tpa

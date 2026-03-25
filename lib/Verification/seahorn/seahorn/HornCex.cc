@@ -43,7 +43,7 @@
 
 namespace seahorn {
 std::string HornCexFile;
-}
+} // namespace seahorn
 
 static llvm::cl::opt<std::string, true> XHornCexFile(
     "horn-cex",

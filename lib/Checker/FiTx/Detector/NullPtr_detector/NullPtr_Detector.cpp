@@ -3,35 +3,35 @@
 #include "Checker/FiTx/Frontend/State.h"
 
 namespace NullPointer {
-void defineStates(framework::StateManager& manager) {
-  auto init_args = framework::StateArgs("init", framework::StateType::INIT);
-  framework::State& init = manager.createState(init_args);
+void defineStates(fitx::StateManager& manager) {
+  auto init_args = fitx::StateArgs("init", fitx::StateType::INIT);
+  fitx::State& init = manager.createState(init_args);
 
-  auto null_args = framework::StateArgs("null");
-  framework::State& null = manager.createState(null_args);
+  auto null_args = fitx::StateArgs("null");
+  fitx::State& null = manager.createState(null_args);
 
-  auto use_args = framework::StateArgs(
-      "used", framework::StateType::BUG,
-      framework::BugNotificationTiming::IMMEDIATE, false);
-  framework::State& use = manager.createState(use_args);
+  auto use_args = fitx::StateArgs(
+      "used", fitx::StateType::BUG,
+      fitx::BugNotificationTiming::IMMEDIATE, false);
+  fitx::State& use = manager.createState(use_args);
 
-  auto use_rule = framework::UseValueTransitionRule();
+  auto use_rule = fitx::UseValueTransitionRule();
   manager.addTransition(null, use, use_rule);
 
-  auto store_non_null_rule = framework::StoreValueTransitionRule(
-      framework::StoreValueTransitionRule::NON_NULL_VAL);
+  auto store_non_null_rule = fitx::StoreValueTransitionRule(
+      fitx::StoreValueTransitionRule::NON_NULL_VAL);
   manager.addTransition(null, init, store_non_null_rule);
 
-  auto store_null_rule = framework::StoreValueTransitionRule(
-      framework::StoreValueTransitionRule::NULL_VAL);
+  auto store_null_rule = fitx::StoreValueTransitionRule(
+      fitx::StoreValueTransitionRule::NULL_VAL);
   manager.addTransition(init, null, store_null_rule);
 }
 }  // namespace NullPointer
 
 namespace {
-class NullPtrDereferenceDetector : public framework::FrameworkPass {
+class NullPtrDereferenceDetector : public fitx::FrameworkPass {
   virtual void defineStates() override {
-    framework::StateManager manager;
+    fitx::StateManager manager;
     NullPointer::defineStates(manager);
     addStateManager(manager);
   }

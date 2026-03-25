@@ -9,5 +9,6 @@
 #include "Verification/Sifa/SymAbs/SifaSymAbsDomain.h"
 
 template class lotus::sifa::DagInterpreter<lotus::sifa::Transition, bool>;
-template class lotus::sifa::DagInterpreter<lotus::sifa::Transition, lotus::sifa::SymAbsState>;
+template class lotus::sifa::DagInterpreter<lotus::sifa::Transition,
+                                           lotus::sifa::SymAbsState>;
 template class lotus::sifa::IcfgInterpreter<bool>;

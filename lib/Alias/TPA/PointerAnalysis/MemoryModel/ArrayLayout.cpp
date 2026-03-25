@@ -69,8 +69,8 @@ const ArrayLayout *ArrayLayout::getDefaultLayout() { return defaultLayout; }
 
 // Maps a raw offset to a normalized offset.
 // Returns: {new_offset, is_array_access}
-// If the offset falls into an array triple, returns the offset of the base element
-// and true. Otherwise returns original offset and false.
+// If the offset falls into an array triple, returns the offset of the base
+// element and true. Otherwise returns original offset and false.
 std::pair<size_t, bool> ArrayLayout::offsetInto(size_t offset) const {
   bool hitArray = false;
   for (auto const &triple : arrayLayout) {
@@ -80,11 +80,11 @@ std::pair<size_t, bool> ArrayLayout::offsetInto(size_t offset) const {
     if (triple.start <= offset && offset < triple.end) {
       hitArray = true;
       // Normalize: map to the start of the array + offset within the element.
-      // Actually, here it maps to the specific element slot within the *first* index?
-      // Logic: start + (off - start) % size.
-      // Example: start=0, size=4. Access 8. 0 + (8-0)%4 = 0.
-      // Example: start=0, size=4. Access 9 (byte 1 of index 2). 0 + (9-0)%4 = 1.
-      // So it preserves intra-element offset but collapses indices.
+      // Actually, here it maps to the specific element slot within the *first*
+      // index? Logic: start + (off - start) % size. Example: start=0, size=4.
+      // Access 8. 0 + (8-0)%4 = 0. Example: start=0, size=4. Access 9 (byte 1
+      // of index 2). 0 + (9-0)%4 = 1. So it preserves intra-element offset but
+      // collapses indices.
       offset = triple.start + (offset - triple.start) % triple.size;
     }
   }

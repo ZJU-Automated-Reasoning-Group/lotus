@@ -7,5 +7,5 @@ This section documents the verification tools and frameworks used throughout Lot
    :maxdepth: 2
 
    clam
-   symbolic-abstraction
+   symabs-ai
    seahorn

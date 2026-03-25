@@ -92,13 +92,13 @@ public:
 };
 
 char PromoteSeahornAssume::ID = 0;
-}
+} // namespace
 
 namespace seahorn {
 FunctionPass *createPromoteSeahornAssumePass() {
   return new PromoteSeahornAssume();
 }
-}
+} // namespace seahorn
 
 static llvm::RegisterPass<PromoteSeahornAssume>
     X("promote-seahorn-assume",

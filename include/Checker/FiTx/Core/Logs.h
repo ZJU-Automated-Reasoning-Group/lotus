@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-namespace framework {
+namespace fitx {
 
 struct EndPoints;
 class EndPoint {
@@ -59,7 +59,7 @@ public:
 
   LoggingClient &operator<<(const std::string &log);
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &ostream,
-                                       framework::LoggingClient &client);
+                                       fitx::LoggingClient &client);
 
   std::string &getBuffer() { return buffer_; }
 
@@ -78,4 +78,4 @@ public:
 private:
   std::vector<LoggingClient *> clients_;
 };
-} // namespace framework
+} // namespace fitx

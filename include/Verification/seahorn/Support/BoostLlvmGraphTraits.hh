@@ -17,11 +17,11 @@ template <typename T> struct llvm_null_trait<T *> {
 };
 
 template <typename G>
-struct MkOutEdge : public std::unary_function<
-                       typename boost::graph_traits<G>::vertex_descriptor,
-                       typename boost::graph_traits<G>::edge_descriptor> {
+struct MkOutEdge {
   typedef typename boost::graph_traits<G>::vertex_descriptor Node;
   typedef typename boost::graph_traits<G>::edge_descriptor Edge;
+  using argument_type = Node;
+  using result_type = Edge;
 
   Node m_src;
 
@@ -32,11 +32,11 @@ struct MkOutEdge : public std::unary_function<
 };
 
 template <typename G>
-struct MkInEdge : public std::unary_function<
-                      typename boost::graph_traits<G>::vertex_descriptor,
-                      typename boost::graph_traits<G>::edge_descriptor> {
+struct MkInEdge {
   typedef typename boost::graph_traits<G>::vertex_descriptor Node;
   typedef typename boost::graph_traits<G>::edge_descriptor Edge;
+  using argument_type = Node;
+  using result_type = Edge;
 
   Node m_dst;
 

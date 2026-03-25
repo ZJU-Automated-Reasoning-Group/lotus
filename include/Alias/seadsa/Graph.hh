@@ -1,10 +1,9 @@
 #pragma once
 
-#include "boost/container/flat_map.hpp"
-#include "boost/container/flat_set.hpp"
-#include "boost/functional/hash.hpp"
-#include "boost/iterator/filter_iterator.hpp"
-#include "boost/iterator/indirect_iterator.hpp"
+#include <functional>
+#include <iterator>
+#include <map>
+#include <set>
 
 // llvm 3.8: forward declarations not enough
 #include "llvm/IR/Argument.h"
@@ -13,11 +12,12 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ImmutableSet.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
 
 #include "Alias/seadsa/AllocSite.hh"
 #include "Alias/seadsa/FieldType.hh"
-
-#include <functional>
 
 namespace llvm {
 class Type;
@@ -26,6 +26,76 @@ class raw_ostream;
 } // namespace llvm
 
 namespace seadsa {
+
+// Custom indirect_iterator adapter that dereferences unique_ptr
+template <typename IteratorT>
+class indirect_iterator {
+  IteratorT m_iter;
+  
+public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = typename std::remove_reference<decltype(**std::declval<IteratorT>())>::type;
+  using difference_type = typename std::iterator_traits<IteratorT>::difference_type;
+  using pointer = value_type*;
+  using reference = value_type&;
+  
+  indirect_iterator() = default;
+  indirect_iterator(IteratorT iter) : m_iter(iter) {}
+  
+  reference operator*() const { return **m_iter; }
+  pointer operator->() const { return &(**m_iter); }
+  
+  indirect_iterator& operator++() { ++m_iter; return *this; }
+  indirect_iterator operator++(int) { auto tmp = *this; ++m_iter; return tmp; }
+  
+  bool operator==(const indirect_iterator& other) const { return m_iter == other.m_iter; }
+  bool operator!=(const indirect_iterator& other) const { return m_iter != other.m_iter; }
+};
+
+// Custom filter_iterator adapter
+template <typename PredicateT, typename IteratorT>
+class filter_iterator {
+  PredicateT m_pred;
+  IteratorT m_iter;
+  IteratorT m_end;
+  
+  void skip_to_next() {
+    while (m_iter != m_end && !m_pred(*m_iter))
+      ++m_iter;
+  }
+  
+public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = typename std::iterator_traits<IteratorT>::value_type;
+  using difference_type = typename std::iterator_traits<IteratorT>::difference_type;
+  using pointer = typename std::iterator_traits<IteratorT>::pointer;
+  using reference = typename std::iterator_traits<IteratorT>::reference;
+  
+  filter_iterator() = default;
+  filter_iterator(PredicateT pred, IteratorT iter, IteratorT end)
+      : m_pred(pred), m_iter(iter), m_end(end) {
+    skip_to_next();
+  }
+  
+  reference operator*() const { return *m_iter; }
+  pointer operator->() const { return m_iter.operator->(); }
+  
+  filter_iterator& operator++() { ++m_iter; skip_to_next(); return *this; }
+  filter_iterator operator++(int) { auto tmp = *this; ++(*this); return tmp; }
+  
+  bool operator==(const filter_iterator& other) const { return m_iter == other.m_iter; }
+  bool operator!=(const filter_iterator& other) const { return m_iter != other.m_iter; }
+};
+
+template <typename PredicateT, typename IteratorT>
+filter_iterator<PredicateT, IteratorT> make_filter_iterator(PredicateT pred, IteratorT begin, IteratorT end) {
+  return filter_iterator<PredicateT, IteratorT>(pred, begin, end);
+}
+
+template <typename IteratorT>
+indirect_iterator<IteratorT> make_indirect_iterator(IteratorT iter) {
+  return indirect_iterator<IteratorT>(iter);
+}
 
 class Node;
 class Cell;
@@ -112,21 +182,21 @@ protected:
 
 public:
   using const_iterator =
-      boost::indirect_iterator<typename NodeVector::const_iterator>;
-  using iterator = boost::indirect_iterator<typename NodeVector::iterator>;
+      seadsa::indirect_iterator<typename NodeVector::const_iterator>;
+  using iterator = seadsa::indirect_iterator<typename NodeVector::iterator>;
   using scalar_const_iterator = ValueMap::const_iterator;
   using global_const_iterator =
-      boost::filter_iterator<IsGlobal, typename ValueMap::const_iterator>;
+      seadsa::filter_iterator<IsGlobal, typename ValueMap::const_iterator>;
   using formal_const_iterator = ArgumentMap::const_iterator;
   using return_const_iterator = ReturnMap::const_iterator;
   using alloc_site_iterator =
-      boost::indirect_iterator<typename AllocSites::iterator>;
+      seadsa::indirect_iterator<typename AllocSites::iterator>;
   using alloc_site_const_iterator =
-      boost::indirect_iterator<typename AllocSites::const_iterator>;
+      seadsa::indirect_iterator<typename AllocSites::const_iterator>;
   using callsite_iterator =
-      boost::indirect_iterator<typename CallSites::iterator>;
+      seadsa::indirect_iterator<typename CallSites::iterator>;
   using callsite_const_iterator =
-      boost::indirect_iterator<typename CallSites::const_iterator>;
+      seadsa::indirect_iterator<typename CallSites::const_iterator>;
 
   Graph(const llvm::DataLayout &dl, SetFactory &sf, bool is_flat = false);
   virtual ~Graph();
@@ -508,7 +578,7 @@ public:
   using Set = Graph::Set;
   // TODO: Investigate why flat_map is slower for accessed_types_type.
   using accessed_types_type = llvm::DenseMap<unsigned, Set>;
-  using links_type = boost::container::flat_map<Field, CellRef>;
+  using links_type = std::map<Field, CellRef>;
 
   // Iterator for graph interface... Defined in GraphTraits.h
   using iterator = NodeIterator<Node>;
@@ -560,7 +630,7 @@ private:
   unsigned m_size;
 
   /// allocation sites for the node
-  using AllocaSet = boost::container::flat_set<const llvm::Value *>;
+  using AllocaSet = std::set<const llvm::Value *>;
   AllocaSet m_alloca_sites;
 
   /// XXX This is ugly. Ids should probably be unique per-graph, not
@@ -579,11 +649,8 @@ private:
       m_accessedTypes =
           accessed_types_type(m_accessedTypes.begin(), m_accessedTypes.end());
 
-    if (m_links.size() * shrinkThreshold < m_links.capacity())
-      m_links.shrink_to_fit();
-
-    if (m_alloca_sites.size() * shrinkThreshold < m_alloca_sites.capacity())
-      m_alloca_sites.shrink_to_fit();
+    // Note: std::map and std::set don't have capacity() or shrink_to_fit()
+    // They manage memory automatically
   }
   /// Transfer links/types and other information from the current
   /// node to the given one at a given offset and make the current
@@ -866,11 +933,7 @@ inline raw_ostream &operator<<(raw_ostream &o, const seadsa::Cell &c) {
 namespace std {
 template <> struct hash<seadsa::Cell> {
   size_t operator()(const seadsa::Cell &c) const {
-    size_t seed = 0;
-    boost::hash_combine(seed, c.getNode());
-    boost::hash_combine(seed, c.getRawOffset());
-    // boost::hash_combine(seed, c.getType().asTuple());
-    return seed;
+    return llvm::hash_combine(c.getNode(), c.getRawOffset());
   }
 };
 } // namespace std

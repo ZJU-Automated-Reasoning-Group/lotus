@@ -1,6 +1,7 @@
 // Lower Expr (trimming-condition) formulas into LLVM IR for verifier.assume.
 // Paper §6 Eliminating quantifiers: existentials from negateForTrimming are
-// eliminated by QE or nondet witnesses; remaining quantifiers → "true" (no pruning).
+// eliminated by QE or nondet witnesses; remaining quantifiers → "true" (no
+// pruning).
 #include "FailureDirectedTrimmingImpl.h"
 
 #include <llvm/IR/Constants.h>
@@ -10,8 +11,9 @@
 
 using namespace llvm;
 
-// Trimming condition must remain a necessary condition for failure; if we cannot
-// represent it (e.g. unresolved quantifiers), produce "true" to avoid unsound pruning.
+// Trimming condition must remain a necessary condition for failure; if we
+// cannot represent it (e.g. unresolved quantifiers), produce "true" to avoid
+// unsound pruning.
 
 Value *codegenValue(const ExprFactory &F, const ExprRef &E, IRBuilder<> &B,
                     DenseMap<uint32_t, Value *> &BoundVals, Module &M,
@@ -125,8 +127,7 @@ Value *codegenValue(const ExprFactory &F, const ExprRef &E, IRBuilder<> &B,
     return B.CreateICmp(E->Pred, A, C);
   }
   case ExprKind::Select: {
-    Value *Cond =
-        codegenValue(F, E->Args[0], B, BoundVals, M, Nondet, DerefUF);
+    Value *Cond = codegenValue(F, E->Args[0], B, BoundVals, M, Nondet, DerefUF);
     Value *T = codegenValue(F, E->Args[1], B, BoundVals, M, Nondet, DerefUF);
     Value *Fv = codegenValue(F, E->Args[2], B, BoundVals, M, Nondet, DerefUF);
     if (!Cond || !Cond->getType()->isIntegerTy(1))
@@ -208,7 +209,8 @@ Value *codegenValue(const ExprFactory &F, const ExprRef &E, IRBuilder<> &B,
 }
 
 ExprRef eliminateExistsByNondet(const ExprFactory &F, const ExprRef &E,
-                                IRBuilder<> &B, Module &M, NondetFactory &Nondet,
+                                IRBuilder<> &B, Module &M,
+                                NondetFactory &Nondet,
                                 DenseMap<uint32_t, Value *> &BoundVals) {
   // Eliminates existential quantifiers by choosing a nondet witness value.
   //

@@ -8,7 +8,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 
-namespace framework {
+namespace fitx {
 class CallInst : public Instruction {
  public:
   static std::shared_ptr<CallInst> Create(
@@ -36,35 +36,35 @@ class CallInst : public Instruction {
     return *this;
   }
 
-  void setCalledFunction(std::shared_ptr<framework::Function> called_function) {
+  void setCalledFunction(std::shared_ptr<fitx::Function> called_function) {
     called_function_ = called_function;
   }
 
-  std::shared_ptr<framework::Function> CalledFunction() {
+  std::shared_ptr<fitx::Function> CalledFunction() {
     return called_function_;
   };
 
-  const std::vector<std::shared_ptr<framework::Value>>& Arguments() {
+  const std::vector<std::shared_ptr<fitx::Value>>& Arguments() {
     return arguments_;
   }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const framework::Instruction* I) {
+  static bool classof(const fitx::Instruction* I) {
     return I->Opcode() == llvm::Instruction::Call;
   }
 
-  static bool classof(const framework::Value* V) {
-    return llvm::isa<framework::Instruction>(V) &&
-           classof(llvm::cast<framework::Instruction>(V));
+  static bool classof(const fitx::Value* V) {
+    return llvm::isa<fitx::Instruction>(V) &&
+           classof(llvm::cast<fitx::Instruction>(V));
   }
 
-  void setArguments(std::vector<std::shared_ptr<framework::Value>> arguments);
+  void setArguments(std::vector<std::shared_ptr<fitx::Value>> arguments);
 
  private:
-  std::shared_ptr<framework::Value> return_value_;
-  std::vector<std::shared_ptr<framework::Value>> arguments_;
+  std::shared_ptr<fitx::Value> return_value_;
+  std::vector<std::shared_ptr<fitx::Value>> arguments_;
 
-  std::shared_ptr<framework::Function> called_function_;
+  std::shared_ptr<fitx::Function> called_function_;
 };
 
-}  // namespace framework
+}  // namespace fitx

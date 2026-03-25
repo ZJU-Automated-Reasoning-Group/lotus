@@ -37,7 +37,7 @@ Main Components
 MHPAnalysis
 ~~~~~~~~~~~
 
-**File**: ``MHPAnalysis.cpp``, ``MHPAnalysis.h``
+**File**: ``MHP/MHPAnalysis.cpp``, ``MHP/MHPAnalysis.h``
 
 The core May-Happen-in-Parallel analysis determines which pairs of program
 statements may execute concurrently in a multithreaded program.
@@ -75,7 +75,7 @@ statements may execute concurrently in a multithreaded program.
 LockSetAnalysis
 ~~~~~~~~~~~~~~~
 
-**File**: ``LockSetAnalysis.cpp``, ``LockSetAnalysis.h``
+**File**: ``LockSet/LockSetAnalysis.cpp``, ``LockSet/LockSetAnalysis.h``
 
 Computes the sets of locks that may or must be held at each program point.
 Essential for data race detection, deadlock detection, and precise MHP analysis.
@@ -117,7 +117,7 @@ Essential for data race detection, deadlock detection, and precise MHP analysis.
 MemUseDefAnalysis
 ~~~~~~~~~~~~~~~~~
 
-**File**: ``MemUseDefAnalysis.cpp``, ``MemUseDefAnalysis.h``
+**File**: ``Memory/MemUseDefAnalysis.cpp``, ``Memory/MemUseDefAnalysis.h``
 
 Performs memory use-def analysis based on MemorySSA to track memory dependencies
 in concurrent contexts. Identifies which memory definitions may reach each
@@ -146,7 +146,7 @@ memory use, accounting for concurrent execution.
 ThreadAPI
 ~~~~~~~~~
 
-**File**: ``ThreadAPI.cpp``, ``ThreadAPI.h``
+**File**: ``Utils/ThreadAPI.cpp``, ``Utils/ThreadAPI.h``
 
 Provides a unified interface for identifying and categorizing thread-related
 operations in LLVM IR. Acts as an abstraction layer over different threading
@@ -179,7 +179,7 @@ models.
 HappensBeforeAnalysis
 ~~~~~~~~~~~~~~~~~~~~~
 
-**File**: ``HappensBeforeAnalysis.cpp``, ``HappensBeforeAnalysis.h``
+**File**: ``MHP/HappensBeforeAnalysis.cpp``, ``MHP/HappensBeforeAnalysis.h``
 
 Determines happens-before relationships between instructions using MHP analysis
 and synchronization operations. The happens-before relation is fundamental for
@@ -202,7 +202,7 @@ reasoning about memory ordering and data races.
 ThreadFlowGraph
 ~~~~~~~~~~~~~~~
 
-**File**: ``ThreadFlowGraph.cpp``, ``ThreadFlowGraph.h``
+**File**: ``Utils/ThreadFlowGraph.cpp``, ``Utils/ThreadFlowGraph.h``
 
 Implements a graph representation of thread synchronization operations and their
 ordering relationships. Used as an intermediate representation for MHP and
@@ -225,7 +225,7 @@ happens-before analyses.
 EscapeAnalysis
 ~~~~~~~~~~~~~~
 
-**File**: ``EscapeAnalysis.cpp``, ``EscapeAnalysis.h``
+**File**: ``Memory/EscapeAnalysis.cpp``, ``Memory/EscapeAnalysis.h``
 
 Determines which values escape their thread-local scope and become shared between
 threads. Essential for identifying which memory locations may be accessed by
@@ -246,7 +246,7 @@ multiple threads.
 StaticVectorClockMHP
 ~~~~~~~~~~~~~~~~~~~~
 
-**File**: ``StaticVectorClockMHP.cpp``, ``StaticVectorClockMHP.h``
+**File**: ``MHP/StaticVectorClockMHP.cpp``, ``MHP/StaticVectorClockMHP.h``
 
 Implements a static vector clock-based approach for MHP analysis. Uses vector
 clocks to efficiently track happens-before relationships and compute MHP pairs.
@@ -260,7 +260,7 @@ clocks to efficiently track happens-before relationships and compute MHP pairs.
 StaticThreadSharingAnalysis
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**File**: ``StaticThreadSharingAnalysis.cpp``, ``StaticThreadSharingAnalysis.h``
+**File**: ``Memory/StaticThreadSharingAnalysis.cpp``, ``Memory/StaticThreadSharingAnalysis.h``
 
 Analyzes which memory locations are shared between threads using static analysis.
 Combines escape analysis with thread flow information to identify shared memory.
@@ -278,7 +278,7 @@ Usage
 
 .. code-block:: cpp
 
-   #include <Analysis/Concurrency/MHPAnalysis.h>
+   #include <Analysis/Concurrency/MHP/MHPAnalysis.h>
 
    llvm::Module &M = ...;
    mhp::MHPAnalysis mhp(M);
@@ -295,7 +295,7 @@ Usage
 
 .. code-block:: cpp
 
-   #include <Analysis/Concurrency/LockSetAnalysis.h>
+   #include <Analysis/Concurrency/LockSet/LockSetAnalysis.h>
 
    llvm::Module &M = ...;
    mhp::LockSetAnalysis lsa(M);
@@ -309,9 +309,9 @@ Usage
 
 .. code-block:: cpp
 
-   #include <Analysis/Concurrency/MHPAnalysis.h>
-   #include <Analysis/Concurrency/LockSetAnalysis.h>
-   #include <Analysis/Concurrency/EscapeAnalysis.h>
+   #include <Analysis/Concurrency/MHP/MHPAnalysis.h>
+   #include <Analysis/Concurrency/LockSet/LockSetAnalysis.h>
+   #include <Analysis/Concurrency/Memory/EscapeAnalysis.h>
 
    llvm::Module &M = ...;
    
@@ -341,7 +341,7 @@ Usage
 
 .. code-block:: cpp
 
-   #include <Analysis/Concurrency/ThreadAPI.h>
+   #include <Analysis/Concurrency/Utils/ThreadAPI.h>
 
    ThreadAPI *api = ThreadAPI::getThreadAPI();
    

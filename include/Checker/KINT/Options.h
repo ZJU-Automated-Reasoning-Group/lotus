@@ -32,13 +32,13 @@ extern llvm::cl::opt<std::string> RobustOnlyBugs;
 // Define a category for logging options
 extern llvm::cl::OptionCategory LoggingCategory;
 
-// Define log levels                                              
+// Define log levels
 enum class LogLevel {
-    DEBUG,  // Most verbose
-    INFO,   // Normal informational messages
-    WARNING, // Warnings
-    ERROR,   // Errors
-    NONE    // No logging
+  DEBUG,   // Most verbose
+  INFO,    // Normal informational messages
+  WARNING, // Warnings
+  ERROR,   // Errors
+  NONE     // No logging
 };
 
 // Add logging control options

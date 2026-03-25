@@ -19,14 +19,13 @@
 #include "llvm/Pass.h"
 
 namespace llvm {
-  //
-  // Class: SimplifyEV
-  //
-  class SimplifyEV : public ModulePass {
-  public:
-    static char ID;
-    SimplifyEV() : ModulePass(ID) {}
-    virtual bool runOnModule(Module& M) override;
-  };
+//
+// Class: SimplifyEV
+//
+class SimplifyEV : public ModulePass {
+public:
+  static char ID;
+  SimplifyEV() : ModulePass(ID) {}
+  virtual bool runOnModule(Module &M) override;
+};
 } // namespace llvm
-

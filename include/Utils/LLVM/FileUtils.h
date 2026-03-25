@@ -1,8 +1,9 @@
 #pragma once
 
-#include <llvm/ADT/StringRef.h>
 #include <string>
 #include <vector>
+
+#include <llvm/ADT/StringRef.h>
 
 class FileUtil {
 public:
@@ -13,8 +14,8 @@ public:
                                 std::vector<std::string> &SubDirectories);
   static std::string readStringFromFile(llvm::StringRef Path, bool &IsSuccess);
   static bool readCharVectorFromFile(llvm::StringRef Path,
-                                    std::vector<char> &CharVector);
+                                     std::vector<char> &CharVector);
   static bool isFileExist(llvm::StringRef Path);
-  static std::string getFileNameFromPath(llvm::StringRef path, 
-                                        llvm::StringRef separator = "/\\");
-}; 
+  static std::string getFileNameFromPath(llvm::StringRef path,
+                                         llvm::StringRef separator = "/\\");
+};

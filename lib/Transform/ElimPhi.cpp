@@ -6,14 +6,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
-//#include "llvm/Support/raw_ostream.h"
+// #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "elim-phi"
 
@@ -43,9 +45,8 @@ class EliminatePHIPass : public PassInfoMixin<EliminatePHIPass> {
 
     /* Insert a load right after the last PHI in the PHI block. */
     Builder.SetInsertPoint(PN->getParent()->getFirstNonPHI());
-    LoadInst *Ld =
-        Builder.CreateLoad(PN->getType(), AI,
-                           PN->hasName() ? PN->getName() + ".val" : "phi.val");
+    LoadInst *Ld = Builder.CreateLoad(
+        PN->getType(), AI, PN->hasName() ? PN->getName() + ".val" : "phi.val");
     PN->replaceAllUsesWith(Ld);
 
     SlotForPhi[PN] = AI;
@@ -60,15 +61,14 @@ class EliminatePHIPass : public PassInfoMixin<EliminatePHIPass> {
 
     /* An edge is critical if the predecessor has >1 successor and the successor
        has >1 predecessor. */
-    bool Critical = (TI->getNumSuccessors() > 1) &&
-                    !SuccBB->getSinglePredecessor();
+    bool Critical =
+        (TI->getNumSuccessors() > 1) && !SuccBB->getSinglePredecessor();
 
     if (!Critical)
       return PredBB; // we can insert the store *before* the terminator
 
-    LLVM_DEBUG(dbgs() << "  splitting critical edge "
-                      << PredBB->getName() << " -> " << SuccBB->getName()
-                      << '\n');
+    LLVM_DEBUG(dbgs() << "  splitting critical edge " << PredBB->getName()
+                      << " -> " << SuccBB->getName() << '\n');
 
     Function *F = PredBB->getParent();
     BasicBlock *EdgeBB =
@@ -85,6 +85,24 @@ public:
     bool Changed = false;
     SlotForPhi.clear();
 
+    // Conservative safety check: this transform currently handles only
+    // predecessor edges from BranchInst terminators.
+    SmallPtrSet<BasicBlock *, 8> PhiBlocks;
+    for (auto &BB : F)
+      if (isa<PHINode>(BB.begin()))
+        PhiBlocks.insert(&BB);
+
+    for (BasicBlock *SuccBB : PhiBlocks) {
+      for (BasicBlock *PredBB : predecessors(SuccBB)) {
+        if (!isa<BranchInst>(PredBB->getTerminator())) {
+          LLVM_DEBUG(dbgs()
+                     << "  skipping elim-phi for function " << F.getName()
+                     << ": unsupported non-branch predecessor edge\n");
+          return PreservedAnalyses::all();
+        }
+      }
+    }
+
     /* Collect all branch terminators first (iterator invalidation safety). */
     SmallVector<BranchInst *, 8> WorkList;
     for (auto &BB : F)
@@ -100,7 +118,9 @@ public:
 
         /* Choose the block in which we will emit the store(s). */
         BasicBlock *StoreBB = ensureEdgeForStore(PredBB, SuccBB, i);
-        IRBuilder<> Builder(StoreBB == PredBB ? (Instruction*)BI : &*StoreBB->getFirstInsertionPt());
+        IRBuilder<> Builder(StoreBB == PredBB
+                                ? (Instruction *)BI
+                                : &*StoreBB->getFirstInsertionPt());
 
         /* Rewrite every PHI in the successor. */
         SmallVector<PHINode *, 8> Phis;

@@ -275,7 +275,7 @@ inline Expr mkMapsDecl(Expr fdecl) {
 
   Expr fname = bind::fname(fdecl);
 
-  for (auto type : llvm::make_range(++fdecl->args_begin(), fdecl->args_end())) {
+  for (auto *type : llvm::make_range(++fdecl->args_begin(), fdecl->args_end())) {
     if (isOpX<FINITE_MAP_TY>(type)) {
       fmap_arg = true;
       Expr vTy = sort::finiteMapValTy(type);

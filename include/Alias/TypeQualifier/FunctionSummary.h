@@ -15,7 +15,9 @@
 #include "Alias/TypeQualifier/Annotation.h"
 #include "Alias/TypeQualifier/Common.h"
 #include "Alias/TypeQualifier/PtsSet.h"
+#include "Alias/TypeQualifier/QualifierTypes.h"
 
+#include <map>
 #include <unordered_map>
 
 using namespace llvm;
@@ -84,7 +86,7 @@ public:
     }
     return nextIdx;
   }
-  NodeIndex getValueNodeFor(const llvm::Value *val) {
+  NodeIndex getValueNodeFor(const llvm::Value *val) const {
     auto itr = valueNodeMap.find(val);
     if (itr == valueNodeMap.end()) {
       return InvalidIndex;
@@ -92,7 +94,7 @@ public:
       return itr->second;
     }
   }
-  const llvm::Value *getValueForNode(NodeIndex i) {
+  const llvm::Value *getValueForNode(NodeIndex i) const {
     const SumAndersNode &n = nodes.at(i);
     if (n.getValue() != nullptr)
       return n.getValue();
@@ -113,7 +115,7 @@ public:
     return nextIdx;
   }
 
-  NodeIndex getObjectNodeFor(const llvm::Value *val) {
+  NodeIndex getObjectNodeFor(const llvm::Value *val) const {
     auto itr = objNodeMap.find(val);
     if (itr == objNodeMap.end())
       return InvalidIndex;
@@ -240,21 +242,36 @@ public:
   std::map<int, ArgInfo> args;
 
   unsigned noNodes;
-  std::vector<int> reqVec;
-  std::vector<int> updateVec;
-  std::vector<int> changeVec;
+  QualifierArray reqVec;
+  QualifierArray updateVec;
+  QualifierArray changeVec;
   std::string fname;
   std::set<std::string> relatedBC;
 
   void setRetSize(int _size) { retSize = _size; }
   void setRetOffset(int _offset) { retOffset = _offset; }
-  int getRetNodes() { return 0; }
-  int getRetSize() { return retSize; };
-  int getRetOffset() { return retOffset; }
+  int getRetNodes() const { return 0; }
+  int getRetSize() const { return retSize; };
+  int getRetOffset() const { return retOffset; }
   void setStackVar(int _var) { stackVar = _var; }
-  int getStackVar() { return stackVar; }
+  int getStackVar() const { return stackVar; }
   void setUninitStackVar(int _var) { uninitStackVar = _var; }
-  int getUninitStackVar() { return uninitStackVar; }
+  int getUninitStackVar() const { return uninitStackVar; }
+  QualifierState requiredState(NodeIndex idx) const { return reqVec.at(idx); }
+  void setRequiredState(NodeIndex idx, QualifierState state) {
+    reqVec.at(idx) = state;
+  }
+  QualifierState requiredInputState(NodeIndex idx) const {
+    return requiredState(idx);
+  }
+  QualifierState updatedState(NodeIndex idx) const { return updateVec.at(idx); }
+  void setUpdatedState(NodeIndex idx, QualifierState state) {
+    updateVec.at(idx) = state;
+  }
+  QualifierState returnState() const { return updateVec.at(getRetNodes()); }
+  QualifierState returnObjectState(NodeIndex idx) const {
+    return updatedState(idx);
+  }
   Summary() {
     noNodes = 0;
     retSize = 0;
@@ -321,7 +338,7 @@ public:
     if (noNodes != s2.noNodes)
       return false;
     for (unsigned i = 0; i < noNodes; i++) {
-      if (reqVec[i] != reqVec[i] || updateVec[i] != updateVec[i])
+      if (reqVec[i] != s2.reqVec[i] || updateVec[i] != s2.updateVec[i])
         return false;
     }
     return true;

@@ -6,9 +6,9 @@
 #include "seahorn/Support/CFG.hh"
 #include "seahorn/Transforms/Instrumentation/ShadowMemDsa.hh"
 
+#include "seahorn/Expr/ExprLlvm.hh"
 #include "seahorn/Support/IteratorExtras.hh"
 #include "seahorn/Support/SeaDebug.h"
-#include "seahorn/Expr/ExprLlvm.hh"
 
 using namespace seahorn;
 using namespace llvm;

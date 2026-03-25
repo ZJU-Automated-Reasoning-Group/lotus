@@ -29,27 +29,27 @@ checking safety properties over LLVM bitcode.
 
 For detailed documentation, see :doc:`clam/index`.
 
-SymbolicAbstraction – Symbolic Abstraction Framework
+SymAbsAI – Symbolic Abstraction + Abstract Interpretation
 ------------------------------------------
 
-SymbolicAbstraction is a framework for static program analysis using symbolic abstraction
+SymAbsAI is a framework for static program analysis using symbolic abstraction
 to provide a flexible interface for designing program analyses in a
 compositional way.
 
-**Binary**: ``symbolic_abstraction``  
-**Location**: ``tools/verifier/symbolic_abstraction/``
+**Binary**: ``symabs_ai``
+**Location**: ``tools/verifier/symabs-ai/``
 
 **Quick Start**:
 
 .. code-block:: bash
 
    # Analyze all functions
-   ./build/bin/symbolic_abstraction example.bc
+   ./build/bin/symabs_ai example.bc
 
    # Analyze specific function
-   ./build/bin/symbolic_abstraction --function=foo example.bc
+   ./build/bin/symabs_ai --function=foo example.bc
 
-For detailed documentation, see :doc:`symbolic_abstraction/index`.
+For detailed documentation, see :doc:`symabs-ai/index`.
 
 SeaHorn – Verification Framework
 ---------------------------------

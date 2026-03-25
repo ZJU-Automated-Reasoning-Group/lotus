@@ -29,11 +29,171 @@
 
 #include "Alias/LotusAA/Engine/IntraProceduralAnalysis.h"
 
+#include <llvm/ADT/APInt.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Operator.h>
 
 using namespace llvm;
+
+namespace {
+
+static Value *tracebackPointerCastChain(Value *ptr) {
+  while (ptr) {
+    if (auto *cast = dyn_cast<CastInst>(ptr)) {
+      Value *src = cast->getOperand(0);
+      if (!src->getType()->isPointerTy())
+        break;
+      ptr = src;
+      continue;
+    }
+
+    if (auto *ce = dyn_cast<ConstantExpr>(ptr)) {
+      if (!Instruction::isCast(ce->getOpcode()))
+        break;
+      Value *src = ce->getOperand(0);
+      if (!src->getType()->isPointerTy())
+        break;
+      ptr = src;
+      continue;
+    }
+
+    break;
+  }
+
+  return ptr;
+}
+
+static Type *getSequentialElementType(Type *type) {
+  if (auto *array_ty = dyn_cast<ArrayType>(type))
+    return array_ty->getElementType();
+  if (auto *vector_ty = dyn_cast<VectorType>(type))
+    return vector_ty->getElementType();
+  return nullptr;
+}
+
+static int64_t getElementTypeSizeInBits(Type *type, const DataLayout &DL) {
+  return type ? static_cast<int64_t>(DL.getTypeSizeInBits(type)) : 0;
+}
+
+static int64_t getLegacyStyleInboundOffset(GEPOperator *gep, unsigned start_idx,
+                                           Type *start_type,
+                                           const DataLayout &DL) {
+  int64_t offset = 0;
+  Type *type = start_type;
+
+  for (unsigned idx = start_idx; idx < gep->getNumOperands(); ++idx) {
+    Value *index_val = gep->getOperand(idx);
+    if (auto *const_idx = dyn_cast<ConstantInt>(index_val)) {
+      int64_t field_idx = const_idx->getSExtValue();
+
+      if (Type *elem_type = getSequentialElementType(type)) {
+        type = elem_type;
+        offset += field_idx * getElementTypeSizeInBits(type, DL);
+        continue;
+      }
+
+      if (auto *struct_ty = dyn_cast<StructType>(type)) {
+        if (field_idx < 0 ||
+            static_cast<unsigned>(field_idx) >= struct_ty->getNumElements()) {
+          return PTGraph::UNKNOWN_OFFSET;
+        }
+
+        const StructLayout *layout = DL.getStructLayout(struct_ty);
+        offset += static_cast<int64_t>(
+            layout->getElementOffsetInBits(static_cast<unsigned>(field_idx)));
+        type = struct_ty->getElementType(static_cast<unsigned>(field_idx));
+        continue;
+      }
+
+      return PTGraph::UNKNOWN_OFFSET;
+    }
+
+    // Symbolic sequential indices collapse to field 0, but
+    // symbolic struct indices force the whole access path to unknown.
+    if (Type *elem_type = getSequentialElementType(type)) {
+      type = elem_type;
+      continue;
+    }
+
+    return PTGraph::UNKNOWN_OFFSET;
+  }
+
+  return offset;
+}
+
+static int64_t getLegacyStyleGepOffset(GEPOperator *gep,
+                                       const DataLayout &DL) {
+  Type *base_type = gep->getSourceElementType();
+  if (!base_type)
+    return PTGraph::UNKNOWN_OFFSET;
+
+  int64_t pointer_offset = 0;
+  if (gep->getNumOperands() >= 2) {
+    Value *outer_index = gep->getOperand(1);
+    if (auto *const_idx = dyn_cast<ConstantInt>(outer_index)) {
+      pointer_offset = const_idx->getSExtValue() *
+                       getElementTypeSizeInBits(base_type, DL);
+    }
+  }
+
+  int64_t inbound_offset = 0;
+  if (isa<StructType>(base_type)) {
+    inbound_offset = getLegacyStyleInboundOffset(gep, 2, base_type, DL);
+  } else if (Type *elem_type = getSequentialElementType(base_type)) {
+    if (gep->getNumOperands() >= 3) {
+      Value *inner_index = gep->getOperand(2);
+      if (auto *const_idx = dyn_cast<ConstantInt>(inner_index)) {
+        inbound_offset = const_idx->getSExtValue() *
+                         getElementTypeSizeInBits(elem_type, DL);
+      } else {
+        // Symbolic array/vector indices collapse to element 0.
+        inbound_offset = 0;
+      }
+    }
+  } else {
+    // Symbolic pointer arithmetic over non-composite element
+    // types also collapses to offset 0 rather than a distinct unknown field.
+    inbound_offset = 0;
+  }
+
+  return PTGraph::composeOffset(pointer_offset, inbound_offset);
+}
+
+static std::pair<Value *, int64_t> trackPointerOffset(Value *ptr,
+                                                      const DataLayout &DL) {
+  if (!ptr)
+    return {nullptr, 0};
+
+  APInt ap_offset(DL.getIndexTypeSizeInBits(ptr->getType()), 0, true);
+  if (const Value *base =
+          ptr->stripAndAccumulateConstantOffsets(DL, ap_offset,
+                                                 /*AllowNonInbounds=*/true)) {
+    if (base != ptr)
+      return {const_cast<Value *>(base), ap_offset.getSExtValue() * 8};
+  }
+
+  int64_t offset = 0;
+
+  while (true) {
+    Value *ptr_start = ptr;
+
+    while (auto *gep = dyn_cast<GEPOperator>(ptr)) {
+      if (!PTGraph::isUnknownOffset(offset)) {
+        offset = PTGraph::composeOffset(offset, getLegacyStyleGepOffset(gep, DL));
+      }
+      ptr = gep->getPointerOperand();
+    }
+
+    ptr = tracebackPointerCastChain(ptr);
+    if (ptr == ptr_start)
+      break;
+  }
+
+  return {ptr, offset};
+}
+
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Memory Access Operations
@@ -83,7 +243,7 @@ void IntraLotusAA::processLoad(LoadInst *load_inst) {
       continue;
 
     PTResult *fld_pts = processBasePointer(fld_val);
-    load_pts->add_derived_target(fld_pts, 0);
+    load_pts->add_derived_target(load_pair.cond, fld_pts, 0);
   }
 
   PTResultIterator iter(load_pts, this);
@@ -122,12 +282,14 @@ void IntraLotusAA::processStore(StoreInst *store) {
 
   PTResultIterator iter(res, this);
 
-  for (auto *loc : iter) {
+  for (auto &pt_item : iter) {
+    ObjectLocator *loc = pt_item.first;
+    path_cond_t cond = pt_item.second;
     MemObject *obj = loc->getObj();
     if (obj->isNull() || obj->isUnknown())
       continue;
 
-    loc->storeValue(store_value, store, 0);
+    loc->storeValue(store_value, store, cond, 0);
   }
 
   if (store_value->getType()->isPointerTy()) {
@@ -174,7 +336,9 @@ PTResult *IntraLotusAA::processPhi(PHINode *phi) {
     Value *val_i = phi->getIncomingValue(i);
     PTResult *in_pts = processBasePointer(val_i);
     assert(in_pts && "PHI incoming value not processed");
-    phi_pts->add_derived_target(in_pts, 0);
+    path_cond_t phi_cond =
+        findOrCreateUnitPhiRegion(phi->getParent(), phi->getIncomingBlock(i));
+    phi_pts->add_derived_target(phi_cond, in_pts, 0);
   }
 
   PTResultIterator iter(phi_pts, this);
@@ -207,8 +371,10 @@ PTResult *IntraLotusAA::processSelect(SelectInst *select) {
   PTResult *pts_false = processBasePointer(false_val);
 
   PTResult *select_pts = findPTResult(select, true);
-  select_pts->add_derived_target(pts_true, 0);
-  select_pts->add_derived_target(pts_false, 0);
+  select_pts->add_derived_target(getValueCond(select->getCondition(), true),
+                                 pts_true, 0);
+  select_pts->add_derived_target(getValueCond(select->getCondition(), false),
+                                 pts_false, 0);
 
   PTResultIterator iter(select_pts, this);
   return select_pts;
@@ -247,28 +413,17 @@ PTResult *IntraLotusAA::processSelect(SelectInst *select) {
 ///
 /// @see ObjectLocator for field-level memory modeling
 PTResult *IntraLotusAA::processGepBitcast(Value *ptr) {
-  // Track pointer through GEP/bitcast operations
-  int64_t offset = 0;
-  Value *base_ptr = ptr;
-
-  // For GEP, extract base pointer
-  // Note: Offset tracking is intentionally simplified to 0
-  // Field-sensitivity is handled through ObjectLocator field tracking,
-  // not through offset arithmetic in points-to results
-  if (GEPOperator *gep = dyn_cast<GEPOperator>(ptr)) {
-    base_ptr = gep->getPointerOperand();
-    offset = 0; // Field offsets handled by ObjectLocator
-  } else if (BitCastInst *bc = dyn_cast<BitCastInst>(ptr)) {
-    base_ptr = bc->getOperand(0);
-    offset = 0;
-  }
+  auto base_off = trackPointerOffset(ptr, getDL());
+  Value *base_ptr = base_off.first;
+  int64_t offset = base_off.second;
 
   if (base_ptr == ptr) {
-    return addPointsTo(ptr, newObject(ptr, MemObject::CONCRETE), 0);
+    return addPointsTo(ptr, newObject(ptr, MemObject::CONCRETE), 0,
+                       getEmptyCond());
   }
 
   PTResult *pts = processBasePointer(base_ptr);
-  PTResult *ret = derivePtsFrom(ptr, pts, offset);
+  PTResult *ret = derivePtsFrom(ptr, pts, offset, getEmptyCond());
   PTResultIterator iter(ret, this);
   return ret;
 }
@@ -288,7 +443,7 @@ PTResult *IntraLotusAA::processGepBitcast(Value *ptr) {
 PTResult *IntraLotusAA::processCast(CastInst *cast) {
   Value *base_ptr = cast->getOperand(0);
   PTResult *pts = processBasePointer(base_ptr);
-  PTResult *ret = derivePtsFrom(cast, pts, 0);
+  PTResult *ret = derivePtsFrom(cast, pts, 0, getEmptyCond());
   PTResultIterator iter(ret, this);
   return ret;
 }

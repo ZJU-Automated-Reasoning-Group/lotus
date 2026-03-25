@@ -2,9 +2,9 @@
 
 # Framework core
 set(WPDS_FRAMEWORK_SOURCES
-  DataFlowFacts.cpp
-  GenKillTransformer.cpp
-  InterProceduralDataFlowEngine.cpp
+  Core/DataFlowFacts.cpp
+  Core/GenKillTransformer.cpp
+  Solver/InterProceduralDataFlowEngine.cpp
 )
 
 # Client analyses

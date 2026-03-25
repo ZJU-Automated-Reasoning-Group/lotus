@@ -168,7 +168,7 @@ template <class CGT> Range IntraProceduralRA<CGT>::getRange(const Value *v) {
 
 template <class CGT> bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
   //	if(CG) delete CG;
-  CG = static_cast<ConstraintGraph*>(new CGT());
+  CG = static_cast<ConstraintGraph *>(new CGT());
 
   MAX_BIT_INT = getMaxBitWidth(F);
   updateMinMax(MAX_BIT_INT);
@@ -259,7 +259,7 @@ unsigned InterProceduralRA<CGT>::getMaxBitWidth(Module &M) {
 template <class CGT> bool InterProceduralRA<CGT>::runOnModule(Module &M) {
   // Constraint Graph
   //	if(CG) delete CG;
-  CG = static_cast<ConstraintGraph*>(new CGT());
+  CG = static_cast<ConstraintGraph *>(new CGT());
 
   MAX_BIT_INT = getMaxBitWidth(M);
   updateMinMax(MAX_BIT_INT);
@@ -1128,7 +1128,7 @@ Range Range::Xor(const Range &other) const {
 
 // Truncate
 //		- if the source range is entirely inside max bit range, he is
-//the
+// the
 // result
 //      - else, the result is the max bit range
 Range Range::truncate(unsigned bitwidth) const {
@@ -1436,9 +1436,7 @@ ControlDep::~ControlDep() {}
 
 Range ControlDep::eval() const { return Range(Min, Max); }
 
-void ControlDep::print(raw_ostream &OS) const {
-  (void)OS;
-}
+void ControlDep::print(raw_ostream &OS) const { (void)OS; }
 
 // ========================================================================== //
 // UnaryOp
@@ -2301,35 +2299,34 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br) {
 
     // We need a help function since ConstantRange::makeSatisfyingICmpRegion
     // doesn't exist in LLVM 3.6.2
-    auto makeCompatibleCR = [](CmpInst::Predicate pred, const ConstantRange &CR) -> ConstantRange {
-      // This is a simple implementation that may not be as precise as 
+    auto makeCompatibleCR = [](CmpInst::Predicate pred,
+                               const ConstantRange &CR) -> ConstantRange {
+      // This is a simple implementation that may not be as precise as
       // the original makeSatisfyingICmpRegion, but works with LLVM 3.6.2
       switch (pred) {
-        case CmpInst::ICMP_EQ:
-          return CR;
-        case CmpInst::ICMP_NE:
-          return CR.inverse();
-        case CmpInst::ICMP_UGT:
-        case CmpInst::ICMP_SGT:
-          return ConstantRange(CR.getUpper(), CR.getLower());
-        case CmpInst::ICMP_UGE:
-        case CmpInst::ICMP_SGE:
-          return ConstantRange(CR.getUpper(), CR.getLower()+1);
-        case CmpInst::ICMP_ULT:
-        case CmpInst::ICMP_SLT:
-          return ConstantRange(CR.getLower(), CR.getUpper());
-        case CmpInst::ICMP_ULE:
-        case CmpInst::ICMP_SLE:
-          return ConstantRange(CR.getLower(), CR.getUpper()+1);
-        default:
-          return ConstantRange(CR.getBitWidth(), true);
+      case CmpInst::ICMP_EQ:
+        return CR;
+      case CmpInst::ICMP_NE:
+        return CR.inverse();
+      case CmpInst::ICMP_UGT:
+      case CmpInst::ICMP_SGT:
+        return ConstantRange(CR.getUpper(), CR.getLower());
+      case CmpInst::ICMP_UGE:
+      case CmpInst::ICMP_SGE:
+        return ConstantRange(CR.getUpper(), CR.getLower() + 1);
+      case CmpInst::ICMP_ULT:
+      case CmpInst::ICMP_SLT:
+        return ConstantRange(CR.getLower(), CR.getUpper());
+      case CmpInst::ICMP_ULE:
+      case CmpInst::ICMP_SLE:
+        return ConstantRange(CR.getLower(), CR.getUpper() + 1);
+      default:
+        return ConstantRange(CR.getBitWidth(), true);
       }
     };
 
-    ConstantRange tmpT =
-        (variable == Op0)
-            ? makeCompatibleCR(pred, CR)
-            : makeCompatibleCR(swappred, CR);
+    ConstantRange tmpT = (variable == Op0) ? makeCompatibleCR(pred, CR)
+                                           : makeCompatibleCR(swappred, CR);
 
     APInt sigMin = tmpT.getSignedMin();
     APInt sigMax = tmpT.getSignedMax();
@@ -2990,10 +2987,10 @@ void ConstraintGraph::findIntervals() {
       buildConstantVector(component, compUseMap);
 #endif
 
-// generateEntryPoints(component, entryPoints);
-// iterate a fixed number of time before widening
-// update(component.size()*2 /*| NUMBER_FIXED_ITERATIONS*/, compUseMap,
-// entryPoints);
+      // generateEntryPoints(component, entryPoints);
+      // iterate a fixed number of time before widening
+      // update(component.size()*2 /*| NUMBER_FIXED_ITERATIONS*/, compUseMap,
+      // entryPoints);
 
 #ifdef PRINT_DEBUG
       if (func)

@@ -12,6 +12,7 @@
 
 #include "Alias/AliasAnalysisWrapper/AliasAnalysisWrapper.h"
 #include "Alias/AllocAA/AllocAA.h"
+#include "Alias/DDA/FlowDDA.h"
 #include "Alias/DyckAA/DyckAliasAnalysis.h"
 #include "Alias/SparrowAA/AndersenAA.h"
 #include "Alias/TPA/PointerAnalysis/Analysis/SemiSparsePointerAnalysis.h"
@@ -104,6 +105,7 @@ AliasResult AliasAnalysisWrapper::queryBackend(const Value *v1, const Value *v2)
   }
 
   if (_andersen_aa) return _andersen_aa->alias(mkLoc(v1s), mkLoc(v2s));
+  if (_dda_aa) return _dda_aa->mayAlias(v1s, v2s) ? AliasResult::MayAlias : AliasResult::NoAlias;
   if (_dyck_aa) return _dyck_aa->mayAlias(const_cast<Value *>(v1s), const_cast<Value *>(v2s)) 
                        ? AliasResult::MayAlias : AliasResult::NoAlias;
   if (_llvm_aa) return _llvm_aa->alias(mkLoc(v1), mkLoc(v2));

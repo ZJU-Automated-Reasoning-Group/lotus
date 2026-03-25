@@ -9,15 +9,3 @@ add_library(FailureDirectedTrimming STATIC
   CloneAndWrap.cpp
   Pass.cpp
 )
-
-target_include_directories(FailureDirectedTrimming
-  PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-
-target_link_libraries(FailureDirectedTrimming
-  PUBLIC
-    CanaryAliasAnalysisWrapper
-    ${Z3_LIBRARIES}
-)

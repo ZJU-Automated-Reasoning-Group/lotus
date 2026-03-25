@@ -2,8 +2,9 @@
  * @file ExpandUtils.cpp
  * @brief Helper functions for expansion passes.
  *
- * Provides utility functions used by various expansion passes to safely manipulate
- * LLVM IR, particularly handling PHI nodes and function transformations.
+ * Provides utility functions used by various expansion passes to safely
+ * manipulate LLVM IR, particularly handling PHI nodes and function
+ * transformations.
  *
  * @author rainoftime
  */
@@ -57,9 +58,10 @@ void phiSafeReplaceUses(Use *use, Value *newVal) {
 /**
  * @brief Recreate a function with a new function type.
  *
- * Creates a new function with the given type, copies attributes and basic blocks
- * from the old function, and replaces all uses of the old function with a bitcast
- * to the new function. The old function is not deleted but becomes unused.
+ * Creates a new function with the given type, copies attributes and basic
+ * blocks from the old function, and replaces all uses of the old function with
+ * a bitcast to the new function. The old function is not deleted but becomes
+ * unused.
  *
  * @param func The function to recreate
  * @param newType The new function type

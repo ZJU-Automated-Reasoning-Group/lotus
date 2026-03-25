@@ -1,15 +1,17 @@
 // Implementation of the Control Flow Graph (CFG) and CFGNodes.
 //
 // The TPA CFG is a "semi-sparse" representation optimized for pointer analysis.
-// Unlike the standard LLVM CFG (BasicBlocks containing Instructions), the TPA CFG
-// consists of `CFGNode`s that correspond only to pointer-relevant instructions.
+// Unlike the standard LLVM CFG (BasicBlocks containing Instructions), the TPA
+// CFG consists of `CFGNode`s that correspond only to pointer-relevant
+// instructions.
 //
 // Structure:
 // - CFG: Represents a function's control flow graph.
 // - CFGNode: Abstract base class for nodes (Alloc, Copy, Store, etc.).
 // - Edges:
 //   - Control Flow (succ/pred): Standard execution order.
-//   - Def-Use (def/use): Data flow dependencies for top-level pointers (SSA-like).
+//   - Def-Use (def/use): Data flow dependencies for top-level pointers
+//   (SSA-like).
 
 #include "Alias/TPA/PointerAnalysis/Program/CFG/CFG.h"
 

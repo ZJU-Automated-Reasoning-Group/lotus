@@ -5,9 +5,9 @@
 
 #include "seahorn/Expr/Expr.hh"
 #include "seahorn/Expr/Smt/EZ3.hh"
+#include <boost/tokenizer.hpp>
 #include <fstream>
 #include <iostream>
-#include <boost/tokenizer.hpp>
 
 namespace seahorn
 {
@@ -18,6 +18,6 @@ namespace seahorn
                                               const std::string &filepath);
   void parseLemmasFromExpFile(Expr bvar, ExprVector& lemmas,
                               const std::string &filepath);
-}
+} // namespace seahorn
 
 #endif

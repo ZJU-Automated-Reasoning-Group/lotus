@@ -7,5 +7,7 @@
 #include "Verification/Sifa/Summarizers/FixpointLoopSummarizer.h"
 #include "Verification/Sifa/SymAbs/SifaSymAbsDomain.h"
 
-template class lotus::sifa::FixpointLoopSummarizer<lotus::sifa::Transition, bool>;
-template class lotus::sifa::FixpointLoopSummarizer<lotus::sifa::Transition, lotus::sifa::SymAbsState>;
+template class lotus::sifa::FixpointLoopSummarizer<lotus::sifa::Transition,
+                                                   bool>;
+template class lotus::sifa::FixpointLoopSummarizer<lotus::sifa::Transition,
+                                                   lotus::sifa::SymAbsState>;

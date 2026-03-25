@@ -107,7 +107,7 @@ public:
       }
     }
 
-    for (auto F : FunctionsToCall) {
+    for (auto *F : FunctionsToCall) {
       // -- create a call with non-deterministic actual parameters
       SmallVector<Value *, 16> Args;
       for (auto &A : F->args()) {

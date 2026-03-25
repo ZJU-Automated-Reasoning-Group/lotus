@@ -14,7 +14,8 @@
  * - A variable-offset GEP with one index argument, which is a variable
  *   (e.g., y = getelementptr x, i)
  * - A variable-offset GEP with two index arguments, where the first index
- *   argument is 0 and the second one is a variable (e.g., y = getelementptr x, 0, i)
+ *   argument is 0 and the second one is a variable (e.g., y = getelementptr x,
+ * 0, i)
  *
  * @author rainoftime
  */
@@ -189,7 +190,8 @@ static bool expandGEP(GetElementPtrInst *gepInst, const DataLayout &dataLayout,
  *
  * @param F The function to transform
  * @param analysisManager Function analysis manager (unused)
- * @return PreservedAnalyses::none() if modified, PreservedAnalyses::all() otherwise
+ * @return PreservedAnalyses::none() if modified, PreservedAnalyses::all()
+ * otherwise
  */
 PreservedAnalyses
 ExpandGetElementPtrPass::run(llvm::Function &F,

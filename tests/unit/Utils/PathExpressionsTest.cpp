@@ -1,6 +1,6 @@
 // Path expressions unit test (Tarjan path expression algorithm).
 
-#include "Utils/General/PathExpressions/PathExpressions.h"
+#include "Utils/Algorithms/PathExpressions/PathExpressions.h"
 
 #include <gtest/gtest.h>
 

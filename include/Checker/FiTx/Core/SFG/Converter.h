@@ -9,14 +9,14 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Value.h"
 
-namespace framework {
+namespace fitx {
 
 class Converter {
  public:
   struct ValueSignature {
     llvm::Value* value;
     long array_element_num;
-    std::vector<framework::Value::Fields> fields;
+    std::vector<fitx::Value::Fields> fields;
   };
 
   // factory
@@ -24,14 +24,14 @@ class Converter {
 
   struct ValueSignature GetSignitureFromDefinition(llvm::Value* value);
 
-  std::shared_ptr<framework::Value> Convert(llvm::Value* llvm_value);
+  std::shared_ptr<fitx::Value> Convert(llvm::Value* llvm_value);
 
-  std::shared_ptr<framework::Instruction> ConvertInstruction(
+  std::shared_ptr<fitx::Instruction> ConvertInstruction(
       ValueSignature signature);
-  std::shared_ptr<framework::Value> ConvertValue(ValueSignature signature);
+  std::shared_ptr<fitx::Value> ConvertValue(ValueSignature signature);
 
   void manageValue(llvm::Value* value,
-                   std::shared_ptr<framework::Value> framework_value);
+                   std::shared_ptr<fitx::Value> framework_value);
 
   template <class FrameworkClass, class LLVMClass>
   std::shared_ptr<FrameworkClass> createManagedInst(
@@ -79,13 +79,13 @@ class Converter {
   template <class FrameworkClass>
   std::shared_ptr<FrameworkClass> getManagedInst(
       llvm::Instruction* inst, long array_element_num = Value::kNonArrayElement,
-      std::vector<framework::Value::Fields> fields =
-          std::vector<framework::Value::Fields>()) {
+      std::vector<fitx::Value::Fields> fields =
+          std::vector<fitx::Value::Fields>()) {
     auto managed =
         getManagedValue(ValueSignature{inst, array_element_num, fields});
 
-    if (managed && framework::shared_isa<FrameworkClass>(managed))
-      return framework::shared_dyn_cast<FrameworkClass>(managed);
+    if (managed && fitx::shared_isa<FrameworkClass>(managed))
+      return fitx::shared_dyn_cast<FrameworkClass>(managed);
 
     return std::shared_ptr<FrameworkClass>();
   }
@@ -94,22 +94,22 @@ class Converter {
   std::shared_ptr<FrameworkClass> getManagedInst(ValueSignature signature) {
     auto managed = getManagedValue(signature);
 
-    if (managed && framework::shared_isa<FrameworkClass>(managed))
-      return framework::shared_dyn_cast<FrameworkClass>(managed);
+    if (managed && fitx::shared_isa<FrameworkClass>(managed))
+      return fitx::shared_dyn_cast<FrameworkClass>(managed);
 
     return std::shared_ptr<FrameworkClass>();
   }
 
-  std::shared_ptr<framework::Value> getManagedValue(
+  std::shared_ptr<fitx::Value> getManagedValue(
       llvm::Value* value, long array_element_num = Value::kNonArrayElement,
-      std::vector<framework::Value::Fields> fields =
-          std::vector<framework::Value::Fields>());
-  std::shared_ptr<framework::Value> getManagedValue(ValueSignature signature);
+      std::vector<fitx::Value::Fields> fields =
+          std::vector<fitx::Value::Fields>());
+  std::shared_ptr<fitx::Value> getManagedValue(ValueSignature signature);
 
  private:
   Converter() = default;
 
-  std::map<llvm::Value*, std::vector<std::shared_ptr<framework::Value>>>
+  std::map<llvm::Value*, std::vector<std::shared_ptr<fitx::Value>>>
       managed_values_;
 };
-}  // namespace framework
+}  // namespace fitx

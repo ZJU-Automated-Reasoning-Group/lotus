@@ -1,21 +1,24 @@
 // FailureDirectedTrimmingPass: failure-directed program trimming (FDTrim).
 // Ferles et al., ESEC/FSE'17.
 //
-// Inserts verifier.assume(...) that prune paths provably irrelevant to assertion
-// failures while preserving equi-safety (paper §3 Def. Equi-safety, Def. Trimmed program).
+// Inserts verifier.assume(...) that prune paths provably irrelevant to
+// assertion failures while preserving equi-safety (paper §3 Def. Equi-safety,
+// Def. Trimmed program).
 //
-// Core: infer safety condition SC(π) (φ ⇒ wp(s, true)); insert assume(¬SC(π)) as
-// trimming condition (necessary for failure; paper §5, Theorem 5.1).
+// Core: infer safety condition SC(π) (φ ⇒ wp(s, true)); insert assume(¬SC(π))
+// as trimming condition (necessary for failure; paper §5, Theorem 5.1).
 //
 // Paper §5 Program Instrumentation (modular):
-//   1) Safe clone f.fdtrim.safe: assert→assume, error→assume(false); internal calls→safe clones.
-//   2) Wrap call f(args): if(⋆) call f.safe(args) else { call f(args); assume(false); unreachable }.
-//   3) Compute safety conditions (paper §4 Fig. 3), negate, bound/simplify (paper §6), insert assumes.
-
-#include "Verification/FailureDirectedTrimming/FailureDirectedTrimming.h"
-#include "FailureDirectedTrimmingImpl.h"
+//   1) Safe clone f.fdtrim.safe: assert→assume, error→assume(false); internal
+//   calls→safe clones. 2) Wrap call f(args): if(⋆) call f.safe(args) else {
+//   call f(args); assume(false); unreachable }. 3) Compute safety conditions
+//   (paper §4 Fig. 3), negate, bound/simplify (paper §6), insert assumes.
 
 #include "Alias/AliasAnalysisWrapper/AliasAnalysisWrapper.h"
+#include "FailureDirectedTrimmingImpl.h"
+#include "Verification/FailureDirectedTrimming/FailureDirectedTrimming.h"
+
+#include <iterator>
 
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/Dominators.h>
@@ -23,8 +26,6 @@
 #include <llvm/IR/IntrinsicInst.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/Pass.h>
-
-#include <iterator>
 
 using namespace llvm;
 
@@ -134,8 +135,7 @@ bool runFailureDirectedTrimming(Module &M) {
         if (F.getName().endswith(".fdtrim.safe"))
           continue;
 
-        FunctionSCResult R =
-            computeSafetyConditions(F, EF, BVM, AA, Env, Has);
+        FunctionSCResult R = computeSafetyConditions(F, EF, BVM, AA, Env, Has);
         Env.Summaries[&F] = R.Summary;
       }
     }
@@ -270,13 +270,11 @@ public:
   static char ID;
   FailureDirectedTrimmingLegacyPass() : ModulePass(ID) {}
 
-  bool runOnModule(Module &M) override {
-    return runFailureDirectedTrimming(M);
-  }
+  bool runOnModule(Module &M) override { return runFailureDirectedTrimming(M); }
 };
 
 char FailureDirectedTrimmingLegacyPass::ID = 0;
-static RegisterPass<FailureDirectedTrimmingLegacyPass> X(
-    "fdtrim", "Failure-directed program trimming", false, false);
+static RegisterPass<FailureDirectedTrimmingLegacyPass>
+    X("fdtrim", "Failure-directed program trimming", false, false);
 
 } // namespace

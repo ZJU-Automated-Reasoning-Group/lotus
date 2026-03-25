@@ -12,7 +12,10 @@
 namespace llvm {
 typedef std::pair<BasicBlock *, BasicBlock *> BBPair;
 namespace bgl {
-struct MkOutEdgePair : public std::unary_function<BasicBlock *, BBPair> {
+struct MkOutEdgePair {
+  using argument_type = BasicBlock *;
+  using result_type = BBPair;
+
   BasicBlock *src;
   MkOutEdgePair() : src(NULL) {}
   MkOutEdgePair(BasicBlock *u) : src(u) {}
@@ -23,7 +26,10 @@ struct MkOutEdgePair : public std::unary_function<BasicBlock *, BBPair> {
   }
 };
 
-struct MkInEdgePair : public std::unary_function<BasicBlock *, BBPair> {
+struct MkInEdgePair {
+  using argument_type = BasicBlock *;
+  using result_type = BBPair;
+
   BasicBlock *dst;
 
   MkInEdgePair() : dst(NULL) {}

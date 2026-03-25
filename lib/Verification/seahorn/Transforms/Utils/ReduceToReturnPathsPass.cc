@@ -1,9 +1,9 @@
 #include "llvm/Pass.h"
-#include "llvm/IR/Value.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -44,6 +44,6 @@ namespace seahorn
     return new ReduceToReturnPathsPass ();
   }
 
-} // end namespace   
+} // namespace seahorn
       
    

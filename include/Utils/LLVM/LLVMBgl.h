@@ -41,8 +41,10 @@ struct MkInEdgePair {
   }
 };
 
-using out_edge_iterator = llvm::mapped_iterator<llvm::succ_iterator, MkOutEdgePair>;
-using in_edge_iterator = llvm::mapped_iterator<llvm::pred_iterator, MkInEdgePair>;
+using out_edge_iterator =
+    llvm::mapped_iterator<llvm::succ_iterator, MkOutEdgePair>;
+using in_edge_iterator =
+    llvm::mapped_iterator<llvm::pred_iterator, MkInEdgePair>;
 
 inline llvm::iterator_range<out_edge_iterator> out_edges(BasicBlock *bb) {
   return llvm::make_range(out_edge_iterator(succ_begin(bb), MkOutEdgePair(bb)),

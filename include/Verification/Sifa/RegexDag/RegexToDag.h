@@ -13,7 +13,9 @@ namespace lotus {
 namespace sifa {
 
 template <typename L>
-class RegexToDag final : public lotus::pathexpressions::IRegexVisitor<L, RegexDagNode<L> *, RegexDagNode<L> *> {
+class RegexToDag final
+    : public lotus::pathexpressions::IRegexVisitor<L, RegexDagNode<L> *,
+                                                   RegexDagNode<L> *> {
 public:
   using Node = RegexDagNode<L>;
   using Dag = RegexDag<L>;
@@ -34,31 +36,39 @@ public:
     return result;
   }
 
-  Node *visit(const lotus::pathexpressions::Union<L> &re, Node *parent) override {
+  Node *visit(const lotus::pathexpressions::Union<L> &re,
+              Node *parent) override {
     Node *join = dag_.makeEpsilonNode();
     join->connectIncoming(re.getFirst()->accept(*this, parent));
     join->connectIncoming(re.getSecond()->accept(*this, parent));
     return join;
   }
 
-  Node *visit(const lotus::pathexpressions::Concatenation<L> &re, Node *parent) override {
+  Node *visit(const lotus::pathexpressions::Concatenation<L> &re,
+              Node *parent) override {
     return re.getSecond()->accept(*this, re.getFirst()->accept(*this, parent));
   }
 
-  Node *visit(const lotus::pathexpressions::Star<L> &re, Node *parent) override {
-    return appendAsNode(lotus::pathexpressions::Regex<L>::star(re.getInner()), parent);
+  Node *visit(const lotus::pathexpressions::Star<L> &re,
+              Node *parent) override {
+    return appendAsNode(lotus::pathexpressions::Regex<L>::star(re.getInner()),
+                        parent);
   }
 
-  Node *visit(const lotus::pathexpressions::Literal<L> &re, Node *parent) override {
-    return appendAsNode(lotus::pathexpressions::Regex<L>::literal(re.getLetter()), parent);
+  Node *visit(const lotus::pathexpressions::Literal<L> &re,
+              Node *parent) override {
+    return appendAsNode(
+        lotus::pathexpressions::Regex<L>::literal(re.getLetter()), parent);
   }
 
-  Node *visit(const lotus::pathexpressions::Epsilon<L> &re, Node *parent) override {
+  Node *visit(const lotus::pathexpressions::Epsilon<L> &re,
+              Node *parent) override {
     (void)re;
     return parent;
   }
 
-  Node *visit(const lotus::pathexpressions::EmptySet<L> &re, Node *parent) override {
+  Node *visit(const lotus::pathexpressions::EmptySet<L> &re,
+              Node *parent) override {
     (void)re;
     return appendAsNode(lotus::pathexpressions::Regex<L>::emptySet(), parent);
   }
@@ -85,4 +95,3 @@ private:
 } // namespace lotus
 
 #endif // LOTUS_VERIFICATION_SIFA_REGEXDAG_REGEXTODAG_H
-

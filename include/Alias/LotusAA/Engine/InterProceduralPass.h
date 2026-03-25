@@ -12,9 +12,6 @@
 
 #pragma once
 
-#include <llvm/IR/Dominators.h>
-#include <llvm/IR/Module.h>
-#include <llvm/Pass.h>
 #include <map>
 #include <mutex>
 #include <set>
@@ -24,6 +21,10 @@
 #include "Alias/LotusAA/Support/Compat.h"
 #include "Alias/LotusAA/Support/FunctionPointerResults.h"
 #include "Alias/Spec/AliasSpecManager.h"
+
+#include <llvm/IR/Dominators.h>
+#include <llvm/IR/Module.h>
+#include <llvm/Pass.h>
 
 namespace llvm {
 
@@ -58,7 +59,7 @@ public:
   // Check if call is a back-edge
   bool isBackEdge(Function *caller, Function *callee);
 
-  // Get possible callees for indirect call
+  // Get possible callees for indirect call, keyed by target function.
   CallTargetSet *getCallees(Function *func, Value *callsite);
 
 public:
@@ -110,5 +111,3 @@ private:
 };
 
 } // namespace llvm
-
-

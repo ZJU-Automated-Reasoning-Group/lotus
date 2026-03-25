@@ -37,7 +37,7 @@ int AllSMTSolver::getModels(z3::expr &expr, int k) {
     std::cout << solver << "\n";
     // get model
     z3::model m = solver.get_model();
-    // std::cout << m << std::endl;
+    // std::cout << m << '\n';
     z3::expr_vector args(ctx);
     for (unsigned i = 0; i < m.size(); i++) {
       // get z3 variable

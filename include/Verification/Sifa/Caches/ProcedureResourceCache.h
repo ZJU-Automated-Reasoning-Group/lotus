@@ -1,4 +1,5 @@
-//===-- Verification/Sifa/Caches/ProcedureResourceCache.h ------------------===//
+//===-- Verification/Sifa/Caches/ProcedureResourceCache.h
+//------------------===//
 //
 // Cache for ProcedureResources per procedure (ported from Ultimate Sifa).
 //
@@ -12,11 +13,11 @@
 #ifndef LOTUS_VERIFICATION_SIFA_CACHES_PROCEDURERESOURCECACHE_H
 #define LOTUS_VERIFICATION_SIFA_CACHES_PROCEDURERESOURCECACHE_H
 
+#include "llvm/IR/Function.h"
+
 #include "Verification/Sifa/CallGraph.h"
 #include "Verification/Sifa/Procedure/ProcedureResources.h"
 #include "Verification/Sifa/Statistics/SifaStats.h"
-
-#include "llvm/IR/Function.h"
 
 #include <unordered_map>
 #include <vector>
@@ -34,10 +35,13 @@ namespace sifa {
 /// CallGraph.locationsOfInterest(F) and CallGraph.successorsOfInterest(F).
 class ProcedureResourceCache {
 public:
-  explicit ProcedureResourceCache(SifaStats &stats) : stats_(stats), callGraph_(nullptr), M_(nullptr) {}
+  explicit ProcedureResourceCache(SifaStats &stats)
+      : stats_(stats), callGraph_(nullptr), M_(nullptr) {}
 
-  /// Ultimate-aligned: use CallGraph for LOIs and enterCallsOfInterest per procedure.
-  ProcedureResourceCache(SifaStats &stats, const CallGraph &cg, const llvm::Module &M)
+  /// Ultimate-aligned: use CallGraph for LOIs and enterCallsOfInterest per
+  /// procedure.
+  ProcedureResourceCache(SifaStats &stats, const CallGraph &cg,
+                         const llvm::Module &M)
       : stats_(stats), callGraph_(&cg), M_(&M) {}
 
   /// Returns (possibly cached) ProcedureResources for \p F.
@@ -50,13 +54,15 @@ public:
   const ProcedureResources &resourcesOf(const std::string &procedureName);
 
   /// Overload: explicit \p locationsOfInterest (e.g. when not using CallGraph).
-  const ProcedureResources &resourcesOf(const llvm::Function &F,
-                                        const std::vector<llvm::BasicBlock *> &locationsOfInterest);
+  const ProcedureResources &
+  resourcesOf(const llvm::Function &F,
+              const std::vector<llvm::BasicBlock *> &locationsOfInterest);
 
 private:
   struct Key {
     const llvm::Function *F = nullptr;
     std::vector<llvm::BasicBlock *> LOIs;
+    std::vector<const llvm::Function *> enterCalls;
 
     bool operator==(const Key &o) const;
   };

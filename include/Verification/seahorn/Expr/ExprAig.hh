@@ -18,9 +18,9 @@ namespace expr
 
       /// size as number of gates + number of inputs
       unsigned aigSize (Expr e);
-    }  
-  }
-}
+    } // namespace boolop  
+  } // namespace op
+} // namespace expr
 
 
 #endif

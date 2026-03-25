@@ -4,87 +4,95 @@ GSA — Gated SSA
 Overview
 ========
 
-The **Gated SSA (GSA)** is a control-flow transformation that augments SSA by
-introducing gating (gamma) functions that explicitly encode the control flow
-guarding each value flowing into a join point.
+The **Gated SSA (GSA)** layer builds a read-only, immutable view of the control
+flow guarding SSA values at join points.
 
 * **Location**: ``lib/IR/GSA/``, ``include/IR/GSA/``
 
-The implementation is adapted from Havlak's construction of Thinned Gated
-Single-Assignment form (LCPC'93). GSA is intentionally independent from
-verification-specific utilities so it can be reused by general IR analyses and
-transformations.
+The analysis itself never mutates LLVM IR. A separate materialization pass can
+lower lowerable GSA trees into ``select`` chains and optionally replace PHI
+nodes.
 
 Key Features
 ============
 
-* **Control Dependence Analysis**: Computes control dependence relationships
-  between basic blocks
-* **Gamma Nodes**: Materializes gating functions (gamma nodes) for PHI nodes
-  that explicitly encode control flow conditions
-* **Thinned GSA**: Optional thinned version that reduces the use of undef values
-* **PHI Replacement**: Optionally replaces PHI nodes with computed gamma nodes
-  in the IR
+* **Read-only analysis**: ``GateAnalysisPass`` builds immutable per-function
+  GSA data without inserting or deleting instructions.
+* **Explicit control-flow guards**: Branches, switches, invokes, and opaque
+  terminators are represented with ``GuardKind`` metadata.
+* **First-class gate trees**: Each tracked PHI maps to a ``GateNode`` whose
+  root is a ``GateExpr`` of kind ``Bottom``, ``LeafValue``, ``Select``, or
+  ``Switch``.
+* **Partial lowering**: ``GsaMaterializationPass`` lowers only gates marked as
+  lowerable and leaves the rest of the PHIs untouched.
 
-Components
+Core Types
 ==========
 
-**ControlDependenceAnalysis** (``ControlDependenceAnalysis.cpp``):
+**Gate kinds**:
 
-* Computes which basic blocks a given block is control dependent on
-* Provides reachability queries between basic blocks
-* Maintains topological ordering information
+* ``Gamma`` – Standard join PHI
+* ``Mu`` – Loop-header PHI
+* ``Eta`` – Loop-exit PHI
 
-**GateAnalysis** (``GateAnalysis.cpp``):
+**Guard kinds**:
 
-* Builds the Gated SSA representation by materializing gamma nodes for PHI nodes
-* Maps PHI nodes to their corresponding gamma values
-* Supports both standard and thinned GSA forms
+* ``BranchTrue`` / ``BranchFalse``
+* ``SwitchCase`` / ``SwitchDefault``
+* ``InvokeNormal`` / ``InvokeUnwind``
+* ``Opaque`` for unsupported non-boolean control flow
 
-**Passes**:
+**Bottom semantics**:
 
-* ``ControlDependenceAnalysisPass`` – Module pass for control dependence analysis
-* ``GateAnalysisPass`` – Module pass that builds GSA form for all functions
+``Bottom`` is an internal sentinel for unavailable flow. Analysis results never
+expose bottom as an LLVM ``Value *``; the materializer lowers it to ``poison``.
+
+Passes
+======
+
+* ``ControlDependenceAnalysisPass`` – Reachability + control dependence with
+  explicit tracked/untracked block behavior
+* ``GateAnalysisPass`` – Builds immutable GSA data
+* ``GsaMaterializationPass`` – Lowers lowerable GSA nodes into LLVM IR
 
 Usage
 =====
 
-**As an LLVM Pass**:
-
 .. code-block:: cpp
 
    #include "IR/GSA/GSA.h"
-   
-   // Create control dependence analysis pass
-   auto *CDA = createControlDependenceAnalysisPass();
-   
-   // Create gate analysis pass
-   auto *GA = createGateAnalysisPass();
-   
-   // Run passes on module
-   CDA->runOnModule(M);
-   GA->runOnModule(M);
-   
-   // Query gate analysis for a function
-   gsa::GateAnalysis &gateAnalysis = GA->getGateAnalysis(F);
-   
-   // Get gamma value for a PHI node
-   PHINode *phi = ...;
-   Value *gamma = gateAnalysis.getGamma(phi);
 
-**Command-Line Options**:
+   auto *cda = createControlDependenceAnalysisPass();
+   auto *ga = createGateAnalysisPass();
+   auto *gm = createGsaMaterializationPass();
 
-* ``-gsa-thinned`` – Emit thin gamma nodes (TGSA), default: true
-* ``-gsa-replace-phis`` – Replace PHI nodes with gamma nodes in the IR, default: true
+   cda->runOnModule(M);
+   ga->runOnModule(M);
 
-Integration
-===========
+   gsa::GateAnalysis &analysis = ga->getGateAnalysis(F);
+   for (const gsa::GateNode *gate : analysis.gates()) {
+     if (!gate->isLowerable())
+       continue;
+     const gsa::GateExpr *root = gate->getRootExpr();
+     (void)root;
+   }
 
-GSA is used by:
+   // Optional mutating stage.
+   gm->runOnModule(M);
 
-* **SeaHorn**: For verification and symbolic execution
-* **Control Flow Analyses**: For understanding control dependencies
-* **IR Transformations**: For control-flow aware optimizations
+Command-Line Options
+====================
 
-The GSA transformation provides explicit control flow information that is useful
-for program analysis, verification, and optimization tasks.
+* ``-gsa-thinned`` – Build thinned GSA (default: true)
+* ``-gsa-replace-phis`` – Only affects ``GsaMaterializationPass``; when true,
+  lowerable PHIs are replaced with the materialized values
+
+Behavior Notes
+==============
+
+* Only blocks reachable from function entry are tracked.
+* ``ControlDependenceAnalysis::getCDBlocks()`` returns an empty list for
+  untracked blocks.
+* ``GateNode::isLowerable()`` is false for gates that depend on non-scalar
+  guards such as exception edges or opaque terminators.
+* Switch-arm ordering and ``GateAnalysis::gates()`` order are deterministic.

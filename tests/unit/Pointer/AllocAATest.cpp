@@ -11,35 +11,23 @@
  */
 
 #include "Alias/AllocAA/AllocAA.h"
+#include "TestUtils/LLVMHelpers.h"
 
 #include <llvm/Analysis/CallGraph.h>
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/Analysis/ScalarEvolution.h>
-#include <llvm/AsmParser/Parser.h>
 #include <llvm/IR/Dominators.h>
 #include <llvm/IR/Instructions.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/Passes/PassBuilder.h>
-#include <llvm/Support/SourceMgr.h>
 #include <gtest/gtest.h>
 
 using namespace llvm;
+using namespace lotus::unittest;
 
 // Test fixture for AllocAA with proper analysis setup
-class AllocAATest : public ::testing::Test {
+class AllocAATest : public LlvmModuleTest {
 protected:
-  LLVMContext context;
-  std::unique_ptr<Module> parseModule(const char *source) {
-    SMDiagnostic err;
-    auto module = parseAssemblyString(source, err, context);
-    if (!module) {
-      err.print("AllocAATest", errs());
-    }
-    return module;
-  }
-
   // Helper to get a function by name
   Function *getFunction(Module &M, StringRef name) {
     return M.getFunction(name);
@@ -53,22 +41,6 @@ protected:
         if (auto *AI = dyn_cast<AllocaInst>(&I)) {
           if (count == idx) return AI;
           ++count;
-        }
-      }
-    }
-    return nullptr;
-  }
-
-  // Helper to find a call instruction to a specific function
-  CallInst *getCallInst(Function *F, StringRef calleeName) {
-    for (auto &BB : *F) {
-      for (auto &I : BB) {
-        if (auto *CI = dyn_cast<CallInst>(&I)) {
-          if (auto *callee = CI->getCalledFunction()) {
-            if (callee->getName() == calleeName) {
-              return CI;
-            }
-          }
         }
       }
     }
@@ -228,11 +200,11 @@ TEST_F(AllocAATest, HeapAllocationDetection) {
   ASSERT_NE(F, nullptr);
   
   // Find malloc call
-  CallInst *mallocCall = getCallInst(F, "malloc");
+  auto *mallocCall = dyn_cast<CallInst>(findCallTo(F, "malloc"));
   ASSERT_NE(mallocCall, nullptr);
   
   // Find free call
-  CallInst *freeCall = getCallInst(F, "free");
+  auto *freeCall = dyn_cast<CallInst>(findCallTo(F, "free"));
   ASSERT_NE(freeCall, nullptr);
   
   // Verify malloc returns pointer

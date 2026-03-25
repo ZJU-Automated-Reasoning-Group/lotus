@@ -8,8 +8,8 @@
 // C++ includes
 #include <ostream>
 #include <string>
-#include <vector>
 #include <unordered_set>
+#include <vector>
 
 // Project includes
 #include "horn_constraint.h"
@@ -211,6 +211,6 @@ namespace horn_verification
 
 	};
 	
-};
+} // namespace horn_verification
 
 #endif

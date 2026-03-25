@@ -1,31 +1,29 @@
 #pragma once
 
-#include "Alias/Dynamic/LogRecord.h"
-
 #include "llvm/ADT/Optional.h"
+
+#include "Alias/Dynamic/LogRecord.h"
 
 #include <fstream>
 #include <vector>
 
-namespace dynamic
-{
+namespace dynamic {
 
-class EagerLogReader
-{
+class EagerLogReader {
 public:
-	EagerLogReader() = delete;
+  EagerLogReader() = delete;
 
-	static std::vector<LogRecord> readLogFromFile(const char* fileName);
+  static std::vector<LogRecord> readLogFromFile(const char *fileName);
 };
 
-class LazyLogReader
-{
+class LazyLogReader {
 private:
-	std::ifstream ifs;
-public:
-	LazyLogReader(const char* fileName);
+  std::ifstream ifs;
 
-	llvm::Optional<LogRecord> readLogRecord();
+public:
+  LazyLogReader(const char *fileName);
+
+  llvm::Optional<LogRecord> readLogRecord();
 };
 
 } // namespace dynamic

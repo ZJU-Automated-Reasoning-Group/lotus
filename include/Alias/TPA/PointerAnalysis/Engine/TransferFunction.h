@@ -47,9 +47,13 @@ class ProgramPoint;
 // The evaluator produces EvalResult containing:
 // - Updated Store (memory-level points-to information)
 // - Successor program points to add to worklist
+//
+// Important split used throughout TPA:
+// - Alloc/Copy/Offset are propagated as top-level-only successors.
+// - Entry/Load/Store/Call/Ret are evaluated with local Store state.
 class TransferFunction {
 private:
-  // The global analysis state (read-only during eval)
+  // Shared analysis state used by transfer evaluation.
   GlobalState &globalState;
 
   // The local store state at this program point

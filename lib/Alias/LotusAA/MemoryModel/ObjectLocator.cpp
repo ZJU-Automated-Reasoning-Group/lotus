@@ -70,6 +70,7 @@
 /// @see getValues() for flow-sensitive value retrieval
 /// @see placePhi() for SSA-style φ-placement algorithm
 
+#include "Alias/LotusAA/Engine/IntraProceduralAnalysis.h"
 #include "Alias/LotusAA/MemoryModel/MemObject.h"
 #include "Alias/LotusAA/MemoryModel/PointsToGraph.h"
 #include "Alias/LotusAA/Support/LotusConfig.h"
@@ -106,6 +107,10 @@ static cl::opt<int> lotus_memory_store_depth(
     cl::desc("Maximum BBs to track for store operations"),
     cl::init(LotusConfig::MemoryLimits::DEFAULT_STORE_DEPTH), cl::Hidden);
 
+static int getLotusMemoryMaxPassingFunc() {
+  return IntraLotusAAConfig::lotus_memory_max_passing_func;
+}
+
 //===----------------------------------------------------------------------===//
 // LocValue Implementation
 //===----------------------------------------------------------------------===//
@@ -129,6 +134,12 @@ void LocValue::dump() {
     outs() << val->getName();
   else
     val->print(outs());
+
+  outs() << " cond=";
+  if (!cond)
+    outs() << "<null>";
+  else
+    cond->print(outs());
 
   outs() << " @";
   if (pos_inst && pos_inst->getParent())
@@ -164,7 +175,7 @@ ObjectLocator::~ObjectLocator() {
 PTGraph *ObjectLocator::getPTG() { return object->getPTG(); }
 
 ObjectLocator *ObjectLocator::offsetBy(int64_t extra_off) {
-  return object->findLocator(offset + extra_off, true);
+  return object->findLocator(PTGraph::composeOffset(offset, extra_off), true);
 }
 
 void ObjectLocator::dump() {
@@ -182,7 +193,7 @@ std::vector<LocValue *> *ObjectLocator::getValueList(BasicBlock *bb) {
 }
 
 LocValue *ObjectLocator::storeValue(Value *val, Instruction *source,
-                                    int function_level) {
+                                    path_cond_t cond, int function_level) {
   if (object->isNull() || object->isUnknown())
     return nullptr;
 
@@ -195,24 +206,28 @@ LocValue *ObjectLocator::storeValue(Value *val, Instruction *source,
       store_level = function_level;
   }
 
-  LocValue::UpdateType update_type = LocValue::STRONG;
-
   BasicBlock *src_bb = source->getParent();
+  LocValue::UpdateType update_type =
+      getPTG()->isAlwaysSatisfied(cond) ? LocValue::STRONG : LocValue::WEAK;
 
-  // Check if value already exists
   for (auto *loc_val : loc_values[src_bb]) {
     if (loc_val->getPos() == source && loc_val->getVal() == val) {
-      loc_val->resetUpdateType(LocValue::STRONG);
+      path_cond_t pre_cond = loc_val->getCond();
+      loc_val->setCond(getPTG()->findOrCreateOrRegion(pre_cond, cond));
+      if (loc_val->isStrongUpdate() || update_type == LocValue::STRONG)
+        loc_val->resetUpdateType(LocValue::STRONG);
       return loc_val;
     }
   }
 
-  LocValue *loc_val = new LocValue(val, source, update_type);
+  LocValue *loc_val = new LocValue(val, source, cond, update_type);
   loc_values[src_bb].push_back(loc_val);
   placePhi(loc_val, src_bb);
 
   if (val != LocValue::FREE_VARIABLE) {
     Type *val_type = val->getType();
+    if (val_type->isVoidTy())
+      val_type = Type::getInt8Ty(val->getContext());
     object->getUpdatedOffset()[offset] = val_type;
     object->getStoredValues()[offset].insert(val);
 
@@ -248,11 +263,13 @@ void ObjectLocator::placePhi(LocValue *loc_value, BasicBlock *bb_start) {
     num_blocks = lotus_memory_store_depth;
   }
 
-  // Place weak phi values in frontier BBs
   for (int i = 0; i < num_blocks; i++) {
     BasicBlock *processing_bb = Frontier[i];
-    LocValue *phi_lv =
-        new LocValue(loc_value->getVal(), loc_value->getPos(), LocValue::WEAK);
+    path_cond_t phi_cond = pt_graph->getUnitRegion(bb_start);
+    path_cond_t processing_cond =
+        pt_graph->findOrCreateAndRegion(loc_value->getCond(), phi_cond);
+    LocValue *phi_lv = new LocValue(loc_value->getVal(), loc_value->getPos(),
+                                    processing_cond, LocValue::WEAK);
     loc_values[processing_bb].push_back(phi_lv);
   }
 }
@@ -269,20 +286,24 @@ LocValue *ObjectLocator::getVersion(Instruction *pos_inst) {
     std::vector<LocValue *> *lv_list = getValueList(bb);
 
     if (lv_list) {
-      int end_pos = lv_list->size();
+      int end_pos = (int)lv_list->size();
 
       if (bb == startBB) {
-        // Find last value before pos_inst
         auto it = bb->rbegin(), ie = bb->rend();
-        while (end_pos) {
+
+        while (end_pos > 0) {
           Instruction *last_loc = lv_list->at(end_pos - 1)->getPos();
+          Instruction *inst = nullptr;
+
           for (; it != ie; ++it) {
-            Instruction *inst = &(*it);
+            inst = &(*it);
             if (inst == pos_inst || inst == last_loc)
               break;
           }
-          if (&(*it) == pos_inst)
+
+          if (inst == pos_inst)
             break;
+
           --end_pos;
         }
       }
@@ -307,9 +328,15 @@ LocValue *ObjectLocator::getVersion(Instruction *pos_inst) {
 static Value *get_constant_from_aggregate(Constant *val, int64_t offset,
                                           const DataLayout *DL);
 
-Argument *ObjectLocator::getValues(Instruction *from_loc, mem_value_t &res,
-                                   Type *symbol_type, int function_level,
-                                   bool enable_strong_update) {
+Argument *ObjectLocator::getValues(Instruction *from_loc, path_cond_t pre_cond,
+                                   mem_value_t &res, Type *symbol_type,
+                                   int function_level,
+                                   bool enable_strong_update,
+                                   ObjectLocator *func_call_cache,
+                                   bool is_include_func_summary) {
+  if (!pre_cond)
+    pre_cond = getPTG()->getEmptyCond();
+
   // Check for constant global initializer
   Value *alloc_site = object->getAllocSite();
   if (alloc_site) {
@@ -317,7 +344,8 @@ Argument *ObjectLocator::getValues(Instruction *from_loc, mem_value_t &res,
       if (gv->isConstant()) {
         Value *constant_global = getInitializerForGlobalValue();
         if (constant_global) {
-          res.push_back(mem_value_item_t(nullptr, constant_global));
+          res.push_back(
+              mem_value_item_t(pre_cond, nullptr, constant_global, 1.0f));
           return nullptr;
         } else {
           return nullptr; // Constant with no initializer
@@ -326,9 +354,105 @@ Argument *ObjectLocator::getValues(Instruction *from_loc, mem_value_t &res,
     }
   }
 
+  mem_value_t *possible_updating_callsite =
+      (is_include_func_summary &&
+       IntraLotusAAConfig::lotus_enable_summary_value)
+          ? &res
+          : nullptr;
+
+  mem_value_t func_in_path;
+  if (func_call_cache) {
+    func_call_cache->getValues(from_loc, pre_cond, func_in_path, nullptr,
+                               FUNC_LEVEL_UNDEFINED, false);
+  }
+
+  size_t func_idx = 0;
+
   DominatorTree *DT = getPTG()->getDomTree();
   if (!DT)
     return nullptr;
+
+  auto get_confidence_with_no_call_barrier =
+      [&](int val_seq, path_cond_t current_pre_cond,
+          mem_value_t *func_detailed_res) -> float {
+    float result = 1.0f;
+    int max_passing_func = getLotusMemoryMaxPassingFunc();
+
+    if (val_seq == PTGraph::VALUE_SEQ_UNDEF)
+      return result;
+
+    while (func_idx < func_in_path.size()) {
+      if (max_passing_func != -1 &&
+          static_cast<int>(func_idx) > max_passing_func) {
+        return 0.1f;
+      }
+
+      mem_value_item_t &mem_item = func_in_path[func_idx];
+      Value *func_val = mem_item.pos;
+      int func_seq = getPTG()->getSequenceNum(func_val);
+      if (val_seq == PTGraph::VALUE_SEQ_INFINITE || func_seq <= val_seq)
+        break;
+
+      ++func_idx;
+
+      if (func_seq == PTGraph::VALUE_SEQ_UNDEF)
+        continue;
+
+      CallBase *call = dyn_cast<CallBase>(func_val);
+      if (!call)
+        continue;
+
+      if (Function *func = call->getCalledFunction()) {
+        if (getPTG()->isNoEffectFunction(func))
+          continue;
+      }
+
+      path_cond_t func_cond = mem_item.cond;
+      float func_exec_confidence = 1.0f;
+      if (!getPTG()->isAlwaysSatisfied(func_cond)) {
+        path_cond_t func_final_cond =
+            getPTG()->findOrCreateAndRegion(current_pre_cond, func_cond);
+        if (!getPTG()->isSatisfiable(func_final_cond)) {
+          func_exec_confidence = 0.0f;
+        } else {
+          func_exec_confidence =
+              llvm::LotusConfig::Heuristics::COND_SAT_PROBABILITY;
+        }
+      }
+
+      int ap_depth = PTGraph::FUNC_OBJ_UNREACHABLE;
+      if (CallInst *call_inst = dyn_cast<CallInst>(call)) {
+        ap_depth = getPTG()->getObjectToCallApDepth(getObj(), call_inst);
+      }
+      if (ap_depth == PTGraph::FUNC_OBJ_UNREACHABLE)
+        continue;
+
+      if (Function *callee = call->getCalledFunction()) {
+        if (PTGraph *callee_graph = getPTG()->getPtGraph(callee)) {
+          if (callee_graph->getInlineApDepth() >= ap_depth)
+            continue;
+        }
+      }
+
+      float func_affect_confidence =
+          llvm::LotusConfig::Heuristics::MEM_CHANGE_PROBABILITY[ap_depth] *
+          func_exec_confidence;
+      result *= (1.0f - func_affect_confidence);
+
+      if (func_detailed_res && IntraLotusAAConfig::lotus_enable_summary_value) {
+        if (Instruction *func_inst = dyn_cast<Instruction>(func_val)) {
+          func_detailed_res->push_back(mem_value_item_t(
+              getPTG()->findOrCreateAndRegion(current_pre_cond, func_cond),
+              func_inst, LocValue::SUMMARY_VALUE, func_affect_confidence));
+        }
+      }
+    }
+
+    return result;
+  };
+
+  path_cond_t curr_anti_cond = getPTG()->getEmptyCond();
+  float curr_confidence = 1.0f;
 
   BasicBlock *bb = from_loc->getParent();
   BasicBlock *startBB = bb;
@@ -385,11 +509,26 @@ Argument *ObjectLocator::getValues(Instruction *from_loc, mem_value_t &res,
       // Collect values from this BB
       for (int i = end_pos - 1; i >= 0; --i) {
         LocValue *curr_lv = lv_list->at(i);
+        path_cond_t cond = curr_lv->getCond();
+        path_cond_t mem_val_cond =
+            getPTG()->findOrCreateAndRegion(curr_anti_cond, cond);
         Value *val = curr_lv->getVal();
         Instruction *pos = curr_lv->getPos();
+        path_cond_t final_cond =
+            getPTG()->findOrCreateAndRegion(pre_cond, mem_val_cond);
 
-        if (val != LocValue::NO_VALUE) {
-          res.push_back(mem_value_item_t(pos, val));
+        if (getPTG()->isSatisfiable(final_cond) && val != LocValue::NO_VALUE) {
+          float no_effect_confidence = 1.0f;
+          if (IntraLotusAAConfig::lotus_enable_score_computation) {
+            int val_seq = pos ? getPTG()->getSequenceNum(pos)
+                              : PTGraph::VALUE_SEQ_INFINITE;
+            no_effect_confidence = get_confidence_with_no_call_barrier(
+                val_seq, final_cond, possible_updating_callsite);
+          }
+
+          curr_confidence *= no_effect_confidence;
+          res.push_back(
+              mem_value_item_t(final_cond, pos, val, curr_confidence));
           value_loaded++;
         }
 
@@ -398,8 +537,9 @@ Argument *ObjectLocator::getValues(Instruction *from_loc, mem_value_t &res,
             // Stop at strong update
             return nullptr;
           }
-          // For weak updates, would need to track anti-conditions
-          // Simplified: just collect all weak updates
+          path_cond_t anti_cond = getPTG()->findOrCreateNotRegion(cond);
+          curr_anti_cond =
+              getPTG()->findOrCreateAndRegion(curr_anti_cond, anti_cond);
         }
       }
     }
@@ -415,6 +555,17 @@ Argument *ObjectLocator::getValues(Instruction *from_loc, mem_value_t &res,
     bb_tracked++;
   }
 
+  path_cond_t default_cond =
+      getPTG()->findOrCreateAndRegion(curr_anti_cond, pre_cond);
+  if (!getPTG()->isSatisfiable(default_cond))
+    return nullptr;
+
+  if (IntraLotusAAConfig::lotus_enable_score_computation) {
+    float no_effect_confidence = get_confidence_with_no_call_barrier(
+        0, default_cond, possible_updating_callsite);
+    curr_confidence *= no_effect_confidence;
+  }
+
   // No explicit stores found - check what to return
   if (SymbolicMemObject *sym_obj = dyn_cast<SymbolicMemObject>(object)) {
     // Symbolic object - create pseudo-argument
@@ -423,7 +574,8 @@ Argument *ObjectLocator::getValues(Instruction *from_loc, mem_value_t &res,
       // Main function - try to get global initializer
       Value *init_val = getInitializerForGlobalValue();
       if (init_val) {
-        res.push_back(mem_value_item_t(nullptr, init_val));
+        res.push_back(
+            mem_value_item_t(default_cond, nullptr, init_val, curr_confidence));
         return nullptr;
       }
     } else {
@@ -434,7 +586,8 @@ Argument *ObjectLocator::getValues(Instruction *from_loc, mem_value_t &res,
           if (function_level != FUNC_LEVEL_UNDEFINED)
             load_level = function_level;
         }
-        res.push_back(mem_value_item_t(nullptr, pseudo_arg));
+        res.push_back(mem_value_item_t(default_cond, nullptr, pseudo_arg,
+                                       curr_confidence));
         return pseudo_arg;
       }
     }
@@ -442,9 +595,11 @@ Argument *ObjectLocator::getValues(Instruction *from_loc, mem_value_t &res,
 
   // Return appropriate default value
   if (object->isReallyAllocated()) {
-    res.push_back(mem_value_item_t(nullptr, LocValue::UNDEF_VALUE));
+    res.push_back(mem_value_item_t(default_cond, nullptr, LocValue::UNDEF_VALUE,
+                                   curr_confidence));
   } else {
-    res.push_back(mem_value_item_t(nullptr, LocValue::FREE_VARIABLE));
+    res.push_back(mem_value_item_t(default_cond, nullptr,
+                                   LocValue::FREE_VARIABLE, curr_confidence));
   }
 
   return nullptr;
@@ -454,7 +609,6 @@ Argument *ObjectLocator::getValues(Instruction *from_loc, mem_value_t &res,
 // Constant Extraction Helper
 //===----------------------------------------------------------------------===//
 
-/// Extract constant from aggregate type (arrays, structs) at given offset
 static Value *get_constant_from_aggregate(Constant *val, int64_t offset,
                                           const DataLayout *DL) {
   if (!val)
@@ -464,48 +618,48 @@ static Value *get_constant_from_aggregate(Constant *val, int64_t offset,
 
   if (ConstantDataArray *array_global = dyn_cast<ConstantDataArray>(val)) {
     Type *elem_type = array_global->getElementType();
-    int64_t element_size = DL->getTypeSizeInBits(elem_type);
+    int64_t element_size = (int64_t)DL->getTypeSizeInBits(elem_type);
     if (element_size != 0) {
-      int idx = offset / element_size;
-      int remainder = offset % element_size;
+      int64_t idx = offset / element_size;
+      int64_t remainder = offset % element_size;
       if (idx >= 0 && remainder >= 0 &&
-          (unsigned)idx < array_global->getNumElements()) {
-        Constant *element = array_global->getElementAsConstant(idx);
+          (uint64_t)idx < array_global->getNumElements()) {
+        Constant *element = array_global->getElementAsConstant((unsigned)idx);
         result = get_constant_from_aggregate(element, remainder, DL);
       }
     }
   } else if (ConstantArray *array_global = dyn_cast<ConstantArray>(val)) {
     Type *elem_type = array_global->getType()->getElementType();
-    int64_t element_size = DL->getTypeSizeInBits(elem_type);
+    int64_t element_size = (int64_t)DL->getTypeSizeInBits(elem_type);
     if (element_size != 0) {
-      int idx = offset / element_size;
-      int remainder = offset % element_size;
+      int64_t idx = offset / element_size;
+      int64_t remainder = offset % element_size;
       if (idx >= 0 && remainder >= 0 &&
-          (unsigned)idx < array_global->getType()->getNumElements()) {
+          (uint64_t)idx < array_global->getType()->getNumElements()) {
         result = get_constant_from_aggregate(
             array_global->getAggregateElement((unsigned)idx), remainder, DL);
       }
     }
   } else if (ConstantStruct *struct_global = dyn_cast<ConstantStruct>(val)) {
     StructType *st = struct_global->getType();
-    unsigned n_elem = st->getNumContainedTypes();
-    int64_t cur_size = 0;
-    int64_t last_size = 0;
-    unsigned idx = 0;
-
+    int n_elem = st->getNumContainedTypes();
+    int cur_size = 0;
+    int last_size = 0;
+    int idx;
     for (idx = 0; idx < n_elem; idx++) {
-      if (cur_size >= offset)
+      if (cur_size >= offset) {
         break;
+      }
 
       Type *t = st->getContainedType(idx);
       last_size = cur_size;
-      cur_size += DL->getTypeSizeInBits(t);
+      cur_size += (int)DL->getTypeSizeInBits(t);
     }
 
     if (cur_size == offset && idx < n_elem) {
       Constant *elem_val = struct_global->getAggregateElement(idx);
       result = get_constant_from_aggregate(elem_val, 0, DL);
-    } else if (cur_size > offset && last_size < offset && idx > 0) {
+    } else if (cur_size > offset && last_size < offset) {
       Constant *elem_val = struct_global->getAggregateElement(idx - 1);
       result = get_constant_from_aggregate(elem_val, offset - last_size, DL);
     }
@@ -547,7 +701,11 @@ Value *ObjectLocator::getInitializerForGlobalValue() {
 namespace llvm {
 
 raw_ostream &operator<<(raw_ostream &out, ObjectLocator &locator) {
-  out << "[" << locator.getObj()->getName() << "]." << locator.getOffset();
+  out << "[" << locator.getObj()->getName() << "].";
+  if (PTGraph::isUnknownOffset(locator.getOffset()))
+    out << "unknown";
+  else
+    out << locator.getOffset();
   return out;
 }
 

@@ -1,39 +1,46 @@
 #include "FailureDirectedTrimmingImpl.h"
 
+#include <functional>
+
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/Dominators.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/IntrinsicInst.h>
 
-#include <functional>
-
 using namespace llvm;
 
 // Safety condition inference (paper §4, Figure 3).
 //
-// Judgment: Λ, Υ, Φ ⊢ s : Φ'  (with aliasing oracle Λ, summary env Υ; Φ' ⇒ wp(s, Φ) if s terminates).
-// The analysis computes formulas sufficient for avoiding assertion failures from
-// a given program point onward (verifier model: executions terminate on assert/assume violation).
+// Judgment: Λ, Υ, Φ ⊢ s : Φ'  (with aliasing oracle Λ, summary env Υ; Φ' ⇒
+// wp(s, Φ) if s terminates). The analysis computes formulas sufficient for
+// avoiding assertion failures from a given program point onward (verifier
+// model: executions terminate on assert/assume violation).
 //
 // Key result maps:
-//   - Res.BeforeInst[I]  : safety condition immediately before I (paper Φ' at each statement)
-//   - Res.PreAfterPhi[BB]: safety condition at BB entry after PHIs (for edge merge + PHI substitution)
-//   - Res.Summary        : procedure summary (paper rule (10); used at callsites per rule (6))
+//   - Res.BeforeInst[I]  : safety condition immediately before I (paper Φ' at
+//   each statement)
+//   - Res.PreAfterPhi[BB]: safety condition at BB entry after PHIs (for edge
+//   merge + PHI substitution)
+//   - Res.Summary        : procedure summary (paper rule (10); used at
+//   callsites per rule (6))
 //
-// Formulas are intentionally conservative (stronger than necessary), so bounded iteration is sound.
-// The trimming pass negates them to obtain necessary conditions for failure (paper §5, Theorem 5.1).
+// Formulas are intentionally conservative (stronger than necessary), so bounded
+// iteration is sound. The trimming pass negates them to obtain necessary
+// conditions for failure (paper §5, Theorem 5.1).
 
 ExprRef storeOp(const ExprFactory &F, BoundVarManager &BVM,
                 lotus::AliasAnalysisWrapper &AA, const Instruction *CtxI,
-                uint64_t TagBase, ExprRef Ptr, Type *StoredValTy, ExprRef NewVal,
-                ExprRef Phi) {
+                uint64_t TagBase, ExprRef Ptr, Type *StoredValTy,
+                ExprRef NewVal, ExprRef Phi) {
   // Paper rule (4) and Def. *Store operation*: store(drf(α), e, Λ, Φ) =
-  //   Φ[e/drf(α)] ∧ ⋀_{αᵢ ∈ A \ {α}} αᵢ ≠ α,  where A = aliases(α, Λ) ∩ derefs(Φ).
+  //   Φ[e/drf(α)] ∧ ⋀_{αᵢ ∈ A \ {α}} αᵢ ≠ α,  where A = aliases(α, Λ) ∩
+  //   derefs(Φ).
   // LLVM-IR analogue: rewrite Φ into a precondition sound under aliasing.
   //
   // 1) Replace drf(Ptr) in Φ with NewVal (same stored type).
-  // 2) For every other drf(Loc) in Φ that may alias Ptr, add Loc ≠ Ptr (disambiguation).
-  // 3) If Φ contains drf(Ptr) with a different value type, use fresh bound var + outer ∀.
+  // 2) For every other drf(Loc) in Φ that may alias Ptr, add Loc ≠ Ptr
+  // (disambiguation). 3) If Φ contains drf(Ptr) with a different value type,
+  // use fresh bound var + outer ∀.
   if (!Ptr || !StoredValTy || !NewVal || !Phi)
     return Phi;
 
@@ -319,18 +326,20 @@ ExprRef icmpPtr(const ExprFactory &F, CmpInst::Predicate Pred, ExprRef A,
 // storeTransfer, havocDerefLocation, summaryOf, callTransfer
 // -----------------------------------------------------------------------------
 ExprRef storeTransfer(const ExprFactory &F, BoundVarManager &BVM,
-                      lotus::AliasAnalysisWrapper &AA,
-                      const Instruction *I, const StoreInst *SI, ExprRef Phi) {
+                      lotus::AliasAnalysisWrapper &AA, const Instruction *I,
+                      const StoreInst *SI, ExprRef Phi) {
   ExprRef Ptr = buildValueExpr(F, SI->getPointerOperand());
   ExprRef Val = buildValueExpr(F, SI->getValueOperand());
-  uint64_t TagBase = llvm::hash_combine(reinterpret_cast<uintptr_t>(SI),
-                                        reinterpret_cast<uintptr_t>(SI->getPointerOperand()),
-                                        reinterpret_cast<uintptr_t>(SI->getValueOperand()->getType()));
+  uint64_t TagBase = llvm::hash_combine(
+      reinterpret_cast<uintptr_t>(SI),
+      reinterpret_cast<uintptr_t>(SI->getPointerOperand()),
+      reinterpret_cast<uintptr_t>(SI->getValueOperand()->getType()));
   return storeOp(F, BVM, AA, I, /*TagBase=*/300 + TagBase, Ptr,
                  SI->getValueOperand()->getType(), Val, Phi);
 }
 
-// Paper Def. *Havoc operation*: havoc(drf(α), Λ, Φ) = ∀v_new . store(drf(α), v_new, Λ, Φ).
+// Paper Def. *Havoc operation*: havoc(drf(α), Λ, Φ) = ∀v_new . store(drf(α),
+// v_new, Λ, Φ).
 ExprRef havocDerefLocation(const ExprFactory &F, BoundVarManager &BVM,
                            lotus::AliasAnalysisWrapper &AA,
                            const Instruction *I, uint64_t Tag, ExprRef Ptr,
@@ -344,8 +353,8 @@ ExprRef havocDerefLocation(const ExprFactory &F, BoundVarManager &BVM,
   return F.forall(Id, ValTy, Body);
 }
 
-// Paper Def. *Procedure summary*: summary(f, Υ, v̄) = Υ(f)[v̄/v_in] if f ∈ dom(Υ),
-// else false if hasAsrts(f), else true.
+// Paper Def. *Procedure summary*: summary(f, Υ, v̄) = Υ(f)[v̄/v_in] if f ∈
+// dom(Υ), else false if hasAsrts(f), else true.
 ExprRef summaryOf(const ExprFactory &F, const SummaryEnv &Env,
                   const HasAsrtsEnv &Has, const Function *Callee,
                   ArrayRef<ExprRef> Actuals) {
@@ -372,7 +381,8 @@ ExprRef summaryOf(const ExprFactory &F, const SummaryEnv &Env,
 
 // Paper rule (6): v := call prc(v_act) → Φ' = Φ_s ∧ summary(prc, Υ, v_act),
 // where Φ_s = ∀v . havoc(ᾱ, Λ, Φ), ᾱ = modLocs(prc, Λ). We approximate ᾱ by
-// havocking return value and derefs in Φ that may be modified (onlyAccessesArgMemory heuristic).
+// havocking return value and derefs in Φ that may be modified
+// (onlyAccessesArgMemory heuristic).
 ExprRef callTransfer(const ExprFactory &F, BoundVarManager &BVM,
                      lotus::AliasAnalysisWrapper &AA, const SummaryEnv &Env,
                      const HasAsrtsEnv &Has, const CallBase *CB, ExprRef Phi) {
@@ -380,8 +390,9 @@ ExprRef callTransfer(const ExprFactory &F, BoundVarManager &BVM,
     return Phi;
   const Function *Callee = getDirectCalledFunctionMatchingType(*CB);
 
-  // Modular call: havoc return (rule (5)-style), havoc modified derefs (Def. Havoc),
-  // then conjoin summary (Def. Procedure summary). Sound; not full mod/ref.
+  // Modular call: havoc return (rule (5)-style), havoc modified derefs (Def.
+  // Havoc), then conjoin summary (Def. Procedure summary). Sound; not full
+  // mod/ref.
   ExprRef Out = Phi;
   if (!CB->getType()->isVoidTy()) {
     Out = havocVar(F, BVM, CB, /*Tag=*/1, CB->getType(), CB, Out);
@@ -477,7 +488,8 @@ Instruction *firstNonPhiNonDbg(BasicBlock &B) {
   return B.getTerminator();
 }
 
-// Condition on edge Pred→Succ: PreAfterPhi[Succ] with PHI operands substituted by values from Pred (rule (1) sequencing across CFG edges).
+// Condition on edge Pred→Succ: PreAfterPhi[Succ] with PHI operands substituted
+// by values from Pred (rule (1) sequencing across CFG edges).
 ExprRef edgePre(const ExprFactory &F,
                 const DenseMap<const BasicBlock *, ExprRef> &PreAfterPhi,
                 const BasicBlock *Succ, const BasicBlock *Pred) {
@@ -499,24 +511,26 @@ ExprRef edgePre(const ExprFactory &F,
   return substitute(F, Phi, S);
 }
 
-// Backward analysis over the CFG (paper rules (1)–(10)). Block entries initialized
-// to false (no known safe states); fixpoint grows the set. Rule (10): procedure
-// analyzed with postcondition true; summary = entry condition.
-FunctionSCResult computeSafetyConditions(
-    Function &Fn, const ExprFactory &F, BoundVarManager &BVM,
-    lotus::AliasAnalysisWrapper &AA, const SummaryEnv &Env,
-    const HasAsrtsEnv &Has) {
+// Backward analysis over the CFG (paper rules (1)–(10)). Block entries
+// initialized to false (no known safe states); fixpoint grows the set. Rule
+// (10): procedure analyzed with postcondition true; summary = entry condition.
+FunctionSCResult computeSafetyConditions(Function &Fn, const ExprFactory &F,
+                                         BoundVarManager &BVM,
+                                         lotus::AliasAnalysisWrapper &AA,
+                                         const SummaryEnv &Env,
+                                         const HasAsrtsEnv &Has) {
   FunctionSCResult Res;
 
   DenseMap<const BasicBlock *, ExprRef> PreAfterPhi;
   for (BasicBlock &BB : Fn) {
-    // Conservative init (paper: analysis can terminate at any point; init to false is sound).
+    // Conservative init (paper: analysis can terminate at any point; init to
+    // false is sound).
     PreAfterPhi[&BB] = F.boolConst(false);
   }
 
-  auto computePost = [&](BasicBlock &BB,
-                         const DenseMap<const BasicBlock *, ExprRef> &CurPre)
-      -> ExprRef {
+  auto computePost =
+      [&](BasicBlock &BB,
+          const DenseMap<const BasicBlock *, ExprRef> &CurPre) -> ExprRef {
     Instruction *Term = BB.getTerminator();
     if (!Term)
       return F.boolConst(true);
@@ -529,8 +543,7 @@ FunctionSCResult computeSafetyConditions(
     if (auto *CB = dyn_cast<CallBase>(Term)) {
       std::vector<ExprRef> All;
       for (unsigned i = 0; i < Term->getNumSuccessors(); ++i) {
-        All.push_back(
-            edgePre(F, CurPre, Term->getSuccessor(i), &BB));
+        All.push_back(edgePre(F, CurPre, Term->getSuccessor(i), &BB));
       }
       ExprRef After = F.and_(All);
 
@@ -566,7 +579,8 @@ FunctionSCResult computeSafetyConditions(
       return callTransfer(F, BVM, AA, Env, Has, CB, After);
     }
 
-    // Paper rule (9): if(⋆){s1}else{s2} → Φ' = Φ₁ ∧ Φ₂; we use path-sensitive (Cond⇒PreT)∧(¬Cond⇒PreE).
+    // Paper rule (9): if(⋆){s1}else{s2} → Φ' = Φ₁ ∧ Φ₂; we use path-sensitive
+    // (Cond⇒PreT)∧(¬Cond⇒PreE).
     if (auto *Br = dyn_cast<BranchInst>(Term)) {
       if (Br->isUnconditional()) {
         BasicBlock *Succ = Br->getSuccessor(0);
@@ -591,8 +605,7 @@ FunctionSCResult computeSafetyConditions(
         BasicBlock *Succ = C.getCaseSuccessor();
         ExprRef CaseExpr = buildValueExpr(F, CaseVal);
         ExprRef Eq = F.icmp(CmpInst::ICMP_EQ, Cond, CaseExpr);
-        Conjs.push_back(
-            F.implies(Eq, edgePre(F, CurPre, Succ, &BB)));
+        Conjs.push_back(F.implies(Eq, edgePre(F, CurPre, Succ, &BB)));
       }
 
       std::vector<ExprRef> NegCases;
@@ -601,16 +614,14 @@ FunctionSCResult computeSafetyConditions(
         NegCases.push_back(F.icmp(CmpInst::ICMP_NE, Cond, CaseExpr));
       }
       ExprRef NoneMatch = F.and_(NegCases);
-      Conjs.push_back(F.implies(
-          NoneMatch,
-          edgePre(F, CurPre, Sw->getDefaultDest(), &BB)));
+      Conjs.push_back(
+          F.implies(NoneMatch, edgePre(F, CurPre, Sw->getDefaultDest(), &BB)));
       return F.and_(Conjs);
     }
 
     std::vector<ExprRef> All;
     for (unsigned i = 0; i < Term->getNumSuccessors(); ++i) {
-      All.push_back(
-          edgePre(F, CurPre, Term->getSuccessor(i), &BB));
+      All.push_back(edgePre(F, CurPre, Term->getSuccessor(i), &BB));
     }
     return F.and_(All);
   };
@@ -719,7 +730,8 @@ FunctionSCResult computeSafetyConditions(
   return Res;
 }
 
-// Paper Def. *Procedure summary*: hasAsrts(f) = true iff f or any (transitive) callee contains an assertion.
+// Paper Def. *Procedure summary*: hasAsrts(f) = true iff f or any (transitive)
+// callee contains an assertion.
 HasAsrtsEnv computeHasAsrts(Module &M) {
   HasAsrtsEnv Out;
 

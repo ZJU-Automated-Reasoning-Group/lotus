@@ -1,5 +1,6 @@
 /*
-FIXME: this MemorySSA is tighly bounded to DSA alias analysis, which is not a good idea.
+FIXME: this MemorySSA is tighly bounded to DSA alias analysis, which is not a
+good idea.
 */
 #include "IR/MemorySSA/MemorySSA.h"
 

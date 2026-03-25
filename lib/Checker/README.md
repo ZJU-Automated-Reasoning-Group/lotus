@@ -2,11 +2,14 @@
 
 Bug checkers and reporting infrastructure.
 
-| Subdir | Purpose |
-|--------|---------|
-| **Concurrency** | Thread-safety: Atomicity, ConditionVariable, DataRace, Deadlock, LockMismatch. |
-| **FiTx** | Detectors: double-free, double-lock/unlock, leak, null-ptr, ref/ unref, UAF, use-before-init. |
-| **GVFA** | Global value-flow based. Sources/sinks over Dyck analysis. Checkers: NullPointer, UseAfterFree, UseOfUninitializedVariable, InvalidUseOfStackAddress, FreeOfNonHeapMemory. |
-| **KINT** | Integer bug detection. Range analysis, taint analysis, SMT (Z3). |
-| **Pulse** | Biabductive analysis (Infer Pulse–style). Witnessable bugs, disjunctive domain, loop abstraction. |
-| **Report** | Shared reporting: BugReport, BugReportMgr, BugTypes, SARIF, SuppressionManager. |
+**Status**: Most checkers are unstable; many were migrated from other projects (notably SVF) and may require further integration work.
+
+| Subdir | Purpose | Status |
+|--------|---------|--------|
+| **AE** | Abstract Execution (abstract interpretation engine). Migrated from SVF's AE engine. | ⚠️ Migrated (from SVF), unstable |
+| **Concurrency** | Thread-safety: Atomicity, ConditionVariable, DataRace, Deadlock, LockMismatch. | ⚠️ Unstable |
+| **FiTx** | Detectors: double-free, double-lock/unlock, leak, null-ptr, ref/ unref, UAF, use-before-init. | ✅ Stable |
+| **KINT** | Integer bug detection. Taint analysis, SMT (Z3). | ⚠️ Unstable |
+| **Pulse** | Biabductive analysis (Infer Pulse–style). Witnessable bugs, disjunctive domain, loop abstraction. | ⚠️ Migrated (from Infer), Unstable |
+| **Saber** | Source-sink bug detector. Migrated from SVF's SABER engine. Checkers: memory leak, double-free, file operations (fopen/fclose). | ⚠️ Migrated (from SVF), unstable |
+| **Report** | Shared reporting: BugReport, BugReportMgr, BugTypes, SARIF, SuppressionManager. | ✅ Stable |

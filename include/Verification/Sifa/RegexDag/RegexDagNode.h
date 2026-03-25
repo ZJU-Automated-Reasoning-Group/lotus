@@ -18,7 +18,7 @@
 #ifndef LOTUS_VERIFICATION_SIFA_REGEXDAG_REGEXDAGNODE_H
 #define LOTUS_VERIFICATION_SIFA_REGEXDAG_REGEXDAGNODE_H
 
-#include "Utils/General/PathExpressions/Regex.h"
+#include "Utils/Algorithms/PathExpressions/Regex.h"
 
 #include <algorithm>
 #include <vector>
@@ -26,8 +26,7 @@
 namespace lotus {
 namespace sifa {
 
-template <typename L>
-class RegexDagNode final {
+template <typename L> class RegexDagNode final {
 public:
   using Label = L;
   using RegexRef = lotus::pathexpressions::RegexRef<L>;
@@ -38,14 +37,19 @@ public:
 
   bool isEpsilon() const { return content_ && content_->isEpsilon(); }
 
-  const std::vector<RegexDagNode<L> *> &getOutgoingNodes() const { return outgoing_; }
-  const std::vector<RegexDagNode<L> *> &getIncomingNodes() const { return incoming_; }
+  const std::vector<RegexDagNode<L> *> &getOutgoingNodes() const {
+    return outgoing_;
+  }
+  const std::vector<RegexDagNode<L> *> &getIncomingNodes() const {
+    return incoming_;
+  }
 
   void connectOutgoing(RegexDagNode<L> *succ) {
     if (!succ || succ == this) {
       return;
     }
-    if (std::find(outgoing_.begin(), outgoing_.end(), succ) != outgoing_.end()) {
+    if (std::find(outgoing_.begin(), outgoing_.end(), succ) !=
+        outgoing_.end()) {
       return;
     }
     outgoing_.push_back(succ);
@@ -56,7 +60,8 @@ public:
     if (!pred || pred == this) {
       return;
     }
-    if (std::find(incoming_.begin(), incoming_.end(), pred) != incoming_.end()) {
+    if (std::find(incoming_.begin(), incoming_.end(), pred) !=
+        incoming_.end()) {
       return;
     }
     incoming_.push_back(pred);
@@ -64,22 +69,26 @@ public:
   }
 
   void removeOutgoing(RegexDagNode<L> *succ) {
-    outgoing_.erase(std::remove(outgoing_.begin(), outgoing_.end(), succ), outgoing_.end());
+    outgoing_.erase(std::remove(outgoing_.begin(), outgoing_.end(), succ),
+                    outgoing_.end());
   }
 
   void removeIncoming(RegexDagNode<L> *pred) {
-    incoming_.erase(std::remove(incoming_.begin(), incoming_.end(), pred), incoming_.end());
+    incoming_.erase(std::remove(incoming_.begin(), incoming_.end(), pred),
+                    incoming_.end());
   }
 
 private:
   void connectOutgoingInternal(RegexDagNode<L> *succ) {
-    if (std::find(outgoing_.begin(), outgoing_.end(), succ) == outgoing_.end()) {
+    if (std::find(outgoing_.begin(), outgoing_.end(), succ) ==
+        outgoing_.end()) {
       outgoing_.push_back(succ);
     }
   }
 
   void connectIncomingInternal(RegexDagNode<L> *pred) {
-    if (std::find(incoming_.begin(), incoming_.end(), pred) == incoming_.end()) {
+    if (std::find(incoming_.begin(), incoming_.end(), pred) ==
+        incoming_.end()) {
       incoming_.push_back(pred);
     }
   }

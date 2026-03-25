@@ -54,7 +54,7 @@ SymAbs: SMT Formula Abstraction Library
 **Location**: ``lib/Solvers/SMT/SymAbs/``
 
 **Important Distinction**: This library is **NOT** the same as
-:doc:`../verification/symbolic-abstraction`, which is a complete program
+:doc:`../verification/symabs-ai`, which is a complete program
 analysis framework for LLVM IR.
 
 SymAbs implements algorithms from "Automatic Abstraction of Bit-Vector Formulae"
@@ -64,7 +64,7 @@ formulas). It operates at the formula/solver level, not the program level.
 **Key Differences**:
 
 +------------------+------------------------------------------+----------------------------------------+
-| Aspect           | ``lib/Solvers/SMT/SymAbs``              | ``lib/Verification/SymbolicAbstraction``|
+| Aspect           | ``lib/Solvers/SMT/SymAbs``              | ``lib/Verification/SymAbsAI``|
 +==================+==========================================+========================================+
 | **Input**        | SMT bit-vector formulas (Z3 expressions) | LLVM IR (program code)                |
 +------------------+------------------------------------------+----------------------------------------+
@@ -114,7 +114,7 @@ two's complement to avoid wrap-around during arithmetic.
   - You need to approximate bit-vector constraints with linear integer constraints
   - You're working at the formula/solver level, not the program level
 
-- Use ``lib/Verification/SymbolicAbstraction`` when:
+- Use ``lib/Verification/SymAbsAI`` when:
   - You're analyzing LLVM IR programs
   - You need a complete abstract interpretation framework
   - You want to integrate analysis into LLVM optimization passes

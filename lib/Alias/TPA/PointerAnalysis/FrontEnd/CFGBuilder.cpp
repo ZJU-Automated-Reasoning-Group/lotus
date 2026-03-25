@@ -26,16 +26,16 @@ CFGBuilder::CFGBuilder(CFG &c, const TypeMap &t) : cfg(c), typeMap(t) {}
 
 void CFGBuilder::buildCFG(const Function &llvmFunc) {
   auto dataLayout = DataLayout(llvmFunc.getParent());
-  
+
   // Phase 1: Translate LLVM instructions to TPA nodes
   auto instTranslator = InstructionTranslator(cfg, typeMap, dataLayout);
-  
+
   // Phase 2: Connect nodes to form control flow graph and def-use chains
   FunctionTranslator(cfg, instTranslator).translateFunction(llvmFunc);
-  
+
   // Phase 3: Simplify the graph (remove identity copies, etc.)
   CFGSimplifier().simplify(cfg);
-  
+
   // Phase 4: Build helper maps for querying
   cfg.buildValueMap();
 }

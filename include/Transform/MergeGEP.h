@@ -18,14 +18,13 @@
 #include "llvm/Pass.h"
 
 namespace llvm {
-  //
-  // Class: MergeArrayGEP
-  //
-  class MergeArrayGEP : public ModulePass {
-  public:
-    static char ID;
-    MergeArrayGEP() : ModulePass(ID) {}
-    virtual bool runOnModule(Module& M) override;
-  };
+//
+// Class: MergeArrayGEP
+//
+class MergeArrayGEP : public ModulePass {
+public:
+  static char ID;
+  MergeArrayGEP() : ModulePass(ID) {}
+  virtual bool runOnModule(Module &M) override;
+};
 } // namespace llvm
-

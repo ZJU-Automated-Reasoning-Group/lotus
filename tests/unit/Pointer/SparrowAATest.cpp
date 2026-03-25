@@ -7,32 +7,20 @@
  */
 
 #include "Alias/SparrowAA/AndersenAA.h"
+#include "TestUtils/LLVMHelpers.h"
 
 #include <algorithm>
 #include <set>
 
-#include <gtest/gtest.h>
 #include <llvm/Analysis/MemoryLocation.h>
-#include <llvm/AsmParser/Parser.h>
 #include <llvm/IR/Instructions.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
-#include <llvm/Support/SourceMgr.h>
+#include <gtest/gtest.h>
 
 using namespace llvm;
+using namespace lotus::unittest;
 
-class SparrowAATest : public ::testing::Test {
+class SparrowAATest : public LlvmModuleTest {
 protected:
-  LLVMContext context;
-  std::unique_ptr<Module> parseModule(const char *source) {
-    SMDiagnostic err;
-    auto module = parseAssemblyString(source, err, context);
-    if (!module) {
-      err.print("SparrowAATest", errs());
-    }
-    return module;
-  }
-
   bool pointsToSetContains(const std::vector<const Value *> &ptsSet,
                            const Value *v) {
     return std::find(ptsSet.begin(), ptsSet.end(), v) != ptsSet.end();
@@ -520,7 +508,7 @@ TEST_F(SparrowAATest, ContextSensitiveQueryInContext) {
   Function *caller = module->getFunction("caller");
   ASSERT_NE(caller, nullptr);
 
-  auto initialCtx = AA.getInitialContext();
+  const auto *initialCtx = AA.getInitialContext();
 
   Function *callee = module->getFunction("callee");
   ASSERT_NE(callee, nullptr);
@@ -557,8 +545,8 @@ TEST_F(SparrowAATest, ContextEvolution) {
   Function *foo = module->getFunction("foo");
   ASSERT_NE(foo, nullptr);
 
-  auto globalCtx = AA.getGlobalContext();
-  auto initialCtx = AA.getInitialContext();
+  const auto *globalCtx = AA.getGlobalContext();
+  const auto *initialCtx = AA.getInitialContext();
 
   EXPECT_NE(globalCtx, nullptr);
   EXPECT_NE(initialCtx, nullptr);
@@ -576,8 +564,8 @@ TEST_F(SparrowAATest, ContextToString) {
 
   AndersenAAResult AA(*module, 1);
 
-  auto globalCtx = AA.getGlobalContext();
-  auto initialCtx = AA.getInitialContext();
+  const auto *globalCtx = AA.getGlobalContext();
+  const auto *initialCtx = AA.getInitialContext();
 
   std::string globalStr = AA.contextToString(globalCtx, false);
   std::string initialStr = AA.contextToString(initialCtx, false);

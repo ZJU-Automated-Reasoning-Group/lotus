@@ -49,7 +49,7 @@ using namespace llvm;
 ///
 /// @note Alloca objects have function-local lifetime (stack frame)
 PTResult *IntraLotusAA::processAlloca(AllocaInst *alloca) {
-  return addPointsTo(alloca, newObject(alloca), 0);
+  return addPointsTo(alloca, newObject(alloca), 0, getEmptyCond());
 }
 
 /// Processes a function argument - symbolic input from caller.
@@ -71,7 +71,7 @@ PTResult *IntraLotusAA::processArg(Argument *arg) {
   MemObject::ObjKind kind = func_pseudo_ret_cache.count(arg)
                                 ? MemObject::CONCRETE
                                 : MemObject::SYMBOLIC;
-  return addPointsTo(arg, newObject(arg, kind), 0);
+  return addPointsTo(arg, newObject(arg, kind), 0, getEmptyCond());
 }
 
 /// Processes a global variable - program-wide symbolic object.
@@ -84,7 +84,8 @@ PTResult *IntraLotusAA::processArg(Argument *arg) {
 ///
 /// @note Global functions are also GlobalValues, handled here
 PTResult *IntraLotusAA::processGlobal(GlobalValue *global) {
-  return addPointsTo(global, newObject(global, MemObject::SYMBOLIC), 0);
+  return addPointsTo(global, newObject(global, MemObject::SYMBOLIC), 0,
+                     getEmptyCond());
 }
 
 /// Processes a null pointer constant.
@@ -117,10 +118,11 @@ PTResult *IntraLotusAA::processNonPointer(Value *non_pointer_val) {
     Value *src = cast->getOperand(0);
     if (src->getType()->isPointerTy()) {
       PTResult *src_res = processBasePointer(src);
-      return derivePtsFrom(non_pointer_val, src_res, 0);
+      return derivePtsFrom(non_pointer_val, src_res, 0, getEmptyCond());
     }
   }
-  return addPointsTo(non_pointer_val, newObject(non_pointer_val), 0);
+  return addPointsTo(non_pointer_val, newObject(non_pointer_val), 0,
+                     getEmptyCond());
 }
 
 /// Fallback handler for unknown/unhandled pointer sources.
@@ -134,5 +136,5 @@ PTResult *IntraLotusAA::processNonPointer(Value *non_pointer_val) {
 /// **Soundness:** Unknown → may alias anything (conservative
 /// over-approximation)
 PTResult *IntraLotusAA::processUnknown(Value *unknown_val) {
-  return addPointsTo(unknown_val, MemObject::UnknownObj, 0);
+  return addPointsTo(unknown_val, MemObject::UnknownObj, 0, getEmptyCond());
 }

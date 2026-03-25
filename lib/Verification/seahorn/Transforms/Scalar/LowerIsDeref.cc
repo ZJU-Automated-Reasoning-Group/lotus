@@ -18,7 +18,7 @@ using namespace seahorn;
 namespace seahorn {
 Value *lowerIsDereferenceable(CallBase *IsDerefCall, const DataLayout &DL,
                               const TargetLibraryInfo *TLI);
-}
+} // namespace seahorn
 
 STATISTIC(NumIsDerefLower, "Number of sea.is_dereferenceable lowered");
 

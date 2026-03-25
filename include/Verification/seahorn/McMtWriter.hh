@@ -137,6 +137,6 @@ namespace seahorn
     return out;
   }
   
-}
+} // namespace seahorn
 
 #endif /* _MCMT_WRITER__H_ */

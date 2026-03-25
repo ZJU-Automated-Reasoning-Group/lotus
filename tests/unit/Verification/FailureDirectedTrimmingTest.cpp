@@ -1,30 +1,17 @@
 #include <gtest/gtest.h>
 
+#include "TestUtils/LLVMHelpers.h"
 #include "Verification/FailureDirectedTrimming/FailureDirectedTrimming.h"
 
-#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/Support/SourceMgr.h"
 
 using namespace llvm;
 
 namespace {
-
-static std::unique_ptr<Module> parseModule(LLVMContext &Ctx, const char *IR) {
-  SMDiagnostic Err;
-  auto M = parseAssemblyString(IR, Err, Ctx);
-  if (!M) {
-    std::string Msg;
-    raw_string_ostream OS(Msg);
-    Err.print("FailureDirectedTrimmingTest", OS);
-    ADD_FAILURE() << OS.str();
-  }
-  return M;
-}
 
 static unsigned countCallsTo(const Function &F, StringRef CalleeName) {
   unsigned Count = 0;
@@ -187,7 +174,7 @@ static unsigned countTrimmingAssumptions(const Function &F) {
 
 TEST(FailureDirectedTrimmingPassTest, CreatesSafeClonesAndWrapsCalls) {
   LLVMContext Ctx;
-  auto M = parseModule(Ctx, R"IR(
+  auto M = lotus::unittest::parseAssembly(Ctx, R"IR(
 ; ModuleID = 'fdtrim-test'
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx14.0.0"
@@ -256,7 +243,7 @@ ok:
 
 TEST(FailureDirectedTrimmingPassTest, SafeCloneConvertsCrabAssertToAssume) {
   LLVMContext Ctx;
-  auto M = parseModule(Ctx, R"IR(
+  auto M = lotus::unittest::parseAssembly(Ctx, R"IR(
 ; ModuleID = 'fdtrim-assert-test'
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx14.0.0"
@@ -329,7 +316,7 @@ entry:
 
 TEST(FailureDirectedTrimmingPassTest, DefaultDerefCodegenUsesUF) {
   LLVMContext Ctx;
-  auto M = parseModule(Ctx, R"IR(
+  auto M = lotus::unittest::parseAssembly(Ctx, R"IR(
 ; ModuleID = 'fdtrim-deref-test'
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx14.0.0"

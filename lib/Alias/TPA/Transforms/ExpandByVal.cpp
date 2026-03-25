@@ -31,7 +31,8 @@ namespace transform {
  *
  * @param M The module to transform
  * @param analysisManager Module analysis manager (unused)
- * @return PreservedAnalyses::none() if modified, PreservedAnalyses::all() otherwise
+ * @return PreservedAnalyses::none() if modified, PreservedAnalyses::all()
+ * otherwise
  */
 PreservedAnalyses ExpandByValPass::run(Module &M,
                                        ModuleAnalysisManager &analysisManager) {

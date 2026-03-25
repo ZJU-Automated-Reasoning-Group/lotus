@@ -1,8 +1,8 @@
 #pragma once
 
-#include "llvm/Pass.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Pass.h"
 
 
 namespace seahorn
@@ -21,4 +21,3 @@ namespace seahorn
 
     inline Pass *createNameValuesPass(){return new NameValues();}
 }
-

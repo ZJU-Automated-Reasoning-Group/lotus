@@ -1,7 +1,8 @@
 // Implementation of SemiSparseProgram.
 //
-// SemiSparseProgram acts as the top-level container for the program being analyzed.
-// It bridges the LLVM Module with the analysis-specific representations (CFGs, TypeMaps).
+// SemiSparseProgram acts as the top-level container for the program being
+// analyzed. It bridges the LLVM Module with the analysis-specific
+// representations (CFGs, TypeMaps).
 //
 // Key Responsibilities:
 // 1. Maintain the mapping between LLVM Functions and TPA CFGs.
@@ -17,8 +18,9 @@ using namespace llvm;
 
 namespace tpa {
 
-// Constructor. Scans the module to populate the list of address-taken functions.
-// These functions are potential targets for indirect calls where the target is unknown (Universal).
+// Constructor. Scans the module to populate the list of address-taken
+// functions. These functions are potential targets for indirect calls where the
+// target is unknown (Universal).
 SemiSparseProgram::SemiSparseProgram(const llvm::Module &m) : module(m) {
   for (auto const &f : module) {
     if (f.hasAddressTaken())

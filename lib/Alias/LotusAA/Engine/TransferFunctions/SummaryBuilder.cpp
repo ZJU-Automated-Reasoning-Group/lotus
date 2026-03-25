@@ -64,6 +64,7 @@ void IntraLotusAA::collectEscapedObjects(
   map<ObjectLocator *, set<MemObject *, mem_obj_cmp>, obj_loc_cmp>
       single_pointed_objects;
   map<MemObject *, ObjectLocator *, mem_obj_cmp> obj_pointers;
+  set<Type *> large_structure_type;
 
   // Worklist of reachable objects
   std::vector<MemObject *> reachable_worklist;
@@ -87,7 +88,8 @@ void IntraLotusAA::collectEscapedObjects(
       PTResult *pt_result = processBasePointer(ret_val);
       PTResultIterator ptr_iter(pt_result, this);
 
-      for (auto *loc : ptr_iter) {
+      for (auto &point_to_item : ptr_iter) {
+        ObjectLocator *loc = point_to_item.first;
         MemObject *obj = loc->getObj();
         int64_t offset = loc->getOffset();
 
@@ -122,16 +124,30 @@ void IntraLotusAA::collectEscapedObjects(
   while (!reachable_worklist.empty()) {
     MemObject *cur_obj = reachable_worklist.back();
     Value *cur_obj_source = cur_obj->getAllocSite();
+    Type *parent_type = cur_obj->guessType();
     reachable_worklist.pop_back();
 
     for (auto &ptr_offset_pair : cur_obj->getUpdatedOffset()) {
       int64_t ptr_offset = ptr_offset_pair.first;
+      Type *child_type = ptr_offset_pair.second;
+
+      if (IntraLotusAAConfig::lotus_restrict_inter_structure != -1 &&
+          child_type == parent_type) {
+        if (auto *pointer_type = dyn_cast<PointerType>(child_type)) {
+          if (pointer_type->getPointerElementType()->isStructTy())
+            large_structure_type.insert(child_type);
+        }
+      }
 
       mem_value_t res;
       for (auto &ret_pair : ret_insts) {
         ReturnInst *ret = ret_pair.first;
+        path_cond_t cond = ret_pair.second;
         ObjectLocator *locator = cur_obj->findLocator(ptr_offset, true);
-        locator->getValues(ret, res, nullptr);
+        locator->getValues(ret, cond, res, nullptr,
+                           ObjectLocator::FUNC_LEVEL_UNDEFINED, true,
+                           func_obj ? func_obj->findLocator(0, false) : nullptr,
+                           true);
       }
 
       refineResult(res);
@@ -143,7 +159,8 @@ void IntraLotusAA::collectEscapedObjects(
           continue;
 
         PTResultIterator ptr_iter(pt_result, this);
-        for (auto *loc : ptr_iter) {
+        for (auto &point_to_item : ptr_iter) {
+          ObjectLocator *loc = point_to_item.first;
           MemObject *obj = loc->getObj();
           int64_t offset = loc->getOffset();
 
@@ -229,6 +246,38 @@ void IntraLotusAA::collectEscapedObjects(
     escape_objs.insert(pseudo_obj);
   }
 
+  if (IntraLotusAAConfig::lotus_restrict_inter_structure != -1) {
+    map<Type *, MemObject *> pseudo_objs_for_type;
+    std::vector<MemObject *> merged;
+
+    for (MemObject *esc_obj : escape_objs) {
+      Type *esc_obj_type = esc_obj->guessType();
+      if (large_structure_type.count(esc_obj_type) == 0)
+        continue;
+
+      merged.push_back(esc_obj);
+      MemObject *pseudo_obj = nullptr;
+      auto it = pseudo_objs_for_type.find(esc_obj_type);
+      if (it != pseudo_objs_for_type.end()) {
+        pseudo_obj = it->second;
+      } else {
+        pseudo_obj = newObject(esc_obj->getAllocSite(), MemObject::CONCRETE);
+        pseudo_objs_for_type[esc_obj_type] = pseudo_obj;
+      }
+
+      pseudo_to_real_map[pseudo_obj].insert(esc_obj);
+      real_to_pseudo_map[esc_obj] = pseudo_obj;
+    }
+
+    for (MemObject *obj : merged) {
+      escape_objs.erase(obj);
+    }
+
+    for (auto &type_pair : pseudo_objs_for_type) {
+      escape_objs.insert(type_pair.second);
+    }
+  }
+
   // Record escape sources
   for (MemObject *obj : escape_objs) {
     escape_source.insert(obj->getAllocSite());
@@ -245,7 +294,9 @@ void IntraLotusAA::collectOutputs() {
     for (auto &ret_pair : ret_insts) {
       ReturnInst *ret = ret_pair.first;
       Value *ret_value = ret->getReturnValue();
-      ret_item->getVal()[ret].push_back(mem_value_item_t(nullptr, ret_value));
+      path_cond_t cond = ret_pair.second;
+      ret_item->getVal()[ret].push_back(
+          mem_value_item_t(cond, nullptr, ret_value, 1.0f));
     }
     ret_item->symbolic_info.reset(nullptr, 0);
     ret_item->func_level = 0;
@@ -285,8 +336,13 @@ void IntraLotusAA::collectOutputs() {
 
           for (auto &ret_pair : ret_insts) {
             ReturnInst *ret = ret_pair.first;
+            path_cond_t cond = ret_pair.second;
             mem_value_t &res = output_item->getVal()[ret];
-            locator->getValues(ret, res, normalized_type);
+            locator->getValues(ret, cond, res, normalized_type,
+                               ObjectLocator::FUNC_LEVEL_UNDEFINED, true,
+                               func_obj ? func_obj->findLocator(0, false)
+                                        : nullptr,
+                               true);
             refineResult(res);
           }
         } else {
@@ -295,8 +351,13 @@ void IntraLotusAA::collectOutputs() {
 
           for (auto &ret_pair : ret_insts) {
             ReturnInst *ret = ret_pair.first;
+            path_cond_t cond = ret_pair.second;
             mem_value_t &res = output_item->getVal()[ret];
-            locator->getValues(ret, res, normalized_type);
+            locator->getValues(ret, cond, res, normalized_type,
+                               ObjectLocator::FUNC_LEVEL_UNDEFINED, true,
+                               func_obj ? func_obj->findLocator(0, false)
+                                        : nullptr,
+                               true);
           }
 
           AccessPath &info = output_item->getSymbolicInfo();
@@ -329,8 +390,13 @@ void IntraLotusAA::collectOutputs() {
 
         for (auto &ret_pair : ret_insts) {
           ReturnInst *ret = ret_pair.first;
+          path_cond_t cond = ret_pair.second;
           mem_value_t &res = output_item->getVal()[ret];
-          locator->getValues(ret, res, normalized_type);
+          locator->getValues(ret, cond, res, normalized_type,
+                             ObjectLocator::FUNC_LEVEL_UNDEFINED, true,
+                             func_obj ? func_obj->findLocator(0, false)
+                                      : nullptr,
+                             true);
           refineResult(res);
         }
 
@@ -342,6 +408,45 @@ void IntraLotusAA::collectOutputs() {
       }
     }
   }
+
+  auto refine_output_value = [this](std::vector<OutputItem *> &output_items) {
+    std::map<std::pair<Value *, Instruction *>, std::pair<path_cond_t, float>>
+        merged_values;
+
+    for (auto *out : output_items) {
+      for (auto &ret_mem_pair : out->getVal()) {
+        mem_value_t &mem_vals = ret_mem_pair.second;
+        for (auto &mem : mem_vals) {
+          auto key = std::make_pair(mem.val, mem.pos);
+          auto it = merged_values.find(key);
+          if (it == merged_values.end()) {
+            merged_values.emplace(key, std::make_pair(mem.cond, mem.confidence));
+          } else {
+            it->second.first =
+                findOrCreateOrRegion(it->second.first, mem.cond);
+            it->second.second = mem_value_item_t::compute_or_confidence(
+                it->second.second, mem.confidence);
+          }
+        }
+      }
+    }
+
+    for (auto *out : output_items) {
+      for (auto &ret_mem_pair : out->getVal()) {
+        mem_value_t &mem_vals = ret_mem_pair.second;
+        mem_value_t refined_mem_vals;
+        refined_mem_vals.reserve(mem_vals.size());
+        for (auto &mem : mem_vals) {
+          auto merged = merged_values[std::make_pair(mem.val, mem.pos)];
+          refined_mem_vals.emplace_back(merged.first, mem.pos, mem.val,
+                                        merged.second);
+        }
+        mem_vals = std::move(refined_mem_vals);
+      }
+    }
+  };
+
+  refine_output_value(outputs);
 
   // Record point-to changes for outputs
   for (auto &output_item : outputs) {
@@ -359,7 +464,8 @@ void IntraLotusAA::collectOutputs() {
           if (pt_result) {
             PTResultIterator iter(pt_result, this);
 
-            for (auto *loc : iter) {
+            for (auto &point_to_item : iter) {
+              ObjectLocator *loc = point_to_item.first;
               int64_t offset = loc->getOffset();
               MemObject *point_to_obj = loc->getObj();
 
@@ -371,7 +477,10 @@ void IntraLotusAA::collectOutputs() {
 
               Value *parent_val = loc->getObj()->getAllocSite();
               AccessPath output_info(parent_val, offset);
-              output_item->pseudo_pts.push_back(output_info);
+              path_cond_t final_cond =
+                  findOrCreateAndRegion(value_item.cond, point_to_item.second);
+              output_item->pseudo_pts.push_back(
+                  std::make_pair(final_cond, output_info));
             }
           }
         }
@@ -384,6 +493,11 @@ void IntraLotusAA::collectInputs() {
   // Collect pseudo-arguments from symbolic objects
   for (auto &obj_pair : mem_objs) {
     MemObject *obj = obj_pair.first;
+
+    if (IntraLotusAAConfig::lotus_restrict_inter_structure != -1 &&
+        real_to_pseudo_map.count(obj) != 0) {
+      continue;
+    }
 
     if (obj->getKind() == MemObject::SYMBOLIC) {
       SymbolicMemObject *sobj = cast<SymbolicMemObject>(obj);
@@ -401,6 +515,11 @@ void IntraLotusAA::collectInputs() {
       }
     }
   }
+
+  pseudo_input_indices.clear();
+  unsigned next_index = 0;
+  for (const auto &input_item : inputs)
+    pseudo_input_indices[input_item.first] = next_index++;
 
   // Verify completeness (if testing enabled)
   if (IntraLotusAAConfig::lotus_test_correctness) {
@@ -450,7 +569,7 @@ void IntraLotusAA::finalizeInterface() {
              IntraLotusAAConfig::lotus_restrict_inline_size) {
     lotus_restrict_ap_level_adjust = 0;
   } else {
-    // Self-adjusting heuristic based on interface size
+    // Keep the exact self-adjusting interface pruning heuristic.
     const int CACHE_SIZE = 10;
     int cache_input[CACHE_SIZE] = {0};
     int cache_output[CACHE_SIZE] = {0};
@@ -504,7 +623,6 @@ void IntraLotusAA::finalizeInterface() {
 
       if (cache_input[cache_idx] == 0 && cache_output[cache_idx] == 0 &&
           lotus_restrict_ap_level_adjust != 0) {
-        // Fully inline - no more interfaces at this depth
         lotus_restrict_ap_level_adjust =
             LotusConfig::MAXIMAL_SUMMARY_AP_DEPTH + 1;
         break;
@@ -530,12 +648,27 @@ void IntraLotusAA::finalizeInterface() {
          IntraLotusAAConfig::lotus_restrict_inline_depth < 0)) {
       new_outputs.push_back(output_item);
     } else {
+      for (auto &ret_val_pair : output_item->getVal()) {
+        mem_value_t *vals = &ret_val_pair.second;
+        mem_value_t *summary_vals;
+        if (level > IntraLotusAAConfig::lotus_restrict_summary_ap_depth) {
+          summary_vals = summary_outputs[0];
+        } else {
+          summary_vals = summary_outputs[level];
+        }
+        for (mem_value_item_t &mem_item : *vals)
+          summary_vals->push_back(mem_item);
+      }
       delete output_item;
     }
   }
 
   outputs.clear();
   outputs = std::move(new_outputs);
+
+  for (mem_value_t *vals : summary_outputs) {
+    refineResult(*vals);
+  }
 
   // Filter inputs
   std::vector<Value *> to_remove;
@@ -550,6 +683,14 @@ void IntraLotusAA::finalizeInterface() {
           (func_level < IntraLotusAAConfig::lotus_restrict_inline_depth ||
            IntraLotusAAConfig::lotus_restrict_inline_depth < 0))) {
       to_remove.push_back(arg);
+      int summary_idx = 0;
+      if (level > IntraLotusAAConfig::lotus_restrict_summary_ap_depth) {
+        summary_idx = 0;
+      } else {
+        summary_idx = level;
+      }
+      summary_inputs[summary_idx]->insert(arg);
+      summary_inputs_idx[arg] = summary_idx;
     }
   }
 
@@ -557,28 +698,52 @@ void IntraLotusAA::finalizeInterface() {
     inputs.erase(arg);
   }
 
+  pseudo_input_indices.clear();
+  unsigned next_pseudo_input_index = 0;
+  for (const auto &input_item : inputs)
+    pseudo_input_indices[input_item.first] = next_pseudo_input_index++;
+
   // Finalize point-to info for outputs
   for (OutputItem *output_item : outputs) {
     auto &point_to = output_item->getPseudoPointTo();
 
-    // Filter point-to information
-    vector<AccessPath> filtered_pts;
+    if (IntraLotusAAConfig::lotus_restrict_output_pts != -1 &&
+        static_cast<int>(point_to.size()) >
+            IntraLotusAAConfig::lotus_restrict_output_pts) {
+      point_to.clear();
+      continue;
+    }
+
+    map<Value *, map<int64_t, pair<path_cond_t, AccessPath>, less<int64_t>>,
+        llvm_cmp>
+        should_exist;
 
     for (auto &point_to_item : point_to) {
-      AccessPath &ap = point_to_item;
+      AccessPath &ap = point_to_item.second;
       Value *parent_val = ap.getParentPtr();
+      int64_t offset = ap.getOffset();
 
-      if (!parent_val || isa<GlobalValue>(parent_val) ||
-          inputs.count(parent_val) || escape_source.count(parent_val)) {
-        filtered_pts.push_back(ap);
-      } else if (Argument *parent_arg = dyn_cast<Argument>(parent_val)) {
-        if (parent_arg->getParent()) {
-          filtered_pts.push_back(ap);
+      if (parent_val == nullptr || isa<GlobalValue>(parent_val) ||
+          inputs.count(parent_val) || escape_source.count(parent_val) ||
+          (isa<Argument>(parent_val) &&
+           cast<Argument>(parent_val)->getParent() != nullptr)) {
+        if (should_exist.count(parent_val) &&
+            should_exist[parent_val].count(offset)) {
+          path_cond_t prev_cond = should_exist[parent_val][offset].first;
+          should_exist[parent_val][offset] = std::make_pair(
+              findOrCreateOrRegion(prev_cond, point_to_item.first), ap);
+        } else {
+          should_exist[parent_val][offset] = point_to_item;
         }
       }
     }
 
-    point_to = std::move(filtered_pts);
+    point_to.clear();
+    for (auto &value_offsets : should_exist) {
+      for (auto &offset_item : value_offsets.second) {
+        point_to.push_back(offset_item.second);
+      }
+    }
   }
 
   // Record inline depth

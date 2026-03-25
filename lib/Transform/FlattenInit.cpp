@@ -167,7 +167,6 @@
 // unhandled store or begins unwinding, it updates all global initializers to
 // match the internal representation.
 
-#include "llvm/Pass.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -178,11 +177,11 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Support/Alignment.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/Format.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -193,17 +192,17 @@ struct LinearTerm {
   /// The pointer, represented as an LLVM value.  This should either be a
   /// GlobalReference constant or an allocation Instruction such as `alloca` or
   /// a call to `malloc`.
-  Value* Ptr;
+  Value *Ptr;
   /// The coefficient to multiply `Ptr` by.  Addition, subtraction, and
   /// multiplication all work the same regardless of the signedness of the
   /// inputs, so for simplicity we make the coefficient unsigned.
   uint64_t Coeff;
 
-  LinearTerm(Value* Ptr, uint64_t Coeff) : Ptr(Ptr), Coeff(Coeff) {}
+  LinearTerm(Value *Ptr, uint64_t Coeff) : Ptr(Ptr), Coeff(Coeff) {}
 };
 
-void addTerm(LinearTerm Term, SmallVector<LinearTerm, 1>& Terms) {
-  for (auto& OldTerm : Terms) {
+void addTerm(LinearTerm Term, SmallVector<LinearTerm, 1> &Terms) {
+  for (auto &OldTerm : Terms) {
     if (OldTerm.Ptr == Term.Ptr) {
       OldTerm.Coeff += Term.Coeff;
       if (OldTerm.Coeff == 0) {
@@ -218,12 +217,13 @@ void addTerm(LinearTerm Term, SmallVector<LinearTerm, 1>& Terms) {
   Terms.push_back(Term);
 }
 
-void mergeTerms(SmallVector<LinearTerm, 1>& Dest, SmallVector<LinearTerm, 1> const& Src) {
-  DenseMap<Value*, unsigned> PtrIdx;
+void mergeTerms(SmallVector<LinearTerm, 1> &Dest,
+                SmallVector<LinearTerm, 1> const &Src) {
+  DenseMap<Value *, unsigned> PtrIdx;
   for (unsigned I = 0; I < Dest.size(); ++I) {
     PtrIdx.insert(std::make_pair(Dest[I].Ptr, I));
   }
-  for (auto const& Term : Src) {
+  for (auto const &Term : Src) {
     auto It = PtrIdx.find(Term.Ptr);
     if (It != PtrIdx.end()) {
       unsigned I = It->second;
@@ -247,19 +247,19 @@ struct LinearPtr {
   uint64_t Offset;
 
   LinearPtr() : Terms(), Offset(0) {}
-  explicit LinearPtr(Value* Ptr) : Terms { LinearTerm(Ptr, 1) }, Offset(0) {}
-  explicit LinearPtr(uint64_t Const) : Terms {}, Offset(Const) {}
+  explicit LinearPtr(Value *Ptr) : Terms{LinearTerm(Ptr, 1)}, Offset(0) {}
+  explicit LinearPtr(uint64_t Const) : Terms{}, Offset(Const) {}
 
   LinearPtr neg() const {
     LinearPtr Out = *this;
     Out.Offset = -Out.Offset;
-    for (auto& Term : Out.Terms) {
+    for (auto &Term : Out.Terms) {
       Term.Coeff = -Term.Coeff;
     }
     return std::move(Out);
   }
 
-  LinearPtr add(const LinearPtr& Other) const {
+  LinearPtr add(const LinearPtr &Other) const {
     LinearPtr Out;
     Out.Offset = Offset + Other.Offset;
 
@@ -277,7 +277,7 @@ struct LinearPtr {
     return std::move(Out);
   }
 
-  LinearPtr sub(const LinearPtr& Other) const {
+  LinearPtr sub(const LinearPtr &Other) const {
     return std::move(add(Other.neg()));
   }
 
@@ -285,7 +285,7 @@ struct LinearPtr {
   LinearPtr mulConst(uint64_t Factor) const {
     LinearPtr Out = *this;
     Out.Offset *= Factor;
-    for (auto& Term : Out.Terms) {
+    for (auto &Term : Out.Terms) {
       Term.Coeff *= Factor;
     }
     return std::move(Out);
@@ -293,7 +293,7 @@ struct LinearPtr {
 
   /// Multiply this pointer expression by another pointer expression.  This
   /// fails if it would produce a nonlinear expression, such as `ptr * ptr`.
-  Optional<LinearPtr> mul(const LinearPtr& Other) const {
+  Optional<LinearPtr> mul(const LinearPtr &Other) const {
     if (Terms.size() > 0 && Other.Terms.size() > 0) {
       // Non-linear multiplication.
       return None;
@@ -310,7 +310,7 @@ struct LinearPtr {
   /// base.  The offset is the value of the `this->Offset` field.  A base of
   /// `nullptr` indicates that no pointers are involved in this expression
   /// (it's an absolute memory address instead).
-  Optional<Value*> getBase() const {
+  Optional<Value *> getBase() const {
     if (Terms.size() == 0) {
       return nullptr;
     } else if (Terms.size() == 1 && Terms[0].Coeff == 1) {
@@ -321,7 +321,6 @@ struct LinearPtr {
   }
 };
 
-
 typedef uint8_t Label;
 
 const Label BOTTOM = 3;
@@ -329,7 +328,6 @@ const Label MAYBE_TAINTED = 2;
 const Label LABEL_MASK = 3;
 const SmallVector<Label, 8> EmptyLabels;
 const SmallVector<Label, 8> MaybeTaintedLabels(8, MAYBE_TAINTED);
-
 
 enum MemStoreKind {
   /// Store the value `Val` at this location.
@@ -351,26 +349,27 @@ struct MemStore {
   uint64_t Offset;
   union {
     /// The value stored, for `OpStore`.
-    Value* Val;
+    Value *Val;
     /// The number of bytes affected, for `OpZero` and `OpUnknown`.
     uint64_t Len;
   };
   SmallVector<Label, 8> Labels;
 
-  static MemStore CreateStore(uint64_t Offset, Value* Val, SmallVector<Label, 8> Labels) {
-    MemStore MS = { OpStore, Offset, 0, std::move(Labels) };
+  static MemStore CreateStore(uint64_t Offset, Value *Val,
+                              SmallVector<Label, 8> Labels) {
+    MemStore MS = {OpStore, Offset, 0, std::move(Labels)};
     MS.Val = Val;
     return MS;
   }
 
   static MemStore CreateZero(uint64_t Offset, uint64_t Len) {
-    MemStore MS = { OpZero, Offset };
+    MemStore MS = {OpZero, Offset};
     MS.Len = Len;
     return MS;
   }
 
   static MemStore CreateUnknown(uint64_t Offset, uint64_t Len) {
-    MemStore MS = { OpUnknown, Offset };
+    MemStore MS = {OpUnknown, Offset};
     MS.Len = Len;
     return MS;
   }
@@ -383,40 +382,41 @@ struct MemStore {
   }
 
   /// Get the number of bytes affected by this operation.
-  uint64_t getStoreSize(DataLayout const& DL) const {
+  uint64_t getStoreSize(DataLayout const &DL) const {
     switch (Kind) {
-      case OpStore:
-        return DL.getTypeStoreSize(Val->getType());
-      case OpZero:
-      case OpUnknown:
-        return Len;
-      default:
-        assert(0 && "bad mem op kind");
-        return 0;
+    case OpStore:
+      return DL.getTypeStoreSize(Val->getType());
+    case OpZero:
+    case OpUnknown:
+      return Len;
+    default:
+      assert(0 && "bad mem op kind");
+      return 0;
     }
   }
 
-  uint64_t getEndOffset(DataLayout const& DL) const {
+  uint64_t getEndOffset(DataLayout const &DL) const {
     return Offset + getStoreSize(DL);
   }
 
-  bool overlaps(MemStore const& Other, DataLayout const& DL) const {
+  bool overlaps(MemStore const &Other, DataLayout const &DL) const {
     return overlapsRange(Other.Offset, Other.getEndOffset(DL), DL);
   }
 
-  bool overlapsRange(uint64_t Start, uint64_t End, DataLayout const& DL) const {
+  bool overlapsRange(uint64_t Start, uint64_t End, DataLayout const &DL) const {
     return Offset < End && Start < getEndOffset(DL);
   }
 
-  bool contains(uint64_t O, DataLayout const& DL) const {
+  bool contains(uint64_t O, DataLayout const &DL) const {
     return Offset <= O && O < getEndOffset(DL);
   }
 
-  bool containsRange(uint64_t Start, uint64_t End, DataLayout const& DL) const {
+  bool containsRange(uint64_t Start, uint64_t End, DataLayout const &DL) const {
     return Offset <= Start && End <= getEndOffset(DL);
   }
 
-  bool containedByRange(uint64_t Start, uint64_t End, DataLayout const& DL) const {
+  bool containedByRange(uint64_t Start, uint64_t End,
+                        DataLayout const &DL) const {
     return Start <= Offset && getEndOffset(DL) <= End;
   }
 };
@@ -436,7 +436,7 @@ struct MemRegion {
 
   MemRegion() : Ops(), MinOffset(0), MaxOffset(0), Written(false) {}
 
-  void pushOp(MemStore Op, DataLayout const& DL) {
+  void pushOp(MemStore Op, DataLayout const &DL) {
     uint64_t End = Op.getEndOffset(DL);
     if (End == Op.Offset) {
       // The size of the op is zero.  Don't actually push anything.
@@ -461,17 +461,17 @@ struct MemRegion {
 /// A representation of the contents of memory.  This is used to handle memory
 /// ops in the interpreter.
 struct Memory {
-  DataLayout const& DL;
-  DenseMap<Value*, MemRegion> Regions;
+  DataLayout const &DL;
+  DenseMap<Value *, MemRegion> Regions;
 
-  Memory(DataLayout const& DL) : DL(DL) {}
+  Memory(DataLayout const &DL) : DL(DL) {}
 
   /// Get the `MemRegion` representing the contents of allocation `V`.  `V`
   /// should be either a reference to a global variable or a memory allocation
   /// instruction.
-  MemRegion& getRegion(Value* V);
-  void initRegion(MemRegion& Region, Value* V);
-  void storeConstant(MemRegion& Region, uint64_t Offset, Constant* C);
+  MemRegion &getRegion(Value *V);
+  void initRegion(MemRegion &Region, Value *V);
+  void storeConstant(MemRegion &Region, uint64_t Offset, Constant *C);
 
   /// Load a value of type `T` from `Offset` within region `Base`.  If the
   /// range `Offset .. Offset + Len` (where `Len` is the size in bytes of `T`)
@@ -486,19 +486,18 @@ struct Memory {
   ///
   /// If the range `Offset .. Offset + Len` is not covered by a single
   /// operation, the returned `Value*` is null.
-  std::tuple<Value*, SmallVector<Label, 8>, uint64_t> load(Value* Base, uint64_t Offset, Type* T);
+  std::tuple<Value *, SmallVector<Label, 8>, uint64_t>
+  load(Value *Base, uint64_t Offset, Type *T);
   /// Store `V` at `Offset` within region `Base`.
-  void store(Value* Base, uint64_t Offset, Value* V, SmallVector<Label, 8>);
-  void zero(Value* Base, uint64_t Offset, uint64_t Len);
-  void setUnknown(Value* Base, uint64_t Offset, uint64_t Len);
-  void clear() {
-    Regions.clear();
-  }
+  void store(Value *Base, uint64_t Offset, Value *V, SmallVector<Label, 8>);
+  void zero(Value *Base, uint64_t Offset, uint64_t Len);
+  void setUnknown(Value *Base, uint64_t Offset, uint64_t Len);
+  void clear() { Regions.clear(); }
   /// Set the labe of the byte at `Offset` within region `Base`.
-  void setLabel(Value* Base, uint64_t Offset, Label L);
+  void setLabel(Value *Base, uint64_t Offset, Label L);
 };
 
-MemRegion& Memory::getRegion(Value* V) {
+MemRegion &Memory::getRegion(Value *V) {
   auto It = Regions.find(V);
   if (It == Regions.end()) {
     MemRegion Region;
@@ -510,31 +509,32 @@ MemRegion& Memory::getRegion(Value* V) {
   return It->second;
 }
 
-void Memory::initRegion(MemRegion& Region, Value* V) {
+void Memory::initRegion(MemRegion &Region, Value *V) {
   if (auto *GV = dyn_cast<GlobalVariable>(V)) {
     if (!GV->hasInitializer()) {
       return;
     }
-    Constant* C = GV->getInitializer();
+    Constant *C = GV->getInitializer();
     storeConstant(Region, 0, C);
   }
 }
 
-void Memory::storeConstant(MemRegion& Region, uint64_t Offset, Constant* C) {
+void Memory::storeConstant(MemRegion &Region, uint64_t Offset, Constant *C) {
   if (auto *Array = dyn_cast<ConstantArray>(C)) {
-    Type* ElemTy = Array->getType()->getElementType();
+    Type *ElemTy = Array->getType()->getElementType();
     uint64_t Stride = DL.getTypeAllocSize(ElemTy);
     for (unsigned I = 0; I < Array->getNumOperands(); ++I) {
       storeConstant(Region, Offset + I * Stride, Array->getOperand(I));
     }
   } else if (auto *DataArray = dyn_cast<ConstantDataArray>(C)) {
-    Type* ElemTy = DataArray->getElementType();
+    Type *ElemTy = DataArray->getElementType();
     uint64_t Stride = DL.getTypeAllocSize(ElemTy);
     for (unsigned I = 0; I < DataArray->getNumElements(); ++I) {
-      storeConstant(Region, Offset + I * Stride, DataArray->getElementAsConstant(I));
+      storeConstant(Region, Offset + I * Stride,
+                    DataArray->getElementAsConstant(I));
     }
   } else if (auto *Struct = dyn_cast<ConstantStruct>(C)) {
-    const StructLayout* Layout = DL.getStructLayout(Struct->getType());
+    const StructLayout *Layout = DL.getStructLayout(Struct->getType());
     for (unsigned I = 0; I < Struct->getNumOperands(); ++I) {
       uint64_t FieldOffset = Offset + Layout->getElementOffset(I);
       storeConstant(Region, FieldOffset, Struct->getOperand(I));
@@ -542,7 +542,8 @@ void Memory::storeConstant(MemRegion& Region, uint64_t Offset, Constant* C) {
   } else if (auto *AggZero = dyn_cast<ConstantAggregateZero>(C)) {
     uint64_t Len = DL.getTypeStoreSize(AggZero->getType());
     Region.pushOp(MemStore::CreateZero(Offset, Len), DL);
-  } else if (C->getType()->isIntOrPtrTy() || C->getType()->isFloatingPointTy()) {
+  } else if (C->getType()->isIntOrPtrTy() ||
+             C->getType()->isFloatingPointTy()) {
     // Primitive values can be stored directly.
     Region.pushOp(MemStore::CreateStore(Offset, C, EmptyLabels), DL);
   } else if (isa<UndefValue>(C)) {
@@ -554,25 +555,27 @@ void Memory::storeConstant(MemRegion& Region, uint64_t Offset, Constant* C) {
   }
 }
 
-std::tuple<Value*, SmallVector<Label, 8>, uint64_t> Memory::load(Value* Base, uint64_t Offset, Type* T) {
+std::tuple<Value *, SmallVector<Label, 8>, uint64_t>
+Memory::load(Value *Base, uint64_t Offset, Type *T) {
   uint64_t End = Offset + DL.getTypeStoreSize(T);
 
-  auto& Region = getRegion(Base);
-  for (auto& Store : make_range(Region.Ops.rbegin(), Region.Ops.rend())) {
+  auto &Region = getRegion(Base);
+  for (auto &Store : make_range(Region.Ops.rbegin(), Region.Ops.rend())) {
     if (Store.overlapsRange(Offset, End, DL)) {
       switch (Store.Kind) {
-        case OpStore:
-          if (Store.containsRange(Offset, End, DL)) {
-            return std::make_tuple(Store.Val, Store.Labels, Offset - Store.Offset);
-          }
-          break;
-        case OpZero:
-          if (Store.containsRange(Offset, End, DL)) {
-            return std::make_tuple(Constant::getNullValue(T), Store.Labels, 0);
-          }
-          break;
-        case OpUnknown:
-          break;
+      case OpStore:
+        if (Store.containsRange(Offset, End, DL)) {
+          return std::make_tuple(Store.Val, Store.Labels,
+                                 Offset - Store.Offset);
+        }
+        break;
+      case OpZero:
+        if (Store.containsRange(Offset, End, DL)) {
+          return std::make_tuple(Constant::getNullValue(T), Store.Labels, 0);
+        }
+        break;
+      case OpUnknown:
+        break;
       }
 
       // `Store` overlaps this load, but we failed to obtain an appropriate
@@ -585,12 +588,13 @@ std::tuple<Value*, SmallVector<Label, 8>, uint64_t> Memory::load(Value* Base, ui
   return std::make_tuple(nullptr, EmptyLabels, 0);
 }
 
-void Memory::store(Value* Base, uint64_t Offset, Value* V, SmallVector<Label, 8> L) {
+void Memory::store(Value *Base, uint64_t Offset, Value *V,
+                   SmallVector<Label, 8> L) {
   uint64_t End = Offset + DL.getTypeStoreSize(V->getType());
 
-  auto& Region = getRegion(Base);
+  auto &Region = getRegion(Base);
   // Look for an existing `OpStore` that we can reuse.
-  for (auto& Store : make_range(Region.Ops.rbegin(), Region.Ops.rend())) {
+  for (auto &Store : make_range(Region.Ops.rbegin(), Region.Ops.rend())) {
     if (Store.overlapsRange(Offset, End, DL)) {
       if (Store.Kind == OpStore && Store.Offset == Offset &&
           Store.getStoreSize(DL) == DL.getTypeStoreSize(V->getType())) {
@@ -608,28 +612,30 @@ void Memory::store(Value* Base, uint64_t Offset, Value* V, SmallVector<Label, 8>
   Region.pushOp(MemStore::CreateStore(Offset, V, std::move(L)), DL);
 }
 
-void Memory::zero(Value* Base, uint64_t Offset, uint64_t Len) {
+void Memory::zero(Value *Base, uint64_t Offset, uint64_t Len) {
   if (Len == 0) {
     return;
   }
   uint64_t End = Offset + Len;
 
-  auto& Region = getRegion(Base);
-  if (Region.Ops.size() > 0 && Offset <= Region.MinOffset && End - 1 >= Region.MaxOffset) {
+  auto &Region = getRegion(Base);
+  if (Region.Ops.size() > 0 && Offset <= Region.MinOffset &&
+      End - 1 >= Region.MaxOffset) {
     // We're overwriting all data currently in the region.
     Region.Ops.clear();
   }
   Region.pushOp(MemStore::CreateZero(Offset, Len), DL);
 }
 
-void Memory::setUnknown(Value* Base, uint64_t Offset, uint64_t Len) {
+void Memory::setUnknown(Value *Base, uint64_t Offset, uint64_t Len) {
   uint64_t End = Offset + Len;
 
-  auto& Region = getRegion(Base);
+  auto &Region = getRegion(Base);
   if (Region.Ops.size() == 0) {
     // The region is already entirely unknown.
     return;
-  } else if (Region.Ops.size() > 0 && Offset <= Region.MinOffset && End - 1 >= Region.MaxOffset) {
+  } else if (Region.Ops.size() > 0 && Offset <= Region.MinOffset &&
+             End - 1 >= Region.MaxOffset) {
     // We're overwriting all data currently in the region.  Afterward, the
     // entire region is unknown, so we don't need to add an explicit op.
     Region.Ops.clear();
@@ -638,11 +644,11 @@ void Memory::setUnknown(Value* Base, uint64_t Offset, uint64_t Len) {
   Region.pushOp(MemStore::CreateUnknown(Offset, Len), DL);
 }
 
-void Memory::setLabel(Value* Base, uint64_t Offset, Label L) {
-  auto& Region = getRegion(Base);
+void Memory::setLabel(Value *Base, uint64_t Offset, Label L) {
+  auto &Region = getRegion(Base);
   // We don't set `Region.Written` because no data is being modified.  Taint
   // labels are handled separately.
-  for (auto& Store : make_range(Region.Ops.rbegin(), Region.Ops.rend())) {
+  for (auto &Store : make_range(Region.Ops.rbegin(), Region.Ops.rend())) {
     if (Store.contains(Offset, DL)) {
       uint64_t RelOffset = Offset - Store.Offset;
       Store.setLabel(RelOffset, L);
@@ -658,16 +664,15 @@ void Memory::setLabel(Value* Base, uint64_t Offset, Label L) {
   }
 }
 
-
 /// A call-stack frame for the interpreter.
 struct StackFrame {
   /// The function we're currently in.
-  Function& Func;
+  Function &Func;
   /// The basic block we were in before the current one.  Used when handling
   /// phi nodes.
-  BasicBlock* PrevBB;
+  BasicBlock *PrevBB;
   /// The basic block we're currently in.
-  BasicBlock* CurBB;
+  BasicBlock *CurBB;
   /// An iterator pointing to the next instruction to execute.  `CurBB` and
   /// `Iter` together make up the "program counter" for this frame of the
   /// stack.
@@ -678,49 +683,50 @@ struct StackFrame {
   /// of an instruction.  The value is the corresponding value in the new
   /// program (`NewFunc`/`NewBB`), which can be either a constant or the result
   /// of a new instruction.
-  DenseMap<Value*, Value*> Locals;
+  DenseMap<Value *, Value *> Locals;
   /// For each local (identified by its old value), this gives the labels for
   /// each byte of that local.  If a value is missing here, then it is
   /// untainted.
-  DenseMap<Value*, SmallVector<Label, 8>> Labels;
+  DenseMap<Value *, SmallVector<Label, 8>> Labels;
 
   /// When this frame is performing a call, this is the old `Value` for the
   /// return value of that call.  When the call retuns, a mapping from
   /// `ReturnValue` to the new return value will be added to `Locals`.
-  Value* ReturnValue;
+  Value *ReturnValue;
   /// When this frame is performing a call, this may be non-null to indicate
   /// that the return value should be cast to a different type after returning.
   /// This is used to handle calls through bitcasted function pointers.
-  Type* CastReturnType;
+  Type *CastReturnType;
   /// When this frame is performing an `invoke`, this is the block to jump to
   /// if the call throws an exception.
-  BasicBlock* UnwindDest;
+  BasicBlock *UnwindDest;
 
   /// Create a new stack frame for the given function.  The caller is
   /// responsible for adding argument values to `Locals`.
-  StackFrame(Function& Func)
-    : Func(Func), PrevBB(nullptr), CurBB(&Func.getEntryBlock()), Iter(CurBB->begin()),
-      ReturnValue(nullptr), CastReturnType(nullptr), UnwindDest(nullptr) {}
+  StackFrame(Function &Func)
+      : Func(Func), PrevBB(nullptr), CurBB(&Func.getEntryBlock()),
+        Iter(CurBB->begin()), ReturnValue(nullptr), CastReturnType(nullptr),
+        UnwindDest(nullptr) {}
 
-  void addArgument(unsigned I, Value* V, SmallVector<Label, 8> L) {
-    Argument* Arg = std::next(Func.arg_begin(), I);
+  void addArgument(unsigned I, Value *V, SmallVector<Label, 8> L) {
+    Argument *Arg = std::next(Func.arg_begin(), I);
     Locals[Arg] = V;
     Labels[Arg] = std::move(L);
   }
 
-  void enterBlock(BasicBlock* BB);
+  void enterBlock(BasicBlock *BB);
   /// Enter `BB`, or if `BB` is null, advance to the next instruction.
   ///
   /// This is mostly used for call handling, where some kinds of calls are
   /// terminators with an explicit next block, while others are ordinary
   /// instructions.
-  void advance(BasicBlock* BB);
+  void advance(BasicBlock *BB);
 
   /// Map an old value to the corresponding new value.  If `OldVal` is a
   /// constant, it is returned unchanged; otherwise, this looks up `OldVal` in
   /// `Locals`.
-  Value* mapValue(Value* OldVal);
-  SmallVector<Label, 8> const& getLabels(Value* OldVal);
+  Value *mapValue(Value *OldVal);
+  SmallVector<Label, 8> const &getLabels(Value *OldVal);
 };
 
 /// Information about the calling context, used for unwinding.
@@ -728,16 +734,16 @@ struct UnwindContext {
   /// When the callee would return, instead it jumps to this new block and (if
   /// the return type is non-void) adds the new return value to the phi node in
   /// this block.
-  BasicBlock* ReturnDest;
+  BasicBlock *ReturnDest;
 
   /// When the callee would `resume`, instead it jumps to this new block and
   /// adds the resume value to the phi node in this block.
-  BasicBlock* UnwindDest;
+  BasicBlock *UnwindDest;
 
   /// List of (old) landingpad instructions of enclosing `invoke` instructions.
   /// All the clauses of these landingpads will be added to landingpads in the
   /// callee.
-  SmallVector<LandingPadInst*, 2> LandingPads;
+  SmallVector<LandingPadInst *, 2> LandingPads;
 
   UnwindContext() : ReturnDest(nullptr), UnwindDest(nullptr), LandingPads() {}
 };
@@ -746,26 +752,24 @@ struct UnwindContext {
 /// memory and call stack used by the interpreter, the new function and basic
 /// block where instruction will be emitted, and a few other things.
 struct State {
-  Pass& P;
-  DataLayout const& DL;
-  Function* NewFunc;
-  BasicBlock* NewBB;
-  TargetLibraryInfo* TLI;
+  Pass &P;
+  DataLayout const &DL;
+  Function *NewFunc;
+  BasicBlock *NewBB;
+  TargetLibraryInfo *TLI;
 
-  DenseMap<Value*, Optional<LinearPtr>> EvalCache;
+  DenseMap<Value *, Optional<LinearPtr>> EvalCache;
   Memory Mem;
   std::vector<StackFrame> Stack;
 
   SimplifyQuery SQ;
 
-  State(Pass& P, Function& OldFunc, StringRef NewName, TargetLibraryInfo* TLI)
-    : P(P), DL(OldFunc.getParent()->getDataLayout()), TLI(TLI), SQ(DL, TLI), Mem(DL) {
-    NewFunc = Function::Create(
-        OldFunc.getFunctionType(),
-        OldFunc.getLinkage(),
-        OldFunc.getAddressSpace(),
-        NewName,
-        OldFunc.getParent());
+  State(Pass &P, Function &OldFunc, StringRef NewName, TargetLibraryInfo *TLI)
+      : P(P), DL(OldFunc.getParent()->getDataLayout()), TLI(TLI), SQ(DL, TLI),
+        Mem(DL) {
+    NewFunc = Function::Create(OldFunc.getFunctionType(), OldFunc.getLinkage(),
+                               OldFunc.getAddressSpace(), NewName,
+                               OldFunc.getParent());
     NewFunc->copyAttributesFrom(&OldFunc);
 
     NewBB = BasicBlock::Create(NewFunc->getContext(), "flatinit", NewFunc);
@@ -785,39 +789,42 @@ struct State {
   /// function returns normally, or at the instruction after the call if
   /// `NormalDest` is nullptr.  For invoke instructions, `UnwindDest` gives the
   /// landing pad (for non-invoke calls, `UnwindDest` is nullptr).
-  bool stepCall(CallBase* Call, CallBase* OldCall, BasicBlock* NormalDest, BasicBlock* UnwindDest);
-  bool stepMemset(CallBase* Call);
-  bool stepMemmove(CallBase* Call);
-  bool stepMalloc(CallBase* Call, CallBase* OldCall);
-  bool stepRealloc(CallBase* Call, CallBase* OldCall);
-  bool stepFree(CallBase* Call, CallBase* OldCall);
-  Value* stepAlloca(AllocaInst* Alloca);
-  bool stepSetLabel(CallBase* Call);
+  bool stepCall(CallBase *Call, CallBase *OldCall, BasicBlock *NormalDest,
+                BasicBlock *UnwindDest);
+  bool stepMemset(CallBase *Call);
+  bool stepMemmove(CallBase *Call);
+  bool stepMalloc(CallBase *Call, CallBase *OldCall);
+  bool stepRealloc(CallBase *Call, CallBase *OldCall);
+  bool stepFree(CallBase *Call, CallBase *OldCall);
+  Value *stepAlloca(AllocaInst *Alloca);
+  bool stepSetLabel(CallBase *Call);
 
   // Allocate a new `GlobalVariable` containing an array.  This is a helper
   // function for `stepMalloc` and such.
-  std::pair<GlobalVariable*, Constant*> allocateGlobal(
-      Type* ElemTy, uint64_t Count, uint64_t Align, bool Zero);
+  std::pair<GlobalVariable *, Constant *>
+  allocateGlobal(Type *ElemTy, uint64_t Count, uint64_t Align, bool Zero);
 
   /// Load a single byte from memory.  Returns `nullptr` if the value of the
   /// byte is unknown.
-  std::pair<Value*, SmallVector<Label, 8>> memLoadByte(Value* Base, uint64_t Offset);
+  std::pair<Value *, SmallVector<Label, 8>> memLoadByte(Value *Base,
+                                                        uint64_t Offset);
   /// Load a value of type `T` from memory.  Returns `nullptr` if the value is
   /// unknown.
-  std::pair<Value*, SmallVector<Label, 8>> memLoad(Value* Base, uint64_t Offset, Type* T);
+  std::pair<Value *, SmallVector<Label, 8>> memLoad(Value *Base,
+                                                    uint64_t Offset, Type *T);
   /// Load a null-terminated string pointed to by `V`.
-  std::string memLoadString(Value* V);
-  void memCopy(Value* DestBase, uint64_t DestOffset,
-      Value* SrcBase, uint64_t SrcOffset, uint64_t Len);
+  std::string memLoadString(Value *V);
+  void memCopy(Value *DestBase, uint64_t DestOffset, Value *SrcBase,
+               uint64_t SrcOffset, uint64_t Len);
   /// Try to convert the result of `Memory::load` to a value of type `T`.
   /// Returns null if the conversion isn't possible.  This is a helper function
   /// for `memLoad` etc.
-  Value* convertLoadResult(Value* V, uint64_t Offset, Type* T);
+  Value *convertLoadResult(Value *V, uint64_t Offset, Type *T);
 
   /// Unwind the interpreter's call stack, emitting the remaining code for each
   /// function on the stack.
   void unwind();
-  void unwindFrame(StackFrame& SF, UnwindContext* PrevUC, UnwindContext* UC);
+  void unwindFrame(StackFrame &SF, UnwindContext *PrevUC, UnwindContext *UC);
 
   /// Update global initializers to match the contents of `Mem`.
   ///
@@ -829,45 +836,44 @@ struct State {
   void updateMemory();
 
   /// Try to evaluate `V` into a base (pointer) and offset form.
-  Optional<std::pair<Value*, uint64_t>> evalBaseOffset(Value* V);
-  LinearPtr* evalPtr(Value* V);
-  Optional<LinearPtr> evalPtrImpl(Value* V);
-  Optional<LinearPtr> evalPtrConstant(Constant* C);
-  Optional<LinearPtr> evalPtrInstruction(Instruction* Inst);
-  Optional<LinearPtr> evalPtrOpcode(unsigned Opcode, User* U);
-  Optional<LinearPtr> evalPtrGEP(User* U);
+  Optional<std::pair<Value *, uint64_t>> evalBaseOffset(Value *V);
+  LinearPtr *evalPtr(Value *V);
+  Optional<LinearPtr> evalPtrImpl(Value *V);
+  Optional<LinearPtr> evalPtrConstant(Constant *C);
+  Optional<LinearPtr> evalPtrInstruction(Instruction *Inst);
+  Optional<LinearPtr> evalPtrOpcode(unsigned Opcode, User *U);
+  Optional<LinearPtr> evalPtrGEP(User *U);
 
   /// General-purpose instruction simplification and constant folding.  This
   /// may return `Inst` itself, some existing new instruction, or a constant.
-  Value* foldInst(Instruction* Inst);
+  Value *foldInst(Instruction *Inst);
   /// Apply `foldInst` to `Inst`, emit `Inst` into `NewBB` if needed, and
   /// return the resulting value.  `Inst` will be deleted automatically if this
   /// is appropriate (so `Inst` should not be used afterward - but the returned
   /// `Value*` is guaranteed to evaluate to the same value as `Inst`).  This
   /// method should be used when synthesizing a new instruction from scratch.
-  Value* foldAndEmitInst(Instruction* Inst);
+  Value *foldAndEmitInst(Instruction *Inst);
   // Compute the label for a folded instruction.
-  SmallVector<Label, 8> labelInst(StackFrame* SF, Instruction* Inst);
+  SmallVector<Label, 8> labelInst(StackFrame *SF, Instruction *Inst);
 
   // Check that the label is BOTTOM or error out.
   void checkBottom(SmallVector<Label, 8> L);
 
   /// Constant fold, plus some extra cases.
-  Constant* constantFoldExtra(Constant* C);
+  Constant *constantFoldExtra(Constant *C);
   /// Wrapper around llvm::ConstantFoldConstant.
-  Constant* constantFoldConstant(Constant* C);
-  Constant* constantFoldAlignmentCheckAnd(Constant* C);
-  Constant* constantFoldAlignmentCheckURem(Constant* C);
-  Constant* constantFoldAlignmentCheckPtr(
-      Constant* C, LinearPtr* LP, uint64_t Align, uint64_t Mask);
+  Constant *constantFoldConstant(Constant *C);
+  Constant *constantFoldAlignmentCheckAnd(Constant *C);
+  Constant *constantFoldAlignmentCheckURem(Constant *C);
+  Constant *constantFoldAlignmentCheckPtr(Constant *C, LinearPtr *LP,
+                                          uint64_t Align, uint64_t Mask);
 
   /// Constant fold, plus some extra cases.  Returns nullptr if it was unable
   /// to reduce `Inst` to a constant.
-  Constant* constantFoldInstructionExtra(Instruction* Inst);
-  Constant* constantFoldNullCheckInst(Instruction* Inst);
-  Constant* constantFoldPointerCompare(Instruction* Inst);
+  Constant *constantFoldInstructionExtra(Instruction *Inst);
+  Constant *constantFoldNullCheckInst(Instruction *Inst);
+  Constant *constantFoldPointerCompare(Instruction *Inst);
 };
-
 
 // Flattening
 
@@ -890,8 +896,8 @@ bool State::step() {
   if (Stack.size() == 0) {
     return false;
   }
-  StackFrame& SF = Stack.back();
-  Instruction* OldInst = &*SF.Iter;
+  StackFrame &SF = Stack.back();
+  Instruction *OldInst = &*SF.Iter;
 
   // Phi nodes need special handling: they must be executed simultaneously, not
   // sequentially, on entry to the block.
@@ -900,16 +906,17 @@ bool State::step() {
 
     // Compute all the new values first, so that all updates to `SF.Locals`
     // happen at once.
-    SmallVector<std::tuple<PHINode*, Value*, SmallVector<Label, 8>>, 4> NewValues;
+    SmallVector<std::tuple<PHINode *, Value *, SmallVector<Label, 8>>, 4>
+        NewValues;
     while (auto *PHI = dyn_cast<PHINode>(&*SF.Iter)) {
-      Value* OldVal = PHI->getIncomingValueForBlock(SF.PrevBB);
-      Value* NewVal = SF.mapValue(OldVal);
+      Value *OldVal = PHI->getIncomingValueForBlock(SF.PrevBB);
+      Value *NewVal = SF.mapValue(OldVal);
       SmallVector<Label, 8> OldLabel = SF.getLabels(OldVal);
       NewValues.push_back(std::make_tuple(PHI, NewVal, OldLabel));
       ++SF.Iter;
     }
 
-    for (auto& Pair : NewValues) {
+    for (auto &Pair : NewValues) {
       SF.Locals[std::get<0>(Pair)] = std::get<1>(Pair);
       SF.Labels[std::get<0>(Pair)] = std::get<2>(Pair);
     }
@@ -917,20 +924,19 @@ bool State::step() {
     return true;
   }
 
-  Instruction* Inst(OldInst->clone());
+  Instruction *Inst(OldInst->clone());
   Inst->setName(OldInst->getName());
   for (unsigned I = 0; I < Inst->getNumOperands(); ++I) {
-    Value* OldVal = Inst->getOperand(I);
+    Value *OldVal = Inst->getOperand(I);
     if (!isa<BasicBlock>(OldVal)) {
-      Value* NewVal = SF.mapValue(OldVal);
+      Value *NewVal = SF.mapValue(OldVal);
       Inst->setOperand(I, NewVal);
     }
   }
 
-
   // Try simplification and/or constant folding.
 
-  Value* Folded = foldInst(Inst);
+  Value *Folded = foldInst(Inst);
   if (Folded != Inst) {
     SF.Locals[OldInst] = Folded;
     SmallVector<Label, 8> FoldedLabel = labelInst(&SF, Inst);
@@ -939,7 +945,6 @@ bool State::step() {
     ++SF.Iter;
     return true;
   }
-
 
   // Instructions with special handling.  If these special cases fail, we fall
   // through and (usually) emit the instruction unchanged.
@@ -950,18 +955,18 @@ bool State::step() {
     if (stepCall(Call, cast<CallInst>(OldInst), nullptr, nullptr)) {
       // Checks on target.
       auto *Callee = Call->getCalledOperand();
-      auto const& CalleeL = SF.getLabels(Callee);
+      auto const &CalleeL = SF.getLabels(Callee);
       checkBottom(CalleeL);
 
       return true;
     }
   }
   if (auto *Invoke = dyn_cast<InvokeInst>(Inst)) {
-    if (stepCall(Invoke, cast<InvokeInst>(OldInst), 
-          Invoke->getNormalDest(), Invoke->getUnwindDest())) {
+    if (stepCall(Invoke, cast<InvokeInst>(OldInst), Invoke->getNormalDest(),
+                 Invoke->getUnwindDest())) {
       // Checks on target.
       auto *Callee = Invoke->getCalledOperand();
-      auto const& CalleeL = SF.getLabels(Callee);
+      auto const &CalleeL = SF.getLabels(Callee);
       checkBottom(CalleeL);
 
       return true;
@@ -976,15 +981,15 @@ bool State::step() {
 
     // `Return` is the new instruction (with operands already mapped), so it's
     // not invalidated when we deallocate `SF`.
-    Value* RetVal = Return->getReturnValue();
-    auto const& RetL = SF.getLabels(RetVal);
+    Value *RetVal = Return->getReturnValue();
+    auto const &RetL = SF.getLabels(RetVal);
 
     Stack.pop_back();
-    StackFrame& PrevSF = Stack.back();
+    StackFrame &PrevSF = Stack.back();
     if (PrevSF.ReturnValue != nullptr && RetVal != nullptr) {
       if (PrevSF.CastReturnType != nullptr) {
         RetVal = foldAndEmitInst(CastInst::CreateBitOrPointerCast(
-              RetVal, PrevSF.CastReturnType, "returncast"));
+            RetVal, PrevSF.CastReturnType, "returncast"));
       }
       // Propagate label for returned value.
       PrevSF.Labels[PrevSF.ReturnValue] = RetL;
@@ -1001,7 +1006,8 @@ bool State::step() {
 
   if (auto *Branch = dyn_cast<BranchInst>(Inst)) {
     if (Branch->isUnconditional()) {
-      // Taint analysis checks on target are unnecessary since the successor is a compile-time constant.
+      // Taint analysis checks on target are unnecessary since the successor is
+      // a compile-time constant.
       auto *Succ = Branch->getSuccessor(0);
 
       SF.enterBlock(Succ);
@@ -1010,10 +1016,12 @@ bool State::step() {
     } else {
       if (auto *ConstCond = dyn_cast<Constant>(Branch->getCondition())) {
         // Checks on conditional.
-        auto const& CondL = SF.getLabels(ConstCond);
+        auto const &CondL = SF.getLabels(ConstCond);
         checkBottom(CondL);
-        // Taint analysis checks on target are unnecessary since the successor is a compile-time constant.
-        auto *Succ = ConstCond->isOneValue() ? Branch->getSuccessor(0) : Branch->getSuccessor(1);
+        // Taint analysis checks on target are unnecessary since the successor
+        // is a compile-time constant.
+        auto *Succ = ConstCond->isOneValue() ? Branch->getSuccessor(0)
+                                             : Branch->getSuccessor(1);
 
         SF.enterBlock(Succ);
         Inst->deleteValue();
@@ -1024,9 +1032,10 @@ bool State::step() {
   if (auto *Switch = dyn_cast<SwitchInst>(Inst)) {
     if (auto *ConstCond = dyn_cast<ConstantInt>(Switch->getCondition())) {
       // Checks on target and conditional.
-      auto const& CondL = SF.getLabels(ConstCond);
+      auto const &CondL = SF.getLabels(ConstCond);
       checkBottom(CondL);
-      // Taint analysis checks on target are unnecessary since the successor is a compile-time constant.
+      // Taint analysis checks on target are unnecessary since the successor is
+      // a compile-time constant.
       auto *Succ = Switch->findCaseValue(ConstCond)->getCaseSuccessor();
 
       SF.enterBlock(Succ);
@@ -1039,10 +1048,10 @@ bool State::step() {
     auto *RawPtr = Load->getPointerOperand();
     if (auto Ptr = evalBaseOffset(RawPtr)) {
       // Checks on addr.
-      auto const& AddrL = SF.getLabels(RawPtr);
+      auto const &AddrL = SF.getLabels(RawPtr);
       checkBottom(AddrL);
 
-      Value* V;
+      Value *V;
       SmallVector<Label, 8> L;
       std::tie(V, L) = memLoad(Ptr->first, Ptr->second, Load->getType());
       if (V != nullptr) {
@@ -1067,21 +1076,20 @@ bool State::step() {
         return true;
       }
     } else {
-      errs() << "failed to evaluate to a pointer expression: " << *Load->getPointerOperand() << "\n";
+      errs() << "failed to evaluate to a pointer expression: "
+             << *Load->getPointerOperand() << "\n";
     }
   }
 
-
   // Allocation instructions.
   if (auto *Alloca = dyn_cast<AllocaInst>(Inst)) {
-    if (Value* V = stepAlloca(Alloca)) {
+    if (Value *V = stepAlloca(Alloca)) {
       SF.Locals[OldInst] = V;
       Inst->deleteValue();
       ++SF.Iter;
       return true;
     }
   }
-
 
   // We can't pass through unknown terminators, because we don't know what to
   // execute next.
@@ -1091,7 +1099,6 @@ bool State::step() {
     Inst->deleteValue();
     return false;
   }
-
 
   // Instructions that pass through, but with some special effect.
   if (auto *Store = dyn_cast<StoreInst>(Inst)) {
@@ -1110,12 +1117,12 @@ bool State::step() {
     auto *RawPtr = Store->getPointerOperand();
     if (auto Ptr = evalBaseOffset(RawPtr)) {
       // Checks on addr.
-      auto const& AddrL = SF.getLabels(RawPtr);
+      auto const &AddrL = SF.getLabels(RawPtr);
       checkBottom(AddrL);
 
-      Value* V = Store->getValueOperand();
-      Value* OldV = cast<StoreInst>(OldInst)->getValueOperand();
-      auto const& L = SF.getLabels(OldV);
+      Value *V = Store->getValueOperand();
+      Value *OldV = cast<StoreInst>(OldInst)->getValueOperand();
+      auto const &L = SF.getLabels(OldV);
       if (L.size() > 0) {
         errs() << "store to ";
         Ptr->first->printAsOperand(errs());
@@ -1131,7 +1138,7 @@ bool State::step() {
       Mem.store(Ptr->first, Ptr->second, V, L);
     } else {
       errs() << "clear mem: unknown store dest in " << *Store << "\n";
-      //Mem.clear();
+      // Mem.clear();
       errs() << "unwinding due to (old) " << *OldInst << "\n";
       errs() << "unwinding due to (new) " << *Inst << "\n";
       Inst->deleteValue();
@@ -1150,8 +1157,8 @@ bool State::step() {
   return true;
 }
 
-Value* State::convertLoadResult(Value* V, uint64_t Offset, Type* T) {
-  Type* SrcTy = V->getType();
+Value *State::convertLoadResult(Value *V, uint64_t Offset, Type *T) {
+  Type *SrcTy = V->getType();
   if (SrcTy == T) {
     return V;
   }
@@ -1164,32 +1171,33 @@ Value* State::convertLoadResult(Value* V, uint64_t Offset, Type* T) {
   // Complex case: extracting a byte from a larger value.
   if (auto *IntTy = dyn_cast<IntegerType>(T)) {
     if (SrcTy->isIntOrPtrTy()) {
-      Value* Src = V;
+      Value *Src = V;
       if (auto *SrcPtrTy = dyn_cast<PointerType>(SrcTy)) {
         SrcTy = DL.getIntPtrType(SrcTy);
         Src = foldAndEmitInst(new PtrToIntInst(Src, SrcTy, "loadcast"));
       }
       if (Offset > 0) {
         auto *ShiftAmount = ConstantInt::get(SrcTy, 8 * Offset);
-        Src = foldAndEmitInst(BinaryOperator::Create(
-              Instruction::LShr, Src, ShiftAmount, "loadshift"));
+        Src = foldAndEmitInst(BinaryOperator::Create(Instruction::LShr, Src,
+                                                     ShiftAmount, "loadshift"));
       }
-      return foldAndEmitInst(CastInst::Create(Instruction::Trunc, Src, T, "loadtrunc"));
+      return foldAndEmitInst(
+          CastInst::Create(Instruction::Trunc, Src, T, "loadtrunc"));
     }
   }
 
-  errs() << "load failed: can't extract " << *T << " from offset " << Offset <<
-    " of " << *V << "\n";
+  errs() << "load failed: can't extract " << *T << " from offset " << Offset
+         << " of " << *V << "\n";
   return nullptr;
 }
 
-void StackFrame::enterBlock(BasicBlock* BB) {
+void StackFrame::enterBlock(BasicBlock *BB) {
   PrevBB = CurBB;
   CurBB = BB;
   Iter = BB->begin();
 }
 
-void StackFrame::advance(BasicBlock* BB) {
+void StackFrame::advance(BasicBlock *BB) {
   if (BB == nullptr) {
     ++Iter;
   } else {
@@ -1197,7 +1205,7 @@ void StackFrame::advance(BasicBlock* BB) {
   }
 }
 
-Value* StackFrame::mapValue(Value* OldVal) {
+Value *StackFrame::mapValue(Value *OldVal) {
   if (isa<Constant>(OldVal)) {
     return OldVal;
   }
@@ -1210,7 +1218,7 @@ Value* StackFrame::mapValue(Value* OldVal) {
   return It->second;
 }
 
-SmallVector<Label, 8> const& StackFrame::getLabels(Value* OldVal) {
+SmallVector<Label, 8> const &StackFrame::getLabels(Value *OldVal) {
   auto It = Labels.find(OldVal);
   if (It == Labels.end()) {
     return EmptyLabels;
@@ -1218,7 +1226,7 @@ SmallVector<Label, 8> const& StackFrame::getLabels(Value* OldVal) {
   return It->second;
 }
 
-Function* getCallee(Value* V) {
+Function *getCallee(Value *V) {
   if (auto *Func = dyn_cast<Function>(V)) {
     return Func;
   } else if (auto *Expr = dyn_cast<ConstantExpr>(V)) {
@@ -1233,8 +1241,8 @@ Function* getCallee(Value* V) {
   return nullptr;
 }
 
-bool State::stepCall(
-    CallBase* Call, CallBase* OldCall, BasicBlock* NormalDest, BasicBlock* UnwindDest) {
+bool State::stepCall(CallBase *Call, CallBase *OldCall, BasicBlock *NormalDest,
+                     BasicBlock *UnwindDest) {
   // Never step into malloc or free functions.  If the special handler fails to
   // handle it, bail out.
   if (isReallocLikeFn(Call, TLI)) {
@@ -1261,32 +1269,38 @@ bool State::stepCall(
 
   // Get the callee and the signature used for the call (which may differ from
   // the callee's actual signature, if the callee has been bitcasted).
-  Function* Callee = getCallee(Call->getCalledOperand());
-  FunctionType* CallSig = Call->getFunctionType();
+  Function *Callee = getCallee(Call->getCalledOperand());
+  FunctionType *CallSig = Call->getFunctionType();
+
+  // Unknown/indirect callee that cannot be resolved to a Function.
+  // Fail conservatively so the caller can unwind instead of dereferencing null.
+  if (Callee == nullptr) {
+    return false;
+  }
 
   if (Callee->isIntrinsic() && CallSig == Callee->getFunctionType()) {
     // Each of `stepFoo` functions called here (e.g. `stepMemset`) is expected
     // to dispose of `Call` appropriately (either deleting it or adding it to
     // `NewBB`) if it returns `true`.
     switch (Callee->getIntrinsicID()) {
-      case Intrinsic::memset:
-        if (stepMemset(Call)) {
-          Stack.back().advance(NormalDest);
-          return true;
-        }
-        break;
-      case Intrinsic::memcpy:
-      case Intrinsic::memmove:
-        if (stepMemmove(Call)) {
-          Stack.back().advance(NormalDest);
-          return true;
-        }
-        break;
-      case Intrinsic::lifetime_start:
-      case Intrinsic::lifetime_end:
+    case Intrinsic::memset:
+      if (stepMemset(Call)) {
         Stack.back().advance(NormalDest);
-        NewBB->getInstList().push_back(Call);
         return true;
+      }
+      break;
+    case Intrinsic::memcpy:
+    case Intrinsic::memmove:
+      if (stepMemmove(Call)) {
+        Stack.back().advance(NormalDest);
+        return true;
+      }
+      break;
+    case Intrinsic::lifetime_start:
+    case Intrinsic::lifetime_end:
+      Stack.back().advance(NormalDest);
+      NewBB->getInstList().push_back(Call);
+      return true;
     }
   }
 
@@ -1300,8 +1314,8 @@ bool State::stepCall(
   if (Callee->getName() == "__cc_trace_exec") {
     errs() << "[FUNC] " << memLoadString(Call->getArgOperand(0)) << "(";
     unsigned LastArg = 4;
-    Type* WordTy = IntegerType::get(NewFunc->getContext(), 64);
-    Value* Zero = ConstantInt::get(WordTy, 0);
+    Type *WordTy = IntegerType::get(NewFunc->getContext(), 64);
+    Value *Zero = ConstantInt::get(WordTy, 0);
     while (LastArg >= 1) {
       if (Call->getArgOperand(LastArg) == Zero) {
         --LastArg;
@@ -1313,7 +1327,7 @@ bool State::stepCall(
       if (I > 1) {
         errs() << ", ";
       }
-      Value* V = Call->getArgOperand(I);
+      Value *V = Call->getArgOperand(I);
       if (auto *Int = dyn_cast<ConstantInt>(V)) {
         errs() << format_hex(Int->getZExtValue(), 0);
         continue;
@@ -1356,22 +1370,23 @@ bool State::stepCall(
   if (Callee->getFunctionType() != CallSig) {
     // The callee has been bitcasted to another signature.  Check for
     // compatibility.
-    FunctionType* DefSig = Callee->getFunctionType();
+    FunctionType *DefSig = Callee->getFunctionType();
     if (Call->arg_size() < DefSig->getNumParams()) {
       // Calling with too few arguments is not supported.
       return false;
     }
     for (unsigned I = 0; I < DefSig->getNumParams(); ++I) {
-      Type* CallTy = Call->getArgOperand(I)->getType();
-      Type* DefTy = DefSig->getParamType(I);
-      if (CallTy != DefTy && !CastInst::isBitOrNoopPointerCastable(CallTy, DefTy, DL)) {
+      Type *CallTy = Call->getArgOperand(I)->getType();
+      Type *DefTy = DefSig->getParamType(I);
+      if (CallTy != DefTy &&
+          !CastInst::isBitOrNoopPointerCastable(CallTy, DefTy, DL)) {
         // Argument types are not convertible.
         return false;
       }
     }
 
-    Type* CallReturnTy = Call->getType();
-    Type* DefReturnTy = DefSig->getReturnType();
+    Type *CallReturnTy = Call->getType();
+    Type *DefReturnTy = DefSig->getReturnType();
     if (CallReturnTy != DefReturnTy && !CallReturnTy->isVoidTy() &&
         !CastInst::isBitOrNoopPointerCastable(DefReturnTy, CallReturnTy, DL)) {
       // Return type is non-void and not convertible.
@@ -1380,7 +1395,7 @@ bool State::stepCall(
   }
 
   // Advance the current frame past the call.
-  StackFrame& SF = Stack.back();
+  StackFrame &SF = Stack.back();
   SF.advance(NormalDest);
 
   SF.ReturnValue = OldCall;
@@ -1392,10 +1407,11 @@ bool State::stepCall(
   // Push a new frame to run the callee.
   StackFrame NewSF(*Callee);
   for (unsigned I = 0; I < Callee->getFunctionType()->getNumParams(); ++I) {
-    Value* V = Call->getArgOperand(I);
-    Type* ExpectTy = Callee->getFunctionType()->getParamType(I);
+    Value *V = Call->getArgOperand(I);
+    Type *ExpectTy = Callee->getFunctionType()->getParamType(I);
     if (V->getType() != ExpectTy) {
-      V = foldAndEmitInst(CastInst::CreateBitOrPointerCast(V, ExpectTy, "callcast"));
+      V = foldAndEmitInst(
+          CastInst::CreateBitOrPointerCast(V, ExpectTy, "callcast"));
     }
     NewSF.addArgument(I, V, SF.getLabels(OldCall->getArgOperand(I)));
   }
@@ -1405,7 +1421,7 @@ bool State::stepCall(
   return true;
 }
 
-bool State::stepMemset(CallBase* Call) {
+bool State::stepMemset(CallBase *Call) {
   auto DestPtr = evalBaseOffset(Call->getOperand(0));
   if (!DestPtr) {
     return false;
@@ -1427,7 +1443,7 @@ bool State::stepMemset(CallBase* Call) {
   if (ValConst->isZeroValue()) {
     Mem.zero(DestPtr->first, DestPtr->second, Len);
   } else {
-    Type* ByteTy = IntegerType::get(NewFunc->getContext(), 8);
+    Type *ByteTy = IntegerType::get(NewFunc->getContext(), 8);
     auto *ValByte = ConstantExpr::getTrunc(ValConst, ByteTy);
     for (unsigned I = 0; I < Len; ++I) {
       Mem.store(DestPtr->first, DestPtr->second + I, ValByte, EmptyLabels);
@@ -1438,7 +1454,7 @@ bool State::stepMemset(CallBase* Call) {
   return true;
 }
 
-bool State::stepMemmove(CallBase* Call) {
+bool State::stepMemmove(CallBase *Call) {
   auto DestPtr = evalBaseOffset(Call->getOperand(0));
   if (!DestPtr) {
     return false;
@@ -1469,33 +1485,30 @@ bool State::stepMemmove(CallBase* Call) {
   return true;
 }
 
-std::pair<GlobalVariable*, Constant*> State::allocateGlobal(
-    Type* ElemTy, uint64_t Count, uint64_t Align, bool Zero) {
-  Type* Ty = ArrayType::get(ElemTy, Count);
-  Constant* Init;
+std::pair<GlobalVariable *, Constant *>
+State::allocateGlobal(Type *ElemTy, uint64_t Count, uint64_t Align, bool Zero) {
+  Type *Ty = ArrayType::get(ElemTy, Count);
+  Constant *Init;
   if (Zero) {
     Init = ConstantAggregateZero::get(Ty);
   } else {
     Init = UndefValue::get(Ty);
   }
-  GlobalVariable* GV = new GlobalVariable(
-      *NewFunc->getParent(),
-      Ty,
-      false,  // not constant
-      GlobalValue::InternalLinkage,
-      Init,
-      "alloc");
+  GlobalVariable *GV =
+      new GlobalVariable(*NewFunc->getParent(), Ty,
+                         false, // not constant
+                         GlobalValue::InternalLinkage, Init, "alloc");
   GV->setAlignment(MaybeAlign(Align));
-  Constant* GEPIdxs[2] = {
-    ConstantInt::get(IntegerType::get(NewFunc->getContext(), 64), 0),
-    ConstantInt::get(IntegerType::get(NewFunc->getContext(), 32), 0),
+  Constant *GEPIdxs[2] = {
+      ConstantInt::get(IntegerType::get(NewFunc->getContext(), 64), 0),
+      ConstantInt::get(IntegerType::get(NewFunc->getContext(), 32), 0),
   };
-  Constant* Ptr = ConstantExpr::getInBoundsGetElementPtr(Ty, GV, GEPIdxs);
+  Constant *Ptr = ConstantExpr::getInBoundsGetElementPtr(Ty, GV, GEPIdxs);
   return std::make_pair(GV, Ptr);
 }
 
-bool State::stepMalloc(CallBase* Call, CallBase* OldCall) {
-  Function* Callee = Call->getCalledFunction();
+bool State::stepMalloc(CallBase *Call, CallBase *OldCall) {
+  Function *Callee = Call->getCalledFunction();
   if (Callee == nullptr) {
     return false;
   }
@@ -1505,35 +1518,36 @@ bool State::stepMalloc(CallBase* Call, CallBase* OldCall) {
   }
 
   // The size of the allocated region.  This is always set.
-  Value* SizeV;
+  Value *SizeV;
   // If set, the size of the allocated region is the product of `Size` and
   // `Size2`, instead of just `Size`.
-  Value* Size2V = nullptr;
+  Value *Size2V = nullptr;
   // If set, the allocated region is aligned to a multiple of this amount.
-  Value* AlignV = nullptr;
+  Value *AlignV = nullptr;
   // If set, the allocated region is zeroed.
   bool Zero = false;
   // Out-pointer argument.  If set, the function stores the allocated pointer
   // here and returns zero, instead of returning the pointer directly.
-  Value* OutPtrV = nullptr;
+  Value *OutPtrV = nullptr;
 
   switch (LF) {
-    case LibFunc_malloc:
-      SizeV = Call->getOperand(0);
-      break;
-    case LibFunc_calloc:
-      SizeV = Call->getOperand(0);
-      Size2V = Call->getOperand(1);
-      Zero = true;
-      break;
-    case LibFunc_posix_memalign:
-      OutPtrV = Call->getOperand(0);
-      AlignV = Call->getOperand(1);
-      SizeV = Call->getOperand(2);
-      break;
-    default:
-      errs() << "failed to handle malloc: unsupported callee in " << *Call << "\n";
-      return false;
+  case LibFunc_malloc:
+    SizeV = Call->getOperand(0);
+    break;
+  case LibFunc_calloc:
+    SizeV = Call->getOperand(0);
+    Size2V = Call->getOperand(1);
+    Zero = true;
+    break;
+  case LibFunc_posix_memalign:
+    OutPtrV = Call->getOperand(0);
+    AlignV = Call->getOperand(1);
+    SizeV = Call->getOperand(2);
+    break;
+  default:
+    errs() << "failed to handle malloc: unsupported callee in " << *Call
+           << "\n";
+    return false;
   }
 
   // Convert the arguments.
@@ -1577,21 +1591,23 @@ bool State::stepMalloc(CallBase* Call, CallBase* OldCall) {
     Align = 8;
   }
 
-  Optional<std::pair<Value*, uint64_t>> OutPtr = None;
+  Optional<std::pair<Value *, uint64_t>> OutPtr = None;
   if (OutPtrV != nullptr) {
     OutPtr = evalBaseOffset(OutPtrV);
     if (!OutPtr) {
-      errs() << "malloc failed: failed to evaluate out ptr, in " << *Call << "\n";
+      errs() << "malloc failed: failed to evaluate out ptr, in " << *Call
+             << "\n";
       return false;
     }
   }
 
   // Create the allocation.
-  auto Global = allocateGlobal(IntegerType::get(NewFunc->getContext(), 8), Size, Align, Zero);
-  GlobalVariable* GV = Global.first;
-  Value* Ptr = Global.second;
+  auto Global = allocateGlobal(IntegerType::get(NewFunc->getContext(), 8), Size,
+                               Align, Zero);
+  GlobalVariable *GV = Global.first;
+  Value *Ptr = Global.second;
 
-  Value* ReturnValue;
+  Value *ReturnValue;
   if (OutPtr) {
     Mem.store(OutPtr->first, OutPtr->second, Ptr, EmptyLabels);
     ReturnValue = ConstantInt::get(Call->getType(), 0);
@@ -1607,8 +1623,8 @@ bool State::stepMalloc(CallBase* Call, CallBase* OldCall) {
   return true;
 }
 
-bool State::stepRealloc(CallBase* Call, CallBase* OldCall) {
-  Function* Callee = Call->getCalledFunction();
+bool State::stepRealloc(CallBase *Call, CallBase *OldCall) {
+  Function *Callee = Call->getCalledFunction();
   if (Callee == nullptr) {
     return false;
   }
@@ -1617,17 +1633,18 @@ bool State::stepRealloc(CallBase* Call, CallBase* OldCall) {
     return false;
   }
 
-  Value* OldPtrV;
-  Value* SizeV;
+  Value *OldPtrV;
+  Value *SizeV;
 
   switch (LF) {
-    case LibFunc_realloc:
-      OldPtrV = Call->getOperand(0);
-      SizeV = Call->getOperand(1);
-      break;
-    default:
-      errs() << "failed to handle realloc: unsupported callee in " << *Call << "\n";
-      return false;
+  case LibFunc_realloc:
+    OldPtrV = Call->getOperand(0);
+    SizeV = Call->getOperand(1);
+    break;
+  default:
+    errs() << "failed to handle realloc: unsupported callee in " << *Call
+           << "\n";
+    return false;
   }
 
   // Convert the arguments.
@@ -1647,7 +1664,8 @@ bool State::stepRealloc(CallBase* Call, CallBase* OldCall) {
 
   uint64_t MemcpySize = Size;
   if (OldPtr->second != 0) {
-    errs() << "realloc failed: old pointer has nonzero offset, in " << *Call << "\n";
+    errs() << "realloc failed: old pointer has nonzero offset, in " << *Call
+           << "\n";
     return false;
   } else if (OldPtr->first == nullptr) {
     // If the old pointer is NULL, there's nothing to copy.
@@ -1658,7 +1676,8 @@ bool State::stepRealloc(CallBase* Call, CallBase* OldCall) {
       MemcpySize = GVSize;
     }
   } else {
-    errs() << "realloc failed: couldn't get size of old pointer, in " << *Call << "\n";
+    errs() << "realloc failed: couldn't get size of old pointer, in " << *Call
+           << "\n";
     errs() << "  old pointer is " << *OldPtr->first << "\n";
     return false;
   }
@@ -1667,9 +1686,10 @@ bool State::stepRealloc(CallBase* Call, CallBase* OldCall) {
   bool Zero = false;
 
   // Create the allocation.
-  auto Global = allocateGlobal(IntegerType::get(NewFunc->getContext(), 8), Size, Align, Zero);
-  GlobalVariable* GV = Global.first;
-  Value* Ptr = Global.second;
+  auto Global = allocateGlobal(IntegerType::get(NewFunc->getContext(), 8), Size,
+                               Align, Zero);
+  GlobalVariable *GV = Global.first;
+  Value *Ptr = Global.second;
 
   // Add the allocation to memory, and copy over the old contents.  Note `GV`
   // is the base, not `Ptr` itself.
@@ -1678,18 +1698,14 @@ bool State::stepRealloc(CallBase* Call, CallBase* OldCall) {
     memCopy(GV, 0, OldPtr->first, 0, MemcpySize);
 
     // Emit a call to `memcpy` to initialize the new global from the old.
-    Type* SizeTy = IntegerType::get(NewFunc->getContext(), 64);
-    Type* MemcpyTys[3] = { Ptr->getType(), OldPtrV->getType(), SizeTy };
-    Function* MemcpyFunc = Intrinsic::getDeclaration(
+    Type *SizeTy = IntegerType::get(NewFunc->getContext(), 64);
+    Type *MemcpyTys[3] = {Ptr->getType(), OldPtrV->getType(), SizeTy};
+    Function *MemcpyFunc = Intrinsic::getDeclaration(
         NewFunc->getParent(), Intrinsic::memcpy, MemcpyTys);
-    Value* MemcpyArgs[4] = {
-      Ptr,
-      OldPtrV,
-      ConstantInt::get(SizeTy, MemcpySize),
-      ConstantInt::getFalse(NewFunc->getContext())
-    };
-    CallInst::Create(MemcpyFunc->getFunctionType(), MemcpyFunc, MemcpyArgs,
-        "", NewBB);
+    Value *MemcpyArgs[4] = {Ptr, OldPtrV, ConstantInt::get(SizeTy, MemcpySize),
+                            ConstantInt::getFalse(NewFunc->getContext())};
+    CallInst::Create(MemcpyFunc->getFunctionType(), MemcpyFunc, MemcpyArgs, "",
+                     NewBB);
   }
 
   Stack.back().Locals[OldCall] = Ptr;
@@ -1697,8 +1713,8 @@ bool State::stepRealloc(CallBase* Call, CallBase* OldCall) {
   return true;
 }
 
-bool State::stepFree(CallBase* Call, CallBase* OldCall) {
-  Function* Callee = Call->getCalledFunction();
+bool State::stepFree(CallBase *Call, CallBase *OldCall) {
+  Function *Callee = Call->getCalledFunction();
   if (Callee == nullptr) {
     return false;
   }
@@ -1708,11 +1724,11 @@ bool State::stepFree(CallBase* Call, CallBase* OldCall) {
   }
 
   switch (LF) {
-    case LibFunc_free:
-      break;
-    default:
-      errs() << "failed to handle free: unsupported callee in " << *Call << "\n";
-      return false;
+  case LibFunc_free:
+    break;
+  default:
+    errs() << "failed to handle free: unsupported callee in " << *Call << "\n";
+    return false;
   }
 
   // free(ptr) is a no-op in this model.
@@ -1720,7 +1736,7 @@ bool State::stepFree(CallBase* Call, CallBase* OldCall) {
   return true;
 }
 
-Value* State::stepAlloca(AllocaInst* Alloca) {
+Value *State::stepAlloca(AllocaInst *Alloca) {
   uint64_t Count;
   if (auto *Int = dyn_cast<ConstantInt>(Alloca->getArraySize())) {
     Count = Int->getZExtValue();
@@ -1733,14 +1749,14 @@ Value* State::stepAlloca(AllocaInst* Alloca) {
   bool Zero = false;
 
   auto Global = allocateGlobal(Alloca->getAllocatedType(), Count, Align, Zero);
-  GlobalVariable* GV = Global.first;
-  Value* Ptr = Global.second;
+  GlobalVariable *GV = Global.first;
+  Value *Ptr = Global.second;
 
   EvalCache[GV] = LinearPtr(GV);
   return Ptr;
 }
 
-bool State::stepSetLabel(CallBase* Call) {
+bool State::stepSetLabel(CallBase *Call) {
   auto Ptr = evalBaseOffset(Call->getArgOperand(0));
   if (!Ptr) {
     return false;
@@ -1761,33 +1777,37 @@ bool State::stepSetLabel(CallBase* Call) {
   return true;
 }
 
-std::pair<Value*, SmallVector<Label, 8>> State::memLoadByte(Value* Base, uint64_t Offset) {
-  Type* ByteTy = IntegerType::get(NewFunc->getContext(), 8);
-  Value* LoadVal;
+std::pair<Value *, SmallVector<Label, 8>> State::memLoadByte(Value *Base,
+                                                             uint64_t Offset) {
+  Type *ByteTy = IntegerType::get(NewFunc->getContext(), 8);
+  Value *LoadVal;
   SmallVector<Label, 8> LoadLabels;
   uint64_t LoadOffset;
   std::tie(LoadVal, LoadLabels, LoadOffset) = Mem.load(Base, Offset, ByteTy);
   if (LoadVal == nullptr) {
     return std::make_pair(nullptr, EmptyLabels);
   }
-  return std::make_pair(convertLoadResult(LoadVal, LoadOffset, ByteTy), LoadLabels);
+  return std::make_pair(convertLoadResult(LoadVal, LoadOffset, ByteTy),
+                        LoadLabels);
 }
 
-void dumpMemRegion(MemRegion const& Region) {
-  for (auto& Store : Region.Ops) {
+void dumpMemRegion(MemRegion const &Region) {
+  for (auto &Store : Region.Ops) {
     errs() << "  +" << Store.Offset << ": ";
     if (Store.Kind == OpStore) {
       errs() << "store ";
       Store.Val->printAsOperand(errs());
       errs() << "\n";
     } else {
-      errs() << "fill " << Store.Len << " bytes with kind " << Store.Kind << "\n";
+      errs() << "fill " << Store.Len << " bytes with kind " << Store.Kind
+             << "\n";
     }
   }
 }
 
-std::pair<Value*, SmallVector<Label, 8>> State::memLoad(Value* Base, uint64_t Offset, Type* T) {
-  Value* LoadVal;
+std::pair<Value *, SmallVector<Label, 8>>
+State::memLoad(Value *Base, uint64_t Offset, Type *T) {
+  Value *LoadVal;
   SmallVector<Label, 8> LoadLabels;
   uint64_t LoadOffset;
   std::tie(LoadVal, LoadLabels, LoadOffset) = Mem.load(Base, Offset, T);
@@ -1812,10 +1832,10 @@ std::pair<Value*, SmallVector<Label, 8>> State::memLoad(Value* Base, uint64_t Of
   }
 
   uint64_t Size = DL.getTypeStoreSize(T);
-  SmallVector<Value*, 8> Bytes;
+  SmallVector<Value *, 8> Bytes;
   SmallVector<Label, 8> Labels;
   for (uint64_t I = 0; I < Size; ++I) {
-    Value* Byte;
+    Value *Byte;
     SmallVector<Label, 8> ByteLabels;
     std::tie(Byte, ByteLabels) = memLoadByte(Base, Offset + I);
     if (Byte == nullptr) {
@@ -1839,23 +1859,23 @@ std::pair<Value*, SmallVector<Label, 8>> State::memLoad(Value* Base, uint64_t Of
     }
   }
 
-  Value* V = ConstantInt::get(IntTy, 0);
+  Value *V = ConstantInt::get(IntTy, 0);
   for (uint64_t I = 0; I < Size; ++I) {
-    Value* Byte = Bytes[I];
-    Byte = foldAndEmitInst(CastInst::Create(
-          Instruction::ZExt, Byte, IntTy, "loadext"));
+    Value *Byte = Bytes[I];
+    Byte = foldAndEmitInst(
+        CastInst::Create(Instruction::ZExt, Byte, IntTy, "loadext"));
     if (I > 0) {
       auto *ShiftAmount = ConstantInt::get(IntTy, 8 * I);
-      Byte = foldAndEmitInst(BinaryOperator::Create(
-            Instruction::Shl, Byte, ShiftAmount, "loadshift"));
+      Byte = foldAndEmitInst(BinaryOperator::Create(Instruction::Shl, Byte,
+                                                    ShiftAmount, "loadshift"));
     }
-    V = foldAndEmitInst(BinaryOperator::Create(
-          Instruction::Or, V, Byte, "loadconcat"));
+    V = foldAndEmitInst(
+        BinaryOperator::Create(Instruction::Or, V, Byte, "loadconcat"));
   }
   return std::make_pair(V, Labels);
 }
 
-std::string State::memLoadString(Value* V) {
+std::string State::memLoadString(Value *V) {
   std::string S;
   raw_string_ostream Out(S);
 
@@ -1864,8 +1884,8 @@ std::string State::memLoadString(Value* V) {
     return "???";
   }
 
-  for (unsigned I = 0; ; ++I) {
-    Value* Byte = memLoadByte(Ptr->first, Ptr->second + I).first;
+  for (unsigned I = 0;; ++I) {
+    Value *Byte = memLoadByte(Ptr->first, Ptr->second + I).first;
     if (Byte == nullptr) {
       Out << "???";
       break;
@@ -1885,25 +1905,26 @@ std::string State::memLoadString(Value* V) {
   return Out.str();
 }
 
-void State::memCopy(Value* DestBase, uint64_t DestOffset,
-    Value* SrcBase, uint64_t SrcOffset, uint64_t Len) {
+void State::memCopy(Value *DestBase, uint64_t DestOffset, Value *SrcBase,
+                    uint64_t SrcOffset, uint64_t Len) {
   if (SrcBase == DestBase) {
     // Allocate an extra buffer for temporary storage.
-    auto TempBase = allocateGlobal(IntegerType::get(NewFunc->getContext(), 8), Len, 1, false);
+    auto TempBase = allocateGlobal(IntegerType::get(NewFunc->getContext(), 8),
+                                   Len, 1, false);
     memCopy(TempBase.first, 0, SrcBase, SrcOffset, Len);
     memCopy(DestBase, DestOffset, TempBase.first, 0, Len);
     return;
   }
 
-  Type* ByteTy = IntegerType::get(NewFunc->getContext(), 8);
+  Type *ByteTy = IntegerType::get(NewFunc->getContext(), 8);
 
   Mem.setUnknown(DestBase, DestOffset, Len);
 
-  auto& DestRegion = Mem.getRegion(DestBase);
-  auto& SrcRegion = Mem.getRegion(SrcBase);
+  auto &DestRegion = Mem.getRegion(DestBase);
+  auto &SrcRegion = Mem.getRegion(SrcBase);
   uint64_t SrcEnd = SrcOffset + Len;
   BitVector Written(Len);
-  for (auto& Store : make_range(SrcRegion.Ops.rbegin(), SrcRegion.Ops.rend())) {
+  for (auto &Store : make_range(SrcRegion.Ops.rbegin(), SrcRegion.Ops.rend())) {
     if (!Store.overlapsRange(SrcOffset, SrcEnd, DL)) {
       continue;
     }
@@ -1954,12 +1975,13 @@ void State::memCopy(Value* DestBase, uint64_t DestOffset,
           }
 
           uint64_t ByteOffset = I + SrcOffset - Store.Offset;
-          Value* Byte = convertLoadResult(Store.Val, ByteOffset, ByteTy);
+          Value *Byte = convertLoadResult(Store.Val, ByteOffset, ByteTy);
           SmallVector<Label, 8> Labels;
           if (Store.Labels.size() > I) {
             Labels.push_back(Store.Labels[I]);
           }
-          MemStore NewStore = MemStore::CreateStore(DestOffset + I, Byte, std::move(Labels));
+          MemStore NewStore =
+              MemStore::CreateStore(DestOffset + I, Byte, std::move(Labels));
           DestRegion.pushOp(std::move(NewStore), DL);
           Written.set(I);
         }
@@ -1968,9 +1990,9 @@ void State::memCopy(Value* DestBase, uint64_t DestOffset,
   }
 }
 
-Value* State::foldInst(Instruction* Inst) {
-  Constant* C = nullptr;
-  Value* Simplified = SimplifyInstruction(Inst, SQ);
+Value *State::foldInst(Instruction *Inst) {
+  Constant *C = nullptr;
+  Value *Simplified = SimplifyInstruction(Inst, SQ);
   if (Simplified == nullptr) {
     // `Inst` can't be simplified any further.  Try folding it to a constant
     // instead.
@@ -1996,11 +2018,11 @@ Value* State::foldInst(Instruction* Inst) {
   return Inst;
 }
 
-SmallVector<Label, 8> State::labelInst(StackFrame* SF, Instruction* Inst) {
+SmallVector<Label, 8> State::labelInst(StackFrame *SF, Instruction *Inst) {
   // Handle each folded instruction.
   for (unsigned I = 0; I < Inst->getNumOperands(); ++I) {
     auto *Operand = Inst->getOperand(I);
-    auto const& OperandL = SF->getLabels(Operand);
+    auto const &OperandL = SF->getLabels(Operand);
     for (unsigned J = 0; J < OperandL.size(); ++J) {
       if (OperandL[J] != BOTTOM) {
         return MaybeTaintedLabels;
@@ -2017,8 +2039,8 @@ void State::checkBottom(SmallVector<Label, 8> L) {
   }
 }
 
-Value* State::foldAndEmitInst(Instruction* Inst) {
-  Value* V = foldInst(Inst);
+Value *State::foldAndEmitInst(Instruction *Inst) {
+  Value *V = foldInst(Inst);
   if (V == Inst) {
     NewBB->getInstList().push_back(Inst);
   } else {
@@ -2027,8 +2049,9 @@ Value* State::foldAndEmitInst(Instruction* Inst) {
   return V;
 }
 
-Constant* State::constantFoldConstant(Constant* C) {
-  Constant* Folded = ConstantFoldConstant(C, NewFunc->getParent()->getDataLayout(), TLI);
+Constant *State::constantFoldConstant(Constant *C) {
+  Constant *Folded =
+      ConstantFoldConstant(C, NewFunc->getParent()->getDataLayout(), TLI);
   if (Folded != nullptr) {
     return Folded;
   } else {
@@ -2036,7 +2059,7 @@ Constant* State::constantFoldConstant(Constant* C) {
   }
 }
 
-Constant* State::constantFoldExtra(Constant* C) {
+Constant *State::constantFoldExtra(Constant *C) {
   C = constantFoldAlignmentCheckAnd(C);
   C = constantFoldAlignmentCheckURem(C);
   C = constantFoldConstant(C);
@@ -2046,14 +2069,14 @@ Constant* State::constantFoldExtra(Constant* C) {
 /// Fold alignment checks, like `(uintptr_t)ptr & 7`.  These appear in
 /// functions like `memcpy` and `strcmp`.  We handle these by increasing the
 /// alignment of the declaration of `ptr` so the result has a known value.
-Constant* State::constantFoldAlignmentCheckAnd(Constant* C) {
+Constant *State::constantFoldAlignmentCheckAnd(Constant *C) {
   auto *And = dyn_cast<ConstantExpr>(C);
   if (And == nullptr || And->getOpcode() != Instruction::And) {
     return C;
   }
 
-  Constant* Val = nullptr;
-  ConstantInt* Mask = nullptr;
+  Constant *Val = nullptr;
+  ConstantInt *Mask = nullptr;
   if ((Mask = dyn_cast<ConstantInt>(And->getOperand(0)))) {
     Val = cast<Constant>(And->getOperand(1));
   } else if ((Mask = dyn_cast<ConstantInt>(And->getOperand(1)))) {
@@ -2074,27 +2097,30 @@ Constant* State::constantFoldAlignmentCheckAnd(Constant* C) {
   // expression as `(ptr1 & 7) | (ptr2 & 7)`, then fold it recursively.
   auto *ValOr = dyn_cast<ConstantExpr>(Val);
   if (ValOr != nullptr && ValOr->getOpcode() == Instruction::Or) {
-    Constant* C0 = constantFoldExtra(ConstantExpr::getAnd(ValOr->getOperand(0), Mask));
-    Constant* C1 = constantFoldExtra(ConstantExpr::getAnd(ValOr->getOperand(1), Mask));
+    Constant *C0 =
+        constantFoldExtra(ConstantExpr::getAnd(ValOr->getOperand(0), Mask));
+    Constant *C1 =
+        constantFoldExtra(ConstantExpr::getAnd(ValOr->getOperand(1), Mask));
     return constantFoldExtra(ConstantExpr::getOr(C0, C1));
   }
 
   // Evaluate `Val` as a pointer expression.
-  LinearPtr* Ptr = evalPtr(Val);
+  LinearPtr *Ptr = evalPtr(Val);
   if (Ptr == nullptr) {
     return C;
   }
   return constantFoldAlignmentCheckPtr(C, Ptr, Align, MaskInt);
 }
 
-Constant* State::constantFoldAlignmentCheckURem(Constant* C) {
+Constant *State::constantFoldAlignmentCheckURem(Constant *C) {
   auto *URem = dyn_cast<ConstantExpr>(C);
   if (URem == nullptr || URem->getOpcode() != Instruction::URem) {
     return C;
   }
 
-  Constant* Val = URem->getOperand(0);;
-  ConstantInt* AlignConst = dyn_cast<ConstantInt>(URem->getOperand(1));
+  Constant *Val = URem->getOperand(0);
+  ;
+  ConstantInt *AlignConst = dyn_cast<ConstantInt>(URem->getOperand(1));
   if (AlignConst == nullptr) {
     return C;
   }
@@ -2109,7 +2135,7 @@ Constant* State::constantFoldAlignmentCheckURem(Constant* C) {
   }
 
   // Evaluate `Val` as a pointer expression.
-  LinearPtr* Ptr = evalPtr(Val);
+  LinearPtr *Ptr = evalPtr(Val);
   if (Ptr == nullptr) {
     return C;
   }
@@ -2118,12 +2144,12 @@ Constant* State::constantFoldAlignmentCheckURem(Constant* C) {
 
 /// Handle an alignment check of the pointer `LP`.  The allocation is adjusted
 /// to a multiple of `Align`, and the result is `Addr & Mask`.
-Constant* State::constantFoldAlignmentCheckPtr(
-    Constant* C, LinearPtr* LP, uint64_t Align, uint64_t Mask) {
+Constant *State::constantFoldAlignmentCheckPtr(Constant *C, LinearPtr *LP,
+                                               uint64_t Align, uint64_t Mask) {
   assert(Align > Mask);
   assert((Align & (Align - 1)) == 0 && "Align must be a power of two");
 
-  for (auto& Term : LP->Terms) {
+  for (auto &Term : LP->Terms) {
     // If the base is a global variable or function, adjust its alignment to at
     // least `Align`.
     auto *Global = dyn_cast<GlobalObject>(Term.Ptr);
@@ -2143,8 +2169,9 @@ Constant* State::constantFoldAlignmentCheckPtr(
   return ConstantInt::get(C->getType(), LP->Offset & Mask);
 }
 
-Constant* State::constantFoldInstructionExtra(Instruction* Inst) {
-  Constant* C = ConstantFoldInstruction(Inst, NewFunc->getParent()->getDataLayout(), TLI);
+Constant *State::constantFoldInstructionExtra(Instruction *Inst) {
+  Constant *C =
+      ConstantFoldInstruction(Inst, NewFunc->getParent()->getDataLayout(), TLI);
   if (C != nullptr) {
     return C;
   }
@@ -2164,33 +2191,35 @@ Constant* State::constantFoldInstructionExtra(Instruction* Inst) {
 
 /// Null checks.  We handle `ptr == NULL` by evaluating a `ptr` to a
 /// `LinearPtr` and checking if it's null.
-Constant* State::constantFoldNullCheckInst(Instruction* Inst) {
+Constant *State::constantFoldNullCheckInst(Instruction *Inst) {
   auto *ICmp = dyn_cast<ICmpInst>(Inst);
   if (ICmp == nullptr || !ICmp->isEquality()) {
     return nullptr;
   }
 
-  Value* PtrVal = nullptr;
-  Constant* NullConst;
-  if ((NullConst = dyn_cast<Constant>(ICmp->getOperand(0))) && NullConst->isNullValue()) {
+  Value *PtrVal = nullptr;
+  Constant *NullConst;
+  if ((NullConst = dyn_cast<Constant>(ICmp->getOperand(0))) &&
+      NullConst->isNullValue()) {
     PtrVal = ICmp->getOperand(1);
-  } else if ((NullConst = dyn_cast<Constant>(ICmp->getOperand(1))) && NullConst->isNullValue()) {
+  } else if ((NullConst = dyn_cast<Constant>(ICmp->getOperand(1))) &&
+             NullConst->isNullValue()) {
     PtrVal = ICmp->getOperand(0);
   } else {
     return nullptr;
   }
 
-  LinearPtr* Ptr = evalPtr(PtrVal);
+  LinearPtr *Ptr = evalPtr(PtrVal);
   if (Ptr == nullptr) {
     return nullptr;
   }
   // Convert to base and offset form.  For now, we don't try to handle cases
   // where two pointers have been added together.
-  Optional<Value*> OptBase = Ptr->getBase();
+  Optional<Value *> OptBase = Ptr->getBase();
   if (!OptBase.hasValue()) {
     return nullptr;
   }
-  Value* Base = OptBase.getValue();
+  Value *Base = OptBase.getValue();
 
   bool PtrIsNull = Base == nullptr && Ptr->Offset == 0;
   bool Result;
@@ -2211,7 +2240,7 @@ Constant* State::constantFoldNullCheckInst(Instruction* Inst) {
 /// Equality checks between two pointers.  We handle `ptr1 == ptr2` by
 /// evaluating both pointers to `LinearPtr`s and checking if their bases and
 /// offsets are the same.
-Constant* State::constantFoldPointerCompare(Instruction* Inst) {
+Constant *State::constantFoldPointerCompare(Instruction *Inst) {
   auto *ICmp = dyn_cast<ICmpInst>(Inst);
   if (ICmp == nullptr || ICmp->getPredicate() != CmpInst::ICMP_EQ) {
     return nullptr;
@@ -2235,19 +2264,19 @@ Constant* State::constantFoldPointerCompare(Instruction* Inst) {
   }
 }
 
-Optional<std::pair<Value*, uint64_t>> State::evalBaseOffset(Value* V) {
-  LinearPtr* LP = evalPtr(V);
+Optional<std::pair<Value *, uint64_t>> State::evalBaseOffset(Value *V) {
+  LinearPtr *LP = evalPtr(V);
   if (LP == nullptr) {
     return None;
   }
-  Optional<Value*> Base = LP->getBase();
+  Optional<Value *> Base = LP->getBase();
   if (!Base.hasValue()) {
     return None;
   }
   return std::make_pair(Base.getValue(), LP->Offset);
 }
 
-LinearPtr* State::evalPtr(Value* V) {
+LinearPtr *State::evalPtr(Value *V) {
   auto It = EvalCache.find(V);
   if (It == EvalCache.end()) {
     Optional<LinearPtr> Ptr = evalPtrImpl(V);
@@ -2260,7 +2289,7 @@ LinearPtr* State::evalPtr(Value* V) {
   }
 }
 
-Optional<LinearPtr> State::evalPtrImpl(Value* V) {
+Optional<LinearPtr> State::evalPtrImpl(Value *V) {
   if (auto *C = dyn_cast<Constant>(V)) {
     return evalPtrConstant(C);
   } else if (auto *Inst = dyn_cast<Instruction>(V)) {
@@ -2272,7 +2301,7 @@ Optional<LinearPtr> State::evalPtrImpl(Value* V) {
   }
 }
 
-Optional<LinearPtr> State::evalPtrConstant(Constant* C) {
+Optional<LinearPtr> State::evalPtrConstant(Constant *C) {
   if (auto *Global = dyn_cast<GlobalObject>(C)) {
     return LinearPtr(C);
   } else if (auto *Alias = dyn_cast<GlobalAlias>(C)) {
@@ -2290,72 +2319,72 @@ Optional<LinearPtr> State::evalPtrConstant(Constant* C) {
   }
 }
 
-Optional<LinearPtr> State::evalPtrInstruction(Instruction* Inst) {
+Optional<LinearPtr> State::evalPtrInstruction(Instruction *Inst) {
   return evalPtrOpcode(Inst->getOpcode(), Inst);
 }
 
-Optional<LinearPtr> State::evalPtrOpcode(unsigned Opcode, User* U) {
-  LinearPtr* A = nullptr;
-  LinearPtr* B = nullptr;
+Optional<LinearPtr> State::evalPtrOpcode(unsigned Opcode, User *U) {
+  LinearPtr *A = nullptr;
+  LinearPtr *B = nullptr;
   switch (Opcode) {
-    case Instruction::Add:
-      A = evalPtr(U->getOperand(0));
-      B = evalPtr(U->getOperand(1));
-      if (A == nullptr || B == nullptr) {
-        return None;
-      }
-      return A->add(*B);
-
-    case Instruction::Sub:
-      A = evalPtr(U->getOperand(0));
-      B = evalPtr(U->getOperand(1));
-      if (A == nullptr || B == nullptr) {
-        return None;
-      }
-      return A->sub(*B);
-
-    case Instruction::Mul:
-      A = evalPtr(U->getOperand(0));
-      B = evalPtr(U->getOperand(1));
-      if (A == nullptr || B == nullptr) {
-        return None;
-      }
-      return A->mul(*B);
-
-    case Instruction::IntToPtr:
-    case Instruction::PtrToInt:
-    case Instruction::BitCast:
-      A = evalPtr(U->getOperand(0));
-      if (A == nullptr) {
-        return None;
-      }
-      return *A;
-
-    case Instruction::GetElementPtr:
-      return std::move(evalPtrGEP(U));
-
-    default:
+  case Instruction::Add:
+    A = evalPtr(U->getOperand(0));
+    B = evalPtr(U->getOperand(1));
+    if (A == nullptr || B == nullptr) {
       return None;
+    }
+    return A->add(*B);
+
+  case Instruction::Sub:
+    A = evalPtr(U->getOperand(0));
+    B = evalPtr(U->getOperand(1));
+    if (A == nullptr || B == nullptr) {
+      return None;
+    }
+    return A->sub(*B);
+
+  case Instruction::Mul:
+    A = evalPtr(U->getOperand(0));
+    B = evalPtr(U->getOperand(1));
+    if (A == nullptr || B == nullptr) {
+      return None;
+    }
+    return A->mul(*B);
+
+  case Instruction::IntToPtr:
+  case Instruction::PtrToInt:
+  case Instruction::BitCast:
+    A = evalPtr(U->getOperand(0));
+    if (A == nullptr) {
+      return None;
+    }
+    return *A;
+
+  case Instruction::GetElementPtr:
+    return std::move(evalPtrGEP(U));
+
+  default:
+    return None;
   }
 }
 
-Optional<LinearPtr> State::evalPtrGEP(User* U) {
+Optional<LinearPtr> State::evalPtrGEP(User *U) {
   // Get the pointee type for the base of the GEP.  Note the cast can fail,
   // since GEP works on vectors of pointers as well as ordinary pointers.
   auto *BasePtrTy = dyn_cast<PointerType>(U->getOperand(0)->getType());
   if (BasePtrTy == nullptr) {
     return None;
   }
-  Type* BaseTy = BasePtrTy->getPointerElementType();
+  Type *BaseTy = BasePtrTy->getPointerElementType();
 
   // Get the base pointer as a `LinearPtr`.
-  LinearPtr* BaseLP = evalPtr(U->getOperand(0));
+  LinearPtr *BaseLP = evalPtr(U->getOperand(0));
   if (BaseLP == nullptr) {
     return None;
   }
   LinearPtr Result = *BaseLP;
 
-  DataLayout const& DL = NewFunc->getParent()->getDataLayout();
+  DataLayout const &DL = NewFunc->getParent()->getDataLayout();
 
   // Apply the first offset, which does pointer arithmeon to the base pointer.
   auto *Idx0 = dyn_cast<ConstantInt>(U->getOperand(1));
@@ -2364,7 +2393,7 @@ Optional<LinearPtr> State::evalPtrGEP(User* U) {
   }
   Result.Offset += DL.getTypeAllocSize(BaseTy) * Idx0->getSExtValue();
 
-  Type* CurTy = BaseTy;
+  Type *CurTy = BaseTy;
   for (unsigned I = 2; I < U->getNumOperands(); ++I) {
     auto *Idx = dyn_cast<ConstantInt>(U->getOperand(I));
     if (Idx == nullptr) {
@@ -2386,10 +2415,9 @@ Optional<LinearPtr> State::evalPtrGEP(User* U) {
   return std::move(Result);
 }
 
-
 // Unwinding
 
-std::string valueName(Value* V) {
+std::string valueName(Value *V) {
   if (!V->getName().empty()) {
     return V->getName().str();
   }
@@ -2418,7 +2446,7 @@ void State::unwind() {
   // except the innermost one.
   std::vector<UnwindContext> UnwindStack;
   for (unsigned I = 0; I < Stack.size() - 1; ++I) {
-    StackFrame& SF = Stack[I];
+    StackFrame &SF = Stack[I];
     UnwindContext UC;
     if (I > 0) {
       UC = UnwindStack.back();
@@ -2426,26 +2454,29 @@ void State::unwind() {
 
     errs() << "build unwind context for " << SF.Func.getName() << "\n";
 
-    UC.ReturnDest = BasicBlock::Create(
-        NewFunc->getContext(), Twine(SF.Func.getName(), ".returndest"), NewFunc);
-    Type* ReturnType = Stack[I + 1].Func.getReturnType();
+    UC.ReturnDest =
+        BasicBlock::Create(NewFunc->getContext(),
+                           Twine(SF.Func.getName(), ".returndest"), NewFunc);
+    Type *ReturnType = Stack[I + 1].Func.getReturnType();
     if (!ReturnType->isVoidTy()) {
-      Value* PHI = PHINode::Create(ReturnType, 0, "returnval", UC.ReturnDest);
+      Value *PHI = PHINode::Create(ReturnType, 0, "returnval", UC.ReturnDest);
       if (SF.CastReturnType != nullptr) {
         PHI = foldAndEmitInst(CastInst::CreateBitOrPointerCast(
-              PHI, SF.CastReturnType, "returncast"));
+            PHI, SF.CastReturnType, "returncast"));
       }
       assert(SF.ReturnValue != nullptr);
       SF.Locals[SF.ReturnValue] = PHI;
     }
 
     if (SF.UnwindDest != nullptr) {
-      UC.UnwindDest = BasicBlock::Create(
-          NewFunc->getContext(), Twine(SF.Func.getName(), ".unwinddest"), NewFunc);
+      UC.UnwindDest =
+          BasicBlock::Create(NewFunc->getContext(),
+                             Twine(SF.Func.getName(), ".unwinddest"), NewFunc);
 
-      LandingPadInst* Pad = cast<LandingPadInst>(&SF.UnwindDest->front());
+      LandingPadInst *Pad = cast<LandingPadInst>(&SF.UnwindDest->front());
       UC.LandingPads.push_back(Pad);
-      Value* PHI = PHINode::Create(Pad->getType(), 0, "unwindval", UC.UnwindDest);
+      Value *PHI =
+          PHINode::Create(Pad->getType(), 0, "unwindval", UC.UnwindDest);
 
       SF.Locals[Pad] = PHI;
     }
@@ -2456,12 +2487,12 @@ void State::unwind() {
   while (Stack.size() > 0) {
     unsigned I = Stack.size() - 1;
 
-    UnwindContext* PrevUC = nullptr;
+    UnwindContext *PrevUC = nullptr;
     if (I > 0 && I - 1 < UnwindStack.size()) {
       PrevUC = &UnwindStack[I - 1];
     }
 
-    UnwindContext* UC = nullptr;
+    UnwindContext *UC = nullptr;
     if (I < UnwindStack.size()) {
       UC = &UnwindStack[I];
     }
@@ -2476,12 +2507,12 @@ void State::unwind() {
 }
 
 struct UnwindFrameState {
-  State& S;
-  StackFrame& SF;
-  UnwindContext* PrevUC;
-  DominatorTree* DT;
+  State &S;
+  StackFrame &SF;
+  UnwindContext *PrevUC;
+  DominatorTree *DT;
 
-  DenseMap<BasicBlock*, BasicBlock*> BlockMap;
+  DenseMap<BasicBlock *, BasicBlock *> BlockMap;
   /// For each new block, a map from old values to new values.  This must be
   /// tracked per-block (instead of everything using `SF.Locals`) because value
   /// mappings can be overwritten when a partial block is in a loop.  For each
@@ -2492,19 +2523,19 @@ struct UnwindFrameState {
   ///
   /// Keying on the new block instead of the old one lets us track partial and
   /// full versions of the same old block separately.
-  DenseMap<BasicBlock*, DenseMap<Value*, Value*>> BlockLocals;
+  DenseMap<BasicBlock *, DenseMap<Value *, Value *>> BlockLocals;
   /// List of old blocks that need to be converted.  Every block in this list
   /// will also be present as a key in BlockMap.
-  std::vector<BasicBlock*> Pending;
+  std::vector<BasicBlock *> Pending;
   /// List of all predecessors, as pairs of `OldPred` and `NewPred`.  For each
   /// predecessor, `handlePHINodes` will update the phi nodes of all its
   /// possible successors.
-  std::vector<std::pair<BasicBlock*, BasicBlock*>> AllPreds;
+  std::vector<std::pair<BasicBlock *, BasicBlock *>> AllPreds;
 
   /// Map from old phi nodes to corresponding new ones.  We can't use
   /// `SF.Locals` for this because some old phi nodes are mapped to trampoline
   /// block phi nodes in that map.
-  DenseMap<PHINode*, PHINode*> PHINodeMap;
+  DenseMap<PHINode *, PHINode *> PHINodeMap;
 
   /// Trampolines used for exiting partial blocks.  Partial blocks need special
   /// handling because a separate full clone of the block might also exist if
@@ -2516,16 +2547,17 @@ struct UnwindFrameState {
   /// block.  The trampoline block consists of a sequence of PHINodes (one for
   /// each value defined in the old block, in order) followed by a clone of the
   /// old terminator.
-  DenseMap<BasicBlock*, BasicBlock*> ExitTrampolines;
+  DenseMap<BasicBlock *, BasicBlock *> ExitTrampolines;
 
-  UnwindFrameState(State& S, StackFrame& SF, UnwindContext* PrevUC)
-    : S(S), SF(SF), PrevUC(PrevUC) {
+  UnwindFrameState(State &S, StackFrame &SF, UnwindContext *PrevUC)
+      : S(S), SF(SF), PrevUC(PrevUC) {
     DT = &S.P.getAnalysis<DominatorTreeWrapperPass>(SF.Func).getDomTree();
   }
 
-  void emitInst(Instruction* Inst, BasicBlock* Out);
-  void emitFullBlock(BasicBlock* BB, BasicBlock* Out);
-  void emitPartialBlock(BasicBlock* BB, BasicBlock::iterator Iter, BasicBlock* Out);
+  void emitInst(Instruction *Inst, BasicBlock *Out);
+  void emitFullBlock(BasicBlock *BB, BasicBlock *Out);
+  void emitPartialBlock(BasicBlock *BB, BasicBlock::iterator Iter,
+                        BasicBlock *Out);
   void emitAllBlocks();
 
   void handlePHINodes();
@@ -2533,14 +2565,15 @@ struct UnwindFrameState {
   /// Map an old value to the corresponding new one.  This returns constants
   /// unchanged, and otherwise maps values through `BlockLocals[NewBB]`.  It
   /// aborts if `OldVal` is not a constant and isn't present in the map either.
-  Value* mapValue(Value* OldVal, BasicBlock* NewBB);
+  Value *mapValue(Value *OldVal, BasicBlock *NewBB);
   /// Map an old basic block to the corresponding new one.  This creates the
   /// new block if needed.  When creating a new block, this initializes the new
   /// block's `BlockLocals` entry with a copy of `BlockLocals[NewPred]`.
-  BasicBlock* mapBlock(BasicBlock* OldBB, BasicBlock* NewPred);
+  BasicBlock *mapBlock(BasicBlock *OldBB, BasicBlock *NewPred);
 };
 
-void State::unwindFrame(StackFrame& SF, UnwindContext* PrevUC, UnwindContext* UC) {
+void State::unwindFrame(StackFrame &SF, UnwindContext *PrevUC,
+                        UnwindContext *UC) {
   errs() << "unwinding out of " << SF.Func.getName() << "\n";
   UnwindFrameState UFS(*this, SF, PrevUC);
 
@@ -2566,14 +2599,14 @@ void State::unwindFrame(StackFrame& SF, UnwindContext* PrevUC, UnwindContext* UC
   UFS.handlePHINodes();
 }
 
-void UnwindFrameState::emitInst(Instruction* Inst, BasicBlock* Out) {
+void UnwindFrameState::emitInst(Instruction *Inst, BasicBlock *Out) {
   if (auto *PHI = dyn_cast<PHINode>(Inst)) {
     // Add a new empty PHI node of the same type.  Incoming values will be
     // populated in a postprocessing pass, based on the edges actually
     // traversed.  (E.g. if we unwind in the middle of one side of a
     // conditional, the new merge block may have only one predecessor instead
     // of two.)
-    PHINode* NewPHI = PHINode::Create(
+    PHINode *NewPHI = PHINode::Create(
         PHI->getType(), PHI->getNumIncomingValues(), PHI->getName(), Out);
     BlockLocals[Out][PHI] = NewPHI;
     PHINodeMap[PHI] = NewPHI;
@@ -2583,10 +2616,10 @@ void UnwindFrameState::emitInst(Instruction* Inst, BasicBlock* Out) {
   if (auto *Return = dyn_cast<ReturnInst>(Inst)) {
     if (PrevUC != nullptr) {
       BranchInst::Create(PrevUC->ReturnDest, Out);
-      Value* OldVal = Return->getReturnValue();
+      Value *OldVal = Return->getReturnValue();
       if (OldVal != nullptr && !OldVal->getType()->isVoidTy()) {
-        PHINode* PHI = cast<PHINode>(&*PrevUC->ReturnDest->begin());
-        Value* NewVal = mapValue(Return->getReturnValue(), Out);
+        PHINode *PHI = cast<PHINode>(&*PrevUC->ReturnDest->begin());
+        Value *NewVal = mapValue(Return->getReturnValue(), Out);
         PHI->addIncoming(NewVal, Out);
       }
       return;
@@ -2596,23 +2629,24 @@ void UnwindFrameState::emitInst(Instruction* Inst, BasicBlock* Out) {
   if (auto *Resume = dyn_cast<ResumeInst>(Inst)) {
     if (PrevUC != nullptr && PrevUC->UnwindDest != nullptr) {
       BranchInst::Create(PrevUC->UnwindDest, Out);
-      PHINode* PHI = cast<PHINode>(&*PrevUC->UnwindDest->begin());
-      Value* NewVal = mapValue(Resume->getValue(), Out);
+      PHINode *PHI = cast<PHINode>(&*PrevUC->UnwindDest->begin());
+      Value *NewVal = mapValue(Resume->getValue(), Out);
       PHI->addIncoming(NewVal, Out);
       return;
     }
   }
 
-  Instruction* NewInst = Inst->clone();
+  Instruction *NewInst = Inst->clone();
   if (!Inst->getType()->isVoidTy()) {
-    NewInst->setName(Twine(Inst->getFunction()->getName()) + "." + valueName(Inst));
+    NewInst->setName(Twine(Inst->getFunction()->getName()) + "." +
+                     valueName(Inst));
   }
   Out->getInstList().push_back(NewInst);
 
   for (unsigned I = 0; I < Inst->getNumOperands(); ++I) {
-    Value* OldVal = Inst->getOperand(I);
+    Value *OldVal = Inst->getOperand(I);
     if (!isa<BasicBlock>(OldVal)) {
-      Value* NewVal = mapValue(OldVal, Out);
+      Value *NewVal = mapValue(OldVal, Out);
       NewInst->setOperand(I, NewVal);
     }
     // Basic blocks are handled below, after setting `BlockLocals[Out][Inst]`.
@@ -2641,14 +2675,14 @@ void UnwindFrameState::emitInst(Instruction* Inst, BasicBlock* Out) {
   if (Inst->isEHPad() || Inst->isExceptionalTerminator()) {
     // Exception-related instructions can only appear inside a function with an
     // EH personality.
-    Function* OldFunc = Inst->getFunction();
+    Function *OldFunc = Inst->getFunction();
     assert(OldFunc->hasPersonalityFn());
-    Constant* Personality = OldFunc->getPersonalityFn();
+    Constant *Personality = OldFunc->getPersonalityFn();
     if (!S.NewFunc->hasPersonalityFn()) {
       S.NewFunc->setPersonalityFn(Personality);
     } else {
       assert(S.NewFunc->getPersonalityFn() == Personality &&
-          "mismatch between different personality functions");
+             "mismatch between different personality functions");
     }
   }
 
@@ -2657,17 +2691,17 @@ void UnwindFrameState::emitInst(Instruction* Inst, BasicBlock* Out) {
   // We call `mapBlock` only after setting `BlockLocals[Out][Inst]` so that the
   // successor block will inherit the mapping for `Inst`.
   for (unsigned I = 0; I < Inst->getNumOperands(); ++I) {
-    Value* OldVal = Inst->getOperand(I);
+    Value *OldVal = Inst->getOperand(I);
     if (auto *OldBB = dyn_cast<BasicBlock>(OldVal)) {
-      BasicBlock* NewBB = mapBlock(OldBB, Out);
+      BasicBlock *NewBB = mapBlock(OldBB, Out);
       NewInst->setOperand(I, NewBB);
     }
   }
 }
 
-void UnwindFrameState::emitFullBlock(BasicBlock* BB, BasicBlock* Out) {
+void UnwindFrameState::emitFullBlock(BasicBlock *BB, BasicBlock *Out) {
   auto TrampIter = ExitTrampolines.find(BB);
-  BasicBlock* TrampBB = nullptr;
+  BasicBlock *TrampBB = nullptr;
   if (TrampIter != ExitTrampolines.end()) {
     TrampBB = TrampIter->second;
   }
@@ -2678,16 +2712,16 @@ void UnwindFrameState::emitFullBlock(BasicBlock* BB, BasicBlock* Out) {
   // If TrampBB is non-null, the code that created the trampoline already added
   // it to AllPreds.
 
-  for (Instruction& Inst : *BB) {
+  for (Instruction &Inst : *BB) {
     if (TrampBB != nullptr && Inst.isTerminator()) {
       auto Iter = TrampBB->begin();
-      DomTreeNode* Node = DT->getNode(BB);
+      DomTreeNode *Node = DT->getNode(BB);
       while (Node != nullptr) {
-        for (Instruction& Inst : *Node->getBlock()) {
+        for (Instruction &Inst : *Node->getBlock()) {
           if (Inst.isTerminator() || Inst.getType()->isVoidTy()) {
             continue;
           }
-          PHINode* PHI = cast<PHINode>(&*Iter);
+          PHINode *PHI = cast<PHINode>(&*Iter);
           ++Iter;
           PHI->addIncoming(mapValue(&Inst, Out), Out);
         }
@@ -2701,9 +2735,11 @@ void UnwindFrameState::emitFullBlock(BasicBlock* BB, BasicBlock* Out) {
   }
 }
 
-void UnwindFrameState::emitPartialBlock(
-    BasicBlock* BB, BasicBlock::iterator Iter, BasicBlock* Out) {
-  for (Instruction& Inst : iterator_range<BasicBlock::iterator>(Iter, BB->end())) {
+void UnwindFrameState::emitPartialBlock(BasicBlock *BB,
+                                        BasicBlock::iterator Iter,
+                                        BasicBlock *Out) {
+  for (Instruction &Inst :
+       iterator_range<BasicBlock::iterator>(Iter, BB->end())) {
     if (Inst.isTerminator()) {
       break;
     }
@@ -2712,7 +2748,7 @@ void UnwindFrameState::emitPartialBlock(
 
   // Build trampoline block.  This block contains a phi node for every value
   // visible downstream, in case it's possible to reenter BB as a full block.
-  BasicBlock* TrampBB = BasicBlock::Create(
+  BasicBlock *TrampBB = BasicBlock::Create(
       S.NewFunc->getContext(),
       Twine(BB->getParent()->getName()) + "." + valueName(BB) + ".trampoline",
       S.NewFunc);
@@ -2723,13 +2759,14 @@ void UnwindFrameState::emitPartialBlock(
   auto TempLocals = BlockLocals[Out];
   BlockLocals[TrampBB] = TempLocals;
 
-  DomTreeNode* Node = DT->getNode(BB);
+  DomTreeNode *Node = DT->getNode(BB);
   while (Node != nullptr) {
-    for (Instruction& Inst : *Node->getBlock()) {
+    for (Instruction &Inst : *Node->getBlock()) {
       if (Inst.isTerminator() || Inst.getType()->isVoidTy()) {
         continue;
       }
-      PHINode* PHI = PHINode::Create(Inst.getType(), 1, Inst.getName(), TrampBB);
+      PHINode *PHI =
+          PHINode::Create(Inst.getType(), 1, Inst.getName(), TrampBB);
       PHI->addIncoming(mapValue(&Inst, Out), Out);
       BlockLocals[TrampBB][&Inst] = PHI;
     }
@@ -2743,44 +2780,45 @@ void UnwindFrameState::emitPartialBlock(
 
 void UnwindFrameState::emitAllBlocks() {
   while (Pending.size() > 0) {
-    BasicBlock* BB = Pending.back();
+    BasicBlock *BB = Pending.back();
     Pending.pop_back();
 
     // Everything we find in `Pending` should already have a new block created,
     // so passing `nullptr` for the predecessor is okay here.
-    BasicBlock* Out = mapBlock(BB, nullptr);
+    BasicBlock *Out = mapBlock(BB, nullptr);
     emitFullBlock(BB, Out);
   }
 }
 
 void UnwindFrameState::handlePHINodes() {
-  for (auto& Entry : AllPreds) {
-    BasicBlock* OldPred = Entry.first;
-    BasicBlock* NewPred = Entry.second;
+  for (auto &Entry : AllPreds) {
+    BasicBlock *OldPred = Entry.first;
+    BasicBlock *NewPred = Entry.second;
 
-    Instruction* Term = OldPred->getTerminator();
+    Instruction *Term = OldPred->getTerminator();
     for (unsigned I = 0; I < Term->getNumSuccessors(); ++I) {
-      BasicBlock* OldSucc = Term->getSuccessor(I);
-      for (PHINode& OldPHI : OldSucc->phis()) {
-        PHINode* NewPHI = PHINodeMap[&OldPHI];
+      BasicBlock *OldSucc = Term->getSuccessor(I);
+      for (PHINode &OldPHI : OldSucc->phis()) {
+        PHINode *NewPHI = PHINodeMap[&OldPHI];
         assert(NewPHI != nullptr && "missing entry for phi node in PHINodeMap");
-        Value* OldVal = OldPHI.getIncomingValueForBlock(OldPred);
-        Value* NewVal = mapValue(OldVal, NewPred);
+        Value *OldVal = OldPHI.getIncomingValueForBlock(OldPred);
+        Value *NewVal = mapValue(OldVal, NewPred);
         NewPHI->addIncoming(NewVal, NewPred);
       }
     }
   }
 }
 
-Value* UnwindFrameState::mapValue(Value* OldVal, BasicBlock* NewBB) {
+Value *UnwindFrameState::mapValue(Value *OldVal, BasicBlock *NewBB) {
   if (isa<Constant>(OldVal)) {
     return OldVal;
   }
 
-  auto& Locals = BlockLocals[NewBB];
+  auto &Locals = BlockLocals[NewBB];
   auto It = Locals.find(OldVal);
   if (It == Locals.end()) {
-    errs() << "error: no local mapping for value " << *OldVal << " in new block ";
+    errs() << "error: no local mapping for value " << *OldVal
+           << " in new block ";
     NewBB->printAsOperand(errs());
     errs() << "\n";
     assert(0 && "no local mapping for value");
@@ -2788,16 +2826,15 @@ Value* UnwindFrameState::mapValue(Value* OldVal, BasicBlock* NewBB) {
   return It->second;
 }
 
-BasicBlock* UnwindFrameState::mapBlock(BasicBlock* OldBB, BasicBlock* NewPred) {
+BasicBlock *UnwindFrameState::mapBlock(BasicBlock *OldBB, BasicBlock *NewPred) {
   auto It = BlockMap.find(OldBB);
   if (It != BlockMap.end()) {
     return It->second;
   }
 
-  BasicBlock* NewBB = BasicBlock::Create(
+  BasicBlock *NewBB = BasicBlock::Create(
       S.NewFunc->getContext(),
-      Twine(OldBB->getParent()->getName()) + "." + valueName(OldBB),
-      S.NewFunc);
+      Twine(OldBB->getParent()->getName()) + "." + valueName(OldBB), S.NewFunc);
   BlockMap.insert(std::make_pair(OldBB, NewBB));
   assert(NewPred != nullptr);
   // Note `Map[X] = Map[Y]` can invalidate `Map[Y]` if `X` is not in the map.
@@ -2806,7 +2843,6 @@ BasicBlock* UnwindFrameState::mapBlock(BasicBlock* OldBB, BasicBlock* NewPred) {
   Pending.push_back(OldBB);
   return NewBB;
 }
-
 
 // Memory update
 
@@ -2817,25 +2853,26 @@ void State::updateMemory() {
   // Temporary storage.  We `memCopy` each region into this buffer, relying on
   // the fact that `memCopy` produces a region with strictly non-overlapping
   // memory ops.
-  auto Temp = allocateGlobal(IntegerType::get(NewFunc->getContext(), 8), 0, 1, false);
-  GlobalVariable* TempBase = Temp.first;
+  auto Temp =
+      allocateGlobal(IntegerType::get(NewFunc->getContext(), 8), 0, 1, false);
+  GlobalVariable *TempBase = Temp.first;
   // Add `TempBase` to `Mem.Regions` preemptively, so we can access it inside
   // the loop without invalidating the iterator.
   Mem.getRegion(TempBase);
 
-  Type* ByteTy = IntegerType::get(NewFunc->getContext(), 8);
-  Constant* ZeroByte = ConstantInt::get(ByteTy, 0);
-  Constant* UndefByte = UndefValue::get(ByteTy);
+  Type *ByteTy = IntegerType::get(NewFunc->getContext(), 8);
+  Constant *ZeroByte = ConstantInt::get(ByteTy, 0);
+  Constant *UndefByte = UndefValue::get(ByteTy);
 
-  std::vector<Constant*> Fields;
+  std::vector<Constant *> Fields;
   std::vector<std::pair<uint64_t, Label>> Labels;
-  std::vector<std::pair<GlobalVariable*, Constant*>> Replacements;
-  for (auto& Entry : Mem.Regions) {
+  std::vector<std::pair<GlobalVariable *, Constant *>> Replacements;
+  for (auto &Entry : Mem.Regions) {
     if (Entry.first == TempBase) {
       continue;
     }
-    Value* Base = Entry.first;
-    MemRegion& Region = Entry.second;
+    Value *Base = Entry.first;
+    MemRegion &Region = Entry.second;
 
     ++Count;
     if (!Region.Written) {
@@ -2851,27 +2888,29 @@ void State::updateMemory() {
 
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
     memCopy(TempBase, 0, GV, 0, Size);
-    MemRegion& TempRegion = Mem.getRegion(TempBase);
+    MemRegion &TempRegion = Mem.getRegion(TempBase);
     std::sort(TempRegion.Ops.begin(), TempRegion.Ops.end(),
-        [](MemStore const& A, MemStore const& B) { return A.Offset < B.Offset; });
+              [](MemStore const &A, MemStore const &B) {
+                return A.Offset < B.Offset;
+              });
 
     // For each region, we build a `ConstantStruct` exactly matching the layout
     // and value found in the `MemRegion`.
     uint64_t Pos = 0;
-    for (auto& Op : TempRegion.Ops) {
+    for (auto &Op : TempRegion.Ops) {
       if (Op.Offset >= Size) {
         errs() << "warning: region ";
         GV->printAsOperand(errs());
-        errs() << " contains out-of-bounds write at " << Op.Offset <<
-          " (size = " << Size << ")\n";
+        errs() << " contains out-of-bounds write at " << Op.Offset
+               << " (size = " << Size << ")\n";
         continue;
       }
 
       if (Pos > Op.Offset) {
         errs() << "region ";
         GV->printAsOperand(errs());
-        errs() << " has overlapping writes: found offset = " << Op.Offset <<
-          " when pos = " << Pos << "\n";
+        errs() << " has overlapping writes: found offset = " << Op.Offset
+               << " when pos = " << Pos << "\n";
         assert(0 && "region has overlapping writes");
       }
 
@@ -2881,36 +2920,30 @@ void State::updateMemory() {
       }
 
       switch (Op.Kind) {
-        case OpStore:
-          {
-            auto *C = dyn_cast<Constant>(Op.Val);
-            if (C == nullptr) {
-              errs() << "region ";
-              GV->printAsOperand(errs());
-              errs() << " contains non-constant value " << *Op.Val <<
-                " (size = " << Size << ")\n";
-              assert(0 && "region contains non-constant value");
-            }
-            Fields.push_back(C);
-            Pos += DL.getTypeAllocSize(C->getType());
-          }
-          break;
-        case OpZero:
-          {
-            for (unsigned I = 0; I < Op.Len; ++I) {
-              Fields.push_back(ZeroByte);
-              Pos += 1;
-            }
-          }
-          break;
-        case OpUnknown:
-          {
-            for (unsigned I = 0; I < Op.Len; ++I) {
-              Fields.push_back(UndefByte);
-              Pos += 1;
-            }
-          }
-          break;
+      case OpStore: {
+        auto *C = dyn_cast<Constant>(Op.Val);
+        if (C == nullptr) {
+          errs() << "region ";
+          GV->printAsOperand(errs());
+          errs() << " contains non-constant value " << *Op.Val
+                 << " (size = " << Size << ")\n";
+          assert(0 && "region contains non-constant value");
+        }
+        Fields.push_back(C);
+        Pos += DL.getTypeAllocSize(C->getType());
+      } break;
+      case OpZero: {
+        for (unsigned I = 0; I < Op.Len; ++I) {
+          Fields.push_back(ZeroByte);
+          Pos += 1;
+        }
+      } break;
+      case OpUnknown: {
+        for (unsigned I = 0; I < Op.Len; ++I) {
+          Fields.push_back(UndefByte);
+          Pos += 1;
+        }
+      } break;
       }
 
       for (unsigned I = 0; I < Op.Labels.size(); ++I) {
@@ -2925,7 +2958,7 @@ void State::updateMemory() {
     }
     assert(Pos == Size);
 
-    Constant* Struct = ConstantStruct::getAnon(NewFunc->getContext(), Fields);
+    Constant *Struct = ConstantStruct::getAnon(NewFunc->getContext(), Fields);
     Fields.clear();
     TempRegion.Ops.clear();
     TempRegion.MinOffset = 0;
@@ -2933,37 +2966,28 @@ void State::updateMemory() {
 
     // Create a new `GlobalVariable` with the new type and initializer, and
     // replace all uses of `GV` with it.
-    GlobalVariable* NewGV = new GlobalVariable(
-        *NewFunc->getParent(),
-        Struct->getType(),
-        GV->isConstant(),
-        GV->getLinkage(),
-        Struct,
-        GV->getName(),
-        GV,
-        GV->getThreadLocalMode(),
-        GV->getAddressSpace(),
-        GV->isExternallyInitialized());
+    GlobalVariable *NewGV = new GlobalVariable(
+        *NewFunc->getParent(), Struct->getType(), GV->isConstant(),
+        GV->getLinkage(), Struct, GV->getName(), GV, GV->getThreadLocalMode(),
+        GV->getAddressSpace(), GV->isExternallyInitialized());
     NewGV->copyAttributesFrom(GV);
-    Constant* BitCast = ConstantExpr::getBitCast(NewGV, GV->getType());
+    Constant *BitCast = ConstantExpr::getBitCast(NewGV, GV->getType());
     Replacements.push_back(std::make_pair(GV, BitCast));
 
     // Emit `noniSetLabelU8` calls to initialize taint labels in `NewGV`.
     if (Labels.size() > 0) {
-      Type* IntTy = IntegerType::get(NewFunc->getContext(), 32);
+      Type *IntTy = IntegerType::get(NewFunc->getContext(), 32);
       FunctionCallee SetLabelFunc = NewFunc->getParent()->getOrInsertFunction(
-          "noniSetLabelU8",
-          Type::getVoidTy(NewFunc->getContext()),
-          ByteTy->getPointerTo(),
-          IntTy);
-      Instruction* FirstInst = NewBB->getFirstNonPHI();
+          "noniSetLabelU8", Type::getVoidTy(NewFunc->getContext()),
+          ByteTy->getPointerTo(), IntTy);
+      Instruction *FirstInst = NewBB->getFirstNonPHI();
 
-      Constant* Ptr = ConstantExpr::getBitCast(NewGV, ByteTy->getPointerTo());
-      for (auto& Entry : Labels) {
-        Value* Args[2] = {
-          ConstantExpr::getGetElementPtr(
-              ByteTy, Ptr, ConstantInt::get(IntTy, Entry.first), true),
-          ConstantInt::get(IntTy, Entry.second),
+      Constant *Ptr = ConstantExpr::getBitCast(NewGV, ByteTy->getPointerTo());
+      for (auto &Entry : Labels) {
+        Value *Args[2] = {
+            ConstantExpr::getGetElementPtr(
+                ByteTy, Ptr, ConstantInt::get(IntTy, Entry.first), true),
+            ConstantInt::get(IntTy, Entry.second),
         };
         CallInst::Create(SetLabelFunc, Args, "", FirstInst);
       }
@@ -2971,16 +2995,16 @@ void State::updateMemory() {
     }
   }
 
-  for (auto& Repl : Replacements) {
+  for (auto &Repl : Replacements) {
     Repl.first->replaceAllUsesWith(Repl.second);
     Repl.first->eraseFromParent();
   }
 
   TempBase->eraseFromParent();
 
-  errs() << "processed " << Count << " memory regions (" << CountUnmodified << " unmodified)\n";
+  errs() << "processed " << Count << " memory regions (" << CountUnmodified
+         << " unmodified)\n";
 }
-
 
 // LLVM pass
 
@@ -2988,28 +3012,33 @@ struct FlattenInit : public ModulePass {
   static char ID;
   FlattenInit() : ModulePass(ID) {}
 
-  bool runOnModule(Module& M) override {
-    Function* MainFunc = M.getFunction("main");
+  bool runOnModule(Module &M) override {
+    Function *MainFunc = M.getFunction("main");
     if (MainFunc == nullptr || MainFunc->isDeclaration()) {
       return false;
     }
 
-    TargetLibraryInfo* TLI = &getAnalysis<TargetLibraryInfoWrapperPass>(*MainFunc).getTLI(*MainFunc);
+    TargetLibraryInfo *TLI =
+        &getAnalysis<TargetLibraryInfoWrapperPass>(*MainFunc).getTLI(*MainFunc);
 
     MainFunc->setName("__cc_old_main");
     State S(*this, *MainFunc, "main", TLI);
     S.run();
 
-    for (auto& BB : *S.NewFunc) {
-      for (auto& Inst : BB) {
-        for (Value* V : Inst.operand_values()) {
+    for (auto &BB : *S.NewFunc) {
+      for (auto &Inst : BB) {
+        for (Value *V : Inst.operand_values()) {
           if (auto *OpBB = dyn_cast<BasicBlock>(V)) {
             if (OpBB->getParent() != S.NewFunc) {
-              errs() << "INVALID: inst " << Inst << " references basic block " << OpBB << " " << OpBB->getName() << " of function " << OpBB->getParent()->getName() << "\n";
+              errs() << "INVALID: inst " << Inst << " references basic block "
+                     << OpBB << " " << OpBB->getName() << " of function "
+                     << OpBB->getParent()->getName() << "\n";
             }
           } else if (auto *OpInst = dyn_cast<Instruction>(V)) {
             if (OpInst->getFunction() != S.NewFunc) {
-              errs() << "INVALID: inst " << Inst << " references instruction " << *OpInst << " of function " << OpInst->getFunction()->getName() << "\n";
+              errs() << "INVALID: inst " << Inst << " references instruction "
+                     << *OpInst << " of function "
+                     << OpInst->getFunction()->getName() << "\n";
             }
           }
         }
@@ -3027,11 +3056,9 @@ private:
     AU.addRequired<DominatorTreeWrapperPass>();
   }
 }; // end of struct FlattenInit
-}  // end of anonymous namespace
+} // end of anonymous namespace
 
 char FlattenInit::ID = 0;
-static RegisterPass<FlattenInit> X(
-        "flatten-init",
-        "Inline and unroll constant-valued initialization code",
-        false /* Only looks at CFG */,
-        false /* Analysis Pass */);
+static RegisterPass<FlattenInit>
+    X("flatten-init", "Inline and unroll constant-valued initialization code",
+      false /* Only looks at CFG */, false /* Analysis Pass */);

@@ -9,11 +9,6 @@
 
 #include "Analysis/TypeHirarchy/DIBasedTypeHierarchy.h"
 
-#include "Analysis/TypeHirarchy/DIBasedTypeHierarchyData.h"
-#include "Analysis/TypeHirarchy/LLVMVFTable.h"
-#include "Utils/General/spdlog/spdlog.h"
-#include "Utils/LLVM/Demangle.h"
-
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -28,11 +23,17 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "Analysis/TypeHirarchy/DIBasedTypeHierarchyData.h"
+#include "Analysis/TypeHirarchy/LLVMVFTable.h"
+#include "Utils/LLVM/Demangle.h"
+
 #include <cassert>
 #include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <spdlog/spdlog.h>
 
 namespace lotus {
 using ClassType = DIBasedTypeHierarchy::ClassType;
@@ -56,7 +57,8 @@ buildVTables(const llvm::DebugInfoFinder &DIF,
     }
     auto IdxIt = TypeToVertex.find(Parent);
     if (IdxIt == TypeToVertex.end()) [[unlikely]] {
-      SPDLOG_WARN("Enclosing type '{}' of virtual function '{}' not found in the current module",
+      SPDLOG_WARN("Enclosing type '{}' of virtual function '{}' not found in "
+                  "the current module",
                   Parent->getName().str(),
                   DemangleUtils::demangle(DIFun->getLinkageName().str()));
 
@@ -65,7 +67,8 @@ buildVTables(const llvm::DebugInfoFinder &DIF,
 
     const auto *Fun = M.getFunction(DIFun->getLinkageName());
     if (!Fun) {
-      SPDLOG_WARN("Referenced virtual function '{}' (aka. {}) not declared in the current module",
+      SPDLOG_WARN("Referenced virtual function '{}' (aka. {}) not declared in "
+                  "the current module",
                   DemangleUtils::demangle(DIFun->getLinkageName().str()),
                   DIFun->getLinkageName().str());
       continue;
@@ -394,7 +397,7 @@ void DIBasedTypeHierarchy::printAsDot(llvm::raw_ostream &OS) const {
       OS << I << " -> " << TypeToVertex.lookup(SubType) << ";\n";
     }
   }
-  
+
   OS << "}\n";
 }
 

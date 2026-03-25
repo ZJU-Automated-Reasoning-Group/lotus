@@ -10,7 +10,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 
-namespace framework {
+namespace fitx {
 
 class CompareInst : public Instruction {
  public:
@@ -22,41 +22,41 @@ class CompareInst : public Instruction {
   CompareInst(llvm::ICmpInst* instruction, std::vector<Fields> fields,
               long array_element_num);
 
-  const std::vector<std::shared_ptr<framework::Value>>& Operands() const {
+  const std::vector<std::shared_ptr<fitx::Value>>& Operands() const {
     return operands_;
   }
 
-  void setOperands(std::vector<std::shared_ptr<framework::Value>> operand);
-  void replaceOperand(std::shared_ptr<framework::Value> operand,
-                      std::shared_ptr<framework::Value> new_operand);
-  bool operandExists(std::shared_ptr<framework::Value> value);
-  bool operandExists(std::shared_ptr<framework::CallInst> call_inst);
+  void setOperands(std::vector<std::shared_ptr<fitx::Value>> operand);
+  void replaceOperand(const std::shared_ptr<fitx::Value>& operand,
+                      const std::shared_ptr<fitx::Value>& new_operand);
+  bool operandExists(const std::shared_ptr<fitx::Value>& value);
+  bool operandExists(const std::shared_ptr<fitx::CallInst>& call_inst);
   bool returnValueOperandExists();
 
-  std::shared_ptr<framework::Value> find_if(
-      std::function<bool(std::shared_ptr<framework::Value>)> lambda);
+  std::shared_ptr<fitx::Value> find_if(
+      std::function<bool(std::shared_ptr<fitx::Value>)> lambda);
 
   const llvm::CmpInst::Predicate GetPredicate() const { return predicate_; }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const framework::Instruction* I) {
+  static bool classof(const fitx::Instruction* I) {
     return I->Opcode() == llvm::Instruction::ICmp;
   }
 
-  static bool classof(const framework::Value* V) {
-    return llvm::isa<framework::Instruction>(V) &&
-           classof(llvm::cast<framework::Instruction>(V));
+  static bool classof(const fitx::Value* V) {
+    return llvm::isa<fitx::Instruction>(V) &&
+           classof(llvm::cast<fitx::Instruction>(V));
   }
 
  private:
   llvm::CmpInst::Predicate predicate_;
-  std::vector<std::shared_ptr<framework::Value>> operands_;
-  std::vector<std::shared_ptr<framework::Value>> replaced_;
+  std::vector<std::shared_ptr<fitx::Value>> operands_;
+  std::vector<std::shared_ptr<fitx::Value>> replaced_;
 };
 
 class BranchInst : public Instruction {
  public:
-  using TransitionNodes = std::vector<std::weak_ptr<framework::BasicBlock>>;
+  using TransitionNodes = std::vector<std::weak_ptr<fitx::BasicBlock>>;
   constexpr static int64_t kTrueTransition = 0;
   constexpr static int64_t kFalseTransition = INT64_MIN;
 
@@ -75,35 +75,35 @@ class BranchInst : public Instruction {
   BranchInst(llvm::SwitchInst* instruction, std::vector<Fields> fields,
              long array_element_num);
 
-  std::shared_ptr<framework::Instruction> Condition() {
+  std::shared_ptr<fitx::Instruction> Condition() {
     return condition_instruction_;
   }
 
-  void setCondition(std::shared_ptr<framework::Instruction> inst) {
+  void setCondition(std::shared_ptr<fitx::Instruction> inst) {
     condition_instruction_ = inst;
   }
 
   void setTransitionNode(int64_t code,
-                         std::shared_ptr<framework::BasicBlock> block);
+                         const std::shared_ptr<fitx::BasicBlock>& block);
 
-  bool isInOperand(std::shared_ptr<framework::Value> value);
+  bool isInOperand(const std::shared_ptr<fitx::Value>& value);
   bool returnValueOperandExists();
   TransitionNodes TruePathNodes() { return nodes_[kTrueTransition]; };
   TransitionNodes FalsePathNodes() { return nodes_[kFalseTransition]; };
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const framework::Instruction* I) {
+  static bool classof(const fitx::Instruction* I) {
     return I->Opcode() == llvm::Instruction::Br ||
            I->Opcode() == llvm::Instruction::Switch;
   }
 
-  static bool classof(const framework::Value* V) {
-    return llvm::isa<framework::Instruction>(V) &&
-           classof(llvm::cast<framework::Instruction>(V));
+  static bool classof(const fitx::Value* V) {
+    return llvm::isa<fitx::Instruction>(V) &&
+           classof(llvm::cast<fitx::Instruction>(V));
   }
 
  private:
-  std::shared_ptr<framework::Instruction> condition_instruction_;
+  std::shared_ptr<fitx::Instruction> condition_instruction_;
   std::map<int64_t, TransitionNodes> nodes_;
 };
-}  // namespace framework
+}  // namespace fitx

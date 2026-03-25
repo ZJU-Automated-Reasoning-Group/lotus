@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <sstream>
 #include <unordered_set>
@@ -237,10 +238,21 @@ ContextPolicy makeContextPolicy(unsigned kCallSite) {
     return buildKCallStringPolicy<1>("1-CFA");
   case 2:
     return buildKCallStringPolicy<2>("2-CFA");
+  case 0:
+    return buildCtxPolicy<aser::NoCtx>(0, "NoCtx");
   default:
+    // k > 2 is not supported; warn and fall back to context-insensitive.
+    llvm::errs() << "WARNING: Andersen: k-callsite depth " << kCallSite
+                 << " is not supported (max is 2); falling back to "
+                    "context-insensitive analysis (k=0).\n";
     return buildCtxPolicy<aser::NoCtx>(0, "NoCtx");
   }
 }
+
+// Definition of the static ID member declared in Andersen.h.
+// Without this definition any ODR-use of Andersen::ID (e.g. passing it to
+// getAnalysis<>()) would cause a linker error.
+char Andersen::ID = 0;
 
 ContextPolicy getSelectedAndersenContextPolicy() {
   return makeContextPolicy(AndersenKContext);
@@ -249,7 +261,9 @@ ContextPolicy getSelectedAndersenContextPolicy() {
 Andersen::Andersen(const Module &module, ContextPolicy policy)
     : ctxPolicy(policy), initialCtx(ctxPolicy.initialCtx()),
       globalCtx(ctxPolicy.globalCtx()) {
-  static int objectCounter = 0;
+  // B3 Fix: use std::atomic to avoid a data race when multiple Andersen
+  // objects are constructed concurrently (e.g., in a parallel pass pipeline).
+  static std::atomic<int> objectCounter{0};
   int myId = ++objectCounter;
   LOG_INFO("=== Andersen object #{} created ===", myId);
   runOnModule(module);
@@ -307,18 +321,35 @@ bool Andersen::getPointsToSet(const llvm::Value *v,
       ptsSet.insert(static_cast<unsigned>(idx));
   }
 
-  if (!sawKnown)
-    return false;
-  return !sawUnknown || !ptsSet.isEmpty();
+  // B5 Fix: if any node resolved to the universal pointer, the returned set
+  // is incomplete (the pointer may point to anything).  Insert the universal
+  // object node as a sentinel so callers can detect this condition.
+  // Previously the function returned false when sawUnknown && !sawKnown,
+  // silently dropping the universal-pointer information.  Now we always
+  // return true (with the sentinel) when at least one node was found,
+  // whether it was a known node or the universal pointer.
+  if (sawUnknown)
+    ptsSet.insert(static_cast<unsigned>(nodeFactory.getUniversalObjNode()));
+
+  // Return true if we found any information (known nodes or universal ptr).
+  return sawKnown || sawUnknown;
 }
 
 bool Andersen::getPointsToSetInContext(const llvm::Value *v,
                                        AndersNodeFactory::CtxKey ctx,
                                        AndersPtsSet &ptsSet) const {
   NodeIndex n = nodeFactory.getValueNodeFor(v, ctx);
-  if (n == AndersNodeFactory::InvalidIndex ||
-      n == nodeFactory.getUniversalPtrNode()) {
+  if (n == AndersNodeFactory::InvalidIndex)
     return false;
+
+  // B1 Fix: mirror the universal-pointer sentinel logic from getPointsToSet.
+  // If the node resolves to the universal pointer, the pointer may point to
+  // anything — insert the universal object sentinel and return true so that
+  // callers do not incorrectly conclude "no alias".
+  if (n == nodeFactory.getUniversalPtrNode()) {
+    ptsSet.clear();
+    ptsSet.insert(static_cast<unsigned>(nodeFactory.getUniversalObjNode()));
+    return true;
   }
 
   NodeIndex rep = nodeFactory.getMergeTarget(n);

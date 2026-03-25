@@ -1,14 +1,16 @@
 // Implementation of TypeAnalysis.
 //
 // The central type analysis engine.
-// Orchestrates the collection and analysis of type information for the entire module.
+// Orchestrates the collection and analysis of type information for the entire
+// module.
 //
 // Process:
 // 1. TypeCollector: Gather all types.
 // 2. StructCastAnalysis: Find compatible structs (bitcasts).
 // 3. ArrayLayoutAnalysis: Build array layouts.
 // 4. PointerLayoutAnalysis: Build pointer layouts (propagating via casts).
-// 5. Build final TypeMap: Combine size, array, and pointer layouts into `TypeLayout` objects.
+// 5. Build final TypeMap: Combine size, array, and pointer layouts into
+// `TypeLayout` objects.
 
 #include "Alias/TPA/PointerAnalysis/FrontEnd/Type/TypeAnalysis.h"
 
@@ -58,29 +60,30 @@ void TypeMapBuilder::insertTypeMap(Type *type, size_t size,
 size_t TypeMapBuilder::getTypeSize(Type *type, const DataLayout &dataLayout) {
   if (isa<FunctionType>(type))
     return dataLayout.getPointerSize();
-  else {
-    // If it's an array of array of ..., get the innermost element type
-    // Wait, type->getTypeAllocSize works for arrays.
-    // Why manual drilling? Maybe to avoid issues with empty arrays?
-    // Actually this logic looks odd. `getTypeAllocSize` handles nested arrays.
-    // But maybe for `[0 x i8]` etc.?
-    // Let's stick to the logic: iterate array types until non-array.
-    while (auto *arrayType = dyn_cast<ArrayType>(type))
-      type = arrayType->getElementType();
-    return dataLayout.getTypeAllocSize(type);
-  }
+  // Bug fix: the previous implementation drilled down through nested ArrayTypes
+  // to the innermost element type and returned its size, ignoring all array
+  // dimensions. For example, [4 x [3 x i32]] would return sizeof(i32)=4 instead
+  // of the correct 48 bytes. This caused TypeLayout sizes to be wrong for
+  // nested arrays, making offsetMemory() incorrectly return Universal for valid
+  // in-bounds accesses.
+  //
+  // Zero-element arrays ([0 x T]) have an alloc size of 0 from DataLayout,
+  // which is correct for our purposes (they model flexible array members; the
+  // memory model treats them as byte arrays anyway via the opaque-type path
+  // above).
+  return dataLayout.getTypeAllocSize(type);
 }
 
 void TypeMapBuilder::buildTypeMap() {
   // Step 1: Collect types
   auto typeSet = TypeCollector().runOnModule(module);
-  
+
   // Step 2: Analyze struct compatibility via casts
   auto structCastMap = StructCastAnalysis().runOnModule(module);
-  
+
   // Step 3: Build array layouts
   auto arrayLayoutMap = ArrayLayoutAnalysis().runOnTypes(typeSet);
-  
+
   // Step 4: Build pointer layouts (using cast map for safety)
   auto ptrLayoutMap = PointerLayoutAnalysis(structCastMap).runOnTypes(typeSet);
 

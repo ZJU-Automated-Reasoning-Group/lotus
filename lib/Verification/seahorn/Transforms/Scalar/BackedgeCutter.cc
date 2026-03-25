@@ -56,13 +56,13 @@ static void createConditionalAssert(BranchInst &TI, Function &F,
       SBI.mkSeaBuiltinFn(TI.getSuccessor(0) == &dst ? SeaBuiltinsOp::ASSERT_NOT
                                                     : SeaBuiltinsOp::ASSERT,
                          *F.getParent());
-  auto ci = CallInst::Create(assertFn, TI.getCondition(), "", &TI);
+  auto *ci = CallInst::Create(assertFn, TI.getCondition(), "", &TI);
   MDNode *meta = MDNode::get(F.getContext(), None);
   ci->setMetadata("backedge_assert", meta);
   // -- a hack to locate a near-by debug location
   if (TI.getDebugLoc())
     ci->setDebugLoc(TI.getDebugLoc());
-  else if (auto condInst = dyn_cast<Instruction>(TI.getCondition())) {
+  else if (auto *condInst = dyn_cast<Instruction>(TI.getCondition())) {
     ci->setDebugLoc(condInst->getDebugLoc());
   }
 }
@@ -71,7 +71,7 @@ static void createUnconditionalAssert(BranchInst &TI, Function &F,
                                       BasicBlock &dst, SeaBuiltinsInfo &SBI) {
   // insert verifier.assert function
   auto *assertFn = SBI.mkSeaBuiltinFn(SeaBuiltinsOp::ASSERT, *F.getParent());
-  auto ci = CallInst::Create(assertFn, ConstantInt::getFalse(F.getContext()),
+  auto *ci = CallInst::Create(assertFn, ConstantInt::getFalse(F.getContext()),
                              "", &TI);
   MDNode *meta = MDNode::get(F.getContext(), None);
   ci->setMetadata("backedge_assert", meta);

@@ -5,7 +5,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-// Provide pipe2 only on macOS (not in older SDKs); Linux/glibc has it in unistd.h
+// Provide pipe2 only on macOS (not in older SDKs); Linux/glibc has it in
+// unistd.h
 #if defined(__APPLE__)
 static int pipe2(int fd[2], int flags) {
   if (pipe(fd) < 0)
@@ -18,7 +19,7 @@ static int pipe2(int fd[2], int flags) {
 }
 #endif
 
-namespace framework {
+namespace fitx {
 struct EndPoints EndPoint::createEndPointPair() {
   int fd[2];
   if (pipe2(fd, O_NONBLOCK) < 0) {
@@ -72,7 +73,7 @@ void LoggingClient::printLog() {
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &ostream,
-                              framework::LoggingClient &client) {
+                              fitx::LoggingClient &client) {
   if (client.end_points_.read.valid())
     ostream << client.end_points_.read.readLog();
 
@@ -94,4 +95,4 @@ void LoggingServer::printClientLogs() {
   }
 }
 
-} // namespace framework
+} // namespace fitx

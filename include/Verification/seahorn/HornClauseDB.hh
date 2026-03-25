@@ -89,11 +89,16 @@ class HornClauseDB {
 public:
   typedef std::vector<HornRule> RuleVector;
   typedef boost::container::flat_set<Expr> expr_set_type;
-  struct IsRelation : public std::unary_function<Expr, bool> {
+  struct IsRelation {
+    using argument_type = Expr;
+    using result_type = bool;
+
     const HornClauseDB &m_db;
     IsRelation(const HornClauseDB &db) : m_db(db) {}
 
-    bool operator()(Expr e) { return bind::isFdecl(e) && m_db.hasRelation(e); }
+    bool operator()(Expr e) const {
+      return bind::isFdecl(e) && m_db.hasRelation(e);
+    }
   };
 
 private:
@@ -305,28 +310,40 @@ public:
  */
 Expr extractTransitionRelation(HornRule r, HornClauseDB &db);
 
-struct IsPredApp : public std::unary_function<Expr, bool> {
+struct IsPredApp {
+  using argument_type = Expr;
+  using result_type = bool;
+
   HornClauseDB &m_db;
   IsPredApp(HornClauseDB &db) : m_db(db) {}
 
-  bool operator()(Expr e) {
+  bool operator()(Expr e) const {
     return bind::isFapp(e) && m_db.hasRelation(bind::fname(e));
   }
 };
 
-struct IsBVar : public std::unary_function<Expr, bool> {
+struct IsBVar {
+  using argument_type = Expr;
+  using result_type = bool;
+
   IsBVar() {}
-  bool operator()(Expr e) { return bind::isBVar(e); }
+  bool operator()(Expr e) const { return bind::isBVar(e); }
 };
 
-struct IsInteger : public std::unary_function<Expr, bool> {
+struct IsInteger {
+  using argument_type = Expr;
+  using result_type = bool;
+
   IsInteger() {}
-  bool operator()(Expr e) { return bind::isIntConst(e); }
+  bool operator()(Expr e) const { return bind::isIntConst(e); }
 };
 
-struct IsBoolean : public std::unary_function<Expr, bool> {
+struct IsBoolean {
+  using argument_type = Expr;
+  using result_type = bool;
+
   IsBoolean() {}
-  bool operator()(Expr e) { return bind::isBoolConst(e); }
+  bool operator()(Expr e) const { return bind::isBoolConst(e); }
 };
 
 template <typename OutputIterator>

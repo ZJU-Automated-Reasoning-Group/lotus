@@ -1,19 +1,18 @@
 #ifndef NPA_BIT_VECTOR_SOLVER_H
 #define NPA_BIT_VECTOR_SOLVER_H
 
-#include "Dataflow/NPA/NPA.h"
 #include "Dataflow/NPA/Domains/BitVectorDomain.h"
 #include "Dataflow/NPA/Domains/BitVectorInfo.h"
+#include "Dataflow/NPA/NPA.h"
+
 #include <unordered_map>
 
 namespace npa {
 
-enum class SolverStrategy {
-    Kleene,
-    Newton
-};
+enum class SolverStrategy { Kleene, Newton };
 
-/// Linear solver strategy for Newton iteration (TOPLAS 2016: LCFL / tensor product).
+/// Linear solver strategy for Newton iteration (TOPLAS 2016: LCFL / tensor
+/// product).
 using LinearStrategy = npa::LinearStrategy;
 
 /**
@@ -21,22 +20,21 @@ using LinearStrategy = npa::LinearStrategy;
  */
 class BitVectorSolver {
 public:
-    using ResultMap = std::unordered_map<const llvm::BasicBlock*, llvm::APInt>;
-    
-    struct Result {
-        ResultMap IN;
-        ResultMap OUT;
-        Stat stats;
-    };
+  using ResultMap = std::unordered_map<const llvm::BasicBlock *, llvm::APInt>;
 
-    /**
-     * @brief Run the analysis on a function
-     */
-    static Result run(llvm::Function &F,
-                      const BitVectorInfo &info,
-                      SolverStrategy strategy = SolverStrategy::Newton,
-                      LinearStrategy linearStrategy = LinearStrategy::Worklist,
-                      bool verbose = false);
+  struct Result {
+    ResultMap IN;
+    ResultMap OUT;
+    Stat stats;
+  };
+
+  /**
+   * @brief Run the analysis on a function
+   */
+  static Result run(llvm::Function &F, const BitVectorInfo &info,
+                    SolverStrategy strategy = SolverStrategy::Newton,
+                    LinearStrategy linearStrategy = LinearStrategy::SCC,
+                    bool verbose = false);
 };
 
 } // namespace npa

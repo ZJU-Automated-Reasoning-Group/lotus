@@ -472,24 +472,24 @@ namespace horn_verification
 		{
 
 			// Headline
-			out << headline << std::endl;
+			out << headline << '\n';
 		
 			// Positive data points
-			out << "Positive data points (" << positive_ptrs.size() << "): " << std::endl;
+			out << "Positive data points (" << positive_ptrs.size() << "):\n";
 			for (const auto & dp : positive_ptrs)
 			{
-				out << *dp << std::endl;
+				out << *dp << '\n';
 			}
 			
 			// Negative data points
-			out << "Negative data points (" << negative_ptrs.size() << "): " << std::endl;
+			out << "Negative data points (" << negative_ptrs.size() << "):\n";
 			for (const auto & dp : negative_ptrs)
 			{
-				out << *dp << std::endl;
+				out << *dp << '\n';
 			}
 			
 			// Horn constraints
-			out << "Horn constraints (" << horn_constraints.size() << "):" << std::endl;
+			out << "Horn constraints (" << horn_constraints.size() << "):\n";
 			for (const auto & clause : horn_constraints)
 			{
 				
@@ -507,7 +507,7 @@ namespace horn_verification
 				{
 					out << "(null)";
 				}
-				out << std::endl;
+				out << '\n';
 				
 			}
 			
@@ -695,9 +695,9 @@ namespace horn_verification
 		{
 		
 			/*
-			std::cout << "---------- Penalty computation (" << left_index << "-" << right_index << ") ----------" << std::endl;
-			for_each(_datapoint_ptrs.begin(), _datapoint_ptrs.end(), [](datapoint<bool> * dp){ std::cout << *dp << std::endl; });
-			for_each(_horn_constraints.begin(), _horn_constraints.end(), [](const horn_constraint<bool> & c){ std::cout << c << std::endl; });
+			std::cout << "---------- Penalty computation (" << left_index << "-" << right_index << ") ----------\n";
+			for_each(_datapoint_ptrs.begin(), _datapoint_ptrs.end(), [](datapoint<bool> * dp){ std::cout << *dp << '\n'; });
+			for_each(_horn_constraints.begin(), _horn_constraints.end(), [](const horn_constraint<bool> & c){ std::cout << c << '\n'; });
 			*/
 
 		

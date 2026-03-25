@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Optimization/PE/LLPECopyPaste.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -15,9 +14,12 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Type.h"
 
+#include "Optimization/PE/LLPECopyPaste.h"
+
 using namespace llvm;
 
-// Functions copy-and-pasted from LLVM main source, marginally preferred to trying to patch the source to export from version to version.
+// Functions copy-and-pasted from LLVM main source, marginally preferred to
+// trying to patch the source to export from version to version.
 // TODO persuade upstream to export these if possible.
 
 // Only needed to support ReadDataFromGlobal
@@ -25,8 +27,7 @@ using namespace llvm;
 /// FoldBitCast - Constant fold bitcast, symbolically evaluating it with
 /// DataLayout.  This always returns a non-null constant, but it may be a
 /// ConstantExpr if unfoldable.
-static Constant *FoldBitCast(Constant *C, Type *DestTy,
-                             const DataLayout &TD) {
+static Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &TD) {
   // Catch the obvious splat cases.
   if (C->isNullValue() && !DestTy->isX86_MMXTy())
     return Constant::getNullValue(DestTy);
@@ -39,7 +40,8 @@ static Constant *FoldBitCast(Constant *C, Type *DestTy,
     if (CDV == 0)
       return ConstantExpr::getBitCast(C, DestTy);
 
-    unsigned NumSrcElts = cast<VectorType>(CDV->getType())->getElementCount().getFixedValue();
+    unsigned NumSrcElts =
+        cast<VectorType>(CDV->getType())->getElementCount().getFixedValue();
 
     Type *SrcEltTy = cast<VectorType>(CDV->getType())->getElementType();
 
@@ -47,8 +49,8 @@ static Constant *FoldBitCast(Constant *C, Type *DestTy,
     // to simplify things.
     if (SrcEltTy->isFloatingPointTy()) {
       unsigned FPWidth = SrcEltTy->getPrimitiveSizeInBits();
-      Type *SrcIVTy =
-        VectorType::get(IntegerType::get(C->getContext(), FPWidth), NumSrcElts, false);
+      Type *SrcIVTy = VectorType::get(
+          IntegerType::get(C->getContext(), FPWidth), NumSrcElts, false);
       // Ask VMCore to do the conversion now that #elts line up.
       C = ConstantExpr::getBitCast(C, SrcIVTy);
       CDV = cast<ConstantDataVector>(C);
@@ -61,7 +63,7 @@ static Constant *FoldBitCast(Constant *C, Type *DestTy,
     for (unsigned i = 0; i != NumSrcElts; ++i) {
       Result <<= BitShift;
       if (TD.isLittleEndian())
-        Result |= CDV->getElementAsInteger(NumSrcElts-i-1);
+        Result |= CDV->getElementAsInteger(NumSrcElts - i - 1);
       else
         Result |= CDV->getElementAsInteger(i);
     }
@@ -87,7 +89,8 @@ static Constant *FoldBitCast(Constant *C, Type *DestTy,
 
   // If the element types match, VMCore can fold it.
   unsigned NumDstElt = DestVTy->getElementCount().getFixedValue();
-  unsigned NumSrcElt = cast<VectorType>(C->getType())->getElementCount().getFixedValue();
+  unsigned NumSrcElt =
+      cast<VectorType>(C->getType())->getElementCount().getFixedValue();
   if (NumDstElt == NumSrcElt)
     return ConstantExpr::getBitCast(C, DestTy);
 
@@ -107,8 +110,8 @@ static Constant *FoldBitCast(Constant *C, Type *DestTy,
   if (DstEltTy->isFloatingPointTy()) {
     // Fold to an vector of integers with same size as our FP type.
     unsigned FPWidth = DstEltTy->getPrimitiveSizeInBits();
-    Type *DestIVTy =
-      VectorType::get(IntegerType::get(C->getContext(), FPWidth), NumDstElt, false);
+    Type *DestIVTy = VectorType::get(IntegerType::get(C->getContext(), FPWidth),
+                                     NumDstElt, false);
     // Recursively handle this integer conversion, if possible.
     C = FoldBitCast(C, DestIVTy, TD);
 
@@ -120,12 +123,12 @@ static Constant *FoldBitCast(Constant *C, Type *DestTy,
   // it to integer first.
   if (SrcEltTy->isFloatingPointTy()) {
     unsigned FPWidth = SrcEltTy->getPrimitiveSizeInBits();
-    Type *SrcIVTy =
-      VectorType::get(IntegerType::get(C->getContext(), FPWidth), NumSrcElt, false);
+    Type *SrcIVTy = VectorType::get(IntegerType::get(C->getContext(), FPWidth),
+                                    NumSrcElt, false);
     // Ask VMCore to do the conversion now that #elts line up.
     C = ConstantExpr::getBitCast(C, SrcIVTy);
     // If VMCore wasn't able to fold it, bail out.
-    if (!isa<ConstantVector>(C) &&  // FIXME: Remove ConstantVector.
+    if (!isa<ConstantVector>(C) && // FIXME: Remove ConstantVector.
         !isa<ConstantDataVector>(C))
       return C;
   }
@@ -136,20 +139,20 @@ static Constant *FoldBitCast(Constant *C, Type *DestTy,
   // more elements.
   bool isLittleEndian = TD.isLittleEndian();
 
-  SmallVector<Constant*, 32> Result;
+  SmallVector<Constant *, 32> Result;
   if (NumDstElt < NumSrcElt) {
     // Handle: bitcast (<4 x i32> <i32 0, i32 1, i32 2, i32 3> to <2 x i64>)
     Constant *Zero = Constant::getNullValue(DstEltTy);
-    unsigned Ratio = NumSrcElt/NumDstElt;
+    unsigned Ratio = NumSrcElt / NumDstElt;
     unsigned SrcBitSize = SrcEltTy->getPrimitiveSizeInBits();
     unsigned SrcElt = 0;
     for (unsigned i = 0; i != NumDstElt; ++i) {
       // Build each element of the result.
       Constant *Elt = Zero;
-      unsigned ShiftAmt = isLittleEndian ? 0 : SrcBitSize*(Ratio-1);
+      unsigned ShiftAmt = isLittleEndian ? 0 : SrcBitSize * (Ratio - 1);
       for (unsigned j = 0; j != Ratio; ++j) {
-        Constant *Src =dyn_cast<ConstantInt>(C->getAggregateElement(SrcElt++));
-        if (!Src)  // Reject constantexpr elements.
+        Constant *Src = dyn_cast<ConstantInt>(C->getAggregateElement(SrcElt++));
+        if (!Src) // Reject constantexpr elements.
           return ConstantExpr::getBitCast(C, DestTy);
 
         // Zero extend the element to the right size.
@@ -169,21 +172,21 @@ static Constant *FoldBitCast(Constant *C, Type *DestTy,
   }
 
   // Handle: bitcast (<2 x i64> <i64 0, i64 1> to <4 x i32>)
-  unsigned Ratio = NumDstElt/NumSrcElt;
+  unsigned Ratio = NumDstElt / NumSrcElt;
   unsigned DstBitSize = DstEltTy->getPrimitiveSizeInBits();
 
   // Loop over each source value, expanding into multiple results.
   for (unsigned i = 0; i != NumSrcElt; ++i) {
     Constant *Src = dyn_cast<ConstantInt>(C->getAggregateElement(i));
-    if (!Src)  // Reject constantexpr elements.
+    if (!Src) // Reject constantexpr elements.
       return ConstantExpr::getBitCast(C, DestTy);
 
-    unsigned ShiftAmt = isLittleEndian ? 0 : DstBitSize*(Ratio-1);
+    unsigned ShiftAmt = isLittleEndian ? 0 : DstBitSize * (Ratio - 1);
     for (unsigned j = 0; j != Ratio; ++j) {
       // Shift the piece of the value into the right place, depending on
       // endianness.
-      Constant *Elt = ConstantExpr::getLShr(Src,
-                                  ConstantInt::get(Src->getType(), ShiftAmt));
+      Constant *Elt = ConstantExpr::getLShr(
+          Src, ConstantInt::get(Src->getType(), ShiftAmt));
       ShiftAmt += isLittleEndian ? DstBitSize : -DstBitSize;
 
       // Truncate and remember this piece.
@@ -200,8 +203,8 @@ static Constant *FoldBitCast(Constant *C, Type *DestTy,
 /// the CurPtr buffer.  TD is the target data.
 /// Taken from llvm-3.2 lib/Analysis/ConstantFolding.cpp
 bool llvm::XXXReadDataFromGlobal(Constant *C, uint64_t ByteOffset,
-				 unsigned char *CurPtr, unsigned BytesLeft,
-				 const DataLayout &TD) {
+                                 unsigned char *CurPtr, unsigned BytesLeft,
+                                 const DataLayout &TD) {
   assert(ByteOffset <= TD.getTypeAllocSize(C->getType()) &&
          "Out of range access");
 
@@ -211,12 +214,11 @@ bool llvm::XXXReadDataFromGlobal(Constant *C, uint64_t ByteOffset,
     return true;
 
   if (ConstantInt *CI = dyn_cast<ConstantInt>(C)) {
-    if (CI->getBitWidth() > 64 ||
-        (CI->getBitWidth() & 7) != 0)
+    if (CI->getBitWidth() > 64 || (CI->getBitWidth() & 7) != 0)
       return false;
 
     uint64_t Val = CI->getZExtValue();
-    unsigned IntBytes = unsigned(CI->getBitWidth()/8);
+    unsigned IntBytes = unsigned(CI->getBitWidth() / 8);
 
     for (unsigned i = 0; i != BytesLeft && ByteOffset != IntBytes; ++i) {
       int n = ByteOffset;
@@ -233,7 +235,7 @@ bool llvm::XXXReadDataFromGlobal(Constant *C, uint64_t ByteOffset,
       C = FoldBitCast(C, Type::getInt64Ty(C->getContext()), TD);
       return XXXReadDataFromGlobal(C, ByteOffset, CurPtr, BytesLeft, TD);
     }
-    if (CFP->getType()->isFloatTy()){
+    if (CFP->getType()->isFloatTy()) {
       C = FoldBitCast(C, Type::getInt32Ty(C->getContext()), TD);
       return XXXReadDataFromGlobal(C, ByteOffset, CurPtr, BytesLeft, TD);
     }
@@ -253,7 +255,7 @@ bool llvm::XXXReadDataFromGlobal(Constant *C, uint64_t ByteOffset,
 
       if (ByteOffset < EltSize &&
           !XXXReadDataFromGlobal(CS->getOperand(Index), ByteOffset, CurPtr,
-                              BytesLeft, TD))
+                                 BytesLeft, TD))
         return false;
 
       ++Index;
@@ -265,12 +267,12 @@ bool llvm::XXXReadDataFromGlobal(Constant *C, uint64_t ByteOffset,
       // If we read all of the bytes we needed from this element we're done.
       uint64_t NextEltOffset = SL->getElementOffset(Index);
 
-      if (BytesLeft <= NextEltOffset-CurEltOffset-ByteOffset)
+      if (BytesLeft <= NextEltOffset - CurEltOffset - ByteOffset)
         return true;
 
       // Move to the next element of the struct.
-      CurPtr += NextEltOffset-CurEltOffset-ByteOffset;
-      BytesLeft -= NextEltOffset-CurEltOffset-ByteOffset;
+      CurPtr += NextEltOffset - CurEltOffset - ByteOffset;
+      BytesLeft -= NextEltOffset - CurEltOffset - ByteOffset;
       ByteOffset = 0;
       CurEltOffset = NextEltOffset;
     }
@@ -289,11 +291,12 @@ bool llvm::XXXReadDataFromGlobal(Constant *C, uint64_t ByteOffset,
     if (ArrayType *AT = dyn_cast<ArrayType>(C->getType()))
       NumElts = AT->getNumElements();
     else
-      NumElts = cast<VectorType>(C->getType())->getElementCount().getFixedValue();
+      NumElts =
+          cast<VectorType>(C->getType())->getElementCount().getFixedValue();
 
     for (; Index != NumElts; ++Index) {
       if (!XXXReadDataFromGlobal(C->getAggregateElement(Index), Offset, CurPtr,
-                              BytesLeft, TD))
+                                 BytesLeft, TD))
         return false;
 
       uint64_t BytesWritten = EltSize - Offset;
@@ -312,7 +315,7 @@ bool llvm::XXXReadDataFromGlobal(Constant *C, uint64_t ByteOffset,
     if (CE->getOpcode() == Instruction::IntToPtr &&
         CE->getOperand(0)->getType() == TD.getIntPtrType(CE->getContext()))
       return XXXReadDataFromGlobal(CE->getOperand(0), ByteOffset, CurPtr,
-                                BytesLeft, TD);
+                                   BytesLeft, TD);
   }
 
   // Otherwise, unknown initializer type.
@@ -321,11 +324,13 @@ bool llvm::XXXReadDataFromGlobal(Constant *C, uint64_t ByteOffset,
 
 // Pinched from Transforms/InstCombine/InstructionCombining.cpp
 
-Type* llvm::XXXFindElementAtOffset(Type *Ty, int64_t Offset,
-				   SmallVectorImpl<Value*> &NewIndices,
-				   const DataLayout* TD) {
-  if (!TD) return 0;
-  if (!Ty->isSized()) return 0;
+Type *llvm::XXXFindElementAtOffset(Type *Ty, int64_t Offset,
+                                   SmallVectorImpl<Value *> &NewIndices,
+                                   const DataLayout *TD) {
+  if (!TD)
+    return 0;
+  if (!Ty->isSized())
+    return 0;
 
   // Start with the index over the outer type.  Note that the type size
   // might be zero (even if the offset isn't zero) if the indexed type
@@ -333,8 +338,8 @@ Type* llvm::XXXFindElementAtOffset(Type *Ty, int64_t Offset,
   Type *IntPtrTy = TD->getIntPtrType(Ty->getContext());
   int64_t FirstIdx = 0;
   if (int64_t TySize = TD->getTypeAllocSize(Ty)) {
-    FirstIdx = Offset/TySize;
-    Offset -= FirstIdx*TySize;
+    FirstIdx = Offset / TySize;
+    Offset -= FirstIdx * TySize;
 
     // Handle hosts where % returns negative instead of values [0..TySize).
     if (Offset < 0) {
@@ -350,7 +355,7 @@ Type* llvm::XXXFindElementAtOffset(Type *Ty, int64_t Offset,
   // Index into the types.  If we fail, set OrigBase to null.
   while (Offset) {
     // Indexing into tail padding between struct/array elements.
-    if (uint64_t(Offset*8) >= TD->getTypeSizeInBits(Ty))
+    if (uint64_t(Offset * 8) >= TD->getTypeSizeInBits(Ty))
       return 0;
 
     if (StructType *STy = dyn_cast<StructType>(Ty)) {
@@ -359,15 +364,15 @@ Type* llvm::XXXFindElementAtOffset(Type *Ty, int64_t Offset,
              "Offset must stay within the indexed type");
 
       unsigned Elt = SL->getElementContainingOffset(Offset);
-      NewIndices.push_back(ConstantInt::get(Type::getInt32Ty(Ty->getContext()),
-                                            Elt));
+      NewIndices.push_back(
+          ConstantInt::get(Type::getInt32Ty(Ty->getContext()), Elt));
 
       Offset -= SL->getElementOffset(Elt);
       Ty = STy->getElementType(Elt);
     } else if (ArrayType *AT = dyn_cast<ArrayType>(Ty)) {
       uint64_t EltSize = TD->getTypeAllocSize(AT->getElementType());
       assert(EltSize && "Cannot index into a zero-sized array");
-      NewIndices.push_back(ConstantInt::get(IntPtrTy,Offset/EltSize));
+      NewIndices.push_back(ConstantInt::get(IntPtrTy, Offset / EltSize));
       Offset %= EltSize;
       Ty = AT->getElementType();
     } else {
@@ -377,5 +382,4 @@ Type* llvm::XXXFindElementAtOffset(Type *Ty, int64_t Offset,
   }
 
   return Ty;
-
 }

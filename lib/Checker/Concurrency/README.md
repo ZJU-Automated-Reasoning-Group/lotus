@@ -6,4 +6,6 @@
 - DataRace
 - Deadlock
 - LockMismatch
+- OpenMP
+- MPI
 

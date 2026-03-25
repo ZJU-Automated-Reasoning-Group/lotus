@@ -3,8 +3,8 @@
 
 #include "Alias/seadsa/Graph.hh"
 
+#include <map>
 #include <unordered_map>
-#include <boost/container/flat_map.hpp>
 
 namespace seadsa
 {
@@ -32,8 +32,7 @@ namespace seadsa
   {
     /// the simulation relation: a node is simulated by a cell
     typedef std::unordered_map<const Node*,
-			       boost::container::flat_map<Node*,
-							  Field> > rel_type;
+			       std::map<Node*, Field> > rel_type;
     rel_type m_sim;
     
   public:

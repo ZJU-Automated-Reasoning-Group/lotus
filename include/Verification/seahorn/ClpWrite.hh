@@ -1,9 +1,9 @@
 #ifndef _HORN_CLP_WRITE__HH_
 #define _HORN_CLP_WRITE__HH_
 
-#include <vector>
 #include "seahorn/HornClauseDB.hh"
 #include "seahorn/Expr/Expr.hh"
+#include <vector>
 
 namespace seahorn
 {
@@ -54,7 +54,7 @@ namespace seahorn
 
     string toString () const;
   };
-}
+} // namespace seahorn
 
 #endif 
 

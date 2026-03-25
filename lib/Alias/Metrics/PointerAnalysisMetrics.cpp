@@ -1,17 +1,21 @@
 /**
  * @file PointerAnalysisMetrics.cpp
- * @brief Collect pointer analysis metrics from AliasAnalysisWrapper for comparison
+ * @brief Collect pointer analysis metrics from AliasAnalysisWrapper for
+ * comparison
  */
 
-#include "Alias/AliasAnalysisWrapper/AliasAnalysisWrapper.h"
 #include "Alias/Metrics/PointerAnalysisMetrics.h"
+
+#include "Alias/AliasAnalysisWrapper/AliasAnalysisWrapper.h"
+
+#include <algorithm>
+#include <set>
+#include <vector>
+
 #include <llvm/Analysis/AliasAnalysis.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Operator.h>
-#include <algorithm>
-#include <set>
-#include <vector>
 
 using namespace llvm;
 using namespace lotus;
@@ -69,8 +73,8 @@ void getPointerOperands(const Instruction &I, std::vector<const Value *> &out) {
 } // namespace
 
 void lotus::collectMetricsFromWrapper(AliasAnalysisWrapper &aa, Module &M,
-                                     PointerAnalysisMetrics &out,
-                                     CollectMetricsOptions options) {
+                                      PointerAnalysisMetrics &out,
+                                      CollectMetricsOptions options) {
   out = PointerAnalysisMetrics{};
 
   if (!aa.isInitialized())

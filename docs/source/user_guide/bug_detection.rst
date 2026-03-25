@@ -9,9 +9,8 @@ Overview
 Lotus includes multiple bug detection tools:
 
 1. **Kint**: Integer-related bugs (overflow, division by zero, bad shift, array bounds)
-2. **GVFA**: Memory safety bugs (null pointer dereference, use-after-free)
-3. **Taint Analysis**: Information flow and injection vulnerabilities
-4. **Concurrency Checker**: Race conditions and deadlocks
+2. **Taint Analysis**: Information flow and injection vulnerabilities
+3. **Concurrency Checker**: Race conditions, deadlocks, OpenMP misuse, and MPI protocol bugs
 
 Bug Categories
 --------------
@@ -262,163 +261,7 @@ Example 3: Division by Zero
        return total / count;
    }
 
-Tool 2: GVFA - Memory Safety Analysis
---------------------------------------
-
-Global Value Flow Analysis detects memory safety violations through interprocedural data flow tracking.
-
-Capabilities
-~~~~~~~~~~~~
-
-1. **Null Pointer Dereference**: Find potential NPDs
-2. **Use-After-Free**: Detect UAF vulnerabilities
-3. **Taint Flow**: Track information flow
-4. **Context-Sensitive Analysis**: Precise call-site tracking
-
-Basic Usage
-~~~~~~~~~~~
-
-.. code-block:: bash
-
-   # Null pointer detection
-   ./build/bin/lotus-gvfa -vuln-type=nullpointer program.bc
-   
-   # Use-after-free detection
-   ./build/bin/lotus-gvfa -vuln-type=uaf program.bc
-   
-   # With CFL reachability (more precise)
-   ./build/bin/lotus-gvfa -test-cfl-reachability -verbose program.bc
-
-Example 1: Null Pointer Dereference
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Vulnerable Code** (``null_deref.c``):
-
-.. code-block:: c
-
-   #include <stdlib.h>
-   
-   typedef struct {
-       int id;
-       char *name;
-   } Record;
-   
-   Record *find_record(int id) {
-       if (id < 0) {
-           return NULL;  // Error case
-       }
-       Record *rec = malloc(sizeof(Record));
-       rec->id = id;
-       rec->name = "Default";
-       return rec;
-   }
-   
-   void print_record(Record *rec) {
-       printf("ID: %d, Name: %s\n", rec->id, rec->name);  // No null check
-   }
-   
-   int main() {
-       Record *rec1 = find_record(10);
-       print_record(rec1);  // OK if malloc succeeded
-       
-       Record *rec2 = find_record(-1);
-       print_record(rec2);  // Bug: rec2 is NULL
-       
-       return 0;
-   }
-
-**Detection**:
-
-.. code-block:: bash
-
-   clang -emit-llvm -c -g null_deref.c -o null_deref.bc
-   ./build/bin/lotus-gvfa -vuln-type=nullpointer -verbose null_deref.bc
-
-**Expected Output**:
-
-.. code-block:: text
-
-   [Null Pointer Dereference]
-   Function: print_record
-   Location: null_deref.c:19
-   Pointer: rec
-   Null source: find_record returns NULL when id < 0
-   Call path: main (line 27) -> print_record (line 19)
-   
-   Dataflow:
-   1. find_record(-1) returns NULL (line 27)
-   2. rec2 = NULL (line 27)
-   3. print_record(rec2) dereferences rec (line 19)
-
-**Fix**:
-
-.. code-block:: c
-
-   void print_record(Record *rec) {
-       if (!rec) {
-           printf("Error: NULL record\n");
-           return;
-       }
-       printf("ID: %d, Name: %s\n", rec->id, rec->name);
-   }
-
-Example 2: Use-After-Free
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Vulnerable Code** (``uaf.c``):
-
-.. code-block:: c
-
-   #include <stdlib.h>
-   
-   int *global_ptr = NULL;
-   
-   void allocate() {
-       global_ptr = malloc(sizeof(int));
-       *global_ptr = 42;
-   }
-   
-   void deallocate() {
-       free(global_ptr);
-       // Should set to NULL but doesn't
-   }
-   
-   void use_pointer() {
-       *global_ptr = 100;  // Bug: may be freed
-   }
-   
-   int main() {
-       allocate();
-       deallocate();
-       use_pointer();  // Bug: use after free
-       return 0;
-   }
-
-**Detection**:
-
-.. code-block:: bash
-
-   clang -emit-llvm -c -g uaf.c -o uaf.bc
-   ./build/bin/lotus-gvfa -vuln-type=uaf -verbose uaf.bc
-
-**Fix**:
-
-.. code-block:: c
-
-   void deallocate() {
-       if (global_ptr) {
-           free(global_ptr);
-           global_ptr = NULL;  // Prevent use-after-free
-       }
-   }
-   
-   void use_pointer() {
-       if (global_ptr) {  // Check before use
-           *global_ptr = 100;
-       }
-   }
-
-Tool 3: Taint Analysis
+Tool 2: Taint Analysis
 -----------------------
 
 Interprocedural taint analysis using the IFDS framework to track information flow.
@@ -569,7 +412,7 @@ Example 2: SQL Injection
        sqlite3_finalize(stmt);
    }
 
-Tool 4: Concurrency Checker
+Tool 3: Concurrency Checker
 ----------------------------
 
 Detects concurrency bugs in multi-threaded programs.
@@ -581,6 +424,8 @@ Capabilities
 2. **Deadlock Detection**: Lock ordering issues
 3. **Atomicity Violations**: Non-atomic operation sequences
 4. **Lock/Unlock Pairing**: Mismatched lock operations
+5. **OpenMP Checks**: Taskgroup/atomic region mismatches and partial task synchronization
+6. **MPI Checks**: Request lifecycle bugs, collective mismatches, blocking deadlocks, and RMA issues
 
 Basic Usage
 ~~~~~~~~~~~
@@ -589,6 +434,32 @@ Basic Usage
 
    ./build/bin/lotus-concur program.bc
    ./build/bin/lotus-concur -verbose program.bc
+   ./build/bin/lotus-concur --checks=openmp,mpi program.bc
+
+OpenMP and MPI Examples
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The concurrency checker also includes dedicated runtime-aware checks for
+OpenMP and MPI programs.
+
+**OpenMP examples**:
+
+* unmatched ``__kmpc_taskgroup`` / ``__kmpc_end_taskgroup`` pairs
+* unmatched ``__kmpc_atomic_start`` / ``__kmpc_atomic_end`` pairs
+* selective ``__kmpc_omp_wait_deps`` synchronization that may not fully order sibling tasks
+
+**MPI examples**:
+
+* ``MPI_Isend`` / ``MPI_Irecv`` requests that are never completed
+* mismatched or rank-conditional collectives
+* simple blocking send/recv deadlock cycles
+* unsynchronized RMA operations or leaked windows
+
+For MPI/OpenMP-heavy codebases, a useful first pass is:
+
+.. code-block:: bash
+
+   ./build/bin/lotus-concur --checks=openmp,mpi --report-json=parallel.json program.bc
 
 Example: Data Race
 ~~~~~~~~~~~~~~~~~~
@@ -680,7 +551,6 @@ Best Practices
 2. **Use Appropriate Checkers**:
 
    - Integer bugs → Kint
-   - Memory safety → GVFA
    - Information flow → Taint analysis
    - Concurrency → Concurrency checker
 
@@ -746,7 +616,6 @@ CI/CD Pipeline
    
    # Run checkers
    ./lotus-kint -check-all source.ll > kint_results.txt
-   ./lotus-gvfa -vuln-type=nullpointer source.bc > gvfa_results.txt
    ./lotus-taint source.bc > taint_results.txt
    
    # Check for bugs
@@ -767,4 +636,3 @@ See Also
 - :doc:`troubleshooting` - Common issues
 - :doc:`../tools/checker` - Detailed tool documentation
 - :doc:`../developer/api_reference` - Programmatic usage
-

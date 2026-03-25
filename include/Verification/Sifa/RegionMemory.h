@@ -16,12 +16,12 @@
 #ifndef LOTUS_VERIFICATION_SIFA_REGIONMEMORY_H
 #define LOTUS_VERIFICATION_SIFA_REGIONMEMORY_H
 
-#include "Alias/AliasAnalysisWrapper/AliasAnalysisWrapper.h"
-
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Value.h"
+
+#include "Alias/AliasAnalysisWrapper/AliasAnalysisWrapper.h"
 
 #include <vector>
 
@@ -30,7 +30,8 @@ namespace sifa {
 
 /// Set of abstract regions: allocas in the function + globals in the module.
 /// Region id = const Value* (AllocaInst or GlobalVariable).
-inline std::vector<const llvm::Value *> getRegionsForFunction(const llvm::Function &F) {
+inline std::vector<const llvm::Value *>
+getRegionsForFunction(const llvm::Function &F) {
   std::vector<const llvm::Value *> regions;
   for (auto &I : F.getEntryBlock())
     if (llvm::isa<llvm::AllocaInst>(&I))

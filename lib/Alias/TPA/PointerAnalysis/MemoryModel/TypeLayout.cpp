@@ -1,7 +1,7 @@
 // Implementation of TypeLayout.
 //
-// TypeLayout aggregates the structural information of a type for analysis purposes.
-// It combines:
+// TypeLayout aggregates the structural information of a type for analysis
+// purposes. It combines:
 // 1. Size: Total size in bytes.
 // 2. ArrayLayout: Where the array regions are.
 // 3. PointerLayout: Where the pointers are.
@@ -41,12 +41,13 @@ const TypeLayout *TypeLayout::getArrayTypeLayout(const TypeLayout *elemLayout,
   auto arrayTripleList = ArrayLayout::ArrayTripleList();
   arrayTripleList.reserve(elemArrayLayout->size() + 1);
   arrayTripleList.push_back({0, newSize, elemSize});
-  
-  // Inherit existing array structures from the element (not strictly necessary if we
-  // collapse everything to the new top-level array, but good for nested precision?)
+
+  // Inherit existing array structures from the element (not strictly necessary
+  // if we collapse everything to the new top-level array, but good for nested
+  // precision?)
   for (auto const &triple : *elemArrayLayout)
     arrayTripleList.push_back(triple);
-    
+
   const auto *const newArrayLayout =
       ArrayLayout::getLayout(std::move(arrayTripleList));
 

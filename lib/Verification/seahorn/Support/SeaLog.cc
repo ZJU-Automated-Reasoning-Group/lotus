@@ -24,4 +24,4 @@ warn_ostream::~warn_ostream() {
   m_os << "\n";
   resetColor();
 }
-}
+} // namespace seahorn

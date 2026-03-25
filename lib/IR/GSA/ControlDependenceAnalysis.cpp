@@ -42,6 +42,7 @@ class ControlDependenceAnalysisImpl : public ControlDependenceAnalysis {
   mutable DenseMap<const BasicBlock *, SparseBitVector<>> m_reach;
   // Maps a basic block to the blocks it is control dependent on.
   DenseMap<const BasicBlock *, SmallVector<BasicBlock *, 4>> m_cdInfo;
+  SmallVector<BasicBlock *, 0> m_empty;
 
 public:
   ControlDependenceAnalysisImpl(Function &f, PostDominatorTree &pdt)
@@ -50,23 +51,33 @@ public:
     calculate(pdt);
   }
 
+  bool isTracked(const BasicBlock &BB) const override {
+    return m_BBToIdx.count(&BB) > 0;
+  }
+
   ArrayRef<BasicBlock *> getCDBlocks(BasicBlock *BB) const override {
+    if (BB == nullptr || !isTracked(*BB))
+      return m_empty;
     auto it = m_cdInfo.find(BB);
-    assert(it != m_cdInfo.end());
-    return it->second;
+    return it != m_cdInfo.end() ? ArrayRef<BasicBlock *>(it->second) : m_empty;
   }
 
   bool isReachable(BasicBlock *Src, BasicBlock *Dst) const override {
+    // Unreachable blocks (absent from m_BBToIdx / m_reach because post_order
+    // never visited them) can never be the source of a CFG path, and are
+    // never the destination of a path from a reachable block.
     auto reachIt = m_reach.find(Src);
-    assert(reachIt != m_reach.end());
+    if (reachIt == m_reach.end())
+      return false; // Src not reachable from entry
     auto dstIdxIt = m_BBToIdx.find(Dst);
-    assert(dstIdxIt != m_BBToIdx.end());
+    if (dstIdxIt == m_BBToIdx.end())
+      return false; // Dst not reachable from entry; Src cannot reach it
     return reachIt->second.test(dstIdxIt->second);
   }
 
   unsigned getBBTopoIdx(BasicBlock *BB) const override {
     auto it = m_BBToIdx.find(BB);
-    assert(it != m_BBToIdx.end());
+    assert(it != m_BBToIdx.end() && "Topology queried for untracked block");
     // m_BBToIdx supplies post-order numbers; reverse gives topo order.
     return m_BBToIdx.size() - it->second;
   }
@@ -116,9 +127,12 @@ void ControlDependenceAnalysisImpl::calculate(PostDominatorTree &PDT) {
       for (const BasicBlock *BBPtr : It->second) {
         Vec.push_back(const_cast<BasicBlock *>(BBPtr));
       }
+      // Use lookup() instead of operator[] to avoid silently inserting a
+      // default 0 entry for any block not yet present in the map, which
+      // would corrupt subsequent index lookups.
       std::sort(Vec.begin(), Vec.end(),
                 [this](const BasicBlock *first, const BasicBlock *second) {
-                  return m_BBToIdx[first] < m_BBToIdx[second];
+                  return m_BBToIdx.lookup(first) < m_BBToIdx.lookup(second);
                 });
       Vec.erase(std::unique(Vec.begin(), Vec.end()), Vec.end());
     }
@@ -127,24 +141,28 @@ void ControlDependenceAnalysisImpl::calculate(PostDominatorTree &PDT) {
 
 void ControlDependenceAnalysisImpl::initReach() {
   m_postOrderBlocks.reserve(m_function.size());
-  DenseMap<BasicBlock *, unsigned> poNums;
-  poNums.reserve(m_function.size());
   unsigned num = 0;
   for (BasicBlock *BB : llvm::post_order(&m_function.getEntryBlock())) {
     m_postOrderBlocks.push_back(BB);
-    poNums[BB] = num;
     m_BBToIdx[BB] = num;
     m_reach[BB].set(num);
     ++num;
   }
 
   // Cache predecessors to avoid linear walks over terminators.
+  // IMPORTANT: iterate only over *reachable* blocks (m_postOrderBlocks),
+  // not over m_function.  Unreachable blocks are absent from m_BBToIdx; if
+  // we used m_function here, DenseMap::operator[] would silently insert a
+  // default index (0) for any unmapped successor, corrupting the index map
+  // and producing wrong reachability results for all blocks with index 0.
   std::vector<DenseSet<BasicBlock *>> inverseSuccessors(m_BBToIdx.size());
 
-  for (auto &BB : m_function)
-    for (auto *succ : successors(&BB)) {
-      m_reach[&BB].set(m_BBToIdx[succ]);
-      inverseSuccessors[m_BBToIdx[succ]].insert(&BB);
+  for (auto *BB : m_postOrderBlocks)
+    for (auto *succ : successors(BB)) {
+      // All successors of reachable blocks are themselves reachable and
+      // therefore present in m_BBToIdx — no bounds check needed.
+      m_reach[BB].set(m_BBToIdx[succ]);
+      inverseSuccessors[m_BBToIdx[succ]].insert(const_cast<BasicBlock *>(BB));
     }
 
   // Propagate reachability backwards until a fixed point.

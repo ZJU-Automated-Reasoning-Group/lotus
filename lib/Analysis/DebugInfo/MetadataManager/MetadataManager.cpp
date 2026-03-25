@@ -48,8 +48,60 @@ namespace noelle {
 MetadataManager::MetadataManager(Module &M) : program{M} {
 
   /*
-   * Collect variable metadata.
+   * Collect variable metadata from llvm.var.annotation (pre-LLVM 14 style)
+   * and llvm.ptr.annotation (LLVM 14+ style).
+   *
+   * Both intrinsics have the annotation string as their second operand,
+   * encoded as a GEP into a global constant string.
+   *
+   * We also strip all pointer casts (BitCastInst, AddrSpaceCastInst) when
+   * resolving the annotated variable, not just a single BitCastInst.
    */
+  auto extractAnnotationString = [](CallInst *call,
+                                    unsigned annotOperandIdx) -> std::string {
+    if (annotOperandIdx >= call->arg_size()) {
+      return "";
+    }
+    // The annotation operand may be a GEP or a direct GlobalVariable.
+    Value *annotOp = call->getArgOperand(annotOperandIdx);
+    GlobalVariable *annoteStr = nullptr;
+    if (auto *gep = dyn_cast<GetElementPtrInst>(annotOp)) {
+      annoteStr = dyn_cast<GlobalVariable>(gep->getOperand(0));
+    } else if (auto *ce = dyn_cast<ConstantExpr>(annotOp)) {
+      // Constant GEP folded at compile time
+      if (ce->getOpcode() == Instruction::GetElementPtr) {
+        annoteStr = dyn_cast<GlobalVariable>(ce->getOperand(0));
+      }
+    } else {
+      annoteStr = dyn_cast<GlobalVariable>(annotOp);
+    }
+    if (!annoteStr) {
+      return "";
+    }
+    auto *data = dyn_cast<ConstantDataSequential>(annoteStr->getInitializer());
+    if (!data || !data->isString()) {
+      return "";
+    }
+    return data->getAsString().str();
+  };
+
+  // Strip all pointer casts to reach the underlying alloca.
+  auto stripCastsToAlloca = [](Value *V) -> AllocaInst * {
+    while (V) {
+      if (auto *AI = dyn_cast<AllocaInst>(V)) {
+        return AI;
+      }
+      if (auto *BC = dyn_cast<BitCastInst>(V)) {
+        V = BC->getOperand(0);
+      } else if (auto *AC = dyn_cast<AddrSpaceCastInst>(V)) {
+        V = AC->getOperand(0);
+      } else {
+        break;
+      }
+    }
+    return nullptr;
+  };
+
   for (auto &F : M) {
     for (auto &inst : instructions(F)) {
       auto *call = dyn_cast<CallInst>(&inst);
@@ -60,38 +112,35 @@ MetadataManager::MetadataManager(Module &M) : program{M} {
       if (callee == nullptr) {
         continue;
       }
-      if (callee->getName().compare("llvm.var.annotation") != 0) {
-        continue;
-      }
-      auto *ptr = dyn_cast<Instruction>(call->getOperand(0));
-      if (ptr == nullptr) {
-        continue;
-      }
-      if (auto *aliasPtr = dyn_cast<BitCastInst>(ptr)) {
-        auto *origPtr = aliasPtr->getOperand(0);
-        ptr = dyn_cast<Instruction>(origPtr);
-      }
-      if (ptr == nullptr) {
-        continue;
-      }
-      auto *var = dyn_cast<AllocaInst>(ptr);
-      if (var == nullptr) {
-        continue;
-      }
-      auto *gep = dyn_cast<GetElementPtrInst>(call->getOperand(1));
-      if (gep != nullptr) {
-        auto *annoteStr = dyn_cast<GlobalVariable>(gep->getOperand(0));
-        if (annoteStr == nullptr) {
+
+      StringRef calleeName = callee->getName();
+
+      // Handle llvm.var.annotation (operand 0 = ptr, operand 1 = annotation)
+      if (calleeName == "llvm.var.annotation") {
+        auto *var = stripCastsToAlloca(call->getArgOperand(0));
+        if (!var) {
           continue;
         }
-        auto *data =
-            dyn_cast<ConstantDataSequential>(annoteStr->getInitializer());
-        if (data == nullptr) {
+        std::string annot = extractAnnotationString(call, 1);
+        if (!annot.empty()) {
+          this->varMetadata[var].insert(annot);
+        }
+        continue;
+      }
+
+      // Handle llvm.ptr.annotation.* (LLVM 14+ replacement for var.annotation)
+      // Signature: i8* @llvm.ptr.annotation.p0i8(i8* %ptr, i8* %annot, ...)
+      if (calleeName.startswith("llvm.ptr.annotation")) {
+        // The first operand is the pointer being annotated; strip casts.
+        auto *var = stripCastsToAlloca(call->getArgOperand(0));
+        if (!var) {
           continue;
         }
-        if (data->isString()) {
-          this->varMetadata[var].insert(data->getAsString().str());
+        std::string annot = extractAnnotationString(call, 1);
+        if (!annot.empty()) {
+          this->varMetadata[var].insert(annot);
         }
+        continue;
       }
     }
   }
@@ -277,16 +326,21 @@ void MetadataManager::deleteMetadata(LoopStructure *loop,
   }
 
   /*
-   * Delete the metadata
+   * Delete the metadata from the IR.
    */
   headerTerm->setMetadata(metadataName, nullptr);
 
   /*
-   * Remove the metadata from our mapping.
+   * Remove the metadata from our mapping (use reference, not copy).
    */
-  auto loopEntries = this->metadata[loop];
-  delete loopEntries[metadataName];
-  loopEntries.erase(metadataName);
+  auto loopIt = this->metadata.find(loop);
+  if (loopIt != this->metadata.end()) {
+    auto entryIt = loopIt->second.find(metadataName);
+    if (entryIt != loopIt->second.end()) {
+      delete entryIt->second;
+      loopIt->second.erase(entryIt);
+    }
+  }
 
   return;
 }
@@ -349,10 +403,19 @@ void MetadataManager::addMetadata(LoopStructure *loop,
   auto metaString = cast<MDString>(metaNode->getOperand(0))->getString();
 
   /*
-   * Add the metadata.
+   * Add the metadata to the actual map (use reference, not a copy).
+   * If an entry already exists for this key, delete the old one first to
+   * avoid a memory leak.
    */
-  auto loopEntries = this->metadata[loop];
-  loopEntries[metadataName] = new MetadataEntry(metadataName, metaString.str());
+  auto &loopEntries = this->metadata[loop];
+  auto it = loopEntries.find(metadataName);
+  if (it != loopEntries.end()) {
+    delete it->second;
+    it->second = new MetadataEntry(metadataName, metaString.str());
+  } else {
+    loopEntries[metadataName] =
+        new MetadataEntry(metadataName, metaString.str());
+  }
 
   return;
 }

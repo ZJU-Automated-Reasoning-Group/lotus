@@ -144,13 +144,13 @@ bool UnifyAssumesPass::runOnFunction(Function &F) {
   B.CreateStore(B.getTrue(), assumeFlag);
 
   // -- process all assumes
-  for (auto ci : assumes) {
+  for (auto *ci : assumes) {
     processCallInst(*ci, *assumeFlag);
   }
 
   // -- delete all assumes or
   // -- distinguish assume by metadata
-  for (auto ci : assumes) {
+  for (auto *ci : assumes) {
     if (!RMUnifiedAssumes)
       markAssumeAsUnified(*ci);
     else
@@ -158,7 +158,7 @@ bool UnifyAssumesPass::runOnFunction(Function &F) {
   }
 
   // -- process all asserts
-  for (auto ci : asserts) {
+  for (auto *ci : asserts) {
     processAssertInst(*ci, *assumeFlag);
   }
 
@@ -210,7 +210,7 @@ void UnifyAssumesPass::processAssertInst(CallInst &CI, AllocaInst &flag) {
       }
     }
   }
-  auto ante = B.CreateLoad(flag.getAllocatedType(), &flag);
+  auto *ante = B.CreateLoad(flag.getAllocatedType(), &flag);
   // negate condition if verifier.assert.not seen
   bool isNot = m_SBI->getSeaBuiltinOp(CI) == seahorn::SeaBuiltinsOp::ASSERT_NOT;
   if (isNot) {

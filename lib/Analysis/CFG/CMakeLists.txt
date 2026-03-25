@@ -1,9 +1,10 @@
 set(CanaryCFG_SOURCES
   CFGReachability.cpp
+  CodeMetrics.cpp
   Dominator.cpp
   DominatorForest.cpp
   DominatorNode.cpp
-  SotoTopo.cpp
+  SortTopo.cpp
   TopologicalOrder.cpp
 )
 add_library(CanaryCFG STATIC ${CanaryCFG_SOURCES})

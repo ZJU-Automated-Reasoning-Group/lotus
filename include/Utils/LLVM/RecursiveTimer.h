@@ -19,74 +19,85 @@
 #ifndef SUPPORT_RECURSIVETIMER_H
 #define SUPPORT_RECURSIVETIMER_H
 
-#include <llvm/Pass.h>
-#include <llvm/Support/raw_os_ostream.h>
-
 #include <chrono>
 #include <string>
 #include <utility>
 
+#include <llvm/Pass.h>
+#include <llvm/Support/raw_os_ostream.h>
+
 using namespace llvm;
 
-class 
-RecursiveTimer {
+class RecursiveTimer {
 private:
-    std::chrono::steady_clock::time_point Begin;
-    std::string Prefix;
+  std::chrono::steady_clock::time_point Begin;
+  std::string Prefix;
+  bool Active = false;
+  static bool Enabled;
 
 public:
-    /// the prefix should be in a style of "Doing sth" or "Sth"
-    /// @{
-    explicit RecursiveTimer(const char *Prefix);
+  /// the prefix should be in a style of "Doing sth" or "Sth"
+  /// @{
+  explicit RecursiveTimer(const char *Prefix);
 
-    explicit RecursiveTimer(const std::string &Prefix);
-    /// @}
+  explicit RecursiveTimer(const std::string &Prefix);
+  /// @}
 
-    /// end of the recorder
-    ~RecursiveTimer();
+  static void setEnabled(bool Enable) { Enabled = Enable; }
+  static bool isEnabled() { return Enabled; }
+
+  /// end of the recorder
+  ~RecursiveTimer();
 };
 
 class RecursiveTimerPass : public ModulePass {
 private:
-    RecursiveTimer **TimerPtr;
-    std::string Message;
-    bool Internal;
+  RecursiveTimer **TimerPtr;
+  std::string Message;
+  bool Internal;
 
 public:
-    static char ID;
+  static char ID;
 
-    explicit RecursiveTimerPass(const char *Prefix) : ModulePass(ID), TimerPtr(new RecursiveTimer *),
-                                                      Message(Prefix), Internal(false) {
-        *TimerPtr = nullptr;
+  explicit RecursiveTimerPass(const char *Prefix)
+      : ModulePass(ID), TimerPtr(new RecursiveTimer *), Message(Prefix),
+        Internal(false) {
+    *TimerPtr = nullptr;
+  }
+
+  explicit RecursiveTimerPass(std::string Prefix)
+      : ModulePass(ID), TimerPtr(new RecursiveTimer *),
+        Message(std::move(Prefix)), Internal(false) {
+    *TimerPtr = nullptr;
+  }
+
+  ~RecursiveTimerPass() override {
+    if (!Internal)
+      delete TimerPtr;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+
+  bool runOnModule(Module &) override {
+    if (!*TimerPtr) {
+      *TimerPtr = new RecursiveTimer(Message);
+    } else {
+      delete *TimerPtr;
+      *TimerPtr = nullptr;
     }
-
-    explicit RecursiveTimerPass(std::string Prefix) : ModulePass(ID), TimerPtr(new RecursiveTimer *),
-                                                      Message(std::move(Prefix)), Internal(false) {
-        *TimerPtr = nullptr;
-    }
-
-    ~RecursiveTimerPass() override { if (!Internal) delete TimerPtr; }
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override { AU.setPreservesAll(); }
-
-    bool runOnModule(Module &) override {
-        if (!*TimerPtr) {
-            *TimerPtr = new RecursiveTimer(Message);
-        } else {
-            delete *TimerPtr;
-            *TimerPtr = nullptr;
-        }
-        return false;
-    }
+    return false;
+  }
 
 private:
-    explicit RecursiveTimerPass(RecursiveTimer **Timer) : ModulePass(ID), TimerPtr(Timer), Internal(true) {
-    }
+  explicit RecursiveTimerPass(RecursiveTimer **Timer)
+      : ModulePass(ID), TimerPtr(Timer), Internal(true) {}
 
 public:
-    Pass *start() { return this; }
+  Pass *start() { return this; }
 
-    Pass *done() { return new RecursiveTimerPass(TimerPtr); }
+  Pass *done() { return new RecursiveTimerPass(TimerPtr); }
 };
 
-#endif //SUPPORT_RECURSIVETIMER_H
+#endif // SUPPORT_RECURSIVETIMER_H

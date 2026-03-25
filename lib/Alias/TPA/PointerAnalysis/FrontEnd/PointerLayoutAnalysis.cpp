@@ -4,14 +4,15 @@
 //
 // Key Feature: Layout Propagation via Casts.
 // Since pointers can be cast between different struct types (especially in C),
-// we must ensure that the pointer analysis "sees" pointers even if they are accessed
-// through a casted type.
+// we must ensure that the pointer analysis "sees" pointers even if they are
+// accessed through a casted type.
 //
 // Algorithm:
 // 1. Build initial layout: recursively scan types to find pointer fields.
-// 2. Propagate layouts: Using the CastMap (from StructCastAnalysis), merge layout information.
-//    If StructA is cast to StructB, then StructA effectively "has" pointers where StructB does.
-//    (Conservative approach to handle unsafe casts).
+// 2. Propagate layouts: Using the CastMap (from StructCastAnalysis), merge
+// layout information.
+//    If StructA is cast to StructB, then StructA effectively "has" pointers
+//    where StructB does. (Conservative approach to handle unsafe casts).
 
 #include "Alias/TPA/PointerAnalysis/FrontEnd/Type/PointerLayoutAnalysis.h"
 
@@ -19,6 +20,7 @@
 #include "Alias/TPA/PointerAnalysis/FrontEnd/Type/TypeSet.h"
 #include "Alias/TPA/PointerAnalysis/MemoryModel/Type/PointerLayout.h"
 
+#include <llvm/ADT/DenseMap.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Type.h>
 #include <llvm/Support/raw_ostream.h>
@@ -138,23 +140,60 @@ public:
 };
 
 void PtrLayoutMapPropagator::propagatePtrLayoutMap() {
-  // For every cast mapping LHS -> {RHS1, RHS2...}
-  for (auto const &mapping : castMap) {
-    auto *lhs = mapping.first;
-    const auto *dstLayout = ptrLayoutMap.lookup(lhs);
-    assert(dstLayout != nullptr && "Cannot find ptrLayout for lhs type");
+  // Fix #5: The cast map records edges srcType -> {dstType, ...}, meaning
+  // "a pointer to srcType is cast to a pointer to dstType". When such a cast
+  // exists, code that accesses memory through dstType may actually be reading
+  // srcType memory (and vice versa). To be sound we must propagate pointer
+  // layout information in BOTH directions:
+  //
+  //   - Forward (src -> dst): if srcType has a pointer at offset X, then
+  //     dstType should also be considered to have a pointer at offset X,
+  //     because code that casts srcType* to dstType* and then reads a field
+  //     at offset X will be reading a pointer.
+  //   - Backward (dst -> src): if dstType has a pointer at offset X, then
+  //     srcType should also be considered to have a pointer at offset X,
+  //     because code that casts srcType* to dstType* and writes a pointer at
+  //     offset X is writing into srcType memory.
+  //
+  // The previous implementation only merged RHS (dstType) layouts into LHS
+  // (srcType), which is the backward direction only. This missed the forward
+  // direction, causing pointer fields of the cast-to type to be invisible when
+  // accessed through the original type.
+  //
+  // We perform a two-pass approach:
+  //   Pass 1: collect all merged layouts without modifying the map (to avoid
+  //           order-dependent results).
+  //   Pass 2: write the merged layouts back.
 
-    // Merge layout of RHS into LHS.
-    // Logic: If LHS is cast to RHS, then memory at LHS might be interpreted as RHS.
-    // So if RHS has a pointer at offset X, LHS should also be considered to potentially
-    // have a pointer at offset X to be safe.
-    for (auto *rhs : mapping.second) {
-      const auto *srcLayout = ptrLayoutMap.lookup(rhs);
-      assert(srcLayout != nullptr && "Cannot find ptrLayout for src type");
-      dstLayout = PointerLayout::merge(dstLayout, srcLayout);
+  // Collect updates: for each type, the merged layout to apply.
+  llvm::DenseMap<const llvm::Type *, const PointerLayout *> updates;
+
+  for (auto const &mapping : castMap) {
+    auto *srcType = mapping.first; // the type being cast FROM
+    const auto *srcLayout = ptrLayoutMap.lookup(srcType);
+    assert(srcLayout != nullptr && "Cannot find ptrLayout for src type");
+
+    for (auto *dstType : mapping.second) {
+      const auto *dstLayout = ptrLayoutMap.lookup(dstType);
+      assert(dstLayout != nullptr && "Cannot find ptrLayout for dst type");
+
+      // Forward: merge srcType's layout into dstType.
+      auto itrDst = updates.find(dstType);
+      const auto *curDst =
+          (itrDst != updates.end()) ? itrDst->second : dstLayout;
+      updates[dstType] = PointerLayout::merge(curDst, srcLayout);
+
+      // Backward: merge dstType's layout into srcType.
+      auto itrSrc = updates.find(srcType);
+      const auto *curSrc =
+          (itrSrc != updates.end()) ? itrSrc->second : srcLayout;
+      updates[srcType] = PointerLayout::merge(curSrc, dstLayout);
     }
-    ptrLayoutMap.insert(lhs, dstLayout);
   }
+
+  // Write back all merged layouts.
+  for (auto const &kv : updates)
+    ptrLayoutMap.insert(kv.first, kv.second);
 }
 
 } // namespace

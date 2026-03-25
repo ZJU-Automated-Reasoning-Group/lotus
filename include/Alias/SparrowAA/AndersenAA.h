@@ -24,21 +24,27 @@ public:
   llvm::AliasResult alias(const llvm::MemoryLocation &,
                           const llvm::MemoryLocation &);
   bool pointsToConstantMemory(const llvm::MemoryLocation &, bool);
-  
+
   // Public method to access points-to information
-  bool getPointsToSet(const llvm::Value *Ptr, std::vector<const llvm::Value*> &PtsSet) const {
+  bool getPointsToSet(const llvm::Value *Ptr,
+                      std::vector<const llvm::Value *> &PtsSet) const {
     return anders.getPointsToSet(Ptr, PtsSet);
   }
 
   // Context-sensitive points-to queries (no cross-context union).
-  bool getPointsToSetInContext(const llvm::Value *Ptr, AndersNodeFactory::CtxKey Ctx,
+  bool getPointsToSetInContext(const llvm::Value *Ptr,
+                               AndersNodeFactory::CtxKey Ctx,
                                std::vector<const llvm::Value *> &PtsSet) const {
     return anders.getPointsToSetInContext(Ptr, Ctx, PtsSet);
   }
 
   // Context utilities for clients that want per-context answers.
-  AndersNodeFactory::CtxKey getInitialContext() const { return anders.getInitialContext(); }
-  AndersNodeFactory::CtxKey getGlobalContext() const { return anders.getGlobalContext(); }
+  AndersNodeFactory::CtxKey getInitialContext() const {
+    return anders.getInitialContext();
+  }
+  AndersNodeFactory::CtxKey getGlobalContext() const {
+    return anders.getGlobalContext();
+  }
   AndersNodeFactory::CtxKey evolveContext(AndersNodeFactory::CtxKey Prev,
                                           const llvm::Instruction *I) const {
     return anders.evolveContext(Prev, I);
@@ -56,7 +62,7 @@ class AndersenAA : public llvm::AnalysisInfoMixin<AndersenAA> {
 
 public:
   using Result = AndersenAAResult;
-  
+
   AndersenAAResult run(llvm::Module &M, llvm::ModuleAnalysisManager &MAM);
 };
 

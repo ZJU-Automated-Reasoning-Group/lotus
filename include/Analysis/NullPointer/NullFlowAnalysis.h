@@ -133,4 +133,16 @@ public:
   bool notNull(Value *) const;
 };
 
+namespace lotus {
+namespace nullpointer {
+namespace testing {
+
+void setNullFlowIncrementalLimitOverrideForTesting(int Limit);
+unsigned getNullFlowIncrementalLimitForTesting();
+bool isContextInsensitiveGuaranteedNonNullValueForTesting(llvm::Value *V);
+
+} // namespace testing
+} // namespace nullpointer
+} // namespace lotus
+
 #endif // NULLPOINTER_NULLFLOWANALYSIS_H

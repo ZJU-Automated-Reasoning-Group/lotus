@@ -1,19 +1,20 @@
 /*
-An Inclusion-based, Semi-Sparse, Flow- and Context-Sensitive Pointer Analysis Tool. 
-Cmd options:
--ext <file>: External pointer table file for modeling library functions
--no-prepass: Skip TPA IR normalization prepasses (GEP expansion, etc.)
+An Inclusion-based, Semi-Sparse, Flow- and Context-Sensitive Pointer Analysis
+Tool. Cmd options: -ext <file>: External pointer table file for modeling library
+functions -no-prepass: Skip TPA IR normalization prepasses (GEP expansion, etc.)
 -prepass-out <file>: Write module after prepass to file (suffix .ll or .bc)
 -cfg-dot-dir <dir>: Write per-function pointer CFGs as .dot files into directory
--print-pts: Print points-to sets for pointers that were materialized by the analysis
--print-indirect-calls: Print resolved targets for each indirect call in the module
--k-limit <n>: Set k-limit for context-sensitive analysis (0 = context-insensitive, default: 0)
--context-strategy <klimit|selective>: klimit = k-CFA at all calls; selective = 0-CFA at direct calls, k-CFA at indirect (default: klimit)
+-print-pts: Print points-to sets for pointers that were materialized by the
+analysis -print-indirect-calls: Print resolved targets for each indirect call in
+the module -k-limit <n>: Set k-limit for context-sensitive analysis (0 =
+context-insensitive, default: 0) -context-strategy <klimit|selective>: klimit =
+k-CFA at all calls; selective = 0-CFA at direct calls, k-CFA at indirect
+(default: klimit)
 */
 
+#include "Alias/AliasAnalysisWrapper/CLIUtils.h"
 #include "Alias/TPA/Context/ContextPolicy.h"
 #include "Alias/TPA/Context/KLimitContext.h"
-#include "Alias/AliasAnalysisWrapper/CLIUtils.h"
 #include "Alias/TPA/PointerAnalysis/Analysis/SemiSparsePointerAnalysis.h"
 #include "Alias/TPA/PointerAnalysis/FrontEnd/SemiSparseProgramBuilder.h"
 #include "Alias/TPA/Transforms/RunPrepass.h"
@@ -21,6 +22,11 @@ Cmd options:
 #include "Alias/TPA/Util/IO/PointerAnalysis/WriteDotFile.h"
 #include "Alias/TPA/Util/Log.h"
 #include "Utils/LLVM/IO/WriteIR.h"
+
+#include <cstdlib>
+#include <sstream>
+#include <string>
+#include <unordered_set>
 
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -30,11 +36,6 @@ Cmd options:
 #include <llvm/Support/Path.h>
 #include <llvm/Support/raw_ostream.h>
 
-#include <cstdlib>
-#include <sstream>
-#include <string>
-#include <unordered_set>
-
 using namespace llvm;
 using namespace lotus::alias::tools;
 
@@ -43,13 +44,14 @@ static cl::opt<std::string> InputFile(cl::Positional,
                                       cl::desc("<input bitcode file>"),
                                       cl::value_desc("filename"));
 
-static cl::opt<std::string> ExtPointerTableFile(
-    "ext", cl::desc("External pointer table file (optional)"),
-    cl::value_desc("filename"), cl::init(""));
+static cl::opt<std::string>
+    ExtPointerTableFile("ext",
+                        cl::desc("External pointer table file (optional)"),
+                        cl::value_desc("filename"), cl::init(""));
 
-static cl::opt<bool> NoPrepass(
-    "no-prepass", cl::desc("Skip TPA IR normalization prepasses"),
-    cl::init(false));
+static cl::opt<bool> NoPrepass("no-prepass",
+                               cl::desc("Skip TPA IR normalization prepasses"),
+                               cl::init(false));
 
 static cl::opt<std::string> PrepassOutFile(
     "prepass-out",
@@ -58,23 +60,25 @@ static cl::opt<std::string> PrepassOutFile(
 
 static cl::opt<std::string> CFGDotOutDir(
     "cfg-dot-dir",
-    cl::desc("Write per-function pointer CFGs as .dot files into this directory"),
+    cl::desc(
+        "Write per-function pointer CFGs as .dot files into this directory"),
     cl::value_desc("directory"), cl::init(""));
 
-static cl::opt<bool> PrintPts(
-    "print-pts",
-    cl::desc("Print points-to sets for pointers that were materialized by the analysis"),
-    cl::init(false));
+static cl::opt<bool> PrintPts("print-pts",
+                              cl::desc("Print points-to sets for pointers that "
+                                       "were materialized by the analysis"),
+                              cl::init(false));
 
 static cl::opt<bool> PrintIndirectCalls(
     "print-indirect-calls",
     cl::desc("Print resolved targets for each indirect call in the module"),
     cl::init(false));
 
-static cl::opt<unsigned> KLimit(
-    "k-limit",
-    cl::desc("Set k-limit for context-sensitive analysis (0 = context-insensitive, default: 0)"),
-    cl::init(0));
+static cl::opt<unsigned>
+    KLimit("k-limit",
+           cl::desc("Set k-limit for context-sensitive analysis (0 = "
+                    "context-insensitive, default: 0)"),
+           cl::init(0));
 
 static cl::opt<std::string> ContextStrategyOpt(
     "context-strategy",
@@ -111,8 +115,9 @@ static std::string findDefaultPointerSpec() {
   return "config/ptr.spec";
 }
 
-static void collectCandidatePointerValues(const Module &M,
-                                          std::unordered_set<const Value *> &out) {
+static void
+collectCandidatePointerValues(const Module &M,
+                              std::unordered_set<const Value *> &out) {
   for (const GlobalVariable &GV : M.globals())
     out.insert(&GV);
 
@@ -133,8 +138,9 @@ static void collectCandidatePointerValues(const Module &M,
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
-  cl::ParseCommandLineOptions(argc, argv,
-                              "TPA (flow-/context-sensitive semi-sparse pointer analysis) tool\n");
+  cl::ParseCommandLineOptions(
+      argc, argv,
+      "TPA (flow-/context-sensitive semi-sparse pointer analysis) tool\n");
 
   // Initialize spdlog with default pattern
   spdlog::set_pattern("%^[%l]%$ %v");
@@ -147,7 +153,7 @@ int main(int argc, char **argv) {
     LOG_ERROR("Failed to parse input file: {}", InputFile);
     return 1;
   }
-  LOG_INFO("Module loaded: {} functions, {} global variables", 
+  LOG_INFO("Module loaded: {} functions, {} global variables",
            M->getFunctionList().size(), M->getGlobalList().size());
 
   if (!NoPrepass) {
@@ -169,9 +175,12 @@ int main(int argc, char **argv) {
     context::setContextStrategy(context::ContextStrategy::Selective);
     context::KLimitContext::setLimit(KLimit);
     if (KLimit > 0) {
-      LOG_INFO("Selective context: 0-CFA at direct calls, {}-CFA at indirect calls", KLimit);
+      LOG_INFO(
+          "Selective context: 0-CFA at direct calls, {}-CFA at indirect calls",
+          KLimit);
     } else {
-      LOG_INFO("Selective context: 0-CFA at direct calls, context-insensitive at indirect");
+      LOG_INFO("Selective context: 0-CFA at direct calls, context-insensitive "
+               "at indirect");
     }
   } else {
     context::setContextStrategy(context::ContextStrategy::KLimit);
@@ -187,19 +196,19 @@ int main(int argc, char **argv) {
   LOG_INFO("Building semi-sparse program representation...");
   tpa::SemiSparseProgramBuilder builder;
   tpa::SemiSparseProgram ssProg = builder.runOnModule(*M);
-  //LOG_INFO("Semi-sparse program built: {} CFGs", ssProg.cfgMap.size());
+  // LOG_INFO("Semi-sparse program built: {} CFGs", ssProg.cfgMap.size());
 
   tpa::SemiSparsePointerAnalysis analysis;
-  std::string pointerSpecPath =
-      ExtPointerTableFile.empty() ? findDefaultPointerSpec()
-                                  : std::string(ExtPointerTableFile);
+  std::string pointerSpecPath = ExtPointerTableFile.empty()
+                                    ? findDefaultPointerSpec()
+                                    : std::string(ExtPointerTableFile);
   if (!sys::fs::exists(pointerSpecPath)) {
     LOG_ERROR("Pointer spec file not found: {}", pointerSpecPath);
     return 1;
   }
   LOG_INFO("Loading external pointer table from: {}", pointerSpecPath);
   analysis.loadExternalPointerTable(pointerSpecPath.c_str());
-  
+
   LOG_INFO("Starting TPA pointer analysis...");
   analysis.runOnProgram(ssProg);
   LOG_INFO("TPA analysis completed successfully");
@@ -207,7 +216,8 @@ int main(int argc, char **argv) {
   if (!CFGDotOutDir.empty()) {
     std::error_code EC = sys::fs::create_directories(CFGDotOutDir);
     if (EC) {
-      LOG_ERROR("Failed to create directory {}: {}", CFGDotOutDir, EC.message());
+      LOG_ERROR("Failed to create directory {}: {}", CFGDotOutDir,
+                EC.message());
       return 2;
     }
 
@@ -236,14 +246,16 @@ int main(int argc, char **argv) {
           auto targets = analysis.getCallees(&I);
           std::string targetNames;
           for (const Function *TF : targets) {
-            if (!targetNames.empty()) targetNames += " ";
+            if (!targetNames.empty())
+              targetNames += " ";
             targetNames += TF->getName().str();
           }
           std::string instStr;
           raw_string_ostream instOS(instStr);
           instOS << I;
           instOS.flush();
-          LOG_INFO("{}: {} -> targets({}): {}", F.getName(), instStr, targets.size(), targetNames);
+          LOG_INFO("{}: {} -> targets({}): {}", F.getName(), instStr,
+                   targets.size(), targetNames);
         }
       }
     }
@@ -265,18 +277,18 @@ int main(int argc, char **argv) {
       raw_string_ostream valueOS(valueStr);
       util::io::dumpValue(valueOS, *V);
       valueOS.flush();
-      
+
       for (const tpa::Pointer *P : ptrs) {
         std::string ptrStr;
         raw_string_ostream ptrOS(ptrStr);
         ptrOS << *P;
         ptrOS.flush();
-        
+
         std::string ptsStr;
         raw_string_ostream ptsOS(ptsStr);
         ptsOS << analysis.getPtsSet(P);
         ptsOS.flush();
-        
+
         LOG_INFO("Value: {} -> {} -> {}", valueStr, ptrStr, ptsStr);
       }
     }

@@ -30,15 +30,17 @@ public:
   static_assert(kChunkBits % kWordBits == 0,
                 "Chunk size must be a multiple of word size.");
 
-  // Hot words first for streaming; align to cache line (16 words = 128 B = 2 cache lines).
+  // Hot words first for streaming; align to cache line (16 words = 128 B = 2
+  // cache lines).
   struct alignas(64) Chunk {
     std::array<std::uint64_t, kWords> words{};
 
     bool operator==(const Chunk &other) const { return words == other.words; }
   };
 
-  static_assert(std::is_trivially_copyable<Chunk>::value,
-                "Chunk must be trivially copyable for memcpy-style optimisations.");
+  static_assert(
+      std::is_trivially_copyable<Chunk>::value,
+      "Chunk must be trivially copyable for memcpy-style optimisations.");
 
   static constexpr Chunk kZeroChunk{{}};
 
@@ -64,10 +66,9 @@ public:
     }
 
     bool operator==(const iterator &other) const {
-      return end_ == other.end_ &&
-             (end_ ||
-              (chunk_pos_ == other.chunk_pos_ &&
-               word_pos_ == other.word_pos_ && cur_word_ == other.cur_word_));
+      return end_ == other.end_ && (end_ || (chunk_pos_ == other.chunk_pos_ &&
+                                             word_pos_ == other.word_pos_ &&
+                                             cur_word_ == other.cur_word_));
     }
 
     bool operator!=(const iterator &other) const { return !(*this == other); }
@@ -227,7 +228,8 @@ public:
     return j == other.ids_.size();
   }
 
-  // Return true if this set and other have at least one element in common (read-only).
+  // Return true if this set and other have at least one element in common
+  // (read-only).
   [[nodiscard]] bool intersects(const ChunkedSparseBitsetPtsSet &other) const {
     std::size_t i = 0;
     std::size_t j = 0;
@@ -347,9 +349,10 @@ public:
     ids_.clear();
     chunks_.clear();
     size_ = 0;
-   }
+  }
 
-  /// Reserves capacity for \p n chunks (not bits). Call before bulk insert/merge.
+  /// Reserves capacity for \p n chunks (not bits). Call before bulk
+  /// insert/merge.
   void reserveChunks(std::size_t n) {
     ids_.reserve(n);
     chunks_.reserve(n);
@@ -376,8 +379,7 @@ private:
   }
 
   std::size_t findChunk(std::uint64_t chunk_id) const {
-    const auto *it =
-        std::lower_bound(ids_.begin(), ids_.end(), chunk_id);
+    const auto *it = std::lower_bound(ids_.begin(), ids_.end(), chunk_id);
     return static_cast<std::size_t>(it - ids_.begin());
   }
 

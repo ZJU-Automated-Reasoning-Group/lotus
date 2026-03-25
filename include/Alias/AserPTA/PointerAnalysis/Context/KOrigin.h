@@ -5,8 +5,9 @@
 #ifndef ASER_PTA_KORIGIN_H
 #define ASER_PTA_KORIGIN_H
 
-#include <llvm/ADT/StringSet.h>
 #include <Alias/AserPTA/Util/Log.h>
+
+#include <llvm/ADT/StringSet.h>
 
 #include "Alias/AserPTA/PointerAnalysis/Context/CtxTrait.h"
 #include "Alias/AserPTA/PointerAnalysis/Context/KCallSite.h"

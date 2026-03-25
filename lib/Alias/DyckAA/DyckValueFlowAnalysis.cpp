@@ -16,36 +16,34 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "Alias/DyckAA/DyckValueFlowAnalysis.h"
+
 #include "Alias/DyckAA/DyckAliasAnalysis.h"
 #include "Alias/DyckAA/DyckModRefAnalysis.h"
-#include "Alias/DyckAA/DyckValueFlowAnalysis.h"
 #include "Utils/LLVM/RecursiveTimer.h"
 
 char DyckValueFlowAnalysis::ID = 0;
-static RegisterPass<DyckValueFlowAnalysis> X("dyckvfa", "vfa based on the unification based alias analysis");
+static RegisterPass<DyckValueFlowAnalysis>
+    X("dyckvfa", "vfa based on the unification based alias analysis");
 
 DyckValueFlowAnalysis::DyckValueFlowAnalysis() : ModulePass(ID) {
-    VFG = nullptr;
+  VFG = nullptr;
 }
 
-DyckValueFlowAnalysis::~DyckValueFlowAnalysis() {
-    delete VFG;
-}
+DyckValueFlowAnalysis::~DyckValueFlowAnalysis() { delete VFG; }
 
 void DyckValueFlowAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.setPreservesAll();
-    AU.addRequired<DyckAliasAnalysis>();
-    AU.addRequired<DyckModRefAnalysis>();
+  AU.setPreservesAll();
+  AU.addRequired<DyckAliasAnalysis>();
+  AU.addRequired<DyckModRefAnalysis>();
 }
 
-DyckVFG *DyckValueFlowAnalysis::getDyckVFGraph() const {
-    return VFG;
-}
+DyckVFG *DyckValueFlowAnalysis::getDyckVFGraph() const { return VFG; }
 
 bool DyckValueFlowAnalysis::runOnModule(Module &M) {
-    RecursiveTimer DyckVFA("Running DyckVFA");
-    auto *DyckAA = &getAnalysis<DyckAliasAnalysis>();
-    auto *DyckMRA = &getAnalysis<DyckModRefAnalysis>();
-    VFG = new DyckVFG(DyckAA, DyckMRA, &M);
-    return false;
+  RecursiveTimer DyckVFA("Running DyckVFA");
+  auto *DyckAA = &getAnalysis<DyckAliasAnalysis>();
+  auto *DyckMRA = &getAnalysis<DyckModRefAnalysis>();
+  VFG = new DyckVFG(DyckAA, DyckMRA, &M);
+  return false;
 }

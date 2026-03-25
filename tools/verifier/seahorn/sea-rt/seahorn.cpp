@@ -1,6 +1,8 @@
 #include "Verification/seahorn/seahorn.h"
+
 #include <cstdint>
 #include <cstdio>
+
 #include <stdarg.h>
 #undef NDEBUG
 #include <cassert>
@@ -8,6 +10,7 @@
 #include <cstring>
 #include <functional>
 #include <map>
+
 #include <stddef.h>
 
 #ifdef __cplusplus

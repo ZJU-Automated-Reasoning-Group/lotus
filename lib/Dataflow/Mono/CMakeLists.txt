@@ -1,16 +1,18 @@
 # Mono-based dataflow analysis implementation
 
 set(MONO_SOURCES
-  Analyses/Intraprocedural/IntraMonoConstantPropagation.cpp
-  Analyses/Intraprocedural/IntraMonoFullConstantPropagation.cpp
-  Analyses/Intraprocedural/IntraMonoSolverTest.cpp
-  Analyses/Intraprocedural/IntraMonoUninitVariables.cpp
-  Analyses/Intraprocedural/LiveVariablesAnalysis.cpp
-  Analyses/Intraprocedural/ReachableAnalysis.cpp
-  Analyses/Interprocedural/InterMonoTaintAnalysis.cpp
-  Analyses/Interprocedural/InterMonoConstantPropagation.cpp
-  Analyses/Interprocedural/InterMonoFullConstantPropagation.cpp
-  Analyses/Interprocedural/InterMonoSolverTest.cpp
+  Analyses/Intra/IntraAvailableExpressions.cpp
+  Analyses/Intra/IntraConstantPropagation.cpp
+  Analyses/Intra/IntraFullConstantPropagation.cpp
+  Analyses/Intra/IntraLiveVariables.cpp
+  Analyses/Intra/IntraReachable.cpp
+  Analyses/Intra/IntraReachingDefinitions.cpp
+  Analyses/Intra/IntraSolverTest.cpp
+  Analyses/Intra/IntraUninitVariables.cpp
+  Analyses/Inter/InterConstantPropagation.cpp
+  Analyses/Inter/InterFullConstantPropagation.cpp
+  Analyses/Inter/InterSolverTest.cpp
+  Analyses/Inter/InterTaintAnalysis.cpp
 )
 
 add_library(MONODataFlow STATIC ${MONO_SOURCES})

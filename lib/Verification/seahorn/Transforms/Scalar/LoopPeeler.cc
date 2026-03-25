@@ -1,9 +1,9 @@
 #include "seahorn/Analysis/SeaBuiltinsInfo.hh"
+#include "seahorn/InitializePasses.hh"
 #include "seahorn/Passes.hh"
 #include "seahorn/Support/SeaDebug.h"
 #include "seahorn/Support/SeaLog.hh"
 #include "seahorn/Transforms/Scalar/CutLoops.hh"
-#include "seahorn/InitializePasses.hh"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"

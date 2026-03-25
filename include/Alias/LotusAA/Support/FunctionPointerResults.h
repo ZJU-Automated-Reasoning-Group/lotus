@@ -16,8 +16,8 @@
 
 namespace llvm {
 
-/// Set of possible function targets for an indirect call
-using CallTargetSet = std::set<Function *, llvm_cmp>;
+/// Map of function targets to the condition under which the edge is feasible.
+using CallTargetSet = std::map<Function *, path_cond_t, llvm_cmp>;
 
 /// Map from call site (Value*) to possible targets
 using CallSiteTargetMap = std::map<Value *, CallTargetSet, llvm_cmp>;
@@ -77,4 +77,3 @@ private:
 };
 
 } // namespace llvm
-

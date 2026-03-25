@@ -30,7 +30,8 @@ public:
   std::size_t dim() const { return matrix_.size(); }
 
   llvm::Optional<int64_t> get(std::size_t i, std::size_t j) const {
-    if (i >= matrix_.size() || j >= matrix_.size()) return llvm::None;
+    if (i >= matrix_.size() || j >= matrix_.size())
+      return llvm::None;
     return matrix_[i][j];
   }
   void set(std::size_t i, std::size_t j, int64_t c) {
@@ -40,7 +41,8 @@ public:
 
   /// Element-wise max (join: looser bound). Same size only.
   OctagonMatrix max(const OctagonMatrix &other) const {
-    if (dim() != other.dim()) return *this;
+    if (dim() != other.dim())
+      return *this;
     OctagonMatrix out(n_);
     for (std::size_t i = 0; i < dim(); ++i)
       for (std::size_t j = 0; j < dim(); ++j) {
@@ -57,7 +59,8 @@ public:
 
   /// Widen: if other[i][j] > this[i][j] then unbounded (nullopt).
   OctagonMatrix widenSimple(const OctagonMatrix &other) const {
-    if (dim() != other.dim()) return *this;
+    if (dim() != other.dim())
+      return *this;
     OctagonMatrix out(n_);
     for (std::size_t i = 0; i < dim(); ++i)
       for (std::size_t j = 0; j < dim(); ++j) {
@@ -78,9 +81,11 @@ public:
       for (std::size_t i = 0; i < d; ++i)
         for (std::size_t j = 0; j < d; ++j) {
           auto ik = out.get(i, k), kj = out.get(k, j);
-          if (!ik || !kj) continue;
+          if (!ik || !kj)
+            continue;
           int64_t sum;
-          if (__builtin_add_overflow(*ik, *kj, &sum)) continue;
+          if (__builtin_add_overflow(*ik, *kj, &sum))
+            continue;
           auto ij = out.get(i, j);
           if (!ij || sum < *ij)
             out.set(i, j, sum);
@@ -92,7 +97,8 @@ public:
   bool hasNegativeSelfLoop() const {
     for (std::size_t i = 0; i < dim(); ++i) {
       auto c = get(i, i);
-      if (c && *c < 0) return true;
+      if (c && *c < 0)
+        return true;
     }
     return false;
   }
@@ -100,30 +106,37 @@ public:
   /// Relax variable \p varIdx: return new matrix with all constraints involving
   /// ±v set to +∞ (sound over-approximation for havoc).
   OctagonMatrix relaxVar(std::size_t varIdx) const {
-    if (varIdx >= n_) return *this;
+    if (varIdx >= n_)
+      return *this;
     OctagonMatrix out(n_);
     const std::size_t d = dim();
     const std::size_t lo = 2 * varIdx, hi = 2 * varIdx + 1;
     for (std::size_t i = 0; i < d; ++i)
       for (std::size_t j = 0; j < d; ++j) {
-        if (i == lo || i == hi || j == lo || j == hi) continue;
+        if (i == lo || i == hi || j == lo || j == hi)
+          continue;
         auto c = get(i, j);
-        if (c) out.set(i, j, *c);
+        if (c)
+          out.set(i, j, *c);
       }
     return out;
   }
 
-  /// Rearrange to new variable order. \p copyInstructions[newIdx] = oldIdx (or dim() for unbounded).
-  OctagonMatrix rearrange(const std::vector<std::size_t> &copyInstructions) const {
+  /// Rearrange to new variable order. \p copyInstructions[newIdx] = oldIdx (or
+  /// dim() for unbounded).
+  OctagonMatrix
+  rearrange(const std::vector<std::size_t> &copyInstructions) const {
     const std::size_t d = copyInstructions.size();
     OctagonMatrix out(d / 2);
-    if (out.dim() != d) return *this;
+    if (out.dim() != d)
+      return *this;
     for (std::size_t i = 0; i < d; ++i)
       for (std::size_t j = 0; j < d; ++j) {
         std::size_t si = copyInstructions[i], sj = copyInstructions[j];
         if (si < dim() && sj < dim()) {
           auto c = get(si, sj);
-          if (c) out.set(i, j, *c);
+          if (c)
+            out.set(i, j, *c);
         }
       }
     return out;

@@ -82,9 +82,9 @@ void UseAfterFreeCheck::insertNonDanglingCheck(Value *Ptr, IRBuilder<> &B,
 				MDString::get(ctx, std::to_string(id++))})));
   if (CG) {
     Function *Fn = I->getParent()->getParent();
-    auto f1 = CG->getOrInsertFunction(Fn);
-    auto f2 = CG->getOrInsertFunction(NotDanglingFn);
-    auto f3 = CG->getOrInsertFunction(AssertFn);
+    auto *f1 = CG->getOrInsertFunction(Fn);
+    auto *f2 = CG->getOrInsertFunction(NotDanglingFn);
+    auto *f3 = CG->getOrInsertFunction(AssertFn);
     f1->addCalledFunction(IntrinsicCI, f2);
     f1->addCalledFunction(AssertCI, f3);
   }
@@ -135,7 +135,7 @@ bool UseAfterFreeCheck::runOnFunction(Function &F) {
   LLVMContext &ctx = F.getContext();
   IRBuilder<> B(ctx);
   bool change = false;
-  for (auto I : Worklist) {
+  for (auto *I : Worklist) {
     Value *Ptr = nullptr;
     if (auto *LI = dyn_cast<LoadInst>(I)) {
       Ptr = LI->getPointerOperand();

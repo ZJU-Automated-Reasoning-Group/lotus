@@ -1,15 +1,16 @@
 // Implementation of Adaptive Context Sensitivity.
 //
-// AdaptiveContext allows fine-grained control over which call sites induce a context change.
-// Instead of applying context sensitivity uniformly (like K-Limit), it only creates new
-// contexts for "tracked" call sites.
+// AdaptiveContext allows fine-grained control over which call sites induce a
+// context change. Instead of applying context sensitivity uniformly (like
+// K-Limit), it only creates new contexts for "tracked" call sites.
 //
 // Use Cases:
 // - Focusing analysis on specific modules or high-risk functions.
 // - Reducing overhead by treating helper functions context-insensitively.
 //
 // Logic:
-// - `trackedCallsites`: A set of program points (call sites) that should trigger context expansion.
+// - `trackedCallsites`: A set of program points (call sites) that should
+// trigger context expansion.
 // - `pushContext`: Checks if the call site is in the tracked set.
 //   - If yes: Pushes a new context (context-sensitive).
 //   - If no: Returns the current context (context-insensitive propagation).

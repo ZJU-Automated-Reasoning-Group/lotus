@@ -86,7 +86,7 @@ public:
   }
 
   int HasEdgeBetween(unsigned i, unsigned j,
-                     EdgeTy edgTy) { /*cout<<"i "<<i<<" j "<<j<<endl;*/
+                     EdgeTy edgTy) { /*cout<<"i "<<i<<" j "<<j<<'\n';*/
     Matrix *q = p + i * Size + j;
     if (q->colors.test(edgTy))
       return 1;

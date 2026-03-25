@@ -223,8 +223,8 @@ HornifyFunction::getPartialFnsToSynth(Function &F) {
 
   // Records all functions passed to sea.synth.assert within BB.
   llvm::SmallVector<llvm::CallInst *, 8> partials;
-  for (auto user : m_synthAssertFn->users()) {
-    if (auto CI = dyn_cast<CallBase>(user)) {
+  for (auto *user : m_synthAssertFn->users()) {
+    if (auto *CI = dyn_cast<CallBase>(user)) {
       // Filters out calls that are in other blocks from the module.
       if (CI->getParent()->getParent() == &F) {
         auto *partial = dyn_cast<CallInst>(CI->getArgOperand(0));
@@ -254,7 +254,7 @@ void HornifyFunction::expandEdgeFilter(const llvm::Instruction &I) {
     // CHCs, and therefore, the operands do not appear in the edge's transition
     // relation.
     for (auto &operand : I.operands()) {
-      auto v = operand.get();
+      auto *v = operand.get();
       if (isa<Instruction>(v))
         m_sem.addToFilter(*v);
     }
@@ -785,7 +785,7 @@ void LargeHornifyFunction::runOnFunction(Function &F) {
 
   // Generates synthesis rules for each call to sea.synth.assert.
   s.reset();
-  for (auto partial : getPartialFnsToSynth(F)) {
+  for (auto *partial : getPartialFnsToSynth(F)) {
     for (auto &cp : cpg) {
       auto &srcBB = cp.bb();
       if (reached.count(&srcBB) <= 0)

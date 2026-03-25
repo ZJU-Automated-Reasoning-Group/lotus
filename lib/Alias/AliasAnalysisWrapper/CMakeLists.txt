@@ -22,6 +22,7 @@ add_library(CanaryAliasAnalysisWrapper STATIC
 target_link_libraries(CanaryAliasAnalysisWrapper
     PUBLIC
         Andersen
+        DDA
         CanaryDyckAA
         SeaDsaAnalysis
         CanaryAllocAA

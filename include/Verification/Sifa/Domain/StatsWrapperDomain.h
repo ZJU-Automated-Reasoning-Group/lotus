@@ -1,4 +1,5 @@
-//===-- Verification/Sifa/Domain/StatsWrapperDomain.h ----------------------===//
+//===-- Verification/Sifa/Domain/StatsWrapperDomain.h
+//----------------------===//
 //
 // Domain wrapper that updates SifaStats (Ultimate StatsWrapperDomain-aligned).
 //
@@ -55,6 +56,7 @@ public:
   State meet(const State &a, const State &b) const override {
     return inner_.meet(a, b);
   }
+  bool supportsMeet() const override { return inner_.supportsMeet(); }
 
   State alpha(const State &s) const override {
     stats_.start(SifaStats::Key::DOMAIN_ALPHA_TIME);
@@ -74,10 +76,18 @@ public:
   State post(const Label &t, const State &in) const override {
     return inner_.post(t, in);
   }
+  State postCall(const Label &t, const State &callerState) const override {
+    return inner_.postCall(t, callerState);
+  }
   State postCall(const State &callerState) const override {
     return inner_.postCall(callerState);
   }
-  State postReturn(const State &callerState, const State &calleeSummary) const override {
+  State postReturn(const Label &t, const State &callerState,
+                   const State &calleeSummary) const override {
+    return inner_.postReturn(t, callerState, calleeSummary);
+  }
+  State postReturn(const State &callerState,
+                   const State &calleeSummary) const override {
     return inner_.postReturn(callerState, calleeSummary);
   }
 

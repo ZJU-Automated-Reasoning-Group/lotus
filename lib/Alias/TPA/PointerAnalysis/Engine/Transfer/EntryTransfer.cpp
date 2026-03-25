@@ -11,9 +11,16 @@ void TransferFunction::evalEntryNode(const ProgramPoint &pp,
   addTopLevelSuccessors(pp, evalResult);
   addMemLevelSuccessors(pp, *localState, evalResult);
 
-  // To prevent the analysis to converge before a newly added return edge is
-  // processed, we need to force the analysis to check the return targets
-  // whenever a function is entered
+  // To prevent the analysis from converging before a newly added return edge
+  // is processed, we need to force the analysis to check the return targets
+  // whenever a function is entered.
+  //
+  // Note: this unconditional enqueue is intentional. The SemiSparsePropagator
+  // uses a memoization table (Memo) and will only actually re-process the exit
+  // node if the store state at that point has changed. So while this enqueues
+  // the exit node on every entry visit, the propagator suppresses redundant
+  // work via memo-table checks, keeping the overall fixpoint correct and
+  // terminating.
   auto &cfg = pp.getCFGNode()->getCFG();
   if (!cfg.doesNotReturn())
     evalResult.addTopLevelProgramPoint(

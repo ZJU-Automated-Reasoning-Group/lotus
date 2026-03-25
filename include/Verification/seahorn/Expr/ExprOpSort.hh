@@ -30,7 +30,7 @@ enum class SimpleTypeOpKind {
 namespace sort {
 
 inline Expr typeTy(ExprFactory &efac);
-}
+} // namespace sort
 
 namespace typeCheck {
 namespace simpleType {

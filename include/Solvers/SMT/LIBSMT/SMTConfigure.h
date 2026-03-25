@@ -8,4 +8,4 @@ public:
 
 public:
   static void init(int T);
-}; 
+};

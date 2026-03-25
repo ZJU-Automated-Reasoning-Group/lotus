@@ -4,7 +4,6 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/IR/Function.h"
 
-
 using namespace llvm;
 
 void RevTopoSort(const llvm::Function &F, std::vector<const BasicBlock *> &out);

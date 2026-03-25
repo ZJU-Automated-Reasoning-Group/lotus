@@ -23,7 +23,7 @@
     string x;                                                                  \
     unsigned mem;                                                              \
     inl >> x >> mem;                                                           \
-    cout << "mem  = " << (double)mem / 1024 << "M" << endl;                    \
+    cout << "mem  = " << (double)mem / 1024 << "M\n";                          \
     in.close();                                                                \
   }
 
@@ -109,7 +109,7 @@ public:
   void constructGraph() {
     unordered_map<string, unsigned> string2nodeid = readNodes();
     int vtxNum = string2nodeid.size();
-    // cout << "Node Number: " << vtxNum << endl;
+    // cout << "Node Number: " << vtxNum << '\n';
     nodes.reserve(vtxNum);
     unordered_map<string, unsigned> str2eid = getEdgeIDs();
     eid2origeidstring = getEidToOrig(str2eid);
@@ -164,7 +164,7 @@ if* return node pair in the string of an edge in the input file
 
       string edgeLabel = getEdgeLabel(line);
       edgeLabel = edgeLabel.substr(1);
-      // cout << "edge label is " << edgeLabel << endl;
+      // cout << "edge label is " << edgeLabel << '\n';
       if (result.find(edgeLabel) == result.end()) {
         result[edgeLabel] = eid;
         eid++;
@@ -196,7 +196,7 @@ if* return node pair in the string of an edge in the input file
         nodestr >> orignodeid;
         node2orignodeid[nid] = orignodeid;
         // cout << "node " << nid << " has original id " << orignodeid << " == "
-        // << from << endl;
+        // << from << '\n';
         nid++;
       }
 
@@ -207,7 +207,7 @@ if* return node pair in the string of an edge in the input file
         nodestr >> orignodeid;
         node2orignodeid[nid] = orignodeid;
         // cout << "node " << nid << " has original id " << orignodeid << " == "
-        // << to << endl;
+        // << to << '\n';
         nid++;
       }
     }

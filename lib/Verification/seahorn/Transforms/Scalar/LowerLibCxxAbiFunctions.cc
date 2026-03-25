@@ -28,8 +28,8 @@ struct LowerLibCxxAbiFunctions : public ModulePass {
     AttributeList as =
         AttributeList::get(Context, AttributeList::FunctionIndex, B);
 
-    const DataLayout *DL = &M.getDataLayout();
-    Type *IntPtrTy = DL->getIntPtrType(Context, 0);
+    const DataLayout &DL = M.getDataLayout();
+    Type *IntPtrTy = DL.getIntPtrType(Context, 0);
 
     CallGraphWrapperPass *cgwp = getAnalysisIfAvailable<CallGraphWrapperPass>();
     CallGraph *cg = cgwp ? &cgwp->getCallGraph() : nullptr;
@@ -92,11 +92,12 @@ struct LowerLibCxxAbiFunctions : public ModulePass {
 
         I.replaceAllUsesWith(ci);
         toKill.push_back(&I);
+        Changed = true;
 
       } else if (fn &&
                  (fn->getName().equals("__cxa_free_exception") ||
                   fn->getName().equals("__cxa_free_dependent_exception"))) {
-        if (!CI.doesNotReturn() || CI.arg_size() != 1)
+        if (CI.doesNotReturn() || CI.arg_size() != 1)
           continue;
 
         IRBuilder<> Builder(F.getContext());
@@ -111,11 +112,13 @@ struct LowerLibCxxAbiFunctions : public ModulePass {
           (*cg)[&F]->addCalledFunction(ci,
                                        (*cg)[ci->getCalledFunction()]);
         toKill.push_back(&I);
+        Changed = true;
       } else if (fn && fn->getName().equals("__cxa_throw")) {
         LOG("lower-libc++abi", errs() << "Deleted " << I << "\n");
         // Assume that after this call there is always an
         // unreachable instruction
         toKill.push_back(&I);
+        Changed = true;
       }
     }
 

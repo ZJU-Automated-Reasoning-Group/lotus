@@ -5,7 +5,7 @@
 namespace seahorn {
 namespace solver {
 class Solver;
-}
+} // namespace solver
 } // namespace seahorn
 
 namespace seahorn {

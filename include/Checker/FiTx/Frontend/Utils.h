@@ -1,4 +1,6 @@
 #pragma once
+#include "llvm/ADT/APFloat.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -17,13 +19,9 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Pass.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
-
-#include "llvm/ADT/APFloat.h"
-#include "llvm/Analysis/LoopInfo.h"
 
 // include STL
 #include <algorithm>
@@ -37,11 +35,10 @@
 #include <string>
 #include <vector>
 
-
-namespace framework {
-void generateWarning(llvm::Instruction* Inst, std::string war);
-void generateWarning(llvm::Instruction* Inst, llvm::Value* val);
-void generateWarning(llvm::Instruction* Inst, llvm::Type* type);
-void generateError(llvm::Instruction* Inst, std::string warn);
-std::string getDebugInfo(llvm::Instruction* inst);
-} // namespace framework
+namespace fitx {
+void generateWarning(llvm::Instruction *Inst, std::string war);
+void generateWarning(llvm::Instruction *Inst, llvm::Value *val);
+void generateWarning(llvm::Instruction *Inst, llvm::Type *type);
+void generateError(llvm::Instruction *Inst, std::string warn);
+std::string getDebugInfo(llvm::Instruction *inst);
+} // namespace fitx

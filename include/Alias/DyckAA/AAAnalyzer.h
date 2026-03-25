@@ -19,6 +19,14 @@
 #ifndef DYCKAA_AAANALYZER_H
 #define DYCKAA_AAANALYZER_H
 
+#include "Alias/DyckAA/DyckCallGraph.h"
+#include "Alias/DyckAA/DyckGraph.h"
+#include "Alias/Spec/AliasSpecManager.h"
+
+#include <map>
+#include <set>
+#include <unordered_map>
+
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/GetElementPtrTypeIterator.h>
@@ -28,96 +36,95 @@
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/raw_ostream.h>
-#include <map>
-#include <set>
-#include <unordered_map>
-
-#include "Alias/DyckAA/DyckCallGraph.h"
-#include "Alias/DyckAA/DyckGraph.h"
-#include "Alias/Spec/AliasSpecManager.h"
 
 using namespace llvm;
 
 typedef struct FunctionTypeNode {
-    FunctionType *FuncTy;
-    FunctionTypeNode *Root;
-    std::set<Function *> CompatibleFuncs;
+  FunctionType *FuncTy;
+  FunctionTypeNode *Root;
+  std::set<Function *> CompatibleFuncs;
 } FunctionTypeNode;
 
 class AAAnalyzer {
 private:
-    Module *Mod;
-    const DataLayout *DL;
-    DyckGraph *CFLGraph;
-    DyckCallGraph *DyckCG;
+  Module *Mod;
+  const DataLayout *DL;
+  DyckGraph *CFLGraph;
+  DyckCallGraph *DyckCG;
 
-    /// For checking compatible functions of a function pointer
-    /// @{
-    std::map<Type *, FunctionTypeNode *> FunctionTyNodeMap;
-    std::set<FunctionTypeNode *> TyRoots;
-    /// @}
+  /// For checking compatible functions of a function pointer
+  /// @{
+  std::map<Type *, FunctionTypeNode *> FunctionTyNodeMap;
+  std::set<FunctionTypeNode *> TyRoots;
+  /// @}
 
-    /// Spec manager for handling library functions
-    lotus::alias::AliasSpecManager specManager;
+  /// Spec manager for handling library functions
+  lotus::alias::AliasSpecManager specManager;
 
 public:
-    AAAnalyzer(Module *, DyckGraph *, DyckCallGraph *);
+  AAAnalyzer(Module *, DyckGraph *, DyckCallGraph *);
 
-    ~AAAnalyzer();
+  ~AAAnalyzer();
 
-    void intraProcedureAnalysis();
+  void intraProcedureAnalysis();
 
-    void interProcedureAnalysis();
-
-private:
-    void printNoAliasedPointerCalls();
-
-    void handleInst(Instruction *Inst, DyckCallGraphNode *Parent);
-
-    void handleInstrinsic(Instruction *Inst);
-
-    void handleExtractInsertValueInst(Value *AggValue, Type *AggTy, ArrayRef<unsigned> &Indices,
-                                      Value *InsertedOrExtractedValue);
-
-    DyckGraphNode *handleGEP(GEPOperator *);
-
-    void handleExtractInsertElmtInst(Value *Vec, Value *Elmt);
-
-    void handleInvokeCallInst(Instruction *Ret, Value *CV, std::vector<Value *> *Args, DyckCallGraphNode *Parent);
-
-    void handleLibInvokeCallInst(Value *Ret, Function *F, const std::vector<Value *> *Args, DyckCallGraphNode *Parent);
-
-    bool handlePointerFunctionCalls(DyckCallGraphNode *Caller, int Counter);
-
-    void handleCommonFunctionCall(Call *, DyckCallGraphNode *Caller, DyckCallGraphNode *Callee);
+  void interProcedureAnalysis();
 
 private:
-    int isCompatible(FunctionType *, FunctionType *);
+  void printNoAliasedPointerCalls();
 
-    std::set<Function *> *getCompatibleFunctions(FunctionType *);
+  void handleInst(Instruction *Inst, DyckCallGraphNode *Parent);
 
-    FunctionTypeNode *initFunctionGroup(FunctionType *);
+  void handleInstrinsic(Instruction *Inst);
 
-    void initFunctionGroups();
+  void handleExtractInsertValueInst(Value *AggValue, Type *AggTy,
+                                    ArrayRef<unsigned> &Indices,
+                                    Value *InsertedOrExtractedValue);
 
-    void destroyFunctionGroups();
+  DyckGraphNode *handleGEP(GEPOperator *);
 
-    void combineFunctionGroups(FunctionType *, FunctionType *);
+  void handleExtractInsertElmtInst(Value *Vec, Value *Elmt);
+
+  void handleInvokeCallInst(Instruction *Ret, Value *CV,
+                            std::vector<Value *> *Args,
+                            DyckCallGraphNode *Parent);
+
+  void handleLibInvokeCallInst(Value *Ret, Function *F,
+                               const std::vector<Value *> *Args,
+                               DyckCallGraphNode *Parent);
+
+  bool handlePointerFunctionCalls(DyckCallGraphNode *Caller, int Counter);
+
+  void handleCommonFunctionCall(Call *, DyckCallGraphNode *Caller,
+                                DyckCallGraphNode *Callee);
 
 private:
-    /// return the structure's field vertex
-    DyckGraphNode *addField(DyckGraphNode *Val, long FieldIndex, DyckGraphNode *Field);
+  int isCompatible(FunctionType *, FunctionType *);
 
-    /// if one of add and val is null, create and return it
-    /// otherwise return the ptr;
-    DyckGraphNode *addPtrTo(DyckGraphNode *Address, DyckGraphNode *Val);
+  std::set<Function *> *getCompatibleFunctions(FunctionType *);
 
-    DyckGraphNode *makeAlias(DyckGraphNode *, DyckGraphNode *);
+  FunctionTypeNode *initFunctionGroup(FunctionType *);
 
-    void makeContentAlias(DyckGraphNode *, DyckGraphNode *);
+  void initFunctionGroups();
 
-    DyckGraphNode *wrapValue(Value *);
+  void destroyFunctionGroups();
+
+  void combineFunctionGroups(FunctionType *, FunctionType *);
+
+private:
+  /// return the structure's field vertex
+  DyckGraphNode *addField(DyckGraphNode *Val, long FieldIndex,
+                          DyckGraphNode *Field);
+
+  /// if one of add and val is null, create and return it
+  /// otherwise return the ptr;
+  DyckGraphNode *addPtrTo(DyckGraphNode *Address, DyckGraphNode *Val);
+
+  DyckGraphNode *makeAlias(DyckGraphNode *, DyckGraphNode *);
+
+  void makeContentAlias(DyckGraphNode *, DyckGraphNode *);
+
+  DyckGraphNode *wrapValue(Value *);
 };
 
 #endif // DYCKAA_AAANALYZER_H
-

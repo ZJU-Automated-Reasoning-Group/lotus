@@ -36,7 +36,7 @@ bool TopologicalOrder::isBackEdge(const BasicBlock &src,
 void TopologicalOrder::print(raw_ostream &out, const Module *m) const {
   out << "TOPO BEGIN\n";
 
-  for (auto bb : *this)
+  for (const auto *bb : *this)
     out << bb->getName() << " ";
   out << "\n";
 

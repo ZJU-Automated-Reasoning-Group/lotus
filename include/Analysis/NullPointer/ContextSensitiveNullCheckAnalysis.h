@@ -1,60 +1,27 @@
-/*
- *  Author: rainoftime
- *  Date: 2025-03
- *  Description: Context-sensitive null check analysis
- */
+#pragma once
 
-#ifndef NULLPOINTER_CONTEXTSENSITIVENULLCHECKANALYSIS_H
-#define NULLPOINTER_CONTEXTSENSITIVENULLCHECKANALYSIS_H
-
-#include <llvm/IR/Function.h>
 #include <llvm/Pass.h>
-//#include <list>
-//#include <set>
-//#include <unordered_map>
+
 #include "Analysis/NullPointer/ContextSensitiveNullFlowAnalysis.h"
-#include <map>
 
-using namespace llvm;
-
-class ContextSensitiveLocalNullCheckAnalysis;
-
-class ContextSensitiveNullCheckAnalysis : public ModulePass {
+class ContextSensitiveNullCheckAnalysis : public llvm::ModulePass {
 private:
-    // Maps a function and context to its local null check analysis
-    std::map<std::pair<Function*, Context>, ContextSensitiveLocalNullCheckAnalysis*> AnalysisMap;
-    
-    // Maximum context depth to consider (to prevent context explosion)
-    unsigned MaxContextDepth;
-    
-    // Maps a function and k-limited context to all contexts that share the same k suffix
-    std::map<std::pair<Function*, Context>, std::set<Context>> KLimitedContextMap;
+  ContextSensitiveNullFlowAnalysis *NFA = nullptr;
 
 public:
-    static char ID;
+  using Context = ContextSensitiveNullFlowAnalysis::Context;
 
-    ContextSensitiveNullCheckAnalysis();
-    ~ContextSensitiveNullCheckAnalysis() override;
+  static char ID;
 
-    bool runOnModule(Module &M) override;
-    void getAnalysisUsage(AnalysisUsage &AU) const override;
+  ContextSensitiveNullCheckAnalysis();
+  ~ContextSensitiveNullCheckAnalysis() override;
 
-public:
-    /// \p Ptr must be an operand of \p Inst
-    /// return true if \p Ptr at \p Inst may be a null pointer in the given context
-    bool mayNull(Value *Ptr, Instruction *Inst, const Context &Ctx);
-    
-    /// Helper method to get a context string for debugging
-    std::string getContextString(const Context& Ctx) const;
-    
-    /// Get a k-limited context (most recent k call sites)
-    Context getKLimitedContext(const Context &Ctx) const;
-    
-    /// Build the KLimitedContextMap for sound k-limiting
-    void buildKLimitedContextMap();
-    
-    /// Check if a pointer may be null in any context with the same k-suffix
-    bool mayNullInAnyMatchingContext(Value *Ptr, Instruction *Inst, const Context &KLimitedCtx);
+  bool runOnModule(llvm::Module &M) override;
+  void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
+
+  bool mayNull(llvm::Value *Ptr, llvm::Instruction *Inst);
+  bool mayNull(llvm::Value *Ptr, llvm::Instruction *Inst, const Context &Ctx);
+
+  std::string getContextString(const Context &Ctx) const;
+  std::vector<Context> getReachableContexts(llvm::Instruction *Inst) const;
 };
-
-#endif // NULLPOINTER_CONTEXTSENSITIVENULLCHECKANALYSIS_H

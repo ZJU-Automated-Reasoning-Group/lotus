@@ -42,31 +42,25 @@ static cl::opt<std::string>
 
 namespace {
 
-void buildValueIds(
-    llvm::Function *F,
-    std::unordered_map<const llvm::Value *, std::string> &ValueToId,
-    std::vector<llvm::Instruction *> &OrderedInsts) {
-  ValueToId.clear();
-  OrderedInsts.clear();
+void buildValueIds(Function *F,
+                   std::unordered_map<const Value *, std::string> &ValueToId,
+                   std::vector<Instruction *> &OrderedInsts) {
   unsigned ArgIdx = 0;
-  for (auto &Arg : F->args()) {
+  for (auto &Arg : F->args())
     ValueToId[&Arg] = "arg" + std::to_string(ArgIdx++);
-  }
   unsigned InstIdx = 0;
-  for (auto &BB : *F) {
+  for (auto &BB : *F)
     for (auto &I : BB) {
       OrderedInsts.push_back(&I);
       ValueToId[&I] = "i" + std::to_string(InstIdx++);
     }
-  }
 }
 
-std::string formatIFDSFactToString(
+std::string formatIFDSFact(
     const ifds::DefinitionFact &fact,
-    const std::unordered_map<const llvm::Value *, std::string> &ValueToId) {
-  if (fact.is_zero()) {
+    const std::unordered_map<const Value *, std::string> &ValueToId) {
+  if (fact.is_zero())
     return "zero";
-  }
   std::ostringstream ss;
   auto varIt = ValueToId.find(fact.get_variable());
   auto defIt = ValueToId.find(fact.get_definition_site());
@@ -75,12 +69,11 @@ std::string formatIFDSFactToString(
   return ss.str();
 }
 
-std::string formatIFDSFactToString(
+std::string formatIFDSFact(
     const ifds::UninitVarFact &fact,
-    const std::unordered_map<const llvm::Value *, std::string> &ValueToId) {
-  if (fact.is_zero()) {
+    const std::unordered_map<const Value *, std::string> &ValueToId) {
+  if (fact.is_zero())
     return "zero";
-  }
   std::ostringstream ss;
   auto It = ValueToId.find(fact.value);
   ss << (fact.is_uninitialized() ? "uninit(" : "init(")
@@ -91,11 +84,10 @@ std::string formatIFDSFactToString(
 template <typename Fact>
 void formatIFDSFactSet(
     raw_ostream &OS, const std::set<Fact> &facts,
-    const std::unordered_map<const llvm::Value *, std::string> &ValueToId) {
+    const std::unordered_map<const Value *, std::string> &ValueToId) {
   std::vector<std::string> formatted;
-  for (const auto &fact : facts) {
-    formatted.push_back(formatIFDSFactToString(fact, ValueToId));
-  }
+  for (const auto &fact : facts)
+    formatted.push_back(formatIFDSFact(fact, ValueToId));
   std::sort(formatted.begin(), formatted.end());
   for (size_t i = 0; i < formatted.size(); ++i) {
     if (i)
@@ -104,7 +96,7 @@ void formatIFDSFactSet(
   }
 }
 
-const llvm::Instruction *getNextInstruction(const llvm::Instruction *I) {
+const Instruction *getNextInstruction(const Instruction *I) {
   if (auto *Next = I->getNextNode())
     return Next;
   for (auto *Succ : successors(I->getParent())) {
@@ -154,28 +146,25 @@ int main(int argc, char **argv) {
     if (F.isDeclaration())
       continue;
 
-    std::unordered_map<const llvm::Value *, std::string> ValueToId;
-    std::vector<llvm::Instruction *> OrderedInsts;
+    std::unordered_map<const Value *, std::string> ValueToId;
+    std::vector<Instruction *> OrderedInsts;
     buildValueIds(&F, ValueToId, OrderedInsts);
-
     OS << "FUNC " << F.getName().str() << "\n";
 
     if (AnalysisOpt == "reaching_defs") {
       ifds::ReachingDefinitionsAnalysis problem;
       ifds::IFDSSolver<ifds::ReachingDefinitionsAnalysis> solver(problem);
       solver.solve(*M);
-
       auto allResults = solver.get_all_results();
       for (auto *I : OrderedInsts) {
-        const llvm::Instruction *nextInst = getNextInstruction(I);
+        const Instruction *nextInst = getNextInstruction(I);
         OS << "  " << ValueToId.at(I) << " IN: ";
         if (nextInst) {
           auto node = ifds::ExplodedSupergraph<ifds::DefinitionFact>::Node(
               nextInst, ifds::DefinitionFact::zero());
           auto It = allResults.find(node);
-          if (It != allResults.end()) {
+          if (It != allResults.end())
             formatIFDSFactSet(OS, It->second, ValueToId);
-          }
         }
         OS << "\n";
       }
@@ -183,18 +172,16 @@ int main(int argc, char **argv) {
       ifds::UninitializedVariablesAnalysis problem;
       ifds::IFDSSolver<ifds::UninitializedVariablesAnalysis> solver(problem);
       solver.solve(*M);
-
       auto allResults = solver.get_all_results();
       for (auto *I : OrderedInsts) {
-        const llvm::Instruction *nextInst = getNextInstruction(I);
+        const Instruction *nextInst = getNextInstruction(I);
         OS << "  " << ValueToId.at(I) << " IN: ";
         if (nextInst) {
           auto node = ifds::ExplodedSupergraph<ifds::UninitVarFact>::Node(
               nextInst, ifds::UninitVarFact::zero());
           auto It = allResults.find(node);
-          if (It != allResults.end()) {
+          if (It != allResults.end())
             formatIFDSFactSet(OS, It->second, ValueToId);
-          }
         }
         OS << "\n";
       }

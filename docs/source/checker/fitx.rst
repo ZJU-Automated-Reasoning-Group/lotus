@@ -131,4 +131,3 @@ See Also
 --------
 
 * :doc:`index` – Checker framework overview
-* :doc:`gvfa` – GVFA-based vulnerability checkers (different analysis approach)

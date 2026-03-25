@@ -1,4 +1,5 @@
-// Explicit instantiations for RegexDag types used by ProcedureResources and DagInterpreter.
+// Explicit instantiations for RegexDag types used by ProcedureResources and
+// DagInterpreter.
 #include "Verification/Sifa/Cfg/Transition.h"
 #include "Verification/Sifa/RegexDag/BackwardClosedOverlay.h"
 #include "Verification/Sifa/RegexDag/RegexDag.h"

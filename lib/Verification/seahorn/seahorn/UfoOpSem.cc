@@ -1325,13 +1325,13 @@ static void printCB(const CallBaseInfo &csi, const FunctionInfo &fi) {
   errs() << "regions: " << fi.regions.size() << " args: " << fi.args.size()
          << " globals: " << fi.globals.size() << " ret: " << fi.ret << "\n";
   errs() << "regions\n";
-  for (auto r : fi.regions)
+  for (const auto *r : fi.regions)
     errs() << *r << "\n";
   errs() << "args\n";
-  for (auto r : fi.args)
+  for (const auto *r : fi.args)
     errs() << *r << "\n";
   errs() << "globals\n";
-  for (auto r : fi.globals)
+  for (const auto *r : fi.globals)
     errs() << *r << "\n";
   if (fi.ret)
     errs() << "ret: " << *fi.ret << "\n";
@@ -1950,7 +1950,7 @@ void FMapUfoOpSem::execCallBase(CallBaseInfo &csi, ExprVector &side,
   for (auto &kv : extraDefs)
     recInlineDefs(kv.first, kv.second, extraDefs, added);
 
-  auto r_it = fi.regions.begin();
+  const auto *r_it = fi.regions.begin();
   auto v_it = csi.m_regionValues.begin();
   for (unsigned i = 3; i < csi.m_fparams.size(); i++) {
     Expr param = csi.m_fparams[i];

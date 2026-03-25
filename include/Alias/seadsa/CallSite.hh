@@ -11,8 +11,6 @@
 // XXX: included for Cell.
 #include "Alias/seadsa/Graph.hh"
 
-#include "boost/iterator/filter_iterator.hpp"
-
 namespace llvm {
 class Value;
 class Function;
@@ -41,11 +39,11 @@ class DsaCallSite {
 
 public:
   using const_formal_iterator =
-      boost::filter_iterator<isPointerTy,
-                             typename llvm::Function::const_arg_iterator>;
+      seadsa::filter_iterator<isPointerTy,
+                              typename llvm::Function::const_arg_iterator>;
   using const_actual_iterator =
-      boost::filter_iterator<isPointerTy,
-                             typename llvm::User::const_op_iterator>;
+      seadsa::filter_iterator<isPointerTy,
+                              typename llvm::User::const_op_iterator>;
 
   DsaCallSite(const llvm::CallBase &cb);
   DsaCallSite(const llvm::Instruction &cs);

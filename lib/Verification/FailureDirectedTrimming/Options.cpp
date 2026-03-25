@@ -14,27 +14,27 @@ using namespace llvm;
 // -----------------------------------------------------------------------------
 cl::opt<bool> FDTrimInstrumentCalls(
     "fdtrim-instrument-calls",
-    cl::desc("Insert trimming assumes before procedure calls"),
-    cl::init(true));
+    cl::desc("Insert trimming assumes before procedure calls"), cl::init(true));
 
 cl::opt<bool> FDTrimInstrumentConditionals(
     "fdtrim-instrument-conditionals",
-    cl::desc("Insert trimming assumes before conditionals"),
-    cl::init(false));
+    cl::desc("Insert trimming assumes before conditionals"), cl::init(false));
 
-cl::opt<bool> FDTrimInstrumentLoops(
-    "fdtrim-instrument-loops",
-    cl::desc("Insert trimming assumes at loop headers"),
-    cl::init(true));
+cl::opt<bool>
+    FDTrimInstrumentLoops("fdtrim-instrument-loops",
+                          cl::desc("Insert trimming assumes at loop headers"),
+                          cl::init(true));
 
-cl::opt<unsigned> FDTrimMaxConjuncts(
-    "fdtrim-max-conjuncts",
-    cl::desc("Maximum number of conjuncts in each inserted assume condition (0 = no limit)"),
-    cl::init(0));
+cl::opt<unsigned>
+    FDTrimMaxConjuncts("fdtrim-max-conjuncts",
+                       cl::desc("Maximum number of conjuncts in each inserted "
+                                "assume condition (0 = no limit)"),
+                       cl::init(0));
 
 cl::opt<unsigned> FDTrimSummaryIterations(
     "fdtrim-summary-iterations",
-    cl::desc("Number of summary refinement iterations (0 = compute no summaries)"),
+    cl::desc(
+        "Number of summary refinement iterations (0 = compute no summaries)"),
     cl::init(2));
 
 cl::opt<unsigned> FDTrimCFGIterations(
@@ -64,13 +64,15 @@ cl::opt<std::string> FDTrimDerefMode(
 
 cl::opt<std::string> FDTrimAA(
     "fdtrim-aa",
-    cl::desc("Alias analysis backend for trimming (e.g., seadsa, andersen, tpa)"),
+    cl::desc(
+        "Alias analysis backend for trimming (e.g., seadsa, andersen, tpa)"),
     cl::init("seadsa"));
 
-cl::opt<bool> FDTrimModelUBOps(
-    "fdtrim-model-ub-ops",
-    cl::desc("Model potentially-UB/poisoning integer ops (div/rem/shifts) instead of havocing them"),
-    cl::init(false));
+cl::opt<bool>
+    FDTrimModelUBOps("fdtrim-model-ub-ops",
+                     cl::desc("Model potentially-UB/poisoning integer ops "
+                              "(div/rem/shifts) instead of havocing them"),
+                     cl::init(false));
 
 // -----------------------------------------------------------------------------
 // Name predicates and getVerifierAssume
@@ -98,7 +100,8 @@ bool isAssertFunctionName(StringRef Name) {
 bool isErrorFunctionName(StringRef Name) {
   return Name == "__VERIFIER_error" || Name == "verifier.error" ||
          Name == "seahorn.error" || Name == "__SEAHORN_error" ||
-         Name == "__assert_fail" || Name == "llvm.trap" || Name == "seahorn.fail";
+         Name == "__assert_fail" || Name == "llvm.trap" ||
+         Name == "seahorn.fail";
 }
 
 FunctionCallee getVerifierAssume(Module &M) {
@@ -113,7 +116,8 @@ FunctionCallee getVerifierAssume(Module &M) {
   B.addAttribute(Attribute::NoInline);
   B.addAttribute(Attribute::InaccessibleMemOnly);
 
-  AttributeList Attrs = AttributeList::get(Ctx, AttributeList::FunctionIndex, B);
+  AttributeList Attrs =
+      AttributeList::get(Ctx, AttributeList::FunctionIndex, B);
   return M.getOrInsertFunction("verifier.assume", Attrs, VoidTy, BoolTy);
 }
 
@@ -140,7 +144,8 @@ Value *NondetFactory::nondetBool(IRBuilder<> &B) {
 }
 
 FunctionCallee DerefUFFactory::get(Type *RetTy, unsigned AddrSpace) {
-  uint64_t Key = llvm::hash_combine(reinterpret_cast<uintptr_t>(RetTy), AddrSpace);
+  uint64_t Key =
+      llvm::hash_combine(reinterpret_cast<uintptr_t>(RetTy), AddrSpace);
   auto It = Cache.find(Key);
   if (It != Cache.end())
     return It->second;
@@ -156,7 +161,8 @@ FunctionCallee DerefUFFactory::get(Type *RetTy, unsigned AddrSpace) {
   B.addAttribute(Attribute::ReadNone);
   B.addAttribute(Attribute::NoRecurse);
 
-  AttributeList Attrs = AttributeList::get(Ctx, AttributeList::FunctionIndex, B);
+  AttributeList Attrs =
+      AttributeList::get(Ctx, AttributeList::FunctionIndex, B);
   FunctionCallee Callee = M.getOrInsertFunction(Name, Attrs, RetTy, I8PtrTy);
   Cache[Key] = Callee;
   return Callee;

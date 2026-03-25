@@ -1,5 +1,5 @@
 #!/bin/bash
-# Fuzz the checkers in tools/checker (lotus-gvfa, lotus-kint, lotus-taint, lotus-concur, lotus-pulse, lotus-fitx).
+# Fuzz the checkers in tools/checker (lotus-kint, lotus-taint, lotus-concur, lotus-pulse, lotus-fitx).
 # Uses CSmith to generate random C, compiles to LLVM IR, then runs each checker.
 # export CLANG="/path/to/your/clang"
 CLANG="${CLANG:-clang}"
@@ -45,27 +45,6 @@ while true; do
         continue
     fi
     echo "Output: Compilation successful"
-
-    # lotus-gvfa (vulnerability checkers); timeout so a single run cannot hang
-    GVFA_TIMEOUT="${GVFA_TIMEOUT:-120}"
-    for vuln in nullpointer useafterfree uninitialized freenonheap stackaddress; do
-        echo "=== Running lotus-gvfa --vuln-type=$vuln ==="
-        if ! timeout "${GVFA_TIMEOUT}s" "$BUILD_DIR/bin/lotus-gvfa" --vuln-type="$vuln" "$BC_FILE" 2>&1; then
-            echo "CRASH or TIMEOUT: lotus-gvfa (--vuln-type=$vuln) crashed on $C_FILE"
-            echo "Test files preserved: $C_FILE, $BC_FILE"
-            exit 1
-        fi
-        echo "✓ lotus-gvfa (--vuln-type=$vuln) completed successfully"
-    done
-    for use_npa in false true; do
-        echo "=== Running lotus-gvfa --vuln-type=nullpointer --use-npa=$use_npa ==="
-        if ! timeout "${GVFA_TIMEOUT}s" "$BUILD_DIR/bin/lotus-gvfa" --vuln-type=nullpointer --use-npa="$use_npa" "$BC_FILE" 2>&1; then
-            echo "CRASH or TIMEOUT: lotus-gvfa (--use-npa=$use_npa) crashed on $C_FILE"
-            echo "Test files preserved: $C_FILE, $BC_FILE"
-            exit 1
-        fi
-        echo "✓ lotus-gvfa (--use-npa=$use_npa) completed successfully"
-    done
 
     # lotus-kint
     echo "=== Running lotus-kint ==="

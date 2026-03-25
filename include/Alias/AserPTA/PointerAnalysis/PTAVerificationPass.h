@@ -4,10 +4,10 @@
 
 
 #include <llvm/Demangle/Demangle.h>
-#include <llvm/IR/Instructions.h>
 #include <llvm/IR/InstrTypes.h>
-#include <llvm/Pass.h>
+#include <llvm/IR/Instructions.h>
 #include <llvm/IR/Module.h>
+#include <llvm/Pass.h>
 
 #include "Alias/AserPTA/PointerAnalysis/PointerAnalysisPass.h"
 #include "Alias/AserPTA/PointerAnalysis/Context/NoCtx.h"
@@ -134,7 +134,7 @@ public:
     }
 };
 
-}
+} // namespace aser
 
 template <typename PTA>
 char aser::PTAVerificationPass<PTA>::ID = 0;

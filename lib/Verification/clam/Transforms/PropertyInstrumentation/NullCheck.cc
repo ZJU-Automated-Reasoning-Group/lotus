@@ -132,8 +132,8 @@ void NullCheck::insertNullCheck(Value *Ptr, IRBuilder<> &B, Instruction *I) {
   // update call graph
   if (CG) {
     Function *Fn = I->getParent()->getParent();
-    auto f1 = CG->getOrInsertFunction(Fn);
-    auto f2 = CG->getOrInsertFunction(AssertFn);
+    auto *f1 = CG->getOrInsertFunction(Fn);
+    auto *f2 = CG->getOrInsertFunction(AssertFn);
     f1->addCalledFunction(CI, f2);
   }
 }
@@ -243,8 +243,8 @@ bool NullCheck::runOnFunction(Function &F) {
                         << "\n";);
           // update call graph
           if (CG) {
-            auto f1 = CG->getOrInsertFunction(&F);
-            auto f2 = CG->getOrInsertFunction(AssumeFn);
+            auto *f1 = CG->getOrInsertFunction(&F);
+            auto *f2 = CG->getOrInsertFunction(AssumeFn);
             f1->addCalledFunction(CI, f2);
           }
         }

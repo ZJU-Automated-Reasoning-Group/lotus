@@ -1,8 +1,12 @@
-// Clone-and-wrap transformation for modular trimming (paper §5, Interprocedural instrumentation).
+// Clone-and-wrap transformation for modular trimming (paper §5, Interprocedural
+// instrumentation).
 //
-// Paper: create prc' (safe clone) with assert→assume and calls→prc'; at each call site replace
-//   v := call prc(e)  by  if(⋆) { v := call prc'(e) } else { v := call prc(e); assume false }.
-// This allows local trimming assumptions inside prc while preserving failing executions.
+// Paper: create prc' (safe clone) with assert→assume and calls→prc'; at each
+// call site replace
+//   v := call prc(e)  by  if(⋆) { v := call prc'(e) } else { v := call prc(e);
+//   assume false }.
+// This allows local trimming assumptions inside prc while preserving failing
+// executions.
 
 #include "FailureDirectedTrimmingImpl.h"
 
@@ -34,12 +38,13 @@ static bool passesNameFiltersForSafeClone(const Function &F) {
   return true;
 }
 
-// Paper §5: create prc' for each prc with assert φ → assume φ, error → assume false;
-// replace calls to prc inside prc' with calls to prc'.
+// Paper §5: create prc' for each prc with assert φ → assume φ, error → assume
+// false; replace calls to prc inside prc' with calls to prc'.
 DenseMap<Function *, Function *> cloneSafeFunctions(Module &M,
                                                     FunctionCallee AssumeFn) {
-  // Safe clone f.fdtrim.safe: cannot exhibit assertion failure (assert→assume, error→assume(false)).
-  // After wrapCallsInOriginalFunctions, executions either follow safe clones or enter failure context.
+  // Safe clone f.fdtrim.safe: cannot exhibit assertion failure (assert→assume,
+  // error→assume(false)). After wrapCallsInOriginalFunctions, executions either
+  // follow safe clones or enter failure context.
   DenseMap<Function *, Function *> SafeOf;
 
   DenseSet<Function *> Candidates;
@@ -184,12 +189,15 @@ DenseMap<Function *, Function *> cloneSafeFunctions(Module &M,
 }
 
 // Paper §5: at call site v := call prc(e), replace with
-//   if(⋆) v := call prc'(e) else { v := call prc(e); assume false }; unreachable on else.
-// Failure branch ensures every entry to prc is followed by assume false (justifies local trimming).
+//   if(⋆) v := call prc'(e) else { v := call prc(e); assume false };
+//   unreachable on else.
+// Failure branch ensures every entry to prc is followed by assume false
+// (justifies local trimming).
 bool wrapCallsInOriginalFunctions(Module &M, FunctionCallee AssumeFn,
                                   DenseMap<Function *, Function *> &SafeOf,
                                   NondetFactory &Nondet) {
-  // For each call f(args) with safe clone: if (nondet) call f.safe(args) else { call f(args); assume(false); unreachable }.
+  // For each call f(args) with safe clone: if (nondet) call f.safe(args) else {
+  // call f(args); assume(false); unreachable }.
   bool Changed = false;
 
   for (Function &F : M) {
@@ -209,7 +217,8 @@ bool wrapCallsInOriginalFunctions(Module &M, FunctionCallee AssumeFn,
       if (isAssumeFunctionName(CF->getName()) ||
           isAssumeNotFunctionName(CF->getName()) ||
           isAssertFunctionName(CF->getName()) ||
-          isErrorFunctionName(CF->getName()) || isNondetFunctionName(CF->getName()))
+          isErrorFunctionName(CF->getName()) ||
+          isNondetFunctionName(CF->getName()))
         continue;
       if (!SafeOf.count(CF))
         continue;

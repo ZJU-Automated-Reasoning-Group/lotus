@@ -139,7 +139,7 @@ namespace horn_verification
 				out << (i > 0 ? ", " : "") << data._categorical_names[i] << " (" << data._number_of_categories[i] << ")";
 			}
 			
-			out << std::endl << "Integer attributes: ";
+			out << '\n' << "Integer attributes: ";
 			for (std::size_t i = 0; i < data._int_names.size(); ++i)
 			{
 				out << (i > 0 ? ", " : "") << data._int_names[i];

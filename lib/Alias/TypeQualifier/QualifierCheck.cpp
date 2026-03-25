@@ -14,7 +14,7 @@
 #include "Alias/TypeQualifier/Config.h"
 #include "Alias/TypeQualifier/Helper.h"
 #include "Alias/TypeQualifier/QualifierAnalysis.h"
-#include "Utils/General/json11.hpp"
+#include "Utils/Formats/json11.hpp"
 
 #include <cstring>
 #include <deque>
@@ -48,7 +48,7 @@ void FuncAnalysis::QualifierCheck() {
 // assert(valIndex != AndersNodeFactory::InvalidIndex && "Failed to find load
 // value node");
 #ifdef STACK_CHECK
-      if (nQualiArray[I].at(opIndex) == _UD) {
+      if (nQualiArray[I].at(opIndex) == QualifierState::Uninitialized) {
         bool ans = warningReported(I, opIndex);
         if (ans)
           break;
@@ -101,7 +101,7 @@ void FuncAnalysis::QualifierCheck() {
       }
 #ifdef HEAP_CHECK
       if (dstIndex == nodeFactory.getUniversalPtrNode() || heapNode) {
-        if (nQualiArray[I].at(srcIndex) != _ID) {
+        if (nQualiArray[I].at(srcIndex) != QualifierState::Initialized) {
           std::ofstream ofile;
           ofile.open(Ctx->heapWarning, std::ios::app);
           OP << "***********Heap Warning: uninitialized ptr stored to  heap"
@@ -125,7 +125,7 @@ void FuncAnalysis::QualifierCheck() {
             unsigned objOffset = nodeFactory.getObjectOffset(obj);
             if (const StructType *structType = dyn_cast<StructType>(type)) {
               for (unsigned i = 0; i < objSize - objOffset; i++) {
-                if (nQualiArray[I].at(obj + i) != _ID) {
+                if (nQualiArray[I].at(obj + i) != QualifierState::Initialized) {
                   std::ofstream ofile;
                   ofile.open(Ctx->heapWarning, std::ios::app);
                   if (Ctx->usedField[structType].find(i) ==
@@ -147,7 +147,7 @@ void FuncAnalysis::QualifierCheck() {
                 }
               }
             } else {
-              if (nQualiArray[I].at(obj) != _ID) {
+              if (nQualiArray[I].at(obj) != QualifierState::Initialized) {
                 std::ofstream ofile;
                 ofile.open(Ctx->heapWarning, std::ios::app);
                 OP << "***********Heap Warning: uninitialized data stored to  "
@@ -178,7 +178,7 @@ void FuncAnalysis::QualifierCheck() {
       assert(op1Index != AndersNodeFactory::InvalidIndex &&
              "Failed to find node for op1");
 #ifdef STACK_CHECK
-      if (nQualiArray[I].at(op0Index) == _UD) {
+      if (nQualiArray[I].at(op0Index) == QualifierState::Uninitialized) {
         bool ans = warningReported(I, op0Index);
         // if (ans) {OP<<"reported before.\n";}
         if (!ans) {
@@ -195,7 +195,7 @@ void FuncAnalysis::QualifierCheck() {
           warningSet.insert(op1Index);
         }
       }
-      if (nQualiArray[I].at(op1Index) == _UD) {
+      if (nQualiArray[I].at(op1Index) == QualifierState::Uninitialized) {
         bool ans = warningReported(I, op1Index);
         if (ans)
           break;
@@ -219,7 +219,7 @@ void FuncAnalysis::QualifierCheck() {
       assert(conIndex != AndersNodeFactory::InvalidIndex &&
              "Failed to find node for condition");
 #ifdef STACK_CHECK
-      if (nQualiArray[I].at(conIndex) == _UD) {
+      if (nQualiArray[I].at(conIndex) == QualifierState::Uninitialized) {
         bool ans = warningReported(I, conIndex);
         if (ans)
           break;
@@ -257,7 +257,7 @@ void FuncAnalysis::QualifierCheck() {
 
           InlineAsm::ConstraintInfo consInfo = CIV.at(argNo);
           if (consInfo.Type == InlineAsm::isInput) {
-            if (nQualiArray[I].at(argIndex) == _UD) {
+            if (nQualiArray[I].at(argIndex) == QualifierState::Uninitialized) {
               insertUninit(I, argIndex, uninitArg);
 #ifdef STACK_CHECK
               bool ans = warningReported(I, argIndex);
@@ -283,125 +283,53 @@ void FuncAnalysis::QualifierCheck() {
         }
         break;
       }
-      // 2. skip the heap allocation function
-      if (CI->getCalledFunction()) {
-        StringRef fName = CI->getCalledFunction()->getName();
-        if (Ctx->HeapAllocFuncs.count(fName.str())) {
-          break;
-        }
-      }
-// 3. direct call check
+// 2. direct and indirect call check
 #ifdef STACK_CHECK
-      if (CI->getCalledFunction()) {
-        Function *Func = CI->getCalledFunction();
-        StringRef fName = Func->getName();
+      auto warnUninitializedArgument = [&](int argNo, StringRef fName) {
+        NodeIndex argIndex = nodeFactory.getValueNodeFor(CI->getArgOperand(argNo));
+        if (nQualiArray[I].at(argIndex) != QualifierState::Uninitialized)
+          return;
+        insertUninit(I, argIndex, uninitArg);
+        if (warningReported(I, argIndex))
+          return;
+#ifdef PRINTWARN
+        OP << "***********Warning: argument check fails @ argument " << argNo
+           << " : arg not initialized\n";
+        OP << "[trace] In function @" << fName.str() << " Instruction:" << *I
+           << "\n";
+#endif
+        visit.clear();
+        warningTy = eToS[getWType(CI->getArgOperand(argNo)->getType())];
+        printRelatedBB(argIndex, I, visit, warningTy);
+        warningSet.insert(argIndex);
+      };
 
-        if (Ctx->OtherFuncs.count(fName.str())) {
-          // do nothing here
-        } else if (Ctx->InitFuncs.count(fName.str())) {
-          for (int argNo = 0; argNo < (int)CI->arg_size(); argNo++) {
-            NodeIndex argIndex =
-                nodeFactory.getValueNodeFor(CI->getArgOperand(argNo));
-            if (nQualiArray[I].at(argIndex) == _UD) {
-              insertUninit(I, argIndex, uninitArg);
-              bool ans = warningReported(I, argIndex);
-              if (ans)
-                continue;
-#ifdef PRINTWARN
-              OP << "***********Warning: argument check fails @ argument "
-                 << argNo << " : arg not initialized\n";
-              OP << "[trace] In function @" << fName.str()
-                 << " Instruction:" << *I << "\n";
-#endif
-              // setRelatedBB(argIndex, I->getParent()->getName().str());
-              visit.clear();
-              warningTy = eToS[getWType(CI->getArgOperand(argNo)->getType())];
-              printRelatedBB(argIndex, I, visit, warningTy);
-              warningSet.insert(argIndex);
-            }
-          }
-        } else if (Ctx->CopyFuncs.count(fName.str())) {
-          checkCopyFuncs(I, Func);
-        } else if (Ctx->TransferFuncs.count(fName.str())) {
-          checkTransferFuncs(I, Func);
-        } else if (Ctx->ObjSizeFuncs.count(fName.str())) {
-          NodeIndex argIndex =
-              nodeFactory.getValueNodeFor(CI->getArgOperand(0));
-          if (nQualiArray[I].at(argIndex) == _UD) {
-            insertUninit(I, argIndex, uninitArg);
-            if (!warningReported(I, argIndex)) {
-#ifdef PRINTWARN
-              OP << "***********Warning: argument check fails @ argument 0: "
-                    "arg not initialized\n";
-              OP << "[trace] In function @" << fName.str()
-                 << " Instruction:" << *I << "\n";
-#endif
-              // setRelatedBB(argIndex, I->getParent()->getName().str());
-              warningTy = eToS[getWType(CI->getArgOperand(0)->getType())];
-              visit.clear();
-              printRelatedBB(argIndex, I, visit, warningTy);
-              warningSet.insert(argIndex);
-            }
-          }
-        } else if (Ctx->OtherFuncs.count(fName.str())) {
+      const std::vector<Function *> targets = resolveCallTargets(CI);
+      for (Function *Func : targets) {
+        const FunctionModel model = FunctionModelRegistry::lookup(Func->getName());
+        switch (model.kind) {
+        case FunctionModelKind::Allocator:
+        case FunctionModelKind::ZeroAllocator:
+        case FunctionModelKind::Ignore:
           continue;
-        } else {
+        case FunctionModelKind::Init:
+          for (int argNo = 0; argNo < (int)CI->arg_size(); argNo++)
+            warnUninitializedArgument(argNo, Func->getName());
+          continue;
+        case FunctionModelKind::Copy:
+          checkCopyFuncs(I, Func);
+          continue;
+        case FunctionModelKind::Transfer:
+          checkTransferFuncs(I, Func);
+          continue;
+        case FunctionModelKind::ObjectSize:
+          if (CI->arg_size() > 0)
+            warnUninitializedArgument(0, Func->getName());
+          continue;
+        case FunctionModelKind::Passthrough:
+        case FunctionModelKind::Unknown:
           checkFuncs(I, Func);
-        }
-      } else {
-        // indirect call
-        for (auto *Func : Ctx->Callees[CI]) {
-          StringRef fName = Func->getName();
-          if (Ctx->OtherFuncs.count(fName.str())) {
-            continue;
-          } else if (Ctx->InitFuncs.count(fName.str())) {
-            for (int argNo = 0; argNo < (int)CI->arg_size(); argNo++) {
-              NodeIndex argIndex =
-                  nodeFactory.getValueNodeFor(CI->getArgOperand(argNo));
-              if (nQualiArray[I].at(argIndex) == _UD) {
-                insertUninit(I, argIndex, uninitArg);
-                if (!warningReported(I, argIndex)) {
-#ifdef PRINTWARN
-                  OP << "***********Warning: argument check fails @ argument "
-                     << argNo << " : arg not initialized\n";
-                  OP << "[trace] In function @" << fName.str()
-                     << " Instruction:" << *I << "\n";
-#endif
-                  warningTy =
-                      eToS[getWType(CI->getArgOperand(argNo)->getType())];
-                  // setRelatedBB(argIndex, I->getParent()->getName().str());
-                  visit.clear();
-                  printRelatedBB(argIndex, I, visit, warningTy);
-                  warningSet.insert(argIndex);
-                }
-              }
-            }
-          } else if (Ctx->CopyFuncs.count(fName.str())) {
-            checkCopyFuncs(I, Func);
-
-          } else if (Ctx->TransferFuncs.count(fName.str())) {
-            checkTransferFuncs(I, Func);
-          } else if (Ctx->ObjSizeFuncs.count(fName.str())) {
-            NodeIndex argIndex =
-                nodeFactory.getValueNodeFor(CI->getArgOperand(0));
-            if (nQualiArray[I].at(argIndex) == _UD) {
-              insertUninit(I, argIndex, uninitArg);
-              if (!warningReported(I, argIndex)) {
-#ifdef PRINTWARN
-                OP << "***********Warning: argument check fails @ argument 0: "
-                      "arg not initialized\n";
-                OP << "[trace] In function @" << fName.str()
-                   << " Instruction:" << *I << "\n";
-#endif
-                // setRelatedBB(argIndex, I->getParent()->getName().str());
-                warningTy = eToS[getWType(CI->getArgOperand(0)->getType())];
-                visit.clear();
-                printRelatedBB(argIndex, I, visit, warningTy);
-              }
-            }
-          } else {
-            checkFuncs(I, Func);
-          }
+          continue;
         }
       }
 #endif
@@ -596,26 +524,26 @@ void FuncAnalysis::calculateRelatedBB(NodeIndex nodeIndex,
           continue;
         }
 
-        if (nQualiArray[aaIns].at(aa) == _UD) {
+        if (nQualiArray[aaIns].at(aa) == QualifierState::Uninitialized) {
           whitelist.insert(aaIns->getParent());
           calculateRelatedBB(aa, aaIns, visit, blacklist, whitelist);
         }
-        if (nQualiArray[aaIns].at(aa) == _ID) {
+        if (nQualiArray[aaIns].at(aa) == QualifierState::Initialized) {
           blacklist.insert(aaIns->getParent());
           calculateRelatedBB(aa, aaIns, visit, blacklist, whitelist);
         }
       }
       // seperatet the quali req and therefore we can scan the BB.
       /*
-      if (inQualiArray[aaIns->getParent()].at(aa) == _UD &&
-      outQualiArray[aaIns->getParent()].at(aa) == _ID) { OP<<"blacklist insert
+      if (inQualiArray[aaIns->getParent()].at(aa) == QualifierState::Uninitialized &&
+      outQualiArray[aaIns->getParent()].at(aa) == QualifierState::Initialized) { OP<<"blacklist insert
       :"<<aaIns->getParent()->getName().str()<<"\n";
               blacklist.insert(aaIns->getParent());
       }*/
 
       for (Function::iterator bb = F->begin(), be = F->end(); bb != be; bb++) {
         const BasicBlock *BB = &*bb;
-        if (inQualiArray[BB].at(aa) != _ID && outQualiArray[BB].at(aa) == _ID) {
+        if (inQualiArray[BB].at(aa) != QualifierState::Initialized && outQualiArray[BB].at(aa) == QualifierState::Initialized) {
           blacklist.insert(BB);
         }
       }
@@ -624,7 +552,7 @@ void FuncAnalysis::calculateRelatedBB(NodeIndex nodeIndex,
         switch (Inst->getOpcode()) {
         case Instruction::Load: {
           NodeIndex srcNode = nodeFactory.getValueNodeFor(Inst->getOperand(0));
-          if (nQualiArray[Inst].at(srcNode) == _UD) {
+          if (nQualiArray[Inst].at(srcNode) == QualifierState::Uninitialized) {
             calculateRelatedBB(srcNode, Inst, visit, blacklist, whitelist);
           }
           break;
@@ -640,7 +568,7 @@ void FuncAnalysis::calculateRelatedBB(NodeIndex nodeIndex,
     for (auto aa : nAAMap[I][nodeIndex]) {
       bool trace = false;
 
-      if (inQualiArray[BB].at(aa) != _ID && outQualiArray[BB].at(aa) == _ID) {
+      if (inQualiArray[BB].at(aa) != QualifierState::Initialized && outQualiArray[BB].at(aa) == QualifierState::Initialized) {
         blacklist.insert(BB);
         trace = true;
       }
@@ -670,9 +598,9 @@ void FuncAnalysis::calculateRelatedBB(NodeIndex nodeIndex,
                 nodeFactory.getValueNodeFor(Inst->getOperand(0));
             NodeIndex op1Index =
                 nodeFactory.getValueNodeFor(Inst->getOperand(1));
-            if (nQualiArray[Inst].at(op0Index) == _UD)
+            if (nQualiArray[Inst].at(op0Index) == QualifierState::Uninitialized)
               calculateRelatedBB(op0Index, Inst, visit, blacklist, whitelist);
-            if (nQualiArray[Inst].at(op1Index) == _UD)
+            if (nQualiArray[Inst].at(op1Index) == QualifierState::Uninitialized)
               calculateRelatedBB(op0Index, Inst, visit, blacklist, whitelist);
             break;
           }
@@ -686,7 +614,7 @@ void FuncAnalysis::calculateRelatedBB(NodeIndex nodeIndex,
           case Instruction::ExtractValue: {
             NodeIndex srcIndex =
                 nodeFactory.getValueNodeFor(Inst->getOperand(0));
-            if (nQualiArray[Inst].at(srcIndex) == _UD)
+            if (nQualiArray[Inst].at(srcIndex) == QualifierState::Uninitialized)
               calculateRelatedBB(srcIndex, Inst, visit, blacklist, whitelist);
             break;
           }
@@ -696,7 +624,7 @@ void FuncAnalysis::calculateRelatedBB(NodeIndex nodeIndex,
             for (unsigned i = 0; i < phiInst->getNumIncomingValues(); i++) {
               NodeIndex srcIndex =
                   nodeFactory.getValueNodeFor(phiInst->getIncomingValue(i));
-              if (nQualiArray[Inst].at(srcIndex) == _UD)
+              if (nQualiArray[Inst].at(srcIndex) == QualifierState::Uninitialized)
                 calculateRelatedBB(srcIndex, Inst, visit, blacklist, whitelist);
             }
             break;

@@ -379,7 +379,10 @@ template <typename Range> struct AbsCst {
 };
 
 template <typename Abs>
-struct ABSCST : public std::unary_function<Expr, VisitAction> {
+struct ABSCST {
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   Abs &m_a;
   unsigned m_offset;
 
@@ -465,7 +468,10 @@ template <typename Range> struct SubBnd {
 };
 
 template <typename Sub>
-struct SUBBND : public std::unary_function<Expr, VisitAction> {
+struct SUBBND {
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   Sub &m_a;
   unsigned m_offset;
 

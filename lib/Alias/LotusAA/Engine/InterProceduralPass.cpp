@@ -11,7 +11,7 @@
 /// ```
 /// LotusAA::runOnModule(Module)
 ///   ├── Initialize global structures (NullObj, UnknownObj, sentinel values)
-///   ├── computeGlobalHeuristic() - Analyze global initializers
+///   ├── computeGlobalHeuristic() - Cache constant stores into globals
 ///   ├── computePtsCgIteratively() - Main fixpoint algorithm
 ///   │   ├── initFuncProcessingSeq() - Build call graph, topological sort
 ///   │   ├── For each function (bottom-up):
@@ -56,7 +56,7 @@
 /// - `--lotus-restrict-cg-iter`: Max CG iterations (default: 5)
 /// - `--lotus-print-pts`: Print points-to results
 /// - `--lotus-print-cg`: Print resolved call graph
-/// - `--lotus-enable-global-heuristic`: Analyze global initializers
+/// - `--lotus-enable-global-heuristic`: Cache constant stores into globals
 ///
 /// **Registered Pass:**
 /// - Pass ID: "lotus-aa"
@@ -83,6 +83,26 @@
 
 using namespace llvm;
 using namespace std;
+
+namespace {
+
+static bool hasSameTargetMembership(const CallTargetSet *oldTargets,
+                                    const CallTargetSet &newTargets) {
+  if (!oldTargets)
+    return newTargets.empty();
+
+  if (oldTargets->size() != newTargets.size())
+    return false;
+
+  for (const auto &newTarget : newTargets) {
+    if (oldTargets->count(newTarget.first) == 0)
+      return false;
+  }
+
+  return true;
+}
+
+} // namespace
 
 // Command-line options
 static cl::opt<bool>
@@ -143,9 +163,12 @@ LotusAA::~LotusAA() {
 
 void LotusAA::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<DominatorTreeWrapperPass>();
-  // Iterated dominance frontier computed on-the-fly via IDFCalculator
+  // Dominator trees are computed and cached on-demand in getDomTree().
+  // We do NOT declare DominatorTreeWrapperPass as required because we manage
+  // our own DominatorTree objects (one per function) rather than using the
+  // pass-manager-provided ones, which would only cover the current function.
 }
+
 
 bool LotusAA::runOnModule(Module &M) {
   DL = &M.getDataLayout();
@@ -191,74 +214,117 @@ bool LotusAA::runOnModule(Module &M) {
 }
 
 void LotusAA::computeGlobalHeuristic(Module &M) {
-  for (Function &f : M) {
-    for (BasicBlock &bb : f) {
-      for (Instruction &inst : bb) {
-        if (StoreInst *store = dyn_cast<StoreInst>(&inst)) {
-          Value *ptr = store->getPointerOperand();
-          Value *val = store->getValueOperand();
-          if (isa<GlobalValue>(ptr) && isa<Constant>(val)) {
-            globalValuesCache_[ptr].insert(val);
-          }
+  // Cache constant values that are explicitly
+  // stored into global pointers while scanning the module. This is a passive
+  // cache and does not synthesize new points-to or call-graph facts by itself.
+  globalValuesCache_.clear();
+
+  for (Function &F : M) {
+    for (BasicBlock &BB : F) {
+      for (Instruction &I : BB) {
+        auto *store = dyn_cast<StoreInst>(&I);
+        if (!store)
+          continue;
+
+        Value *store_ptr = store->getPointerOperand();
+        Value *store_value = store->getValueOperand();
+        if (isa<GlobalValue>(store_ptr) && isa<Constant>(store_value)) {
+          globalValuesCache_[store_ptr].insert(store_value);
         }
       }
     }
   }
 }
 
+
 void LotusAA::initFuncProcessingSeq(Module &M,
                                     std::vector<Function *> &func_seq) {
-  // Simple bottom-up ordering (reverse call graph)
-  map<Function *, int> out_degrees;
+  // Build a bottom-up (callee-before-caller) ordering of functions.
+  //
+  // The previous implementation had two problems:
+  //
+  // 1. Back-edges were only detected *after* the sort (in detectBackEdges),
+  //    but the sort itself needed to know which edges are back-edges to avoid
+  //    counting them in in-degrees.  We now run a DFS-based back-edge
+  //    detection pass first, then build the DAG for Kahn's algorithm.
+  //
+  // 2. Kahn's algorithm silently drops functions that are part of SCCs
+  //    (mutual recursion) because their in-degree never reaches zero.  We
+  //    detect these and append them at the end so they are still analysed.
 
-  // Clear and initialize call graph
+  // --- Step 1: rebuild the raw call graph (all edges, no back-edge filter) ---
   callGraphState_.clear();
 
   std::vector<Function *> allFunctions;
   for (Function &F : M) {
-    allFunctions.push_back(&F);
-    out_degrees[&F] = 0;
+    if (!F.isDeclaration())
+      allFunctions.push_back(&F);
   }
   callGraphState_.initializeForFunctions(allFunctions);
 
-  // Build call graph from function pointer results
   const auto &fpResults = functionPointerResults_.getResultsMap();
   for (const auto &callerResults : fpResults) {
     Function *caller = callerResults.first;
     for (const auto &callsiteResults : callerResults.second) {
-      for (Function *callee : callsiteResults.second) {
-        if (!callee)
-          continue;
-
-        if (!callGraphState_.isBackEdge(caller, callee)) {
+      for (const auto &callee_item : callsiteResults.second) {
+        Function *callee = callee_item.first;
+        if (callee && !callee->isDeclaration())
           callGraphState_.addEdge(caller, callee);
-          out_degrees[callee]++;
-        }
       }
     }
   }
 
-  // Topological sort
+  // --- Step 2: detect back-edges via DFS so the DAG is acyclic ---
+  {
+    std::set<Function *> dummy;
+    callGraphState_.detectBackEdges(dummy);
+  }
+
+  // --- Step 3: Kahn's topological sort on the DAG (back-edges excluded) ---
+  map<Function *, int> in_degree;
+  for (Function *F : allFunctions)
+    in_degree[F] = 0;
+
+  for (Function *F : allFunctions) {
+    for (Function *callee : callGraphState_.getCallees(F)) {
+      if (!callGraphState_.isBackEdge(F, callee))
+        in_degree[callee]++;
+    }
+  }
+
   std::vector<Function *> worklist;
-  for (auto &pair : out_degrees) {
-    if (pair.second == 0)
-      worklist.push_back(pair.first);
+  for (Function *F : allFunctions) {
+    if (in_degree[F] == 0)
+      worklist.push_back(F);
   }
 
   func_seq.clear();
+  std::set<Function *> inSeq;
+
   while (!worklist.empty()) {
     Function *F = worklist.back();
     worklist.pop_back();
-
-    if (F)
-      func_seq.push_back(F);
+    func_seq.push_back(F);
+    inSeq.insert(F);
 
     for (Function *callee : callGraphState_.getCallees(F)) {
-      if (--out_degrees[callee] == 0)
+      if (callGraphState_.isBackEdge(F, callee))
+        continue;
+      if (--in_degree[callee] == 0)
         worklist.push_back(callee);
     }
   }
+
+  // --- Step 4: append any functions dropped by Kahn's (SCC members) ---
+  // These are functions whose in-degree never reached zero because they are
+  // part of a cycle.  Append them in an arbitrary order so they are still
+  // analysed (they will be re-analysed in subsequent fixpoint iterations).
+  for (Function *F : allFunctions) {
+    if (!inSeq.count(F))
+      func_seq.push_back(F);
+  }
 }
+
 
 void LotusAA::initCGBackedge() {
   // Initialize from existing call graph (direct calls)
@@ -293,16 +359,19 @@ void LotusAA::computePtsCgIteratively(Module &M,
   // Always use sequential analysis to avoid concurrency bugs
   const unsigned poolMax = 1;
 
-  while (changed && iteration < lotus_restrict_cg_iter) {
+  while (changed) {
     outs() << "[LotusAA] Iteration " << (iteration + 1) << " using " << poolMax
            << " thread(s)\n";
 
     initFuncProcessingSeq(M, func_seq);
     changed = false;
 
-    // Sequential analysis: process functions in bottom-up order
-    for (Function *func : func_seq) {
-      bool needsAnalysis = (iteration == 0) || changed_func.count(func);
+    // Sequential analysis: process functions in bottom-up order.
+    // func_seq is caller-first, so walk it in reverse to analyze callees first.
+    for (int i = (int)func_seq.size() - 1; i >= 0; i--) {
+      Function *func = func_seq[i];
+      bool needsAnalysis =
+          (iteration >= lotus_restrict_cg_iter) || changed_func.count(func);
 
       if (!needsAnalysis)
         continue;
@@ -313,36 +382,35 @@ void LotusAA::computePtsCgIteratively(Module &M,
       if (lotus_cg)
         new_result->computeCG();
 
-      bool interface_changed =
-          old_result ? !old_result->isSameInterface(new_result) : true;
-
       // Update results
       intraResults_[func] = new_result;
       if (old_result && old_result != new_result)
         delete old_result;
 
-      // Propagate changes to callers
-      if (interface_changed) {
-        changed = true;
-        for (Function *caller : callGraphState_.getCallers(func)) {
-          if (!callGraphState_.isBackEdge(caller, func)) {
-            changed_func.insert(caller);
-          }
+      // Use conservative invalidation: any analyzed callee can
+      // require its callers to be revisited later in the same bottom-up pass.
+      for (Function *caller : callGraphState_.getCallers(func)) {
+        if (!callGraphState_.isBackEdge(caller, func)) {
+          changed_func.insert(caller);
         }
       }
     }
 
     outs() << "\n";
 
-    // Update CG if enabled
-    if (lotus_cg) {
-      // Save callers that need reanalysis before clearing changed_func
-      // These are functions whose callees had interface changes
-      set<Function *> callersNeedingReanalysis = changed_func;
-      changed_func.clear();
+    // Caller reprocessing markers are only relevant within the current
+    // bottom-up pass. Cross-iteration progress is driven by call-target
+    // membership changes.
+    changed_func.clear();
 
-      for (size_t i = func_seq.size() - 1; i >= 0; i--) {
+    // Update CG if enabled
+    if (iteration >= lotus_restrict_cg_iter)
+      break;
+
+    if (lotus_cg) {
+      for (int i = (int)func_seq.size() - 1; i >= 0; i--) {
         Function *func = func_seq[i];
+
         IntraLotusAA *func_result = getPtGraph(func);
 
         if (!func_result)
@@ -359,22 +427,9 @@ void LotusAA::computePtsCgIteratively(Module &M,
           CallTargetSet *oldTargets =
               functionPointerResults_.getTargets(func, callsite);
 
-          // Check if changed
-          bool targetsChanged = false;
-          if (!oldTargets) {
-            targetsChanged = !newTargets.empty();
-          } else {
-            if (oldTargets->size() != newTargets.size()) {
-              targetsChanged = true;
-            } else {
-              for (Function *newTarget : newTargets) {
-                if (oldTargets->count(newTarget) == 0) {
-                  targetsChanged = true;
-                  break;
-                }
-              }
-            }
-          }
+          // Target membership, not path-condition deltas, drives
+          // fixpoint iteration. Conditions are still updated in the database.
+          bool targetsChanged = !hasSameTargetMembership(oldTargets, newTargets);
 
           if (targetsChanged) {
             changed_func.insert(func);
@@ -385,8 +440,8 @@ void LotusAA::computePtsCgIteratively(Module &M,
           functionPointerResults_.setTargets(func, callsite, newTargets);
 
           // Update call graph edges
-          for (Function *target : newTargets) {
-            callGraphState_.addEdge(func, target);
+          for (const auto &target_item : newTargets) {
+            callGraphState_.addEdge(func, target_item.first);
           }
         }
       }
@@ -394,14 +449,16 @@ void LotusAA::computePtsCgIteratively(Module &M,
       // Detect back edges in updated call graph
       callGraphState_.detectBackEdges(changed_func);
 
-      // Merge back callers that need reanalysis due to interface changes
-      changed_func.insert(callersNeedingReanalysis.begin(),
-                          callersNeedingReanalysis.end());
-
       if (!changed_func.empty())
         changed = true;
     } else {
       break; // No CG updates, single iteration
+    }
+
+    if (!changed) {
+      changed = true;
+      iteration = lotus_restrict_cg_iter;
+      continue;
     }
 
     iteration++;
@@ -432,9 +489,6 @@ void LotusAA::finalizeCg(std::vector<Function *> &func_seq) {
 
 bool LotusAA::computePTA(Function *F) {
   assert(intraResults_.count(F));
-  // FIXME: it seems that we almost re-run the analysis in each round of the
-  // on-the-fly callgraph construction?? Maybe this is due partly to the
-  // flow-sensitive nature of our analysis?
 
   IntraLotusAA *old_result = intraResults_[F];
   IntraLotusAA *new_result = new IntraLotusAA(F, this);
@@ -444,14 +498,13 @@ bool LotusAA::computePTA(Function *F) {
   if (lotus_cg)
     new_result->computeCG();
 
-  bool interface_changed = true;
-  if (old_result) {
-    interface_changed = !old_result->isSameInterface(new_result);
+  if (old_result)
     delete old_result;
-  }
 
   intraResults_[F] = new_result;
-  return interface_changed;
+  // Conservative behavior: a recomputed function is treated as having
+  // potentially changed interface semantics.
+  return true;
 }
 
 IntraLotusAA *LotusAA::getPtGraph(Function *F) {

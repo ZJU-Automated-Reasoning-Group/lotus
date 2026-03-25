@@ -1,4 +1,5 @@
 add_library(SMTSampler STATIC
+    NumericalUtils.cpp
     QuickSampler.cpp
     IntervalSampler.cpp
     RegionSampler.cpp

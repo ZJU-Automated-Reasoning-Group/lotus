@@ -6,12 +6,11 @@ class Module;
 
 namespace dynamic {
 
-class MemoryInstrument
-{
+class MemoryInstrument {
 private:
 public:
-    MemoryInstrument() = default;
+  MemoryInstrument() = default;
 
-    void runOnModule(llvm::Module&);
+  void runOnModule(llvm::Module &);
 };
 } // namespace dynamic

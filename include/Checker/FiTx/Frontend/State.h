@@ -1,7 +1,8 @@
 /// \file State.hpp
 /// Typestate FSM for FiTx: states, transitions, and bug-checking hooks.
 /// Paper: Suzuki et al., USENIX ATC 2024, Section 4.1 (Typestate Property),
-/// Table 6 (bug-checking hooks: IMMEDIATE, VAR_END, BLOCK_END, FUNC_END, MOD_END).
+/// Table 6 (bug-checking hooks: IMMEDIATE, VAR_END, BLOCK_END, FUNC_END,
+/// MOD_END).
 
 #pragma once
 #include "llvm/ADT/APFloat.h"
@@ -46,7 +47,7 @@
 #include <string>
 #include <vector>
 
-namespace framework {
+namespace fitx {
 
 /// State kinds in the typestate FSM (paper §4.1).
 enum StateType { INIT, NORMAL, BUG };
@@ -54,7 +55,8 @@ enum StateMergeMethod { STRICT, FLEX, CUSTOM };
 
 /// When to check for buggy states (paper Table 6).
 /// IMMEDIATE = right after transition; VAR_END = end of variable lifetime;
-/// FUNCTION_END = end of function; MODULE_END = end of analysis (e.g. no in-unit callers).
+/// FUNCTION_END = end of function; MODULE_END = end of analysis (e.g. no
+/// in-unit callers).
 enum BugNotificationTiming { IMMEDIATE, FUNCTION_END, END_OF_LIFE, MODULE_END };
 
 enum TriggerConstraint { NONE = 0, NON_RETURN = 1, NON_ARG = 2 };
@@ -105,9 +107,9 @@ public:
   TriggerConstraint getTriggerConstraint() const { return trigger_constraint_; }
   bool isTriggerConstraintSet(TriggerConstraint constraint);
 
-  const framework::StateMergeMethod MergeMethod() { return method_; };
+  const fitx::StateMergeMethod MergeMethod() { return method_; };
 
-  const framework::BugNotificationTiming NotificationTiming() {
+  const fitx::BugNotificationTiming NotificationTiming() {
     return timing_;
   }
 
@@ -155,7 +157,7 @@ public:
   bool operator==(const Transition &transition) const;
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &ostream,
-                                       const framework::Transition &transition);
+                                       const fitx::Transition &transition);
 
 private:
   /* int id_; */
@@ -167,23 +169,24 @@ private:
   std::vector<std::weak_ptr<TransitionRule>> transition_args_;
 };
 
-/// History of transitions applied to one value: list of (transition, instruction).
-/// Used for diagnostics (generateLog) and to filter reports: we only report if
-/// LeastSignificantSource is init (paper §4.2: reduces false positives).
+/// History of transitions applied to one value: list of (transition,
+/// instruction). Used for diagnostics (generateLog) and to filter reports: we
+/// only report if LeastSignificantSource is init (paper §4.2: reduces false
+/// positives).
 class TransitionLogs {
 public:
   TransitionLogs();
   TransitionLogs(const TransitionLogs &logs);
   TransitionLogs(Transition transition,
-                 std::shared_ptr<framework::Instruction> instruction);
+                 std::shared_ptr<fitx::Instruction> instruction);
 
   const State &CurrentState() const;
-  const std::shared_ptr<framework::Instruction> CurrentInstruction() const {
+  const std::shared_ptr<fitx::Instruction> CurrentInstruction() const {
     return transition_logs_.back().instruction;
   }
 
-  void addTransition(framework::Transition &transition,
-                     std::shared_ptr<framework::Instruction> instruction);
+  void addTransition(fitx::Transition &transition,
+                     std::shared_ptr<fitx::Instruction> instruction);
 
   void setWarned();
 
@@ -191,9 +194,10 @@ public:
   TransitionLogs &operator=(const TransitionLogs &logs);
 
   void generateLog(llvm::raw_ostream &stream) const;
-  void logicalTerminate(std::shared_ptr<framework::Instruction> instruction);
+  void logicalTerminate(std::shared_ptr<fitx::Instruction> instruction);
 
-  /// Farthest-from-bug state in the history; used to require "real" init path for reports.
+  /// Farthest-from-bug state in the history; used to require "real" init path
+  /// for reports.
   const State &LeastSignificantSource() const {
     return *least_significant_source_;
   };
@@ -206,10 +210,10 @@ public:
 
 private:
   struct Log {
-    framework::Transition transition;
-    std::shared_ptr<framework::Instruction> instruction;
+    fitx::Transition transition;
+    std::shared_ptr<fitx::Instruction> instruction;
 
-    bool operator==(const framework::TransitionLogs::Log &log) const {
+    bool operator==(const fitx::TransitionLogs::Log &log) const {
       return transition == log.transition && instruction == log.instruction;
     }
   };
@@ -220,9 +224,9 @@ private:
   bool warned_;
 };
 
-/// Lookup transitions by trigger type (paper Table 5): Fun Arg (call F with arg i),
-/// Store (NULL/NON/ANY/CALL_FUNC), Use (load), Alias. Each detector registers
-/// its typestate transitions here.
+/// Lookup transitions by trigger type (paper Table 5): Fun Arg (call F with arg
+/// i), Store (NULL/NON/ANY/CALL_FUNC), Use (load), Alias. Each detector
+/// registers its typestate transitions here.
 class StateTransitionManager {
 public:
   StateTransitionManager() = default;
@@ -233,59 +237,64 @@ public:
 
   void addTransitionRule(Transition &transition, TransitionRule &rule);
 
-  /// Function Arg: transitions triggered by "call F with arg i" (e.g. kfree(ptr)).
+  /// Function Arg: transitions triggered by "call F with arg i" (e.g.
+  /// kfree(ptr)).
   bool existsInFunctionArgTransition(
       const FunctionArgTransitionRule::FunctionArg &arg);
   const std::pair<FunctionArgTransitionRule::FunctionArg,
-                  std::vector<framework::Transition>>
+                  std::vector<fitx::Transition>>
   getFunctionArgTransitions(const std::string &name, unsigned int arg);
 
   /* Store Inst Transition Rule*/
-  std::vector<framework::Transition> getStoreArgTransitions(
-      framework::StoreValueTransitionRule::StoreValueType type,
+  std::vector<fitx::Transition> getStoreArgTransitions(
+      fitx::StoreValueTransitionRule::StoreValueType type,
       const std::string &name = std::string());
 
-  std::vector<framework::Transition> getUseValueTransitions();
+  std::vector<fitx::Transition> getUseValueTransitions();
 
-  std::vector<framework::Transition> getAliasTransitions();
+  /// Transitions triggered when ptr = value_operand (store); applied to all
+  /// may-aliased values (paper Table 5: Alias).
+  std::vector<fitx::Transition> getAliasTransitions();
 
 private:
-  /// Maps (function name, arg index) -> list of transitions (paper Table 5: Fun Arg).
+  /// Maps (function name, arg index) -> list of transitions (paper Table 5: Fun
+  /// Arg).
   void registerFunctionArgTransition(
       const FunctionArgTransitionRule::FunctionArg &arg,
-      framework::Transition transition);
+      fitx::Transition transition);
   void registerFunctionArgTransition(
       const std::vector<FunctionArgTransitionRule::FunctionArg> &arg,
-      framework::Transition transition);
+      fitx::Transition transition);
 
   void registerStoreTransition(std::shared_ptr<StoreValueTransitionRule> rule,
-                               framework::Transition transition);
+                               fitx::Transition transition);
 
   void registerUseTransition(std::shared_ptr<UseValueTransitionRule> rule,
-                             framework::Transition transition);
+                             fitx::Transition transition);
 
   void registerAliasTransition(std::shared_ptr<AliasValueTransitionRule> rule,
-                               framework::Transition transition);
+                               fitx::Transition transition);
 
   std::map<FunctionArgTransitionRule::FunctionArg,
-           std::vector<framework::Transition>>
+           std::vector<fitx::Transition>>
       function_transitions_;
 
   /* Register Store Inst */
-  std::map<std::string, std::vector<framework::Transition>>
+  std::map<std::string, std::vector<fitx::Transition>>
       call_store_transitions_;
 
-  /// Store transitions by type: NULL_VAL, NON_NULL_VAL, ANY, CALL_FUNC (paper Table 5).
-  std::map<framework::StoreValueTransitionRule::StoreValueType,
-           std::vector<framework::Transition>>
+  /// Store transitions by type: NULL_VAL, NON_NULL_VAL, ANY, CALL_FUNC (paper
+  /// Table 5).
+  std::map<fitx::StoreValueTransitionRule::StoreValueType,
+           std::vector<fitx::Transition>>
       store_transitions_;
 
-  std::vector<framework::Transition> use_transitions_;   /// Table 5: Use load
-  std::vector<framework::Transition> alias_transitions_; /// Alias propagation
+  std::vector<fitx::Transition> use_transitions_;   /// Table 5: Use load
+  std::vector<fitx::Transition> alias_transitions_; /// Alias propagation
 
   std::set<Transition> transitions_;
 
-  std::map<framework::TransitionTrigger,
+  std::map<fitx::TransitionTrigger,
            std::vector<std::shared_ptr<TransitionRule>>>
       rules_;
 };
@@ -307,7 +316,7 @@ public:
   State getByID(int id);
 
   void set(State state);
-  void set(State state, std::set<framework::Value>);
+  void set(State state, std::set<fitx::Value>);
 
   void setEarlyStateTransition(bool early_transition);
 
@@ -315,7 +324,7 @@ public:
   const std::set<State> &getStates();
   const std::set<State> getBugStates();
 
-  std::shared_ptr<framework::StateTransitionManager> TransitionManager();
+  std::shared_ptr<fitx::StateTransitionManager> TransitionManager();
 
   void enableStatefulConstraint(std::shared_ptr<StatefulConstraint> constraint);
 
@@ -326,12 +335,12 @@ public:
 private:
   std::set<State> states_;
   std::set<State> bug_states_;
-  std::shared_ptr<framework::StateTransitionManager> transition_manager_;
-  std::shared_ptr<framework::StatefulConstraint> propagation_constraint_;
+  std::shared_ptr<fitx::StateTransitionManager> transition_manager_;
+  std::shared_ptr<fitx::StatefulConstraint> propagation_constraint_;
 
   State *init_state_;
 
   bool early_state_transition_;
 };
 
-}; // namespace framework
+}; // namespace fitx

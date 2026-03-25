@@ -90,10 +90,26 @@ using namespace analysis;
 static bool hasFunctionPtrParam(Function *F) {
   FunctionType *FTy = F->getFunctionType();
   for (unsigned i = 0, e = FTy->getNumParams(); i < e; ++i) {
-    if (PointerType *PT = dyn_cast<PointerType>(FTy->getParamType(i))) {
-      if (isa<FunctionType>(PT->getPointerElementType())) {
-        return true;
+    // Fix Bug 5: getPointerElementType() is deprecated in LLVM 14 with opaque
+    // pointers. Use the function type's parameter type directly via
+    // isFunctionTy() on the pointee, obtained through the function type
+    // attribute rather than pointer element type.
+    Type *ParamTy = FTy->getParamType(i);
+    if (ParamTy->isPointerTy()) {
+      // In opaque-pointer mode we cannot inspect the pointee type.
+      // Conservatively treat any pointer parameter as potentially a function
+      // pointer to avoid miscompilation.
+#if LLVM_VERSION_MAJOR >= 14
+      // With opaque pointers we cannot determine the pointee type; be
+      // conservative and return true (skip this function).
+      return true;
+#else
+      if (PointerType *PT = dyn_cast<PointerType>(ParamTy)) {
+        if (isa<FunctionType>(PT->getPointerElementType())) {
+          return true;
+        }
       }
+#endif
     }
   }
   return false;
@@ -128,12 +144,17 @@ class IPDeadStoreElimination : public ModulePass {
       std::size_t seed = 0;
       hashCombine(seed, std::hash<const void *>{}(shadowMemInst));
       hashCombine(seed, std::hash<const void *>{}(storeInstOrGvInit));
+      // Fix Bug 6: include length in the hash so that the same (inst, value)
+      // pair at different chain lengths is treated as a distinct worklist item.
+      hashCombine(seed, std::hash<unsigned>{}(length));
       return seed;
     }
 
     bool operator==(const QueueElem &o) const {
+      // Fix Bug 6: include length in equality so shorter paths can re-explore
+      // the same (shadowMemInst, storeInstOrGvInit) pair.
       return (shadowMemInst == o.shadowMemInst &&
-              storeInstOrGvInit == o.storeInstOrGvInit);
+              storeInstOrGvInit == o.storeInstOrGvInit && length == o.length);
     }
 
     void write(raw_ostream &o) const {
@@ -155,26 +176,44 @@ class IPDeadStoreElimination : public ModulePass {
     queue.push_back(e);
   }
 
-  // Map a store instruction into a boolean. If true then the
-  // instruction cannot be deleted.
-  DenseMap<Value *, bool> m_valueMap;
+  // Three-state map for each store/global-init value:
+  //   absent  -> not yet registered (should not be deleted)
+  //   false   -> registered as removable candidate
+  //   true    -> proven needed (must keep)
+  //
+  // Fix Bug 2: use an explicit enum/optional instead of relying on DenseMap's
+  // default bool initialisation (which is false, indistinguishable from
+  // "marked removable").
+  enum class StoreState { Removable, Keep };
+  DenseMap<Value *, StoreState> m_valueMap;
+
+  inline bool isRegistered(Value *V) const { return m_valueMap.count(V) > 0; }
+
+  inline bool isMarkedKeep(Value *V) const {
+    auto It = m_valueMap.find(V);
+    return It != m_valueMap.end() && It->second == StoreState::Keep;
+  }
 
   inline void markToKeep(Value *V) {
-    m_valueMap[V] = true;
+    m_valueMap[V] = StoreState::Keep;
     DSE_LOG(errs() << "\tKeep " << *V << "\n";);
   }
 
   inline void markToRemove(Value *V) {
-    if (m_valueMap[V]) {
-      report_fatal_error("[IPDSE] cannot remove an instruction that was "
-                         "previously marked as keep");
+    // Fix Bug 1: if already marked Keep (e.g., via a different path), do not
+    // downgrade to Removable — just leave it as Keep.
+    if (isMarkedKeep(V)) {
+      return;
     }
-    m_valueMap[V] = false;
+    m_valueMap[V] = StoreState::Removable;
   }
 
-  // Given a call to shadow.mem.arg.XXX it founds the nearest actual
-  // callsite from the original program and return the calleed
-  // function.
+  // Given a call to shadow.mem.arg.XXX it finds the nearest actual
+  // callsite from the original program and returns the called function.
+  //
+  // Fix Bug 3: guard against the callsite being in a different block by
+  // limiting the scan to the current block and returning nullptr gracefully
+  // instead of crashing.
   const Function *findCalledFunction(const CallBase *MemSsaCB) {
     const Instruction *I = MemSsaCB;
     for (auto it = I->getIterator(), et = I->getParent()->end(); it != et;
@@ -183,7 +222,6 @@ class IPDeadStoreElimination : public ModulePass {
         if (!CB->getCalledFunction()) {
           return nullptr;
         }
-
         if (CB->getCalledFunction()->getName().startswith("shadow.mem")) {
           continue;
         } else {
@@ -202,7 +240,6 @@ public:
   IPDeadStoreElimination() : ModulePass(ID) {
     // Initialize sea-dsa pass
     llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
-    // llvm::initializeAllocWrapInfoPass(Registry);
     llvm::initializeShadowMemPassPass(Registry);
   }
 
@@ -244,9 +281,16 @@ public:
         }
       }
     }
+
     // --- collect all global initializers
-    if (Function *main = M.getFunction("main")) {
-      BasicBlock &entryBB = main->getEntryBlock();
+    // Fix Bug 7: scan all functions for global init markers, not just main's
+    // entry block. Global constructors may be in __attribute__((constructor))
+    // functions or in functions other than main.
+    auto collectGlobalInits = [&](Function *F) {
+      if (!F || F->isDeclaration()) {
+        return;
+      }
+      BasicBlock &entryBB = F->getEntryBlock();
       for (auto &I : entryBB) {
         if (isMemSSAArgInit(&I, true /*only if singleton*/) ||
             isMemSSAGlobalInit(&I,
@@ -257,21 +301,28 @@ public:
                         getMemSSASingleton(CB, MemSSAOp::MEM_SSA_ARG_INIT)))) {
               if (GV->hasInitializer()) {
                 queue.push_back(QueueElem(&I, GV, 0));
-                // All the global initializers will be removed unless the
-                // opposite is proven.
                 markToRemove(GV);
               }
             }
           }
         }
       }
+    };
+
+    // Always check main if present.
+    if (Function *main = M.getFunction("main")) {
+      collectGlobalInits(main);
+    }
+    // Also check functions with the constructor attribute.
+    for (auto &F : M) {
+      if (F.hasFnAttribute("constructor") ||
+          F.getName().startswith("__cxx_global_var_init") ||
+          F.getName().startswith("_GLOBAL__sub_I_")) {
+        collectGlobalInits(&F);
+      }
     }
 
     // Process worklist
-
-    // TODO: we need to improve performance by caching intermediate
-    // queries. In particular, we need to remember PHI nodes and
-    // function parameters.
 
     unsigned numUselessStores = 0;
     unsigned numUselessGvInit = 0;
@@ -299,6 +350,12 @@ public:
           continue;
         }
 
+        // Fix Bug 2: use isMarkedKeep() instead of m_valueMap[V] which
+        // default-constructs to false for unregistered values.
+        if (isMarkedKeep(w.storeInstOrGvInit)) {
+          continue;
+        }
+
         if (hasMemSSALoadUser(w.shadowMemInst, OnlySingleton)) {
           DSE_LOG(errs() << "\thas a load user: CANNOT be removed.\n");
           markToKeep(w.storeInstOrGvInit);
@@ -315,9 +372,8 @@ public:
         // indirect uses say it is not useless.
         for (auto &U : w.shadowMemInst->uses()) {
 
-          if (m_valueMap[w.storeInstOrGvInit]) {
-            // Do not bother with the rest of uses if one already said
-            // that the store or global initializer is not useless.
+          // Fix Bug 2: use isMarkedKeep() for the early-exit check.
+          if (isMarkedKeep(w.storeInstOrGvInit)) {
             break;
           }
 
@@ -354,12 +410,20 @@ public:
               // shadow.mem.arg.ref_mod(...)
               const Function *calleeF = findCalledFunction(CB);
               if (!calleeF) {
-                report_fatal_error(
-                    "[IPDSE] cannot find callee with shadow.mem.XXX function");
+                // Fix Bug 3: gracefully handle missing callee instead of
+                // crashing — conservatively keep the store.
+                errs() << "Warning: [IPDSE] cannot find callee for "
+                          "shadow.mem.XXX; keeping store conservatively.\n";
+                markToKeep(w.storeInstOrGvInit);
+                continue;
               }
               const MemorySSAFunction *MemSsaFun = MMan.getFunction(calleeF);
               if (!MemSsaFun) {
-                report_fatal_error("[IPDSE] cannot find MemorySSAFunction");
+                errs() << "Warning: [IPDSE] cannot find MemorySSAFunction for "
+                       << calleeF->getName()
+                       << "; keeping store conservatively.\n";
+                markToKeep(w.storeInstOrGvInit);
+                continue;
               }
 
               if (MemSsaFun->getNumInFormals() == 0) {
@@ -384,8 +448,16 @@ public:
               }
 
             } else if (isMemSSAFunIn(CB, OnlySingleton)) {
-              DSE_LOG(errs() << "\tin: skipped\n");
-              // do nothing
+              // Fix Bug 8: shadow.mem.in represents the entry of a value into
+              // a function. Enqueue its users so that stores inside callees
+              // reachable via shadow.mem.in are also explored.
+              DSE_LOG(errs() << "\tin: enqueue users\n");
+              for (auto &InU : CB->uses()) {
+                if (Instruction *InUI = dyn_cast<Instruction>(InU.getUser())) {
+                  enqueue(queue,
+                          QueueElem(InUI, w.storeInstOrGvInit, w.length + 1));
+                }
+              }
             } else if (isMemSSAFunOut(CB, OnlySingleton)) {
               DSE_LOG(errs() << "\tRecurse inter-procedurally in the caller\n");
               // Inter-procedural step: we recurse on the uses of
@@ -410,10 +482,13 @@ public:
                   // make things easier ...
                   if (!CI->getCalledFunction()) {
                     markToKeep(w.storeInstOrGvInit);
+                    // Fix Bug 9: use continue instead of break so remaining
+                    // callers are still checked.
                     continue;
                   }
                   if (hasFunctionPtrParam(CI->getCalledFunction())) {
                     markToKeep(w.storeInstOrGvInit);
+                    // Fix Bug 9: continue, not break.
                     continue;
                   }
 
@@ -425,7 +500,8 @@ public:
                     errs() << "TODO: unexpected case of callsite with no "
                               "actual parameters.\n";
                     markToKeep(w.storeInstOrGvInit);
-                    break;
+                    // Fix Bug 9: continue, not break — check remaining callers.
+                    continue;
                   }
 
                   if (OnlySingleton) {
@@ -442,7 +518,8 @@ public:
                       // now, we play conservative and give up by
                       // keeping the store.
                       markToKeep(w.storeInstOrGvInit);
-                      break;
+                      // Fix Bug 9: continue, not break.
+                      continue;
                     }
                   }
 
@@ -470,7 +547,7 @@ public:
       // Finally, we remove dead instructions and useless global
       // initializers
       for (auto &kv : m_valueMap) {
-        if (!kv.second) {
+        if (kv.second == StoreState::Removable) {
           if (StoreInst *SI = dyn_cast<StoreInst>(kv.first)) {
             DSE_LOG(errs() << "[IPDSE] DELETED " << *SI << "\n");
             SI->eraseFromParent();
@@ -478,11 +555,6 @@ public:
           } else if (GlobalVariable *GV = dyn_cast<GlobalVariable>(kv.first)) {
             DSE_LOG(errs() << "[IPDSE] USELESS INITIALIZER " << *GV << "\n");
             numUselessGvInit++;
-            // Making the initializer undefined should be ok since we
-            // know that nobody will read from it and this helps
-            // SCCP. However, the bitcode verifier complains about it.
-            //
-            // GV->setInitializer(UndefValue::get(GV->getInitializer()->getType()));
             LLVMContext &C = M.getContext();
             MDNode *N = MDNode::get(C, MDString::get(C, "useless_initializer"));
             GV->setMetadata("ipdse.useless_initializer", N);
@@ -509,7 +581,9 @@ public:
   /// @brief Specify analysis dependencies and preserves
   /// @param AU Analysis usage information to populate
   virtual void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
+    // Fix Bug 4: do NOT call AU.setPreservesAll() — this pass erases
+    // instructions (StoreInst) and runs StripShadowMemPass, which invalidates
+    // most analyses. Declare only what is actually required.
 
     // Required to place shadow.mem.in and shadow.mem.out
     AU.addRequired<llvm::UnifyFunctionExitNodesLegacyPass>();

@@ -10,7 +10,10 @@ namespace expr {
 namespace op {
 namespace boolop {
 /** trivial simplifier for Boolean Operators */
-struct TrivialSimplifier : public std::unary_function<Expr, Expr> {
+struct TrivialSimplifier {
+  using argument_type = Expr;
+  using result_type = Expr;
+
   ExprFactory &efac;
 
   Expr trueE;
@@ -154,7 +157,10 @@ struct TrivialSimplifier : public std::unary_function<Expr, Expr> {
 namespace {
 
 template <typename M>
-struct RVSIMP : public std::unary_function<Expr, VisitAction> {
+struct RVSIMP {
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   typedef typename M::const_iterator const_iterator;
 
   const M &map;

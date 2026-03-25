@@ -3,22 +3,21 @@
 #include "Alias/TPA/PointerAnalysis/Support/ProgramPoint.h"
 #include "Alias/TPA/PointerAnalysis/Support/Store.h"
 
-namespace tpa
-{
+namespace tpa {
 
-class EvalSuccessor
-{
+class EvalSuccessor {
 private:
-	ProgramPoint pp;
-	const Store* store;
+  ProgramPoint pp;
+  const Store *store;
 
-	EvalSuccessor(const ProgramPoint& p, const Store* s): pp(p), store(s) {}
+  EvalSuccessor(const ProgramPoint &p, const Store *s) : pp(p), store(s) {}
+
 public:
-	bool isTopLevel() const { return store == nullptr; }
-	const ProgramPoint& getProgramPoint() const { return pp; }
-	const Store* getStore() const { return store; }
+  bool isTopLevel() const { return store == nullptr; }
+  const ProgramPoint &getProgramPoint() const { return pp; }
+  const Store *getStore() const { return store; }
 
-	friend class EvalResult;
+  friend class EvalResult;
 };
 
 } // namespace tpa

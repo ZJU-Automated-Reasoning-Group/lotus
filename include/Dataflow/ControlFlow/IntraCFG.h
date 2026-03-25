@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Dataflow/ControlFlow/FlowDirection.h"
-
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+
+#include "Dataflow/ControlFlow/FlowDirection.h"
 
 #include <algorithm>
 #include <utility>
@@ -45,7 +45,7 @@ public:
   /// Exit nodes for the given direction. Forward: return/exit instructions.
   /// Backward: entry block first instruction(s).
   virtual std::vector<n_t> getExitPointsOf(f_t Function,
-                                          FlowDirection Dir) const = 0;
+                                           FlowDirection Dir) const = 0;
 
   /// True iff \p Inst is a start node for the given direction.
   virtual bool isStartPoint(n_t Inst, FlowDirection Dir) const = 0;
@@ -68,7 +68,7 @@ public:
   std::vector<n_t> getStartPointsOf(f_t Function,
                                     FlowDirection Dir) const override;
   std::vector<n_t> getExitPointsOf(f_t Function,
-                                  FlowDirection Dir) const override;
+                                   FlowDirection Dir) const override;
   bool isStartPoint(n_t Inst, FlowDirection Dir) const override;
   bool isExitInst(n_t Inst, FlowDirection Dir) const override;
 
@@ -87,8 +87,7 @@ private:
 namespace dataflow {
 namespace controlflow {
 
-inline std::vector<LLVMIntraCFG::n_t>
-LLVMIntraCFG::getForwardSuccs(n_t Inst) {
+inline std::vector<LLVMIntraCFG::n_t> LLVMIntraCFG::getForwardSuccs(n_t Inst) {
   std::vector<n_t> Succs;
   if (Inst == nullptr) {
     return Succs;
@@ -105,8 +104,7 @@ LLVMIntraCFG::getForwardSuccs(n_t Inst) {
   return Succs;
 }
 
-inline std::vector<LLVMIntraCFG::n_t>
-LLVMIntraCFG::getBackwardSuccs(n_t Inst) {
+inline std::vector<LLVMIntraCFG::n_t> LLVMIntraCFG::getBackwardSuccs(n_t Inst) {
   std::vector<n_t> Preds;
   if (Inst == nullptr) {
     return Preds;

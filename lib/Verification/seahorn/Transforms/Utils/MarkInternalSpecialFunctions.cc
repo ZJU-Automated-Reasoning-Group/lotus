@@ -7,8 +7,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "seahorn/Support/SeaDebug.h"
 #include "boost/range.hpp"
+#include "seahorn/Support/SeaDebug.h"
 
 #include "seahorn/config.h"
 

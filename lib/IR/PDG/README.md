@@ -1,8 +1,12 @@
 # PDG: Program Dependence Graph
 
-The **Program Dependence Graph (PDG)** is a fine-grained representation of data and control dependences. It is built on top of the ICFG and is used for slicing, security analyses, and other dependence-aware queries.
+The **Program Dependence Graph (PDG)** is a fine-grained representation of data
+and control dependences. It is built on top of the ICFG and is used for
+slicing, security analyses, and other dependence-aware queries.
 
-The PDG is field-sensitive, context-insensitive, and flow-insensitive, designed for practical inter-procedural program analysis.
+The PDG is field-sensitive and flow-insensitive. The query layer now exposes
+both context-insensitive and call/return-matched context-sensitive traversals
+through a single API in ``include/IR/PDG/Analysis/PDGQuery.h``.
 
 ## Key Features
 
@@ -12,20 +16,32 @@ The PDG is field-sensitive, context-insensitive, and flow-insensitive, designed 
 - **Field-Sensitive**: Handles structure fields and array elements separately
 - **Parameter Trees**: Tree structures for field-sensitive parameter analysis
 
-## Components
+## Query Services
 
-- **`ProgramDependencyGraph.cpp`**: Main PDG pass that orchestrates construction of intraprocedural and interprocedural dependencies
-- **`DataDependencyGraph.cpp`**: Builds def-use, RAW, and alias-based data dependence edges
-- **`ControlDependencyGraph.cpp`**: Computes control dependences between basic blocks and instructions
-- **`Graph.cpp`**: Core graph representation with reachability queries
-- **`PDGNode.cpp`**: Node representation for program elements (instructions, values, parameters)
-- **`Slicing.cpp`**: Program slicing algorithms
-- **`ContextSensitiveSlicing.cpp`**: Context-sensitive slicing support
+- **`SliceQuery`**: forward slices, backward slices, chops, and thin slices
+- **`DependenceQuery`**: reachability, shortest paths, all shortest paths, and
+  distance queries
+- **`DataFlowQuery`**: reaching definitions, def-use/use-def chains, liveness,
+  and control-region queries
+- **`TransformQuery`**: motion legality and dependence-aware scheduling helpers
+- **`DiffQuery`**: structural PDG differencing and impact summaries
+- **`PDGCriteriaResolver`**: criteria resolution from nodes, LLVM values,
+  function names, callee names, source locations, property specs, and Cypher
+  selections
+
+Each service consumes a common option/result vocabulary:
+
+- ``PDGQueryOptions``: edge preset, scope, context mode, limits, cache policy,
+  and explanation mode
+- ``PDGQueryScope``: whole graph, explicit node set, function, or prior result
+- ``PDGQueryResult``: nodes, induced edges, predecessor map, witness paths,
+  distances, and diagnostics
 
 ## Usage
 
 ```cpp
-#include "IR/PDG/ProgramDependencyGraph.h"
+#include "IR/PDG/Analysis/PDGQuery.h"
+#include "IR/PDG/Core/ProgramDependencyGraph.h"
 
 // Run PDG passes
 legacy::PassManager PM;
@@ -35,18 +51,35 @@ auto *pdgPass = new ProgramDependencyGraph();
 PM.add(pdgPass);
 PM.run(module);
 
-// Query the PDG
 ProgramGraph *G = pdgPass->getPDG();
+pdg::SliceQuery slicer(*G);
 
-Value* src;
-Value* dst;
-pdg::Node* src_node = G->getNode(*src);
-pdg::Node* dst_node = G->getNode(*dst);
+pdg::PDGCriteria criteria;
+criteria.values.push_back(src);
 
-if (G->canReach(src_node, dst_node)) {
-  // Nodes are connected
+pdg::PDGQueryOptions options;
+options.edge_preset = pdg::PDGEdgePreset::Data;
+options.context_mode = pdg::PDGContextMode::ContextSensitive;
+
+auto result = slicer.forward(criteria, options, &module);
+if (!result.nodes.empty()) {
+  // Criteria reaches at least one node through the selected dependence edges.
 }
 ```
+
+## Edge Presets
+
+The public query API uses fixed edge presets instead of raw edge-type sets:
+
+- ``All``
+- ``Data``
+- ``Control``
+- ``Parameter``
+- ``Interprocedural``
+- ``ValueFlow``
+- ``TransformLegality``
+
+Thin slicing is selected with ``options.slice_flavor = SliceFlavor::Thin``.
 
 ## Alias Analysis Selection
 
@@ -64,8 +97,22 @@ Supported AA types: `andersen`, `andersen-1cfa`, `andersen-2cfa`, `dyck`, `cfl-a
 - `-ddg`: Generate the data dependence graph (intra-procedural)
 - `-dot-*`: Visualization passes (dot format)
 
+## `pdg-query`
+
+``tools/ir/pdg-query.cpp`` supports both raw Cypher queries and analysis mode.
+
+Examples:
+
+- ``pdg-query --analysis slice-backward --criteria-query "MATCH (n:INST_RET) RETURN n" foo.bc``
+- ``pdg-query --analysis chop --criteria-query "MATCH (a) WHERE a.func = 'main' RETURN a" --target-query "MATCH (b:INST_RET) RETURN b" --edge-preset value-flow foo.bc``
+- ``pdg-query --analysis diff --criteria-query "MATCH (n) WHERE n.func = 'old_f' RETURN n" --target-query "MATCH (n) WHERE n.func = 'new_f' RETURN n" --format json foo.bc``
+- ``pdg-query --property-file spec.prp --direction backward --context-sensitive foo.bc``
+
+Analysis mode accepts ``--scope-function``, ``--scope-query``,
+``--context-sensitive``, ``--thin``, and ``--format text|json|dot``.
+
 ## See Also
 
 - Headers: `include/IR/PDG/`
 - Documentation: `docs/source/ir/pdg.rst`
-- Existing README: `lib/IR/PDG/README.md` (detailed usage guide)
+- Query API: `include/IR/PDG/Analysis/PDGQuery.h`

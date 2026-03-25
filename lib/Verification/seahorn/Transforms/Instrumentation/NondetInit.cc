@@ -131,7 +131,7 @@ public:
 };
 
 char NondetInit::ID = 0;
-}
+} // namespace seahorn
 
 namespace seahorn {
 class KillUnusedNondet : public FunctionPass {
@@ -177,7 +177,7 @@ char KillUnusedNondet::ID = 0;
 
 llvm::Pass *createNondetInitPass() { return new NondetInit(); }
 llvm::Pass *createDeadNondetElimPass() { return new KillUnusedNondet(); }
-}
+} // namespace seahorn
 
 static RegisterPass<seahorn::NondetInit> X("nondet-init",
                                            "Non-deterministic initialization"

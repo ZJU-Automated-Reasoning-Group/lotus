@@ -19,32 +19,32 @@
  OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
  OR OTHER DEALINGS IN THE SOFTWARE.
  */
- #include "Analysis/DebugInfo/MetadataManager/MetadataManager.h"
+#include "Analysis/DebugInfo/MetadataManager/MetadataManager.h"
 
- namespace noelle {
- 
- std::set<std::string> MetadataManager::getSourceCodeAnnotations(
-     Function *f) const {
-   if (this->functionMetadata.find(f) == this->functionMetadata.end()) {
-     return {};
-   }
-   return this->functionMetadata.at(f);
- }
- 
- std::set<std::string> MetadataManager::getSourceCodeAnnotations(
-     AllocaInst *var) const {
-   if (this->varMetadata.find(var) == this->varMetadata.end()) {
-     return {};
-   }
-   return this->varMetadata.at(var);
- }
- 
- std::set<std::string> MetadataManager::getSourceCodeAnnotations(
-     GlobalVariable *g) const {
-   if (this->globalMetadata.find(g) == this->globalMetadata.end()) {
-     return {};
-   }
-   return this->globalMetadata.at(g);
- }
- 
- } // namespace noelle
+namespace noelle {
+
+std::set<std::string>
+MetadataManager::getSourceCodeAnnotations(Function *f) const {
+  if (this->functionMetadata.find(f) == this->functionMetadata.end()) {
+    return {};
+  }
+  return this->functionMetadata.at(f);
+}
+
+std::set<std::string>
+MetadataManager::getSourceCodeAnnotations(AllocaInst *var) const {
+  if (this->varMetadata.find(var) == this->varMetadata.end()) {
+    return {};
+  }
+  return this->varMetadata.at(var);
+}
+
+std::set<std::string>
+MetadataManager::getSourceCodeAnnotations(GlobalVariable *g) const {
+  if (this->globalMetadata.find(g) == this->globalMetadata.end()) {
+    return {};
+  }
+  return this->globalMetadata.at(g);
+}
+
+} // namespace noelle

@@ -16,8 +16,7 @@
 namespace lotus {
 namespace sifa {
 
-template <typename L>
-class IDagOverlay {
+template <typename L> class IDagOverlay {
 public:
   using Node = RegexDagNode<L>;
   using Dag = RegexDag<L>;
@@ -35,4 +34,3 @@ public:
 } // namespace lotus
 
 #endif // LOTUS_VERIFICATION_SIFA_REGEXDAG_IDAGOVERLAY_H
-

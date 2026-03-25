@@ -162,10 +162,11 @@ void DsaInfo::recordMemAccesses(const Function &F) {
 }
 
 bool DsaInfo::recordAllocSite(const Value *v, unsigned &site_id) {
-  auto it = m_alloc_sites_bimap.left.find(v);
-  if (it == m_alloc_sites_bimap.left.end()) {
-    site_id = m_alloc_sites_bimap.size() + 1;
-    m_alloc_sites_bimap.insert(typename AllocSiteBiMap::value_type(v, site_id));
+  auto it = m_alloc_site_to_id.find(v);
+  if (it == m_alloc_site_to_id.end()) {
+    site_id = m_alloc_site_to_id.size() + 1;
+    m_alloc_site_to_id[v] = site_id;
+    m_id_to_alloc_site[site_id] = v;
     m_alloc_sites_set.insert(site_id);
     return true;
   } else {
@@ -319,19 +320,19 @@ void DsaInfo::assignNodeId(const Function &fn, Graph *g) {
   /// XXX: Assume class Node already assigns a global id to each node
 
   for (auto &kv :
-       boost::make_iterator_range(g->scalar_begin(), g->scalar_end())) {
+       llvm::make_range(g->scalar_begin(), g->scalar_end())) {
     const Node *n = kv.second->getNode();
     m_nodes_map.insert(std::make_pair(n, NodeInfo(n, n->getId(), "")));
   }
 
   for (auto &kv :
-       boost::make_iterator_range(g->formal_begin(), g->formal_end())) {
+       llvm::make_range(g->formal_begin(), g->formal_end())) {
     const Node *n = kv.second->getNode();
     m_nodes_map.insert(std::make_pair(n, NodeInfo(n, n->getId(), "")));
   }
 
   for (auto &kv :
-       boost::make_iterator_range(g->return_begin(), g->return_end())) {
+       llvm::make_range(g->return_begin(), g->return_end())) {
     const Node *n = kv.second->getNode();
     m_nodes_map.insert(std::make_pair(n, NodeInfo(n, n->getId(), "")));
   }
@@ -340,18 +341,18 @@ void DsaInfo::assignNodeId(const Function &fn, Graph *g) {
   /// XXX: Try to build a global id from the name of a node's
   /// representative. The representative is chosen deterministically.
 
-  typedef boost::unordered_map<const Node *, ValueSet> ReferrerMap;
+  typedef std::unordered_map<const Node *, ValueSet> ReferrerMap;
   typedef std::vector<std::pair<const Node *, std::string>> ReferrerRepVector;
 
   ReferrerMap ref_map;
   ReferrerRepVector sorted_ref_vector;
 
   // Build referrers for each node
-  InsertReferrer(boost::make_iterator_range(g->scalar_begin(), g->scalar_end()),
+  InsertReferrer(llvm::make_range(g->scalar_begin(), g->scalar_end()),
                  ref_map);
-  InsertReferrer(boost::make_iterator_range(g->formal_begin(), g->formal_end()),
+  InsertReferrer(llvm::make_range(g->formal_begin(), g->formal_end()),
                  ref_map);
-  InsertReferrer(boost::make_iterator_range(g->return_begin(), g->return_end()),
+  InsertReferrer(llvm::make_range(g->return_begin(), g->return_end()),
                  ref_map);
 
   // Find *deterministically* a representative for each node from its
@@ -451,16 +452,16 @@ unsigned int DsaInfo::getDsaNodeId(const Node &n) const {
 }
 
 unsigned int DsaInfo::getAllocSiteId(const Value *V) const {
-  auto it = m_alloc_sites_bimap.left.find(V);
-  if (it != m_alloc_sites_bimap.left.end())
+  auto it = m_alloc_site_to_id.find(V);
+  if (it != m_alloc_site_to_id.end())
     return it->second;
   else
     return 0; // not found
 }
 
 const Value *DsaInfo::getAllocValue(unsigned int alloc_site_id) const {
-  auto it = m_alloc_sites_bimap.right.find(alloc_site_id);
-  if (it != m_alloc_sites_bimap.right.end())
+  auto it = m_id_to_alloc_site.find(alloc_site_id);
+  if (it != m_id_to_alloc_site.end())
     return it->second;
   else
     return nullptr; // not found

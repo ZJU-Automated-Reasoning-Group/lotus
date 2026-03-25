@@ -1,5 +1,11 @@
 #include "Utils/LLVM/InstructionUtils.h"
+
 #include "Utils/LLVM/Demangle.h"
+
+#include <algorithm>
+#include <set>
+#include <unordered_set>
+
 #include <llvm/Analysis/CFG.h>
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/Analysis/TargetLibraryInfo.h>
@@ -11,9 +17,6 @@
 #include <llvm/IR/Statepoint.h>
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/Path.h>
-#include <algorithm>
-#include <set>
-#include <unordered_set>
 
 using namespace llvm;
 
@@ -30,18 +33,21 @@ unsigned InstructionUtils::getLineNumber(Instruction &I) {
 
 // Returns the name of the instruction or "No Name" if unnamed.
 std::string InstructionUtils::getInstructionName(Instruction *I) {
-  return I->hasName() ? DemangleUtils::demangleWithCleanup(I->getName().str()) : "No Name";
+  return I->hasName() ? DemangleUtils::demangleWithCleanup(I->getName().str())
+                      : "No Name";
 }
 
 // Returns the name of the value or "No Name" if unnamed.
 std::string InstructionUtils::getValueName(Value *v) {
-  return v->hasName() ? DemangleUtils::demangleWithCleanup(v->getName().str()) : "No Name";
+  return v->hasName() ? DemangleUtils::demangleWithCleanup(v->getName().str())
+                      : "No Name";
 }
 
 // Escapes special characters in a string for JSON output.
 std::string InstructionUtils::escapeJsonString(const std::string &input) {
   std::ostringstream ss;
-  for (std::string::const_iterator iter = input.begin(); iter != input.end(); iter++) {
+  for (std::string::const_iterator iter = input.begin(); iter != input.end();
+       iter++) {
     switch (*iter) {
     case '\\':
       ss << "\\\\";
@@ -87,20 +93,26 @@ std::string InstructionUtils::escapeValueString(Value *currInstr) {
 DILocation *getRecursiveDILoc(Instruction *I, std::string &fileName,
                               std::set<BasicBlock *> &visited) {
   DILocation *DL = I->getDebugLoc().get();
-  if (fileName.empty()) return DL;
-  if (DL && DL->getFilename().equals(fileName)) return DL;
+  if (fileName.empty())
+    return DL;
+  if (DL && DL->getFilename().equals(fileName))
+    return DL;
 
   BasicBlock *BB = I->getParent();
-  if (!visited.insert(BB).second) return nullptr;
+  if (!visited.insert(BB).second)
+    return nullptr;
 
   for (auto &Inst : BB->getInstList()) {
     DILocation *InstDL = Inst.getDebugLoc();
-    if (InstDL && InstDL->getFilename().equals(fileName)) return InstDL;
-    if (&Inst == I) break;
+    if (InstDL && InstDL->getFilename().equals(fileName))
+      return InstDL;
+    if (&Inst == I)
+      break;
   }
 
   for (BasicBlock *Pred : predecessors(BB)) {
-    if (DILocation *PredDL = getRecursiveDILoc(Pred->getTerminator(), fileName, visited))
+    if (DILocation *PredDL =
+            getRecursiveDILoc(Pred->getTerminator(), fileName, visited))
       return PredDL;
   }
   return nullptr;
@@ -123,7 +135,8 @@ std::string getFunctionFileName(Function *F) {
 // Returns the correct debug location for an instruction.
 DILocation *InstructionUtils::getCorrectInstrLocation(Instruction *I) {
   DILocation *DL = I->getDebugLoc().get();
-  if (DL && DL->getFilename().endswith(".c")) return DL;
+  if (DL && DL->getFilename().endswith(".c"))
+    return DL;
 
   std::string funcFileName = getFunctionFileName(I->getFunction());
   if (DL && (funcFileName.empty() || DL->getFilename().equals(funcFileName)))
@@ -149,14 +162,49 @@ int InstructionUtils::getInstrLineNumber(Instruction *I) {
 
 // Static constant for known memory functions
 static const std::unordered_set<std::string> KnownMemFuncs = {
-    "malloc", "calloc", "realloc", "reallocarray", "memalign", "aligned_alloc",
-    "valloc", "pvalloc", "posix_memalign", "mmap", "mmap64", "free",
-    "free_sized", "free_aligned_size", "munmap", "strdup", "strndup",
-    "asprintf", "aswprintf", "vasprintf", "vaswprintf", "getline", "getwline",
-    "getdelim", "getwdelim", "allocate_at_least", "construct_at", "destroy_at",
-    "destroy", "destroy_n", "new", "new[]", "delete", "delete[]", "tempnam",
-    "get_current_dir_name", "realpath", "longjmp", "siglongjmp", "wcsdup",
-    "wcsndup", "mbsdup", "mbsndup"};
+    "malloc",
+    "calloc",
+    "realloc",
+    "reallocarray",
+    "memalign",
+    "aligned_alloc",
+    "valloc",
+    "pvalloc",
+    "posix_memalign",
+    "mmap",
+    "mmap64",
+    "free",
+    "free_sized",
+    "free_aligned_size",
+    "munmap",
+    "strdup",
+    "strndup",
+    "asprintf",
+    "aswprintf",
+    "vasprintf",
+    "vaswprintf",
+    "getline",
+    "getwline",
+    "getdelim",
+    "getwdelim",
+    "allocate_at_least",
+    "construct_at",
+    "destroy_at",
+    "destroy",
+    "destroy_n",
+    "new",
+    "new[]",
+    "delete",
+    "delete[]",
+    "tempnam",
+    "get_current_dir_name",
+    "realpath",
+    "longjmp",
+    "siglongjmp",
+    "wcsdup",
+    "wcsndup",
+    "mbsdup",
+    "mbsndup"};
 
 // Helper function to check if character is newline
 static inline bool isNewLine(char C) { return C == '\n'; }
@@ -171,7 +219,8 @@ static inline std::string truncateString(std::string S) {
 std::string InstructionUtils::valueToString(const Value *V) {
   std::string S;
   llvm::raw_string_ostream RSO(S);
-  if (V) V->print(RSO, true);
+  if (V)
+    V->print(RSO, true);
   return truncateString(S);
 }
 
@@ -179,13 +228,15 @@ std::string InstructionUtils::valueToString(const Value *V) {
 std::string InstructionUtils::typeToString(const Type *T) {
   std::string S;
   llvm::raw_string_ostream RSO(S);
-  if (T) T->print(RSO, true);
+  if (T)
+    T->print(RSO, true);
   return truncateString(S);
 }
 
 // Check if instruction is system-defined (not user code)
 bool InstructionUtils::isSystemDefined(const Instruction *I) {
-  if (!I) return true;
+  if (!I)
+    return true;
   if (auto *Sub = I->getFunction()->getSubprogram())
     return !Sub->getDirectory().startswith_insensitive("/home");
   return true;
@@ -193,26 +244,36 @@ bool InstructionUtils::isSystemDefined(const Instruction *I) {
 
 // Get fully inlined source location
 DILocation *InstructionUtils::getFullyInlinedSrcLoc(const Instruction *I) {
-  if (!I) return nullptr;
+  if (!I)
+    return nullptr;
   auto *DILoc = I->getDebugLoc().get();
-  while (DILoc && DILoc->getInlinedAt()) DILoc = DILoc->getInlinedAt();
+  while (DILoc && DILoc->getInlinedAt())
+    DILoc = DILoc->getInlinedAt();
   return DILoc;
 }
 
 // Get source location as row and column
-std::pair<int64_t, int64_t> InstructionUtils::getSourceLocation(const Instruction *I) {
-  if (!I) return {-7, -7};
+std::pair<int64_t, int64_t>
+InstructionUtils::getSourceLocation(const Instruction *I) {
+  if (!I)
+    return {-7, -7};
   DiagnosticLocation Loc(I->getDebugLoc());
-  if (!Loc.isValid()) return {-8, -8};
+  if (!Loc.isValid())
+    return {-8, -8};
   return {Loc.getLine() ? (int64_t)Loc.getLine() : -9,
           Loc.getColumn() ? (int64_t)Loc.getColumn() : -9};
 }
 
 // Get source location string for a function
-std::string InstructionUtils::getSourceLocationString(const Function *F, const std::string &ModID) {
+std::string
+InstructionUtils::getSourceLocationString(const Function *F,
+                                          const std::string &ModID) {
   DiagnosticLocation Loc(F ? F->getSubprogram() : nullptr);
-  std::string FuncName = F ? DemangleUtils::demangle(F->getName().str()) : "unknown_function";
-  std::string FileName = Loc.isValid() ? llvm::sys::path::filename(Loc.getAbsolutePath()).str() : "unknown_file";
+  std::string FuncName =
+      F ? DemangleUtils::demangle(F->getName().str()) : "unknown_function";
+  std::string FileName =
+      Loc.isValid() ? llvm::sys::path::filename(Loc.getAbsolutePath()).str()
+                    : "unknown_file";
   return FuncName + ";;" + FileName + ";;" + ModID;
 }
 
@@ -233,18 +294,21 @@ bool InstructionUtils::isLifetimeEnd(const Instruction *I) {
 // Get all alloca instructions for a lifetime marker
 std::set<AllocaInst *> InstructionUtils::getAllocas(const IntrinsicInst *II) {
   std::set<AllocaInst *> Allocas;
-  if (!II || !II->isLifetimeStartOrEnd()) return Allocas;
+  if (!II || !II->isLifetimeStartOrEnd())
+    return Allocas;
 
   SmallVector<Value *, 4> SrcObjs;
   getUnderlyingObjectsForCodeGen(II->getOperand(1), SrcObjs);
   for (auto *Obj : SrcObjs)
-    if (auto *AI = dyn_cast<AllocaInst>(Obj)) Allocas.insert(AI);
+    if (auto *AI = dyn_cast<AllocaInst>(Obj))
+      Allocas.insert(AI);
   return Allocas;
 }
 
 // Check if address stays dead after lifetime.end
 bool InstructionUtils::staysDead(IntrinsicInst *II) {
-  if (!II || !isLifetimeEnd(II)) return false;
+  if (!II || !isLifetimeEnd(II))
+    return false;
 
   DominatorTree DTree(*II->getFunction());
   LoopInfo LInfo(DTree);
@@ -252,25 +316,31 @@ bool InstructionUtils::staysDead(IntrinsicInst *II) {
   SmallVector<Instruction *, 4> Worklist;
 
   auto AddWork = [&](Instruction *I) {
-    if (I && I != II && Visited.insert(I).second) Worklist.push_back(I);
+    if (I && I != II && Visited.insert(I).second)
+      Worklist.push_back(I);
   };
 
-  for (auto *AI : getAllocas(II)) AddWork(AI);
+  for (auto *AI : getAllocas(II))
+    AddWork(AI);
 
   while (!Worklist.empty()) {
     auto *I = Worklist.pop_back_val();
-    if (!I || I == II) continue;
-    if (isLifetimeStart(I) && isPotentiallyReachable(I, II, nullptr, &DTree, &LInfo))
+    if (!I || I == II)
+      continue;
+    if (isLifetimeStart(I) &&
+        isPotentiallyReachable(I, II, nullptr, &DTree, &LInfo))
       return false;
     for (auto *U : I->users())
-      if (isa<Instruction>(U)) AddWork(cast<Instruction>(U));
+      if (isa<Instruction>(U))
+        AddWork(cast<Instruction>(U));
   }
   return true;
 }
 
 // Get called function (handles statepoints)
 Function *InstructionUtils::getCalledFunction(const CallBase *CB) {
-  if (!CB) return nullptr;
+  if (!CB)
+    return nullptr;
   if (auto *GCSP = dyn_cast<GCStatepointInst>(CB))
     return GCSP->getActualCalledFunction() ?: CB->getCalledFunction();
   return CB->getCalledFunction();
@@ -278,42 +348,49 @@ Function *InstructionUtils::getCalledFunction(const CallBase *CB) {
 
 // Check if call is possibly unsafe
 bool InstructionUtils::isPossiblyUnsafe(const CallBase *CB) {
-  return !CB || CB->hasRetAttr(Attribute::NoAlias) || CB->hasFnAttr(Attribute::NoAlias) ||
-         !CB->hasRetAttr(Attribute::NoFree) || !CB->hasFnAttr(Attribute::NoFree) ||
-         !CB->doesNotAccessMemory() || !CB->returnDoesNotAlias() ||
-         CB->mayReadOrWriteMemory() || CB->mayHaveSideEffects() ||
-         CB->isIndirectCall() || CB->mayThrow();
+  return !CB || CB->hasRetAttr(Attribute::NoAlias) ||
+         CB->hasFnAttr(Attribute::NoAlias) ||
+         !CB->hasRetAttr(Attribute::NoFree) ||
+         !CB->hasFnAttr(Attribute::NoFree) || !CB->doesNotAccessMemory() ||
+         !CB->returnDoesNotAlias() || CB->mayReadOrWriteMemory() ||
+         CB->mayHaveSideEffects() || CB->isIndirectCall() || CB->mayThrow();
 }
 
 // Check if function is possibly unsafe
-bool InstructionUtils::isPossiblyUnsafe(Function *F, FunctionAnalysisManager *FAM) {
+bool InstructionUtils::isPossiblyUnsafe(Function *F,
+                                        FunctionAnalysisManager *FAM) {
   if (!F || F->hasFnAttribute(Attribute::InaccessibleMemOnly) ||
-      F->hasFnAttribute(Attribute::ReadNone) || F->hasFnAttribute(Attribute::NoAlias) ||
-      !F->hasFnAttribute(Attribute::NoFree) || !F->callsFunctionThatReturnsTwice() ||
+      F->hasFnAttribute(Attribute::ReadNone) ||
+      F->hasFnAttribute(Attribute::NoAlias) ||
+      !F->hasFnAttribute(Attribute::NoFree) ||
+      !F->callsFunctionThatReturnsTwice() ||
       KnownMemFuncs.count(DemangleUtils::demangle(F->getName().str())))
     return true;
 
   if (FAM) {
     auto &TLI = FAM->getResult<TargetLibraryAnalysis>(*F);
     LibFunc TLIF;
-    if (isAllocationFn(F, &TLI) || 
-        (TLI.getLibFunc(*F, TLIF) && TLI.has(TLIF) && isLibFreeFunction(F, TLIF)))
+    if (isAllocationFn(F, &TLI) || (TLI.getLibFunc(*F, TLIF) && TLI.has(TLIF) &&
+                                    isLibFreeFunction(F, TLIF)))
       return true;
   }
   return false;
 }
 
 // Check if memory access is fully safe
-bool InstructionUtils::isFullySafeAccess(ObjectSizeOffsetVisitor &ObjSizeVis, 
-                                          Value *Addr, uint64_t TySize) {
+bool InstructionUtils::isFullySafeAccess(ObjectSizeOffsetVisitor &ObjSizeVis,
+                                         Value *Addr, uint64_t TySize) {
   SizeOffsetType SizeOffset = ObjSizeVis.compute(Addr);
-  if (!ObjSizeVis.bothKnown(SizeOffset)) return false;
+  if (!ObjSizeVis.bothKnown(SizeOffset))
+    return false;
   uint64_t Size = SizeOffset.first.getZExtValue();
   int64_t Offset = SizeOffset.second.getSExtValue();
-  return Offset >= 0 && Size >= uint64_t(Offset) && Size - uint64_t(Offset) >= TySize / 8;
+  return Offset >= 0 && Size >= uint64_t(Offset) &&
+         Size - uint64_t(Offset) >= TySize / 8;
 }
 
 // Get known memory functions
-const std::unordered_set<std::string>& InstructionUtils::getKnownMemoryFunctions() {
+const std::unordered_set<std::string> &
+InstructionUtils::getKnownMemoryFunctions() {
   return KnownMemFuncs;
 }

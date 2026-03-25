@@ -6,8 +6,8 @@
 
 #include "seahorn/Expr/Expr.hh"
 #include "seahorn/Expr/Smt/EZ3.hh"
-#include "seahorn/UfoOpSem.hh"
 #include "seahorn/LiveSymbols.hh"
+#include "seahorn/UfoOpSem.hh"
 
 namespace seahorn
 {
@@ -35,7 +35,7 @@ namespace seahorn
     virtual void runOnFunction (Function &F) override;
   };
 
-}
+} // namespace seahorn
 
 
 

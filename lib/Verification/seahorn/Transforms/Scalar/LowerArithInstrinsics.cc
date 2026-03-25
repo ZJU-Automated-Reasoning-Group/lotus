@@ -1,9 +1,9 @@
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Pass.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "seahorn/Support/SeaDebug.h"
@@ -47,7 +47,7 @@ namespace
         Value *nv = BinaryOperator::Create(Op, I->getOperand(0), I->getOperand(1),
                                            Name, I);
         
-        for (auto EV: uses) 
+        for (auto *EV: uses) 
         {
           assert (EV->getNumIndices () == 1);
           if (EV->getIndices()[0] == 0) {
@@ -104,13 +104,13 @@ namespace
   };
 
   char LowerArithIntrinsics::ID = 0;
-}
+} // namespace
 
 namespace seahorn
 {
   Pass *createLowerArithWithOverflowIntrinsicsPass () 
   {return new LowerArithIntrinsics ();} 
-}
+} // namespace seahorn
 
 static llvm::RegisterPass<LowerArithIntrinsics> 
 X ("lower-arith-overflow-intrinsics", "Lower arithmetic with overflow intrinsics");

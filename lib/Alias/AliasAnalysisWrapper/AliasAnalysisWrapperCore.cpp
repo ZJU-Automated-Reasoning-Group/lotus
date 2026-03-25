@@ -11,6 +11,7 @@
 
 #include "Alias/AliasAnalysisWrapper/AliasAnalysisWrapper.h"
 #include "Alias/AllocAA/AllocAA.h"
+#include "Alias/DDA/FlowDDA.h"
 #include "Alias/DyckAA/DyckAliasAnalysis.h"
 #include "Alias/SparrowAA/AndersenAA.h"
 #include "Alias/TPA/Context/ContextPolicy.h"
@@ -99,7 +100,7 @@ AliasAnalysisWrapper::~AliasAnalysisWrapper() = default;
  * This method sets up the appropriate alias analysis backend according to
  * the configuration specified in _config. It handles:
  * - SparrowAA (Andersen-style) with configurable k-CFA levels
- * - AserPTA (currently falls back to SparrowAA - TODO: full integration)
+ * - AserPTA (currently rejected until wrapper integration is implemented)
  * - TPA (Flow- and context-sensitive semi-sparse analysis)
  * - DyckAA, CFLAnders, CFLSteens, UnderApprox
  * - Combined mode (multiple backends)
@@ -143,13 +144,10 @@ void AliasAnalysisWrapper::initialize() {
   }
   
   case AAConfig::Implementation::AserPTA: {
-    // TODO: Implement AserPTA integration
-    // For now, fall back to SparrowAA with same k-CFA level
-    unsigned k = (_config.ctxSens == AAConfig::ContextSensitivity::KCallSite) ? _config.kLimit : 0;
-    errs() << "AliasAnalysisWrapper: AserPTA not yet integrated, using SparrowAA instead\n";
-    _initialized = initAA([this, k]{
-      _andersen_aa = std::make_unique<AndersenAAResult>(*_module, makeContextPolicy(k));
-    }, "SparrowAA (AserPTA fallback)");
+    errs() << "AliasAnalysisWrapper: AserPTA config requested, but the "
+              "wrapper backend is not integrated yet; refusing to fall back "
+              "to a different analysis\n";
+    _initialized = false;
     break;
   }
   
@@ -195,6 +193,13 @@ void AliasAnalysisWrapper::initialize() {
     }, _config.getName().c_str());
     break;
   }
+
+  case AAConfig::Implementation::DDA:
+    _initialized = initAA([this]{
+      _dda_aa = std::make_unique<lotus::analysis::DemandDrivenAA>();
+      _dda_aa->run(*_module);
+    }, _config.getName().c_str());
+    break;
   
   case AAConfig::Implementation::DyckAA:
     _initialized = initAA([this]{ 
@@ -319,6 +324,10 @@ std::string AAConfig::getName() const {
     } else {
       oss << "(NoCtx)";
     }
+    break;
+
+  case Implementation::DDA:
+    oss << "DDA(NoCtx)";
     break;
     
   case Implementation::DyckAA:

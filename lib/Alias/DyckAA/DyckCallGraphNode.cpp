@@ -20,83 +20,77 @@
 
 static int GlobalCallID = 0;
 
-Call::Call(CallKind K, Instruction *Inst, Value *CalledValue, std::vector<Value *> *Args) : Kind(K) {
-    assert(CalledValue != nullptr && "Error when create a call: called value is null!");
-    assert(Args != nullptr && "Error when create a call: args is null!");
+Call::Call(CallKind K, Instruction *Inst, Value *CalledValue,
+           std::vector<Value *> *Args)
+    : Kind(K) {
+  assert(CalledValue != nullptr &&
+         "Error when create a call: called value is null!");
+  assert(Args != nullptr && "Error when create a call: args is null!");
 
-    this->CalledValue = CalledValue;
-    this->Inst = Inst;
-    this->Args = *Args;
-    this->CallId = ++GlobalCallID;
+  this->CalledValue = CalledValue;
+  this->Inst = Inst;
+  this->Args = *Args;
+  this->CallId = ++GlobalCallID;
 }
 
-CommonCall::CommonCall(Instruction *Inst, Function *Func, std::vector<Value *> *Args)
-        : Call(CK_Common, Inst, Func, Args) {
-}
+CommonCall::CommonCall(Instruction *Inst, Function *Func,
+                       std::vector<Value *> *Args)
+    : Call(CK_Common, Inst, Func, Args) {}
 
-PointerCall::PointerCall(Instruction *Inst, Value *CalledValue, std::vector<Value *> *Args)
-        : Call(CK_Pointer, Inst, CalledValue, Args) {
-}
+PointerCall::PointerCall(Instruction *Inst, Value *CalledValue,
+                         std::vector<Value *> *Args)
+    : Call(CK_Pointer, Inst, CalledValue, Args) {}
 
 DyckCallGraphNode::DyckCallGraphNode(Function *F) : Func(F) {
-    if (!F) return;
-    for (unsigned K = 0; K < F->arg_size(); ++K) Args.push_back(F->getArg(K));
+  if (!F)
+    return;
+  for (unsigned K = 0; K < F->arg_size(); ++K)
+    Args.push_back(F->getArg(K));
 }
 
 DyckCallGraphNode::~DyckCallGraphNode() {
-    auto It = PointerCalls.begin();
-    while (It != PointerCalls.end()) {
-        delete (*It);
-        It++;
-    }
+  auto It = PointerCalls.begin();
+  while (It != PointerCalls.end()) {
+    delete (*It);
+    It++;
+  }
 
-    auto CIt = CommonCalls.begin();
-    while (CIt != CommonCalls.end()) {
-        delete *CIt;
-        CIt++;
-    }
+  auto CIt = CommonCalls.begin();
+  while (CIt != CommonCalls.end()) {
+    delete *CIt;
+    CIt++;
+  }
 }
 
 void DyckCallGraphNode::addPointerCall(PointerCall *PC) {
-    InstructionCallMap.insert(std::pair<Instruction *, Call *>(PC->getInstruction(), PC));
-    PointerCalls.insert(PC);
+  InstructionCallMap.insert(
+      std::pair<Instruction *, Call *>(PC->getInstruction(), PC));
+  PointerCalls.insert(PC);
 }
 
-Function *DyckCallGraphNode::getLLVMFunction() {
-    return Func;
-}
+Function *DyckCallGraphNode::getLLVMFunction() { return Func; }
 
 void DyckCallGraphNode::addCommonCall(CommonCall *CC) {
-    InstructionCallMap.insert(std::pair<Instruction *, Call *>(CC->getInstruction(), CC));
-    CommonCalls.insert(CC);
+  InstructionCallMap.insert(
+      std::pair<Instruction *, Call *>(CC->getInstruction(), CC));
+  CommonCalls.insert(CC);
 }
 
-void DyckCallGraphNode::addRet(Value *Ret) {
-    Rets.insert(Ret);
-}
+void DyckCallGraphNode::addRet(Value *Ret) { Rets.insert(Ret); }
 
-void DyckCallGraphNode::addArg(Value *Arg) {
-    Args.push_back(Arg);
-}
+void DyckCallGraphNode::addArg(Value *Arg) { Args.push_back(Arg); }
 
-void DyckCallGraphNode::addVAArg(Value *Arg) {
-    VAArgs.push_back(Arg);
-}
+void DyckCallGraphNode::addVAArg(Value *Arg) { VAArgs.push_back(Arg); }
 
-std::vector<Value *> &DyckCallGraphNode::getArgs() {
-    return Args;
-}
+std::vector<Value *> &DyckCallGraphNode::getArgs() { return Args; }
 
-std::vector<Value *> &DyckCallGraphNode::getVAArgs() {
-    return VAArgs;
-}
+std::vector<Value *> &DyckCallGraphNode::getVAArgs() { return VAArgs; }
 
-std::set<Value *> &DyckCallGraphNode::getReturns() {
-    return Rets;
-}
+std::set<Value *> &DyckCallGraphNode::getReturns() { return Rets; }
 
 Call *DyckCallGraphNode::getCall(Instruction *Inst) {
-    auto It = InstructionCallMap.find(Inst);
-    if (It != InstructionCallMap.end()) return It->second;
-    return nullptr;
+  auto It = InstructionCallMap.find(Inst);
+  if (It != InstructionCallMap.end())
+    return It->second;
+  return nullptr;
 }

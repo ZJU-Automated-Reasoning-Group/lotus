@@ -2,20 +2,17 @@
 
 #include "Alias/TPA/PointerAnalysis/FrontEnd/Type/TypeMap.h"
 
-namespace llvm
-{
-	class Module;
+namespace llvm {
+class Module;
 } // namespace llvm
 
-namespace tpa
-{
+namespace tpa {
 
-class TypeAnalysis
-{
+class TypeAnalysis {
 public:
-	TypeAnalysis() = default;
+  TypeAnalysis() = default;
 
-	TypeMap runOnModule(const llvm::Module&);
+  TypeMap runOnModule(const llvm::Module &);
 };
 
 } // namespace tpa

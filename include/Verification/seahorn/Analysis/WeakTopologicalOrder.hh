@@ -41,7 +41,7 @@
 
 namespace llvm {
 class BasicBlock;
-}
+} // namespace llvm
 
 namespace seahorn {
 
@@ -259,8 +259,10 @@ private:
   // as described in Bourdoncle's
   partition_t component(vertex_t v) {
     partition_t partition;
-    for (auto vw : boost::make_iterator_range(boost::out_edges(v, *m_g))) {
-      auto w = boost::target(vw, *m_g);
+    using boost::out_edges;
+    using boost::target;
+    for (auto vw : boost::make_iterator_range(out_edges(v, *m_g))) {
+      auto w = target(vw, *m_g);
       if (getDfn(w) == 0)
         visit(w, partition);
     }
@@ -273,8 +275,10 @@ private:
     m_dfn[v] = m_cur_dfn_num++;
     auto head = getDfn(v);
     bool loop = false;
-    for (auto vw : boost::make_iterator_range(boost::out_edges(v, *m_g))) {
-      auto w = boost::target(vw, *m_g);
+    using boost::out_edges;
+    using boost::target;
+    for (auto vw : boost::make_iterator_range(out_edges(v, *m_g))) {
+      auto w = target(vw, *m_g);
       auto min = getDfn(w);
       if (min == 0)
         min = visit(w, partition);
@@ -342,7 +346,10 @@ private:
     }
   }
 
-  struct getHead : public std::unary_function<wto_component_t, vertex_t> {
+  struct getHead {
+    using argument_type = wto_component_t;
+    using result_type = vertex_t;
+
     getHead() {}
     vertex_t operator()(const wto_component_t &c) const { return c.head(); }
   };

@@ -2,8 +2,10 @@
 //
 // PointerLayout tracks which offsets within a type contain pointers.
 // This is essential for:
-// 1. Scanning memory to find pointers (e.g., during copying or garbage collection simulation).
-// 2. Precision: Knowing that an offset does NOT contain a pointer allows us to ignore it.
+// 1. Scanning memory to find pointers (e.g., during copying or garbage
+// collection simulation).
+// 2. Precision: Knowing that an offset does NOT contain a pointer allows us to
+// ignore it.
 //
 // Data Structure:
 // - A set of offsets (`validOffsets`).

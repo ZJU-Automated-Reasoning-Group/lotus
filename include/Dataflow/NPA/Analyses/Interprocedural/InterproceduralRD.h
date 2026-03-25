@@ -1,21 +1,27 @@
 #ifndef NPA_INTERPROC_RD_H
 #define NPA_INTERPROC_RD_H
 
+#include "Dataflow/NPA/Analyses/InterproceduralEngine.h"
 #include "Dataflow/NPA/Domains/GenKillDomain.h"
-#include <llvm/IR/Module.h>
+
 #include <map>
-#include <string>
+
+#include <llvm/IR/Module.h>
 
 namespace npa {
 
 class InterproceduralRD {
 public:
-    struct Result {
-        std::map<std::string, GenKillDomain::value_type> summaries;
-        std::map<std::string, llvm::APInt> blockFacts; 
-    };
+  struct Result {
+    AnalysisStatus status;
+    std::map<FunctionKey, GenKillDomain::value_type> summaries;
+    std::map<BlockKey, llvm::APInt> blockFacts;
+  };
 
-    static Result run(llvm::Module &M, bool verbose = false);
+  static Result run(llvm::Module &M, bool verbose = false,
+                    LinearStrategy linearStrategy = LinearStrategy::SCC,
+                    IndirectCallResolutionMode callResolutionMode =
+                        IndirectCallResolutionMode::ClosedWorldTypeCompatible);
 };
 
 } // namespace npa

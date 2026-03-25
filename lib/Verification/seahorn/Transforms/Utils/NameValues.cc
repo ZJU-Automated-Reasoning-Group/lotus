@@ -3,12 +3,12 @@
 #include "seahorn/Transforms/Utils/NameValues.hh"
 
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 
 #include "seahorn/Support/SeaDebug.h"
 #include <boost/algorithm/string/predicate.hpp>

@@ -9,9 +9,11 @@ For Summer Research, Final Year Project Topics, etc.
 - Btor2
 - SystemVerilog
 - Java
-- Rust
 - Circom: https://github.com/whbjzzwjxq/ZKAP/tree/master/circom2llvm
 - ...?
+- Rust?: https://github.com/seahorn/verify-rust
+  - FMCAD 22: Bounded Model Checking for LLVM
+  - FMCAD 25: A Tale of Two Case Studies: A Unified Explorationof Rust Verification with SEABMC
 
 
 ## 1. Testing Improvements
@@ -35,8 +37,6 @@ Universal interface for the analyses in lib/Alias:
 - Callgraph: callgraph edges, reachable methods, etc.
 - Optimizations: devirtualization, dead code elimination, ...
 - Security: bug finding, guided fuzzing, control-flow integrity, code pointer integrity, ...
-- IR: SVFG, ...
-- Slicing: forward, backward, thin slicing, tropping, ...
 
 **Note**: Currently, we may not focus on some "high-level clients" such as taint analysis and memory safety verification, which can require more reasoning capabilities dataflow tracking, numerical analysis, path sensitivity, etc.
 
@@ -90,9 +90,9 @@ Some related publications
 
 ### Software Protection
 
-- CCS 22: C2C: Fine-grained Configuration-driven System Call Filtering
+- CCS 22: C2C: Fine-Grained Configuration-Driven System Call Filtering
 - USENIX Security 20: Temporal System Call Specialization for Attack Surface Reduction
-- USENIX Security 19:  Origin-sensitive Control Flow Integrity
+- USENIX Security 19:  Origin-Sensitive Control Flow Integrity
 - ISSTA 17:  Boosting the Precision of Virtual Call Integrity Protection with Partial Pointer Analysis for C++ 
 
 
@@ -105,11 +105,11 @@ Some related publications
 * Revise the monotone data flow analysis module
 * Let the WPDS engine work 
 
-## Supporting other Languages
 
-- Rust?: https://github.com/seahorn/verify-rust
-  - FMCAD 22: Bounded Model Checking for LLVM
-  - FMCAD 25: A Tale of Two Case Studies: A Unified Explorationof Rust Verification with SEABMC
+
+## Bindings
+
+- Python (e.g., following https://github.com/SVF-tools/SVF-Python and Z3?)
 
 ## Investigate More Related Work
 

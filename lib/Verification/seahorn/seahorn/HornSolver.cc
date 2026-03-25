@@ -16,7 +16,7 @@
 
 namespace seahorn {
 extern bool InterProcMemFmaps;
-}
+} // namespace seahorn
 
 using namespace llvm;
 
@@ -94,7 +94,7 @@ enum invariant_usage_t {
   ,
   ALWAYS // use invariants everywhere
 };
-}
+} // namespace solver_detail
 
 static llvm::cl::opt<enum solver_detail::invariant_usage_t> UseInvariant(
     "horn-use-invs", llvm::cl::desc("Tell the solver how to use invariants"),
@@ -117,7 +117,7 @@ static llvm::cl::opt<bool>
 
 namespace seahorn {
 extern bool InterProcMemFmaps;
-}
+} // namespace seahorn
 
 namespace seahorn {
 char HornSolver::ID = 0;

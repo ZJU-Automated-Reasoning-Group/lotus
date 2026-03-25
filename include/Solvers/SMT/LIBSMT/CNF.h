@@ -8,9 +8,10 @@
 #pragma once
 
 #include <deque>
+#include <vector>
+
 #include <math.h>
 #include <stddef.h>
-#include <vector>
 
 using namespace std;
 
@@ -95,7 +96,7 @@ protected:
   void score_decay();             // divide scores by constant
   void update_scores(int *first); // update variable scores and positions
 public:
-  cnf_manager(){};
+  cnf_manager() {};
   cnf_manager(cnf &m_cnf);
   ~cnf_manager();
 };

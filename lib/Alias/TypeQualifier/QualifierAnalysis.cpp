@@ -31,6 +31,24 @@ std::string testDir = getCurrentWorkingDir() + "/Summary/";
 
 static bool isCastingCompatibleType(Type *T1, Type *T2);
 
+void IterativeModulePass::run(ModuleList &modules) {
+  bool changed = false;
+  for (auto &entry : modules) {
+    doInitialization(entry.first);
+  }
+
+  do {
+    changed = false;
+    for (auto &entry : modules) {
+      changed |= doModulePass(entry.first);
+    }
+  } while (changed);
+
+  for (auto &entry : modules) {
+    doFinalization(entry.first);
+  }
+}
+
 bool QualifierAnalysis::doInitialization(llvm::Module *M) {
 #ifdef HEAP_CHECK
   // To filter the heap warning, we need to record every use of the struct.
@@ -248,8 +266,8 @@ bool FuncAnalysis::run() {
   buildPtsGraph();
   initSummary();
   computeAASet();
-  NodeIndex numNodes = nodeFactory.getNumNodes();
-  qualiInference();
+  runBackwardRequirednessAnalysis();
+  runForwardQualifierAnalysis();
 #ifdef CAL_STACKVAR
   calStackVar();
 #endif
@@ -1020,8 +1038,8 @@ void FuncAnalysis::initSummary() {
   fSummary.reqVec.resize(numNodes);    //= new int[numNodes];
   fSummary.updateVec.resize(numNodes); //= new int[numNodes];
   for (unsigned i = 0; i < numNodes; i++) {
-    fSummary.reqVec.at(i) = _UNKNOWN;
-    fSummary.updateVec.at(i) = _UNKNOWN;
+    fSummary.reqVec.at(i) = QualifierState::Unknown;
+    fSummary.updateVec.at(i) = QualifierState::Unknown;
   }
 }
 

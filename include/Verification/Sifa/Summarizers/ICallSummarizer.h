@@ -2,8 +2,9 @@
 //
 // Call summarization interface (ported from Ultimate Library-Sifa).
 //
-// lotus v1 (intraprocedural) does not use this yet, but the interface is kept
-// to preserve the structure of the original library.
+// Paper (TACAS 2020 "Ultimate Taipan..."): the call summarization operator
+// computes a summary for a procedure call. IcfgInterpreter uses this when
+// interpreting ReturnSummary transitions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,15 +16,14 @@
 namespace lotus {
 namespace sifa {
 
-template <typename StateT>
-class ICallSummarizer {
+template <typename StateT> class ICallSummarizer {
 public:
   virtual ~ICallSummarizer() = default;
-  virtual StateT summarize(const std::string &calleeName, const StateT &inputAfterCall) = 0;
+  virtual StateT summarize(const std::string &calleeName,
+                           const StateT &inputAfterCall) = 0;
 };
 
 } // namespace sifa
 } // namespace lotus
 
 #endif // LOTUS_VERIFICATION_SIFA_SUMMARIZERS_ICALLSUMMARIZER_H
-

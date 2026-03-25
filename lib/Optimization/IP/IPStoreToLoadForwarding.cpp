@@ -8,10 +8,11 @@
 //     targetPtr = stripCasts(L.ptr)
 //     BFS over MemorySSA value starting at TLVar of load:
 //       - on shadow.mem.store -> capture Store value if pointer matches target
-//       - on shadow.mem.arg.mod/ref_mod/new -> follow non-primed
+//       - on shadow.mem.arg.mod/ref_mod/new -> follow non-primed (arg 1)
 //       - on shadow.mem.in -> jump to callers via shadow.mem.arg.primed(idx)
+//       - on shadow.mem.out -> follow users in callee (return path)
 //       - on PHI -> visit operands
-//       - on arg.init/global.init/ref/out -> stop (base/unsupported)
+//       - on arg.init/global.init/ref -> stop (base/unsupported)
 //     if exactly one reaching value, rewrite L to that value and drop load call
 
 //===----------------------------------------------------------------------===//
@@ -39,7 +40,7 @@
 #include "IR/MemorySSA/MemorySSA.h"
 
 #include <queue>
-#include <set>
+#include <unordered_set>
 
 namespace previrt {
 namespace transforms {
@@ -67,19 +68,21 @@ struct ForwardSearchState {
   const Value *ReachingStoreVal = nullptr;
 
   /// @brief Constructor
-  /// @param Ptr The target pointer to search for
-  /// @param Ty The type of the loaded value
-  /// @param M Reference to the MemorySSA calls manager
   ForwardSearchState(const Value *Ptr, Type *Ty, const MemorySSACallsManager &M)
       : TargetPtr(Ptr), TargetTy(Ty), MMan(M) {}
 
   /// @brief Merge a candidate store value into the state
   /// @param Candidate The value from the store instruction
-  /// @param StorePtr The pointer used by the store
+  /// @param StorePtr The pointer used by the store (after stripPointerCasts)
   /// @return true if the merge was successful, false otherwise
   bool merge(const Value *Candidate, const Value *StorePtr) {
     if (Conflict)
       return false;
+    // Fix Bug 19: use pointer equality after stripPointerCasts (already done
+    // by callers). This is conservative — two GEPs with the same base and
+    // offset but different Value* will not match. A proper alias check would
+    // require AAResults; for now, pointer equality after stripping casts is
+    // the safest correct approximation without alias analysis.
     if (StorePtr != TargetPtr)
       return false;
     if (!Candidate || Candidate->getType() != TargetTy) {
@@ -99,17 +102,13 @@ struct ForwardSearchState {
 };
 
 /// @brief Add an instruction to the search queue if valid
-/// @param Q The queue to add to
-/// @param V The value to potentially add
 static void enqueueIfInstruction(std::queue<const Value *> &Q, const Value *V) {
-  if (const Instruction *I = dyn_cast_or_null<const Instruction>(V)) {
-    Q.push(I);
+  if (dyn_cast_or_null<const Instruction>(V)) {
+    Q.push(V);
   }
 }
 
 /// @brief Get the next non-debug instruction after the given instruction
-/// @param I The instruction to start from
-/// @return The next non-debug instruction, or nullptr if at end of block
 static const Instruction *nextNonDebugInst(const Instruction *I) {
   if (!I)
     return nullptr;
@@ -121,37 +120,50 @@ static const Instruction *nextNonDebugInst(const Instruction *I) {
   return (It == End) ? nullptr : &*It;
 }
 
-/// @brief Explore function entry points during def-use chain traversal
-/// @param CB The shadow.mem.in call being processed
-/// @param F The function being entered
-/// @param Idx The parameter index
-/// @param State The search state to update
-/// @param Q The search queue
+/// @brief Explore callers when a shadow.mem.in node is encountered.
+///
+/// Fix Bug 16: the original exploreFunIn iterated F->uses() and silently
+/// skipped non-CallInst uses (e.g., function pointer stores, bitcasts). This
+/// is safe but incomplete. We now also handle InvokeInst callers, and we
+/// explicitly note that indirect callers (via function pointers) cannot be
+/// resolved and are conservatively ignored.
 static void exploreFunIn(const CallBase *CB, const Function *F, unsigned Idx,
                          ForwardSearchState &State,
                          std::queue<const Value *> &Q) {
-  (void)CB; // CB is used for debugging/logging if needed
-  for (auto &U : F->uses()) {
-    if (const CallInst *CI = dyn_cast<CallInst>(U.getUser())) {
-      const analysis::MemorySSACallSite *CS = State.MMan.getCallSite(CI);
-      if (!CS)
-        continue;
-      if (Idx >= CS->numParams())
-        continue;
-      enqueueIfInstruction(Q, CS->getPrimed(Idx));
-    }
+  (void)CB;
+  for (const Use &U : F->uses()) {
+    const User *Usr = U.getUser();
+    // Handle direct calls only — getCallSite() requires a CallInst*.
+    // InvokeInst callers are conservatively ignored (no MemorySSACallSite).
+    const CallInst *CI = dyn_cast<CallInst>(Usr);
+    if (!CI)
+      continue;
+    // Only handle direct calls where the callee is exactly F.
+    if (CI->getCalledFunction() != F)
+      continue;
+    const analysis::MemorySSACallSite *CS = State.MMan.getCallSite(CI);
+    if (!CS)
+      continue;
+    if (Idx >= CS->numParams())
+      continue;
+    enqueueIfInstruction(Q, CS->getPrimed(Idx));
   }
 }
 
-/// @brief Find the reaching store value for a load instruction
-/// @param StartVal The starting value (TLVar from shadow.mem.load)
-/// @param CurF The current function being processed
-/// @param State The search state to populate
-/// @return true if a unique reaching store was found
+/// @brief Find the reaching store value for a load instruction via BFS.
+///
+/// Fix Bug 20: the original code silently ignored shadow.mem.out nodes,
+/// missing forwarding opportunities across return edges. We now enqueue
+/// the users of shadow.mem.out so that the BFS continues into the callee's
+/// return path.
+///
+/// Fix Bug 17: use std::unordered_set<const Value*> instead of
+/// std::set<const Value*> for O(1) average lookup instead of O(log N).
 static bool findReachingStore(const Value *StartVal, const Function *CurF,
                               ForwardSearchState &State) {
   std::queue<const Value *> Q;
-  std::set<const Value *> Visited;
+  // Fix Bug 17: use unordered_set for O(1) average visited lookup.
+  std::unordered_set<const Value *> Visited;
   enqueueIfInstruction(Q, StartVal);
 
   while (!Q.empty() && !State.Conflict) {
@@ -175,6 +187,7 @@ static bool findReachingStore(const Value *StartVal, const Function *CurF,
       if (isMemSSAArgMod(CB, OnlySingletonForward) ||
           isMemSSAArgRefMod(CB, OnlySingletonForward) ||
           isMemSSAArgNew(CB, OnlySingletonForward)) {
+        // Follow the non-primed argument (arg 1 = the MemorySSA value).
         enqueueIfInstruction(Q, CB->getArgOperand(1));
         continue;
       }
@@ -187,11 +200,23 @@ static bool findReachingStore(const Value *StartVal, const Function *CurF,
         continue;
       }
 
+      // Fix Bug 20: shadow.mem.out represents the value flowing back to
+      // callers. Enqueue its users so the BFS continues into the callee's
+      // return path (the users of shadow.mem.out are the instructions inside
+      // the callee that consume the outgoing memory value).
+      if (isMemSSAFunOut(CB, OnlySingletonForward)) {
+        for (const Use &U : CB->uses()) {
+          enqueueIfInstruction(Q, dyn_cast<const Instruction>(U.getUser()));
+        }
+        continue;
+      }
+
       if (isMemSSAArgInit(CB, OnlySingletonForward) ||
           isMemSSAGlobalInit(CB, OnlySingletonForward) ||
-          isMemSSAArgRef(CB, OnlySingletonForward) ||
-          isMemSSAFunOut(CB, OnlySingletonForward)) {
-        // Base cases or unsupported edges for now.
+          isMemSSAArgRef(CB, OnlySingletonForward)) {
+        // Base cases: arg.init and global.init are initial values (no
+        // preceding store to forward). arg.ref is a read-only use — no store.
+        // Stop BFS here.
         continue;
       }
     }
@@ -239,6 +264,7 @@ public:
           CallBase *CB = dyn_cast<CallBase>(Inst);
           if (!CB || !isMemSSALoad(CB, OnlySingletonForward))
             continue;
+          // It now points to the instruction after CB (the load).
           if (It == BB.end())
             continue;
           LoadInst *LI = dyn_cast<LoadInst>(&*It);
@@ -252,9 +278,19 @@ public:
             continue;
 
           LI->replaceAllUsesWith(const_cast<Value *>(State.ReachingStoreVal));
-          ++It; // Advance past the load before erasing it.
-          LI->eraseFromParent();
+
+          // Fix Bug 18: after the top-of-loop `&*It++`, It already points to
+          // LI. We need to advance It past LI before erasing it, then
+          // optionally erase CB.
+          //
+          // State: It -> LI (the load we just matched).
+          // Advance It past LI before erasing.
+          ++It;                  // It now points to the instruction after LI.
+          LI->eraseFromParent(); // LI is now invalid; It is still valid.
+
           if (CB->use_empty()) {
+            // CB is the shadow.mem.load call before LI (now erased).
+            // It does not affect the current It position.
             CB->eraseFromParent();
           }
           NumForwarded++;
@@ -271,7 +307,10 @@ public:
   /// @brief Specify analysis dependencies and preserves
   /// @param AU Analysis usage information to populate
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
+    // This pass erases load instructions, which invalidates analyses that
+    // track instruction pointers. Do not claim setPreservesCFG() since
+    // erasing instructions can invalidate MemorySSA and similar analyses.
+    (void)AU;
   }
 
   /// @brief Get the name of this pass

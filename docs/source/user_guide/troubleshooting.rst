@@ -68,7 +68,7 @@ Z3 Not Found
 Boost Not Found
 ~~~~~~~~~~~~~~~
 
-**Problem**: Boost libraries required for Sea-DSA and CLAM not found.
+**Problem**: Boost libraries required for SeaHorn, CLAM, and/or CclyzerAA not found.
 
 .. code-block:: text
 
@@ -434,11 +434,11 @@ Taint Analysis Issues
 
 2. Check that source and sink functions are actually called
 
-3. Use GVFA for interprocedural flow:
+3. Use ``lotus-taint`` for interprocedural flow:
 
 .. code-block:: bash
 
-   ./bin/lotus-gvfa -vuln-type=taint input.bc
+   ./bin/lotus-taint input.bc
 
 Performance Tuning
 ------------------
@@ -863,4 +863,3 @@ See Also
 - :doc:`installation` - Installation guide
 - :doc:`quickstart` - Quick start guide  
 - :doc:`tools/index` - Tool documentation
-

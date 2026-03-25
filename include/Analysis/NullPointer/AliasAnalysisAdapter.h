@@ -24,36 +24,37 @@ class DyckAliasAnalysis;
 // Abstract interface for alias analysis adapters
 class AliasAnalysisAdapter {
 public:
-    virtual ~AliasAnalysisAdapter() = default;
+  virtual ~AliasAnalysisAdapter() = default;
 
-    // Return true if V1 may alias with V2 at the given instruction point
-    virtual bool mayAlias(Value *V1, Value *V2, Instruction *InstPoint, 
+  // Return true if V1 may alias with V2 at the given instruction point
+  virtual bool mayAlias(Value *V1, Value *V2, Instruction *InstPoint,
                         bool IncludeI = true) = 0;
-    
-    // Return true if V may be null at the given instruction point
-    virtual bool mayNull(Value *V, Instruction *InstPoint, 
+
+  // Return true if V may be null at the given instruction point
+  virtual bool mayNull(Value *V, Instruction *InstPoint,
                        bool BeforeInstruction = false) = 0;
-                       
-    // Factory method to create the appropriate adapter
-    // The caller takes ownership of the returned object
-    static AliasAnalysisAdapter* createAdapter(Module *M, const DyckAliasAnalysis *DAA);
+
+  // Factory method to create the appropriate adapter
+  // The caller takes ownership of the returned object
+  static AliasAnalysisAdapter *createAdapter(Module *M,
+                                             const DyckAliasAnalysis *DAA);
 };
 
 // Adapter for DyckAA
 class DyckAAAdapter : public AliasAnalysisAdapter {
 private:
-    Module *ModuleRef;
-    const DyckAliasAnalysis *DyckAA;
+  Module *ModuleRef;
+  const DyckAliasAnalysis *DyckAA;
 
 public:
-    explicit DyckAAAdapter(Module *M, const DyckAliasAnalysis *DAA);
-    ~DyckAAAdapter();
-    
-    bool mayAlias(Value *V1, Value *V2, Instruction *InstPoint, 
-                 bool IncludeI = true) override;
-                 
-    bool mayNull(Value *V, Instruction *InstPoint, 
-                bool BeforeInstruction = false) override;
+  explicit DyckAAAdapter(Module *M, const DyckAliasAnalysis *DAA);
+  ~DyckAAAdapter();
+
+  bool mayAlias(Value *V1, Value *V2, Instruction *InstPoint,
+                bool IncludeI = true) override;
+
+  bool mayNull(Value *V, Instruction *InstPoint,
+               bool BeforeInstruction = false) override;
 };
 
-#endif // NULLPOINTER_ALIASANALYSISADAPTER_H 
+#endif // NULLPOINTER_ALIASANALYSISADAPTER_H

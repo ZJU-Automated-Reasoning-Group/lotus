@@ -15,9 +15,9 @@ namespace lotus {
 namespace sifa {
 
 /// Result of a relation check (isEqBottom / isSubsetEq) that may have
-/// over-approximated the inputs. Ported from Ultimate IDomain.ResultForAlteredInputs.
-template <typename StateT>
-struct ResultForAlteredInputs {
+/// over-approximated the inputs. Ported from Ultimate
+/// IDomain.ResultForAlteredInputs.
+template <typename StateT> struct ResultForAlteredInputs {
   StateT lhs;
   StateT rhs;
   bool result = false;
@@ -36,8 +36,7 @@ struct ResultForAlteredInputs {
 /// Abstract domain for Symbolic Interpretation with Fluid Abstractions (Sifa).
 /// Operators work with any state; abstraction (alpha) is applied when the
 /// fluid policy requests it.
-template <typename StateT>
-class IDomain {
+template <typename StateT> class IDomain {
 public:
   using State = StateT;
   using Result = ResultForAlteredInputs<State>;
@@ -54,7 +53,8 @@ public:
   virtual Result isEqBottom(const State &pred) const = 0;
 
   /// Check subset: subset ⊆ superset. May over-approximate both inputs.
-  virtual Result isSubsetEq(const State &subset, const State &superset) const = 0;
+  virtual Result isSubsetEq(const State &subset,
+                            const State &superset) const = 0;
 
   /// Abstraction: over-approximate state (∀ p : p → α(p)). Ideally idempotent.
   virtual State alpha(const State &pred) const = 0;

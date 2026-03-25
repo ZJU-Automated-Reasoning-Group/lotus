@@ -43,7 +43,7 @@ namespace chc_teacher
 			out << "---------- Relations to synthesize ----------" << '\n';
 			for (const auto & r : p.relations)
 			{
-				out << r << std::endl;
+				out << r << '\n';
 			}
 			
 		
@@ -51,7 +51,7 @@ namespace chc_teacher
 			out << "---------- CHCs ----------" << '\n';
 			for (const auto & chc : p.chcs)
 			{
-				out << chc << std::endl;
+				out << chc << '\n';
 			}
 			
 			return out;

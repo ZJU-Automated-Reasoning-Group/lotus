@@ -7,9 +7,9 @@
 
 #pragma once
 
-#include <stdio.h>
-
 #include "Solvers/SMT/LIBSMT/CNF.h"
+
+#include <stdio.h>
 
 struct luby {             // restart scheduler as proposed in
   vector<unsigned> m_seq; // Optimal Speedup of Las Vegas Algorithms
@@ -40,7 +40,7 @@ class sat_solver : public cnf_manager {
   bool verify_solution();
 
 public:
-  sat_solver(){};
+  sat_solver() {};
 
   sat_solver(cnf &m_cnf);
 

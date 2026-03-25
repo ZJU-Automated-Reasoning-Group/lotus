@@ -2,13 +2,24 @@
  * @file ConstraintOptimize.cpp
  * @brief Constraint optimization phase using HVN and HU algorithms.
  *
- * This file implements constraint optimization algorithms (HVN: Hash-based Value
- * Numbering, and HU: HVN with deReference and Union) that reduce the number of
- * constraints by merging equivalent nodes and eliminating redundant constraints.
- * These optimizations significantly speed up the constraint solving phase.
+ * This file implements constraint optimization algorithms (HVN: Hash-based
+ * Value Numbering, and HU: HVN with deReference and Union) that reduce the
+ * number of constraints by merging equivalent nodes and eliminating redundant
+ * constraints. These optimizations significantly speed up the constraint
+ * solving phase.
  *
  * @author rainoftime
  */
+#include "Alias/SparrowAA/Andersen.h"
+#include "Alias/SparrowAA/CycleDetector.h"
+#include "Alias/SparrowAA/Log.h"
+#include "Alias/SparrowAA/SparseBitVectorGraph.h"
+
+#include <deque>
+#include <set>
+#include <unordered_map>
+#include <vector>
+
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/DenseSet.h>
 #include <llvm/ADT/SparseBitVector.h>
@@ -17,16 +28,6 @@
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/raw_ostream.h>
-
-#include <deque>
-#include <set>
-#include <unordered_map>
-#include <vector>
-
-#include "Alias/SparrowAA/Andersen.h"
-#include "Alias/SparrowAA/CycleDetector.h"
-#include "Alias/SparrowAA/Log.h"
-#include "Alias/SparrowAA/SparseBitVectorGraph.h"
 
 #define DEBUG_TYPE "andersen"
 
@@ -56,9 +57,13 @@ namespace {
 
 struct SparseBitVectorHash {
   std::size_t operator()(const SparseBitVector<> &vec) const {
+    // Use a polynomial rolling hash to avoid the high collision rate of
+    // plain XOR (which is commutative and maps e.g. {1,2} and {3} to the
+    // same value when 1^2==3).  The multiplier 2654435761u is the Knuth
+    // multiplicative hash constant for 32-bit values.
     std::size_t ret = 0;
     for (auto const &idx : vec)
-      ret ^= idx;
+      ret = ret * 2654435761u + idx + 1;
     return ret;
   }
 };
@@ -238,8 +243,19 @@ protected:
     NodeIndex nodeIdx = node->getNodeIndex();
     NodeIndex repIdx = repNode->getNodeIndex();
     mergeTarget[nodeIdx] = getMergeTargetRep(repIdx);
-    if (repIdx < nodeFactory.getNumNodes() &&
-        (indirectNodes.count(nodeIdx) || nodeIdx > nodeFactory.getNumNodes()))
+
+    // B4 Fix: propagate the indirect-node property from the cycle member to
+    // the representative.  The previous code guarded the insert with
+    // `repIdx < getNumNodes()`, which silently skipped the case where repIdx
+    // itself is a REF/ADR node (index >= getNumNodes()).  A REF/ADR node that
+    // is the representative of a cycle must also be marked indirect so that
+    // HVN/HU assign it a unique label rather than merging it with unrelated
+    // nodes.
+    //
+    // Condition: mark repIdx indirect if the cycle member (nodeIdx) is
+    // indirect (either explicitly in indirectNodes, or because it is a
+    // REF/ADR node).  We no longer restrict this to VAR-node representatives.
+    if (indirectNodes.count(nodeIdx) || nodeIdx >= nodeFactory.getNumNodes())
       indirectNodes.insert(repIdx);
 
     predGraph.mergeEdge(repIdx, nodeIdx);
@@ -324,9 +340,14 @@ protected:
         if (peLabel[srcTgt] == 0)
           break;
         // If the rhs is equivalent to some ADR node, then we are able to
-        // replace the load with a copy
+        // replace the load with a copy.
+        // ADR nodes start at exactly getNumNodes()*2, but revLabelMap entries
+        // for ADR nodes are stored as (varNode + getNumNodes()*2).  The check
+        // must use >= (not >) so that the first ADR node (index ==
+        // getNumNodes()) is correctly identified.
         NodeIndex srcTgtTgt = revLabelMap[peLabel[srcTgt]];
-        if (srcTgtTgt > nodeFactory.getNumNodes()) {
+        if (srcTgtTgt != AndersNodeFactory::InvalidIndex &&
+            srcTgtTgt >= nodeFactory.getNumNodes()) {
           srcTgtTgt %= nodeFactory.getNumNodes();
           // errs() << "REPLACE " << srcTgt << " with &" << srcTgtTgt << "\n";
           ++NumLoadToStoreOptimized;
@@ -334,7 +355,6 @@ protected:
             newConstraints.emplace_back(AndersConstraint::COPY, destTgt,
                                         srcTgtTgt);
         } else {
-          assert(srcTgtTgt == srcTgt);
           newConstraints.emplace_back(AndersConstraint::LOAD, destTgt, srcTgt);
         }
 
@@ -342,9 +362,10 @@ protected:
       }
       case AndersConstraint::STORE: {
         // If the lhs is equivalent to some ADR node, then we are able to
-        // replace the store with a copy
+        // replace the store with a copy.
         NodeIndex destTgtTgt = revLabelMap[peLabel[destTgt]];
-        if (destTgtTgt > nodeFactory.getNumNodes()) {
+        if (destTgtTgt != AndersNodeFactory::InvalidIndex &&
+            destTgtTgt >= nodeFactory.getNumNodes()) {
           destTgtTgt %= nodeFactory.getNumNodes();
           // errs() << "REPLACE " << destTgt << " with &" << destTgtTgt << "\n";
           ++NumStoreToStoreOptimized;
@@ -352,7 +373,6 @@ protected:
             newConstraints.emplace_back(AndersConstraint::COPY, destTgtTgt,
                                         srcTgt);
         } else {
-          assert(destTgtTgt == destTgt);
           newConstraints.emplace_back(AndersConstraint::STORE, destTgt, srcTgt);
         }
 
@@ -368,9 +388,10 @@ protected:
           break;
 
         // If the rhs is equivalent to some ADR node, then we are able to
-        // replace the copy with an addr_of
+        // replace the copy with an addr_of.
         NodeIndex srcTgtTgt = revLabelMap[peLabel[srcTgt]];
-        if (srcTgtTgt > nodeFactory.getNumNodes()) {
+        if (srcTgtTgt != AndersNodeFactory::InvalidIndex &&
+            srcTgtTgt >= nodeFactory.getNumNodes()) {
           srcTgtTgt %= nodeFactory.getNumNodes();
           // errs() << "REPLACE " << srcTgt << " with &" << srcTgtTgt << "\n";
           newConstraints.emplace_back(AndersConstraint::ADDR_OF, destTgt,
@@ -608,7 +629,7 @@ public:
 void Andersen::optimizeConstraints() {
   // Track constraints before optimization
   NumConstraintsBeforeOpt = constraints.size();
-  
+
   // errs() << "\n#constraints = " << constraints.size() << "\n";
   // dumpConstraints();
 
@@ -637,7 +658,7 @@ void Andersen::optimizeConstraints() {
   // dumpConstraints();
 
   // errs() << "#constraints = " << constraints.size() << "\n";
-  
+
   // Track constraints after optimization
   NumConstraintsAfterOpt = constraints.size();
   NumConstraintsEliminated = NumConstraintsBeforeOpt - NumConstraintsAfterOpt;

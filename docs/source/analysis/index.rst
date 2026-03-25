@@ -6,7 +6,7 @@ This section covers the core analysis components and frameworks in Lotus.
 Lotus provides several reusable analysis utilities and frameworks under
 ``lib/Analysis``. These components complement the alias analyses and
 high-level analyzers such as CLAM (numerical abstract interpretation) and
-SymbolicAbstraction (symbolic abstraction) built in ``lib/Verification``.
+SymAbsAI (symbolic abstraction + abstract interpretation) built in ``lib/Verification``.
 
 Overview
 --------
@@ -19,16 +19,14 @@ At a glance:
   multi-threaded code (MHP, lock sets, thread modeling). See :doc:`concurrency`.
 - **Crypto** (``lib/Analysis/Crypto``): Constant-time programming analysis for
   cryptographic code. See :doc:`crypto`.
-- **GVFA** (``lib/Analysis/GVFA``): Global value-flow engine for interprocedural
-  data-flow reasoning. See :doc:`gvfa`.
 - **NullPointer** (``lib/Analysis/NullPointer``): A family of nullness and
   null-flow analyses. See :doc:`null_pointer`.
 - **Spectre** (``lib/Analysis/Spectre``): Cache speculation analysis for
   detecting Spectre vulnerabilities. See :doc:`spectre`.
 
 
-Higher-level analyzers such as CLAM and SymbolicAbstraction build on these components;
-see :doc:`../verification/clam` and :doc:`../verification/symbolic-abstraction` for
+Higher-level analyzers such as CLAM and SymAbsAI build on these components;
+see :doc:`../verification/clam` and :doc:`../verification/symabs-ai` for
 details.
 
 .. toctree::
@@ -37,6 +35,5 @@ details.
    cfg
    concurrency
    crypto
-   gvfa
    null_pointer
    spectre

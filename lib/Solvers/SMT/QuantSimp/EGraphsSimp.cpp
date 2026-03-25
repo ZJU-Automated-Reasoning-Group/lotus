@@ -1,4 +1,5 @@
 #include "Solvers/SMT/QuantSimp/EGraphsSimp.h"
+
 #include <algorithm>
 
 namespace EGraphs {
@@ -15,8 +16,7 @@ QuantifierArgs::QuantifierArgs(Z3_ast ast, z3::context *ctx) {
   }
 
   unsigned numPatterns = Z3_get_quantifier_num_patterns(*ctx, ast);
-  Z3_pattern *patterns =
-      (Z3_pattern *)malloc(sizeof(Z3_pattern) * numPatterns);
+  Z3_pattern *patterns = (Z3_pattern *)malloc(sizeof(Z3_pattern) * numPatterns);
   for (unsigned i = 0; i < numPatterns; i++) {
     patterns[i] = Z3_get_quantifier_pattern_ast(*ctx, ast, i);
   }
@@ -127,7 +127,9 @@ bool Function::operator==(const Function &other) const {
   return true;
 }
 
-bool Function::operator!=(const Function &other) const { return !(*this == other); }
+bool Function::operator!=(const Function &other) const {
+  return !(*this == other);
+}
 
 bool Function::IsEquivalent(Function *other) {
   if (this->GetRoot() == other->GetRoot()) {
@@ -178,8 +180,7 @@ EGraph::EGraph(z3::context *ctx) {
 }
 
 EGraph::~EGraph() {
-  for (auto it = this->_functions.begin(); it != this->_functions.end();
-       it++) {
+  for (auto it = this->_functions.begin(); it != this->_functions.end(); it++) {
     for (Function *f : *it->second) {
       delete f->Inputs;
       delete f->UsedBy;
@@ -274,7 +275,7 @@ Function *EGraph::ParseOther(z3::expr expr) {
 
 // functions for building z3::expr
 z3::expr EGraph::ToFormula(std::map<Function *, Function *> *repr,
-                   std::set<Function *> *core) {
+                           std::set<Function *> *core) {
   z3::expr_vector arguments(*this->ctx);
   for (Function *in_equality : _in_equalities) {
     arguments.push_back(NodeToTerm(in_equality, repr));
@@ -291,7 +292,8 @@ z3::expr EGraph::ToFormula(std::map<Function *, Function *> *repr,
   return z3::mk_and(arguments);
 }
 
-z3::expr EGraph::NodeToTerm(Function *node, std::map<Function *, Function *> *repr) {
+z3::expr EGraph::NodeToTerm(Function *node,
+                            std::map<Function *, Function *> *repr) {
   if (node->IsBoundVar)
     return z3::expr(*this->ctx, node->boundVar);
   if (node->IsQuantifier) {
@@ -336,8 +338,8 @@ Function *EGraph::AddQuantifier(QuantifierArgs *args, Function *body) {
   Z3_func_decl name = (Z3_func_decl)0;
   if (this->_functions.find(name) == this->_functions.end()) {
     Function *func = new Function(args, body);
-    this->_functions[name] = new std::vector<Function *>{
-        func}; // if function didn't exist, make it
+    this->_functions[name] =
+        new std::vector<Function *>{func}; // if function didn't exist, make it
     this->_class[this->_functions[name]->at(0)] =
         new std::vector<Function *>{func};
     return this->_functions[name]->at(0);
@@ -359,8 +361,8 @@ Function *EGraph::AddBoundVar(z3::expr expr) {
   Z3_func_decl name = (Z3_func_decl)0;
   if (this->_functions.find(name) == this->_functions.end()) {
     Function *func = new Function((Z3_ast)expr);
-    this->_functions[name] = new std::vector<Function *>{
-        func}; // if function didn't exist, make it
+    this->_functions[name] =
+        new std::vector<Function *>{func}; // if function didn't exist, make it
     this->_class[this->_functions[name]->at(0)] =
         new std::vector<Function *>{func};
     return this->_functions[name]->at(0);
@@ -416,8 +418,8 @@ Function *EGraph::AddFunction(std::vector<Function *> *inputs, z3::expr value) {
   Z3_func_decl name = Z3_func_decl(value.decl());
   if (this->_functions.find(name) == this->_functions.end()) {
     Function *func = new Function(inputs, value);
-    this->_functions[name] = new std::vector<Function *>{
-        func}; // if function didn't exist, make it
+    this->_functions[name] =
+        new std::vector<Function *>{func}; // if function didn't exist, make it
     this->_class[this->_functions[name]->at(0)] =
         new std::vector<Function *>{func};
     return this->_functions[name]->at(0);
@@ -449,9 +451,9 @@ void EGraph::MakeEqual(Function *first, Function *second) {
   // out, comment out lines 546 and 551-557
   unsigned int size = this->_class[first->GetRoot()]->size();
   // concat
-  this->_class[first->GetRoot()]->insert(
-      this->_class[first->GetRoot()]->end(), this->_class[root]->begin(),
-      this->_class[root]->end());
+  this->_class[first->GetRoot()]->insert(this->_class[first->GetRoot()]->end(),
+                                         this->_class[root]->begin(),
+                                         this->_class[root]->end());
   delete this->_class[root];
   this->_class.erase(root);
   for (int i = 0; i < size; i++) {
@@ -548,7 +550,7 @@ std::map<Function *, Function *> *EGraph::FindDefs() {
 
 std::map<Function *, Function *> *
 EGraph::AssignRepresentatives(std::map<Function *, Function *> *repr,
-                    std::vector<Function *> toBeAssigned) {
+                              std::vector<Function *> toBeAssigned) {
   // iterate through functions and terms while possible
   for (size_t i = 0; i < toBeAssigned.size(); i++) {
     Function *function = toBeAssigned[i];
@@ -578,7 +580,8 @@ EGraph::AssignRepresentatives(std::map<Function *, Function *> *repr,
   return repr;
 }
 
-bool EGraph::MakesCycle(Function *NewGround, std::map<Function *, Function *> *repr) {
+bool EGraph::MakesCycle(Function *NewGround,
+                        std::map<Function *, Function *> *repr) {
   std::map<Function *, bool> *ColoredGraph = new std::map<Function *, bool>();
 
   // initialize false as the value for every node of EGraph at the start
@@ -601,8 +604,9 @@ bool EGraph::MakesCycle(Function *NewGround, std::map<Function *, Function *> *r
 }
 
 bool EGraph::MakesCycleAux(Function *NewGround,
-                 std::map<Function *, Function *> *repr, Function *current,
-                 std::map<Function *, bool> *ColoredGraph) {
+                           std::map<Function *, Function *> *repr,
+                           Function *current,
+                           std::map<Function *, bool> *ColoredGraph) {
   // found the starting point
   if (current->GetRoot() == NewGround->GetRoot()) {
     return true;

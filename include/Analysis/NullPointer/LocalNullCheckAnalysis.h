@@ -19,14 +19,15 @@
 #ifndef NULLPOINTER_LOCALNULLCHECKANALYSIS_H
 #define NULLPOINTER_LOCALNULLCHECKANALYSIS_H
 
+#include <set>
+#include <unordered_map>
+
 #include <llvm/ADT/BitVector.h>
 #include <llvm/IR/Dominators.h>
 #include <llvm/IR/Instruction.h>
 #include <llvm/Pass.h>
-#include <set>
-#include <unordered_map>
 
-//#include "Alias/DyckAA/DyckValueFlowAnalysis.h"
+// #include "Alias/DyckAA/DyckValueFlowAnalysis.h"
 #include "Analysis/NullPointer/NullEquivalenceAnalysis.h"
 #include "Analysis/NullPointer/NullFlowAnalysis.h"
 
@@ -36,55 +37,69 @@ typedef std::pair<Instruction *, unsigned> Edge;
 
 class LocalNullCheckAnalysis {
 private:
-    /// Mapping an instruction to a mask, if ith bit of mask is set, it must not be null pointer
-    std::unordered_map<Instruction *, int32_t> InstNonNullMap;
+  /// Mapping an instruction to a mask, if ith bit of mask is set, it must not
+  /// be null pointer
+  std::unordered_map<Instruction *, int32_t> InstNonNullMap;
 
-    /// Ptr -> ID
-    std::unordered_map<Value *, size_t> PtrIDMap;
+  /// Ptr -> ID
+  std::unordered_map<Value *, size_t> PtrIDMap;
 
-    /// Edge -> a BitVector, in which if IDth bit is set, the corresponding ptr is not null
-    std::map<Edge, BitVector> DataflowFacts;
+  /// Edge -> a BitVector, in which if IDth bit is set, the corresponding ptr is
+  /// not null
+  std::map<Edge, BitVector> DataflowFacts;
 
-    /// unreachable edges collected during nca
-    std::set<Edge> UnreachableEdges;
+  /// unreachable edges collected during nca
+  std::set<Edge> UnreachableEdges;
 
-    /// The function we analyze
-    Function *F;
+  /// The function we analyze
+  Function *F;
 
-    /// ptr groups
-    NullEquivalenceAnalysis NEA;
+  /// ptr groups
+  NullEquivalenceAnalysis NEA;
 
-    /// nfa
-    NullFlowAnalysis *NFA;
+  /// nfa
+  NullFlowAnalysis *NFA;
 
-    /// dt
-    DominatorTree DT;
+  /// dt
+  DominatorTree DT;
 
 public:
-    LocalNullCheckAnalysis(NullFlowAnalysis* NFA, Function *F);
+  LocalNullCheckAnalysis(NullFlowAnalysis *NFA, Function *F);
 
-    ~LocalNullCheckAnalysis();
+  ~LocalNullCheckAnalysis();
 
-    /// \p Ptr must be an operand of \p Inst
-    /// return true if \p Ptr at \p Inst may be a null pointer
-    bool mayNull(Value *Ptr, Instruction *Inst);
+  /// \p Ptr must be an operand of \p Inst
+  /// return true if \p Ptr at \p Inst may be a null pointer
+  bool mayNull(Value *Ptr, Instruction *Inst);
 
-    void run();
+  void run();
 
 private:
-    void nca();
+  void nca();
 
-    void merge(std::vector<Edge> &, BitVector &);
+  void merge(std::vector<Edge> &, BitVector &);
 
-    void transfer(Edge, const BitVector &, BitVector &);
+  void transfer(Edge, const BitVector &, BitVector &);
 
-    void tag();
+  void tag();
 
-    void init();
+  void init();
 
-    void label();
+  void label();
 
-    void label(Edge);
+  void label(Edge);
 };
 
-#endif //NULLPOINTER_LOCALNULLCHECKANALYSIS_H
+namespace lotus {
+namespace nullpointer {
+namespace testing {
+
+bool allIncomingEdgesUnreachableForTesting(llvm::Function *F,
+                                           llvm::Instruction *Inst,
+                                           const std::set<Edge> &Unreachable);
+
+} // namespace testing
+} // namespace nullpointer
+} // namespace lotus
+
+#endif // NULLPOINTER_LOCALNULLCHECKANALYSIS_H

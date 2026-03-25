@@ -12,8 +12,7 @@
 namespace lotus {
 namespace sifa {
 
-template <typename W, typename I>
-class IWorklistWithInputs {
+template <typename W, typename I> class IWorklistWithInputs {
 public:
   virtual ~IWorklistWithInputs() = default;
 
@@ -27,4 +26,3 @@ public:
 } // namespace lotus
 
 #endif // LOTUS_VERIFICATION_SIFA_WORKLIST_IWORKLISTWITHINPUTS_H
-

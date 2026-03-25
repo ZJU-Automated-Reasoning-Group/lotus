@@ -39,11 +39,11 @@ namespace
     
   };
   char StripLifetime::ID = 0;
-}
+} // namespace
 namespace seahorn
 {
   Pass * createStripLifetimePass () {return new StripLifetime ();}
-}
+} // namespace seahorn
 
 static llvm::RegisterPass<StripLifetime> Y ("strip-lifetime",
                                             "Remove llvm.lifetime instrinsics");

@@ -1,7 +1,7 @@
-#include <clam/config.h>
+#include "sign_constant.hh"
 #include <clam/CrabDomain.hh>
 #include <clam/RegisterAnalysis.hh>
-#include "sign_constant.hh"
+#include <clam/config.h>
 
 namespace clam {
 #ifdef INCLUDE_ALL_DOMAINS

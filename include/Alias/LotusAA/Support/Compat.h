@@ -10,6 +10,7 @@
 #include <llvm/Config/llvm-config.h>
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/Dominators.h>
+#include <llvm/IR/Function.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/IntrinsicInst.h>
 
@@ -81,6 +82,47 @@ inline Type *getPointerElementTypeCompat(Type *T, const DataLayout *DL = nullptr
 #endif
   }
   return T;
+}
+
+inline bool isPointerAnalysisTypeCompatible(Type *lhs, Type *rhs) {
+  if (!lhs || !rhs)
+    return false;
+
+  if (lhs->isPointerTy() && rhs->isPointerTy())
+    return true;
+
+  return lhs == rhs;
+}
+
+inline bool isPointerAnalysisCallsiteCompatible(CallBase *call,
+                                                Function *callee) {
+  if (!call || !callee)
+    return false;
+
+  if (!isPointerAnalysisTypeCompatible(call->getType(),
+                                       callee->getReturnType())) {
+    return false;
+  }
+
+  unsigned call_arg_size = call->arg_size();
+  unsigned callee_arg_size = callee->arg_size();
+  if (!callee->isVarArg() && call_arg_size != callee_arg_size)
+    return false;
+  if (call_arg_size < callee_arg_size)
+    return false;
+
+  unsigned idx = 0;
+  for (Argument &formal_arg : callee->args()) {
+    if (idx >= call_arg_size)
+      return false;
+    if (!isPointerAnalysisTypeCompatible(call->getArgOperand(idx)->getType(),
+                                         formal_arg.getType())) {
+      return false;
+    }
+    ++idx;
+  }
+
+  return true;
 }
 
 // DomTree compatibility

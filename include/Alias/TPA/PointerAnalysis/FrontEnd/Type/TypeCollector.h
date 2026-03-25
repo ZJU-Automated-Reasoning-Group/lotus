@@ -2,20 +2,17 @@
 
 #include "Alias/TPA/PointerAnalysis/FrontEnd/Type/TypeSet.h"
 
-namespace llvm
-{
-	class Module;
+namespace llvm {
+class Module;
 } // namespace llvm
 
-namespace tpa
-{
+namespace tpa {
 
-class TypeCollector
-{
+class TypeCollector {
 public:
-	TypeCollector() = default;
+  TypeCollector() = default;
 
-	TypeSet runOnModule(const llvm::Module&);
+  TypeSet runOnModule(const llvm::Module &);
 };
 
 } // namespace tpa

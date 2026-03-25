@@ -12,8 +12,8 @@
 #include "seahorn/config.h"
 
 #ifdef HAVE_CLAM
-#include "seahorn/clam_Clam.hh"
 #include "seahorn/Analysis/CutPointGraph.hh"
+#include "seahorn/clam_Clam.hh"
 #endif
 
 #include "llvm/ADT/DenseMap.h"
@@ -753,7 +753,10 @@ BoogieWriter::BoogieWriter(
     const DataLayout *dl, const TargetLibraryInfo *tli)
     : m_func(func), m_dl(dl), m_tli(tli), m_invariants(invariants) {}
 
-struct is_formal_argument : std::unary_function<llvm::Argument &, bool> {
+struct is_formal_argument {
+  using argument_type = llvm::Argument &;
+  using result_type = bool;
+
   const Value &m_v;
   is_formal_argument(const Value &v) : m_v(v) {}
   bool operator()(llvm::Value &a) const { return (&a == &m_v); }

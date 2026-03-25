@@ -38,6 +38,7 @@
 
 // #include "llvm/Transforms/Scalar/LICM.h"
 #include "Optimization/LICM.h"
+
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -85,6 +86,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
+
 #include <algorithm>
 #include <utility>
 using namespace llvm;
@@ -559,8 +561,8 @@ bool llvm::sinkRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
       if (!I.mayHaveSideEffects() &&
           isNotUsedOrFreeInLoop(I, LoopNestMode ? OutermostLoop : CurLoop,
                                 SafetyInfo, TTI, FreeInLoop, LoopNestMode) &&
-          canSinkOrHoistInst(I, AA, DT, CurLoop, /*CurAST*/nullptr, MSSAU, true,
-                             &Flags, ORE)) {
+          canSinkOrHoistInst(I, AA, DT, CurLoop, /*CurAST*/ nullptr, MSSAU,
+                             true, &Flags, ORE)) {
         if (sink(I, LI, DT, BFI, CurLoop, SafetyInfo, MSSAU, ORE)) {
           if (!FreeInLoop) {
             ++II;
@@ -994,8 +996,8 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
   if (VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
 
-    // Now that we've finished hoisting make sure that LI and DT are still
-    // valid.
+  // Now that we've finished hoisting make sure that LI and DT are still
+  // valid.
 #ifdef EXPENSIVE_CHECKS
   if (Changed) {
     assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
@@ -1128,7 +1130,7 @@ bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
     }
   return true;
 }
-}
+} // namespace
 
 bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                               Loop *CurLoop, AliasSetTracker *CurAST,
@@ -1492,8 +1494,8 @@ static Instruction *cloneInstructionInExitBlock(
     if (LI->wouldBeOutOfLoopUseRequiringLCSSA(Op.get(), PN.getParent())) {
       auto *OInst = cast<Instruction>(Op.get());
       PHINode *OpPN =
-        PHINode::Create(OInst->getType(), PN.getNumIncomingValues(),
-                        OInst->getName() + ".lcssa", &ExitBlock.front());
+          PHINode::Create(OInst->getType(), PN.getNumIncomingValues(),
+                          OInst->getName() + ".lcssa", &ExitBlock.front());
       for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i)
         OpPN->addIncoming(OInst, PN.getIncomingBlock(i));
       Op = OpPN;
@@ -1715,7 +1717,7 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
   // the instruction.
   // First check if I is worth sinking for all uses. Sink only when it is worth
   // across all uses.
-  SmallSetVector<User*, 8> Users(I.user_begin(), I.user_end());
+  SmallSetVector<User *, 8> Users(I.user_begin(), I.user_end());
   for (auto *UI : Users) {
     auto *User = cast<Instruction>(UI);
 
@@ -1746,8 +1748,8 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
   LLVM_DEBUG(dbgs() << "LICM hoisting to " << Dest->getNameOrAsOperand() << ": "
                     << I << "\n");
   ORE->emit([&]() {
-    return OptimizationRemark(DEBUG_TYPE, "Hoisted", &I) << "hoisting "
-                                                         << ore::NV("Inst", &I);
+    return OptimizationRemark(DEBUG_TYPE, "Hoisted", &I)
+           << "hoisting " << ore::NV("Inst", &I);
   });
 
   // Metadata can be dependent on conditions we are hoisting above.
@@ -2159,9 +2161,8 @@ bool llvm::promoteLoopAccessesToScalars(
       SafeToInsertStore = true;
     else {
       Value *Object = getUnderlyingObject(SomePtr);
-      SafeToInsertStore =
-          (isNoAliasCall(Object) || isa<AllocaInst>(Object)) &&
-          isNotCapturedBeforeOrInLoop(Object, CurLoop, DT);
+      SafeToInsertStore = (isNoAliasCall(Object) || isa<AllocaInst>(Object)) &&
+                          isNotCapturedBeforeOrInLoop(Object, CurLoop, DT);
     }
   }
 
@@ -2202,9 +2203,9 @@ bool llvm::promoteLoopAccessesToScalars(
 
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
-  LoadInst *PreheaderLoad = new LoadInst(
-      AccessTy, SomePtr, SomePtr->getName() + ".promoted",
-      Preheader->getTerminator());
+  LoadInst *PreheaderLoad =
+      new LoadInst(AccessTy, SomePtr, SomePtr->getName() + ".promoted",
+                   Preheader->getTerminator());
   if (SawUnorderedAtomic)
     PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
   PreheaderLoad->setAlignment(Alignment);

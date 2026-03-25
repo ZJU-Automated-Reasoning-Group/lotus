@@ -1,394 +1,732 @@
-/*
- *  Author: rainoftime
- *  Date: 2025-04
- *  Description: Context-sensitive null flow analysis
- */
-
-
-#include "Alias/DyckAA/DyckValueFlowAnalysis.h"
-#include "Alias/DyckAA/DyckAliasAnalysis.h"
-#include "Analysis/NullPointer/API.h"
-#include "Analysis/NullPointer/AliasAnalysisAdapter.h"
 #include "Analysis/NullPointer/ContextSensitiveNullFlowAnalysis.h"
+
+#include "Alias/DyckAA/DyckAliasAnalysis.h"
+#include "Alias/DyckAA/DyckCallGraphNode.h"
+#include "Analysis/NullPointer/API.h"
+#include "Analysis/NullPointer/NullEquivalenceAnalysis.h"
+#include "Dataflow/ControlFlow/InterCFG.h"
 #include "Utils/LLVM/RecursiveTimer.h"
-#include <llvm/IR/InstIterator.h>
+
+#include <algorithm>
+#include <deque>
+#include <map>
+#include <set>
+#include <utility>
+#include <vector>
+
+#include <llvm/IR/IntrinsicInst.h>
 #include <llvm/Support/CommandLine.h>
-#include <llvm/Support/Debug.h>
-#include <llvm/Support/raw_ostream.h>
 
 using namespace llvm;
 
-static cl::opt<int> CSIncrementalLimits("csnfa-limit", cl::init(10), cl::Hidden,
-                                      cl::desc("Determine how many non-null edges we consider a round in context-sensitive analysis."));
+namespace lotus {
+namespace nullpointer {
+namespace testing {
 
-static cl::opt<unsigned> CSMaxContextDepth("csnfa-max-depth", cl::init(3), cl::Hidden,
-                                         cl::desc("Maximum depth of calling context to consider."));
+static int ContextDepthOverride = -1;
 
-static cl::opt<unsigned> CSRound("csnfa-round", cl::init(10), cl::Hidden,
-                               cl::desc("Maximum rounds for context-sensitive analysis."));
-
-// DyckAA is now the only alias analysis option
-
-char ContextSensitiveNullFlowAnalysis::ID = 0;
-static RegisterPass<ContextSensitiveNullFlowAnalysis> X("csnfa", "context-sensitive null value flow");
-
-ContextSensitiveNullFlowAnalysis::ContextSensitiveNullFlowAnalysis() 
-    : ModulePass(ID), AAA(nullptr), DAA(nullptr), VFG(nullptr), MaxContextDepth(CSMaxContextDepth),
-      OwnsAliasAnalysisAdapter(false) {
+void setContextSensitiveNullContextDepthOverrideForTesting(int Depth) {
+  ContextDepthOverride = Depth;
 }
 
-ContextSensitiveNullFlowAnalysis::~ContextSensitiveNullFlowAnalysis() {
-    if (OwnsAliasAnalysisAdapter && AAA) {
-        delete AAA;
+} // namespace testing
+} // namespace nullpointer
+} // namespace lotus
+
+namespace {
+
+static cl::opt<unsigned> CSContextDepth(
+    "cs-context-depth", cl::init(3), cl::Hidden,
+    cl::desc("Maximum call-string depth for context-sensitive null analysis."));
+static cl::opt<unsigned> LegacyCSNFAMaxDepth(
+    "csnfa-max-depth", cl::init(0), cl::Hidden,
+    cl::desc("Deprecated alias for -cs-context-depth."));
+static cl::opt<unsigned> LegacyCSNCAMaxDepth(
+    "csnca-max-depth", cl::init(0), cl::Hidden,
+    cl::desc("Deprecated alias for -cs-context-depth."));
+static cl::opt<unsigned> LegacyCSNFARound(
+    "csnfa-round", cl::init(0), cl::Hidden,
+    cl::desc("Deprecated no-op compatibility option."));
+static cl::opt<unsigned> LegacyCSNCARound(
+    "csnca-round", cl::init(0), cl::Hidden,
+    cl::desc("Deprecated no-op compatibility option."));
+static cl::opt<bool> LegacyCSVerbose(
+    "cs-verbose", cl::init(false), cl::Hidden,
+    cl::desc("Deprecated no-op compatibility option."));
+static cl::opt<bool> LegacyCSPrintPerFunction(
+    "cs-print-per-function", cl::init(false), cl::Hidden,
+    cl::desc("Deprecated no-op compatibility option."));
+
+unsigned configuredContextDepth() {
+  if (lotus::nullpointer::testing::ContextDepthOverride >= 0) {
+    return static_cast<unsigned>(
+        lotus::nullpointer::testing::ContextDepthOverride);
+  }
+  if (LegacyCSNFAMaxDepth.getNumOccurrences() > 0) {
+    return LegacyCSNFAMaxDepth;
+  }
+  if (LegacyCSNCAMaxDepth.getNumOccurrences() > 0) {
+    return LegacyCSNCAMaxDepth;
+  }
+  return CSContextDepth;
+}
+
+bool isGuaranteedNonNullValue(Value *V) {
+  if (!V || !V->getType()->isPointerTy()) {
+    return false;
+  }
+  V = V->stripPointerCastsAndAliases();
+  if (isa<GlobalValue>(V)) {
+    return true;
+  }
+  if (auto *Arg = dyn_cast<Argument>(V)) {
+    return Arg->hasNonNullAttr();
+  }
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    if (auto *CB = dyn_cast<CallBase>(I)) {
+      return CB->hasRetAttr(Attribute::NonNull);
     }
+    return API::isStackAllocate(I);
+  }
+  return false;
+}
+
+bool isKnownMemoryIntrinsic(const CallBase *CB) {
+  auto *Callee = CB ? CB->getCalledFunction() : nullptr;
+  if (!Callee || !Callee->isIntrinsic()) {
+    return false;
+  }
+  auto ID = Callee->getIntrinsicID();
+  return ID >= Intrinsic::memcpy &&
+         ID <= Intrinsic::memset_element_unordered_atomic;
+}
+
+struct ReturnProvenanceKey {
+  Function *Callee = nullptr;
+  lotus::nullpointer::CallStringContext Ctx;
+
+  bool operator<(const ReturnProvenanceKey &Other) const {
+    if (Callee != Other.Callee) {
+      return Callee < Other.Callee;
+    }
+    return Ctx < Other.Ctx;
+  }
+};
+
+struct CallerContinuation {
+  CallBase *Call = nullptr;
+  lotus::nullpointer::CallStringContext CallerCtx;
+
+  bool operator<(const CallerContinuation &Other) const {
+    if (Call != Other.Call) {
+      return Call < Other.Call;
+    }
+    return CallerCtx < Other.CallerCtx;
+  }
+};
+
+} // namespace
+
+char ContextSensitiveNullFlowAnalysis::ID = 0;
+static RegisterPass<ContextSensitiveNullFlowAnalysis>
+    X("csnfa", "context-sensitive null value flow");
+
+ContextSensitiveNullFlowAnalysis::ContextSensitiveNullFlowAnalysis()
+    : ModulePass(ID) {}
+
+ContextSensitiveNullFlowAnalysis::~ContextSensitiveNullFlowAnalysis() {
+  if (OwnsAliasAnalysisAdapter && AAA) {
+    delete AAA;
+  }
 }
 
 void ContextSensitiveNullFlowAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.setPreservesAll();
-    AU.addRequired<DyckValueFlowAnalysis>();
-    AU.addRequired<DyckAliasAnalysis>();
+  AU.setPreservesAll();
+  AU.addRequired<DyckAliasAnalysis>();
 }
 
 bool ContextSensitiveNullFlowAnalysis::runOnModule(Module &M) {
-    RecursiveTimer Timer("Running Context-Sensitive NFA");
-    
-    // Get the value flow graph
-    auto *VFA = &getAnalysis<DyckValueFlowAnalysis>();
-    VFG = VFA->getDyckVFGraph();
-    
-    // Get DyckAliasAnalysis and create the adapter
-    auto *DyckAA = &getAnalysis<DyckAliasAnalysis>();
-    DAA = DyckAA;
-    AAA = AliasAnalysisAdapter::createAdapter(&M, DyckAA);
-    OwnsAliasAnalysisAdapter = true;
+  RecursiveTimer Timer("Running Context-Sensitive NFA");
 
-    // Initialize the basic context (empty context)
-    Context EmptyContext;
-    
-    // Helper function to identify values that must not be null
-    auto MustNotNull = [this](Value *V, Instruction *I) -> bool {
-        V = V->stripPointerCastsAndAliases();
-        if (isa<GlobalValue>(V)) return true;
-        if (auto* CI = dyn_cast<Instruction>(V))
-            return API::isMemoryAllocate(CI);
-        return !AAA->mayNull(V, I);
-    };
-    
-    // Initialize the analysis for each function
-    std::set<DyckVFGNode *> MayNullNodes;
-    for (auto &F: M) {
-        if (!F.empty()) {
-            NewNonNullEdges[{&F, EmptyContext}];
-            NonNullEdges[{&F, EmptyContext}];
-            NonNullNodes[{&F, EmptyContext}];
+  EntryFunctions.clear();
+  InFacts.clear();
+  ReachableContexts.clear();
+  Equivalence.clear();
+  FactIds.clear();
+  FactValues.clear();
+  MaxContextDepth = configuredContextDepth();
+
+  if (OwnsAliasAnalysisAdapter && AAA) {
+    delete AAA;
+    AAA = nullptr;
+    OwnsAliasAnalysisAdapter = false;
+  }
+
+  DAA = &getAnalysis<DyckAliasAnalysis>();
+  AAA = AliasAnalysisAdapter::createAdapter(&M, DAA);
+  OwnsAliasAnalysisAdapter = true;
+
+  for (auto &F : M) {
+    if (!F.empty()) {
+      Equivalence[&F] = std::make_unique<NullEquivalenceAnalysis>(&F);
+    }
+  }
+
+  auto Canonicalize = [this](Value *V) -> Value * {
+    if (!V || !V->getType()->isPointerTy()) {
+      return nullptr;
+    }
+    V = V->stripPointerCastsAndAliases();
+    if (isa<ConstantPointerNull>(V)) {
+      return nullptr;
+    }
+    if (isa<GlobalValue>(V)) {
+      return V;
+    }
+    if (auto *Arg = dyn_cast<Argument>(V)) {
+      auto It = Equivalence.find(Arg->getParent());
+      return It == Equivalence.end() ? V : It->second->get(V);
+    }
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      auto It = Equivalence.find(I->getFunction());
+      return It == Equivalence.end() ? V : It->second->get(V);
+    }
+    return V;
+  };
+
+  auto RegisterFactValue = [this, &Canonicalize](Value *V) {
+    auto *Canonical = Canonicalize(V);
+    if (!Canonical) {
+      return;
+    }
+    if (FactIds.count(Canonical)) {
+      return;
+    }
+    FactIds[Canonical] = FactValues.size();
+    FactValues.push_back(Canonical);
+  };
+
+  auto *DCG = DAA->getDyckCallGraph();
+  std::set<Function *> FunctionsWithInternalCallers;
+  std::set<Function *> ExternalEntryFunctions;
+  if (DCG) {
+    if (auto *ExternalNode = DCG->getFunction(nullptr)) {
+      for (auto It = ExternalNode->child_begin(), End = ExternalNode->child_end();
+           It != End; ++It) {
+        if (auto *EntryFunc = (*It)->getLLVMFunction()) {
+          ExternalEntryFunctions.insert(EntryFunc);
         }
-        for (auto &I: instructions(&F)) {
-            if (I.getType()->isPointerTy() && !MustNotNull(&I, &I)) {
-                if (auto *INode = VFG->getVFGNode(&I)) {
-                    MayNullNodes.insert(INode);
-                }
+      }
+    }
+
+    for (auto It = DCG->nodes_begin(), End = DCG->nodes_end(); It != End; ++It) {
+      auto *CallerNode = *It;
+      if (!CallerNode) {
+        continue;
+      }
+      auto *Caller = CallerNode->getLLVMFunction();
+      if (!Caller) {
+        continue;
+      }
+      for (auto EdgeIt = CallerNode->child_edge_begin(),
+                EdgeEnd = CallerNode->child_edge_end();
+           EdgeIt != EdgeEnd; ++EdgeIt) {
+        auto *CalleeNode = EdgeIt->second;
+        if (!CalleeNode) {
+          continue;
+        }
+        if (auto *Callee = CalleeNode->getLLVMFunction()) {
+          FunctionsWithInternalCallers.insert(Callee);
+        }
+      }
+    }
+  }
+
+  for (auto &F : M) {
+    if (!F.empty() && !FunctionsWithInternalCallers.count(&F)) {
+      EntryFunctions.insert(&F);
+    }
+  }
+  if (EntryFunctions.empty()) {
+    for (auto &F : M) {
+      if (!F.empty() && ExternalEntryFunctions.count(&F)) {
+        EntryFunctions.insert(&F);
+      }
+    }
+  }
+  if (EntryFunctions.empty()) {
+    for (auto &F : M) {
+      if (!F.empty()) {
+        EntryFunctions.insert(&F);
+      }
+    }
+  }
+
+  for (auto &G : M.globals()) {
+    if (G.getType()->isPointerTy()) {
+      RegisterFactValue(&G);
+    }
+  }
+
+  for (auto &F : M) {
+    if (F.empty()) {
+      continue;
+    }
+    for (auto &Arg : F.args()) {
+      if (Arg.getType()->isPointerTy()) {
+        RegisterFactValue(&Arg);
+      }
+    }
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        if (I.getType()->isPointerTy()) {
+          RegisterFactValue(&I);
+        }
+        for (auto &Use : I.operands()) {
+          if (Use->getType()->isPointerTy()) {
+            RegisterFactValue(Use.get());
+          }
+        }
+      }
+    }
+  }
+
+  dataflow::controlflow::LLVMInterCFG ICFG(
+      &M, [this](Instruction *Inst) -> std::vector<Function *> {
+        std::vector<Function *> Callees;
+        auto *Call = dyn_cast<CallBase>(Inst);
+        if (!Call) {
+          return Callees;
+        }
+
+        auto AddCallee = [&Callees](Function *F) {
+          if (!F) {
+            return;
+          }
+          if (std::find(Callees.begin(), Callees.end(), F) == Callees.end()) {
+            Callees.push_back(F);
+          }
+        };
+
+        if (DAA) {
+          auto *Graph = DAA->getDyckCallGraph();
+          auto *CallerNode = Graph ? Graph->getFunction(Call->getFunction()) : nullptr;
+          auto *Resolved = CallerNode ? CallerNode->getCall(Call) : nullptr;
+          if (auto *CC = dyn_cast_or_null<CommonCall>(Resolved)) {
+            AddCallee(CC->getCalledFunction());
+          } else if (auto *PC = dyn_cast_or_null<PointerCall>(Resolved)) {
+            for (auto *Callee : *PC) {
+              AddCallee(Callee);
             }
+          }
         }
-    }
-    
-    // Perform context-sensitive analysis
-    std::set<std::pair<Function*, Context>> WorkList;
-    for (auto &F: M) {
-        if (!F.empty()) {
-            WorkList.insert({&F, EmptyContext});
-        }
-    }
-    
-    // Keep analyzing until we reach a fixed point
-    while (!WorkList.empty()) {
-        auto FuncCtx = *WorkList.begin();
-        WorkList.erase(WorkList.begin());
-        
-        Function *F = FuncCtx.first;
-        Context &Ctx = FuncCtx.second;
-        
-        // Process the function in this context
-        // This part depends on the specific algorithm of your null flow analysis
-        errs() << "Processing function " << F->getName() << " with context " 
-               << getContextString(Ctx) << "\n";
-        
-        // Check all call sites in this function
-        for (auto &I : instructions(F)) {
-            if (auto *CI = dyn_cast<CallInst>(&I)) {
-                auto *Callee = CI->getCalledFunction();
-                if (!Callee || Callee->empty()) continue;
-                
-                // If we haven't reached max context depth, create a new context
-                if (Ctx.size() < MaxContextDepth) {
-                    Context NewCtx = extendContext(Ctx, CI);
-                    
-                    // Add the callee with the new context to the worklist
-                    auto FuncCtxPair = std::make_pair(Callee, NewCtx);
-                    if (NewNonNullEdges.find(FuncCtxPair) == NewNonNullEdges.end()) {
-                        NewNonNullEdges[FuncCtxPair] = {};
-                        NonNullEdges[FuncCtxPair] = {};
-                        NonNullNodes[FuncCtxPair] = {};
-                        WorkList.insert(FuncCtxPair);
-                    }
-                }
-            }
-        }
-    }
-    
-    return false;
-}
 
-bool ContextSensitiveNullFlowAnalysis::recompute(std::set<std::pair<Function*, Context>> &NewNonNullFunctionContexts) {
-    std::unordered_map<FunctionContextPair, std::set<DyckVFGNode *>> PossibleNonNullNodes;
-    unsigned K = 0,
-             Limits = CSIncrementalLimits < 0 ? UINT32_MAX : CSIncrementalLimits;
-    for (auto &NIt : NewNonNullEdges) {
-        auto &EdgeSet = NIt.second;
-        auto &NNNodes = NonNullNodes[NIt.first];
-        auto &NNEdges = NonNullEdges[NIt.first];
-        auto EIt = EdgeSet.begin();
-        while (EIt != EdgeSet.end()) {
-            if (++K > Limits)
-                break;
-            auto *Src = EIt->first;
-            auto *Tgt = EIt->second;
-            assert(Src && Tgt);
-            if (!NNNodes.count(Tgt))
-                PossibleNonNullNodes[NIt.first].insert(Tgt);
-            NNEdges.emplace(Src, Tgt);
-            EIt = EdgeSet.erase(EIt);
+        if (Callees.empty()) {
+          AddCallee(Call->getCalledFunction());
         }
-    }
-    if (PossibleNonNullNodes.empty())
-        return false;
+        return Callees;
+      });
 
+  auto EmptyFacts = [this]() { return BitVector(FactValues.size()); };
+
+  auto SetFact = [this, &Canonicalize](BitVector &Facts, Value *V) {
+    auto *Canonical = Canonicalize(V);
+    if (!Canonical) {
+      return;
+    }
+    auto It = FactIds.find(Canonical);
+    if (It != FactIds.end() && It->second < Facts.size()) {
+      Facts.set(It->second);
+    }
+  };
+
+  auto TestFact = [this, &Canonicalize](const BitVector &Facts, Value *V) {
+    if (isGuaranteedNonNullValue(V)) {
+      return true;
+    }
+    auto *Canonical = Canonicalize(V);
+    if (!Canonical) {
+      return false;
+    }
+    auto It = FactIds.find(Canonical);
+    return It != FactIds.end() && It->second < Facts.size() &&
+           Facts.test(It->second);
+  };
+
+  auto FilterGlobals = [this](const BitVector &Facts) {
+    BitVector Filtered(FactValues.size());
+    for (unsigned I = 0; I < Facts.size(); ++I) {
+      if (!Facts.test(I)) {
+        continue;
+      }
+      if (isa<GlobalValue>(FactValues[I])) {
+        Filtered.set(I);
+      }
+    }
+    return Filtered;
+  };
+
+  auto ApplyLocalTransfer =
+      [&, this](Instruction *Inst, const Context &Ctx,
+                const BitVector &In) -> BitVector {
+    (void)Ctx;
+    BitVector Out = In;
+    if (!Inst) {
+      return Out;
+    }
+
+    switch (Inst->getOpcode()) {
+    case Instruction::Load:
+      SetFact(Out, cast<LoadInst>(Inst)->getPointerOperand());
+      break;
+    case Instruction::Store:
+      SetFact(Out, cast<StoreInst>(Inst)->getPointerOperand());
+      break;
+    case Instruction::GetElementPtr:
+      SetFact(Out, cast<GetElementPtrInst>(Inst)->getPointerOperand());
+      break;
+    case Instruction::Alloca:
+      SetFact(Out, Inst);
+      break;
+    case Instruction::AddrSpaceCast:
+    case Instruction::BitCast:
+      if (TestFact(In, Inst->getOperand(0))) {
+        SetFact(Out, Inst);
+      }
+      break;
+    case Instruction::PHI:
+    case Instruction::Select:
+      if (Inst->getType()->isPointerTy()) {
+        bool AllNonNull = true;
+        for (Value *Op : Inst->operands()) {
+          if (!Op->getType()->isPointerTy()) {
+            continue;
+          }
+          if (!TestFact(In, Op)) {
+            AllNonNull = false;
+            break;
+          }
+        }
+        if (AllNonNull) {
+          SetFact(Out, Inst);
+        }
+      }
+      break;
+    case Instruction::Call:
+    case Instruction::Invoke:
+    case Instruction::CallBr: {
+      auto *CB = cast<CallBase>(Inst);
+      if (CB->getType()->isPointerTy() && CB->hasRetAttr(Attribute::NonNull)) {
+        SetFact(Out, CB);
+      }
+      if (isKnownMemoryIntrinsic(CB)) {
+        for (Value *Arg : CB->args()) {
+          if (Arg->getType()->isPointerTy()) {
+            SetFact(Out, Arg);
+          }
+        }
+      }
+      if (!CB->getCalledFunction() &&
+          CB->getCalledOperand()->getType()->isPointerTy()) {
+        SetFact(Out, CB->getCalledOperand());
+      }
+      break;
+    }
+    default:
+      break;
+    }
+    return Out;
+  };
+
+  auto ApplyNormalEdgeTransfer = [&, this](Instruction *Inst, Instruction *Succ,
+                                           BitVector Facts) {
+    auto *Br = dyn_cast<BranchInst>(Inst);
+    if (!Br || !Br->isConditional()) {
+      return Facts;
+    }
+
+    auto *Cmp = dyn_cast<ICmpInst>(Br->getCondition());
+    if (!Cmp || !Cmp->isEquality()) {
+      return Facts;
+    }
+    auto *Op0 = Cmp->getOperand(0);
+    auto *Op1 = Cmp->getOperand(1);
+    if (!Op0->getType()->isPointerTy() || !Op1->getType()->isPointerTy()) {
+      return Facts;
+    }
+
+    auto *NullOp = dyn_cast<ConstantPointerNull>(Op0);
+    Value *Candidate = Op1;
+    if (!NullOp) {
+      NullOp = dyn_cast<ConstantPointerNull>(Op1);
+      Candidate = Op0;
+    }
+    if (!NullOp) {
+      return Facts;
+    }
+
+    int SuccIndex = -1;
+    for (unsigned I = 0; I < Br->getNumSuccessors(); ++I) {
+      if (&Br->getSuccessor(I)->front() == Succ) {
+        SuccIndex = static_cast<int>(I);
+        break;
+      }
+    }
+    if (SuccIndex < 0) {
+      return Facts;
+    }
+
+    bool NonNullBranch =
+        (Cmp->getPredicate() == ICmpInst::ICMP_EQ && SuccIndex == 1) ||
+        (Cmp->getPredicate() == ICmpInst::ICMP_NE && SuccIndex == 0);
+    if (NonNullBranch) {
+      SetFact(Facts, Candidate);
+    }
+    return Facts;
+  };
+
+  std::deque<ContextKey> Queue;
+  std::set<ContextKey> InQueue;
+  std::map<ReturnProvenanceKey, std::set<CallerContinuation>> ReturnProvenance;
+
+  auto MergeState = [&](const ContextKey &Key, const BitVector &Incoming) {
+    auto It = InFacts.find(Key);
     bool Changed = false;
-    for (auto &Entry : PossibleNonNullNodes) {
-        const FunctionContextPair &FuncCtx = Entry.first;
-        auto &NNNodes = NonNullNodes[FuncCtx];
-        auto &NNEdges = NonNullEdges[FuncCtx];
-
-        std::vector<DyckVFGNode *> WorkList;
-        WorkList.reserve(Entry.second.size());
-        for (auto *N : Entry.second)
-            WorkList.push_back(N);
-
-        while (!WorkList.empty()) {
-            auto *N = WorkList.back();
-            WorkList.pop_back();
-            if (!NNNodes.count(N)) {
-                bool AllInNonNull = true;
-                for (auto IIt = N->in_begin(), IE = N->in_end(); IIt != IE; ++IIt) {
-                    auto *In = IIt->first;
-                    if (!NNEdges.count(std::make_pair(In, N))) {
-                        AllInNonNull = false;
-                        break;
-                    }
-                }
-                if (!AllInNonNull)
-                    continue;
-                NNNodes.insert(N);
-                Changed = true;
-                if (auto *NF = N->getFunction()) {
-                    if (NF == FuncCtx.first) {
-                        NewNonNullFunctionContexts.insert(FuncCtx);
-                    } else {
-                        NewNonNullFunctionContexts.insert({NF, FuncCtx.second});
-                    }
-                }
-            }
-            for (auto &T : *N)
-                WorkList.push_back(T.first);
-        }
-    }
-
-    return Changed;
-}
-
-bool ContextSensitiveNullFlowAnalysis::notNull(Value *Ptr, Context Ctx) const {
-    if (!Ptr || !Ptr->getType()->isPointerTy())
-        return false;
-        
-    // First check if the pointer is known to be non-null
-    Ptr = Ptr->stripPointerCastsAndAliases();
-    if (isa<GlobalValue>(Ptr)) return true;
-    if (auto *I = dyn_cast<Instruction>(Ptr)) {
-        if (API::isMemoryAllocate(I)) return true;
-    }
-    
-    // Then check our context-sensitive analysis results
-    Function *F = nullptr;
-    Instruction *InstPoint = nullptr;
-    if (auto *I = dyn_cast<Instruction>(Ptr)) {
-        F = I->getFunction();
-        InstPoint = I;
+    if (It == InFacts.end()) {
+      InFacts.emplace(Key, Incoming);
+      Changed = true;
     } else {
-        // If it's not an instruction, we need a more conservative approach
-        return false;
+      BitVector Merged = It->second;
+      Merged &= Incoming;
+      if (Merged != It->second) {
+        It->second = Merged;
+        Changed = true;
+      }
     }
 
-    DyckVFGNode *Node = VFG ? VFG->getVFGNode(Ptr) : nullptr;
-    
-    // Get all contexts that have the same k-suffix as our input context
-    std::set<Context> MatchingContexts;
-    
-    // Start with the exact context
-    MatchingContexts.insert(Ctx);
-    
-    // Get the k-suffix of our context
-    Context KSuffix = Ctx;
-    if (KSuffix.size() > MaxContextDepth) {
-        KSuffix.erase(KSuffix.begin(), KSuffix.begin() + (KSuffix.size() - MaxContextDepth));
+    ReachableContexts[Key.Inst].insert(Key.Ctx);
+    if (Changed && !InQueue.count(Key)) {
+      Queue.push_back(Key);
+      InQueue.insert(Key);
     }
-    
-    // Add all contexts that have the same k-suffix
-    for (const auto &Entry : NonNullNodes) {
-        if (Entry.first.first != F) continue;
-        
-        const Context &OtherCtx = Entry.first.second;
-        Context OtherKSuffix = OtherCtx;
-        
-        if (OtherKSuffix.size() > MaxContextDepth) {
-            OtherKSuffix.erase(OtherKSuffix.begin(), OtherKSuffix.begin() + (OtherKSuffix.size() - MaxContextDepth));
-        }
-        
-        // If this context has the same k-suffix, add it to our matching contexts
-        if (OtherKSuffix == KSuffix) {
-            MatchingContexts.insert(OtherCtx);
-        }
+  };
+
+  auto RecordReturnProvenance = [&](Function *Callee, const Context &CalleeCtx,
+                                    CallBase *Call,
+                                    const Context &CallerCtx) -> bool {
+    if (!Callee || !Call) {
+      return false;
     }
-    
-    // For a value to be definitely NOT NULL, it must be NOT NULL in ALL matching contexts
-    // This is the sound approach for k-limiting
-    for (const Context &MatchingCtx : MatchingContexts) {
-        auto FuncCtxPair = std::make_pair(F, MatchingCtx);
-        auto it = NonNullNodes.find(FuncCtxPair);
 
-        if (it == NonNullNodes.end()) {
-            // If we don't have analysis for this context, we can't guarantee NOT_NULL
-            return false;
-        }
-
-        // Check if this pointer is NOT NULL in this context
-        bool IsNotNullInContext = false;
-
-        if (Node && it->second.count(Node)) {
-            IsNotNullInContext = true;
-        }
-
-        // Fall back to alias analysis if flow facts are unavailable
-        if (!IsNotNullInContext && InstPoint && AAA && !AAA->mayNull(Ptr, InstPoint)) {
-            IsNotNullInContext = true;
-        }
-
-        if (!IsNotNullInContext) {
-            // If it's not definitely NOT NULL in any matching context, we can't guarantee NOT_NULL
-            return false;
-        }
+    auto &Continuations = ReturnProvenance[{Callee, CalleeCtx}];
+    bool Inserted =
+        Continuations.insert(CallerContinuation{Call, CallerCtx}).second;
+    if (!Inserted) {
+      return false;
     }
-    
-    // If we get here, the pointer is NOT NULL in all matching contexts
+
+    for (auto *Exit : ICFG.getExitPointsOf(Callee)) {
+      if (!Exit) {
+        continue;
+      }
+
+      auto ReachableIt = ReachableContexts.find(Exit);
+      if (ReachableIt == ReachableContexts.end() ||
+          !ReachableIt->second.count(CalleeCtx)) {
+        continue;
+      }
+
+      ContextKey ExitKey{Exit, CalleeCtx};
+      if (!InQueue.count(ExitKey)) {
+        Queue.push_back(ExitKey);
+        InQueue.insert(ExitKey);
+      }
+    }
+
     return true;
-}
+  };
 
-void ContextSensitiveNullFlowAnalysis::add(Function *F, Context Ctx, Value *V1, Value *V2) {
-    if (!V1 || !V1->getType()->isPointerTy())
-        return;
+  for (auto *Entry : EntryFunctions) {
+    auto Starts = ICFG.getStartPointsOf(Entry);
+    if (Starts.empty()) {
+      continue;
+    }
+    BitVector Seed = EmptyFacts();
+    for (auto &Arg : Entry->args()) {
+      if (Arg.getType()->isPointerTy() && Arg.hasNonNullAttr()) {
+        SetFact(Seed, &Arg);
+      }
+    }
+    MergeState({Starts.front(), Context()}, Seed);
+  }
 
-    if (!V2) {
-        void (ContextSensitiveNullFlowAnalysis::*AddSingle)(Function *, Context, Value *) =
-            &ContextSensitiveNullFlowAnalysis::add;
-        (this->*AddSingle)(F, Ctx, V1);
-        return;
+  while (!Queue.empty()) {
+    ContextKey Key = Queue.front();
+    Queue.pop_front();
+    InQueue.erase(Key);
+
+    auto FactsIt = InFacts.find(Key);
+    if (FactsIt == InFacts.end()) {
+      continue;
     }
 
-    auto *V1N = VFG ? VFG->getVFGNode(V1) : nullptr;
-    if (!V1N)
+    const BitVector In = FactsIt->second;
+    BitVector LocalOut = ApplyLocalTransfer(Key.Inst, Key.Ctx, In);
+    auto PropagateReturnToCall = [&](ReturnInst *Ret, CallBase *Call,
+                                     const Context &CallerCtx) {
+      if (!Call) {
         return;
-    auto *V2N = VFG->getVFGNode(V2);
-    if (!V2N)
-        return;
+      }
 
-    auto FuncCtxPair = std::make_pair(F, Ctx);
-    NonNullEdges[FuncCtxPair];
-    NonNullNodes[FuncCtxPair];
-    NewNonNullEdges[FuncCtxPair].emplace(V1N, V2N);
-}
-
-void ContextSensitiveNullFlowAnalysis::add(Function *F, Context Ctx, CallInst *CI, unsigned int K) {
-    if (!CI) return;
-
-    if (!DAA)
+      auto CallIt = InFacts.find({Call, CallerCtx});
+      if (CallIt == InFacts.end()) {
         return;
+      }
 
-    auto *DCG = DAA->getDyckCallGraph();
-    if (!DCG)
-        return;
-    auto *DCGNode = DCG->getFunction(F);
-    if (!DCGNode)
-        return;
-    auto *C = DCGNode->getCall(CI);
-    if (!C)
-        return;
-    auto *Actual = CI->getArgOperand(K);
-
-    auto AddToCallee = [this, &Ctx, CI, Actual, K](Function *Callee) {
-        if (!Callee)
-            return;
-        if (K >= Callee->arg_size()) {
-            assert(Callee->isVarArg());
-            return;
+      BitVector ReturnFacts =
+          ApplyLocalTransfer(Call, CallerCtx, CallIt->second);
+      if (auto *RetVal = Ret->getReturnValue()) {
+        if (Call->getType()->isPointerTy() && TestFact(In, RetVal)) {
+          SetFact(ReturnFacts, Call);
         }
-        if (Ctx.size() >= MaxContextDepth)
-            return;
-        Context NewCtx = extendContext(Ctx, CI);
-        add(Callee, NewCtx, Actual, Callee->getArg(K));
+      }
+
+      for (auto *RetSite : ICFG.getReturnSitesOfCallAt(Call)) {
+        MergeState({RetSite, CallerCtx}, ReturnFacts);
+      }
     };
 
-    if (auto *CC = dyn_cast<CommonCall>(C)) {
-        AddToCallee(CC->getCalledFunction());
-    } else if (auto *PC = dyn_cast<PointerCall>(C)) {
-        for (auto *Callee : *PC)
-            AddToCallee(Callee);
-    }
-}
+    if (auto *CB = dyn_cast<CallBase>(Key.Inst)) {
+      auto Callees = ICFG.getCalleesOfCallAt(CB);
+      bool HasDefinedCallee = false;
+      bool HasExternalPath = Callees.empty();
 
-void ContextSensitiveNullFlowAnalysis::add(Function *F, Context Ctx, Value *Ret) {
-    if (!Ret || !Ret->getType()->isPointerTy())
-        return;
-
-    auto *RetN = VFG ? VFG->getVFGNode(Ret) : nullptr;
-    if (!RetN)
-        return;
-
-    auto FuncCtxPair = std::make_pair(F, Ctx);
-    NonNullEdges[FuncCtxPair];
-    NonNullNodes[FuncCtxPair];
-    auto &Set = NewNonNullEdges[FuncCtxPair];
-    for (auto &TargetIt : *RetN)
-        Set.emplace(RetN, TargetIt.first);
-}
-
-std::string ContextSensitiveNullFlowAnalysis::getContextString(const Context& Ctx) const {
-    std::string Result = "[";
-    for (size_t i = 0; i < Ctx.size(); ++i) {
-        if (i > 0) Result += ", ";
-        if (Ctx[i]->hasName()) {
-            Result += Ctx[i]->getName().str();
-        } else {
-            Result += "<unnamed call>";
+      for (auto *Callee : Callees) {
+        if (!Callee || Callee->isDeclaration() || Callee->empty()) {
+          HasExternalPath = true;
+          continue;
         }
+
+        HasDefinedCallee = true;
+        Context CalleeCtx = Key.Ctx;
+        CalleeCtx.append(CB, MaxContextDepth);
+        RecordReturnProvenance(Callee, CalleeCtx, CB, Key.Ctx);
+        BitVector CalleeFacts = FilterGlobals(LocalOut);
+        for (unsigned I = 0; I < CB->arg_size() && I < Callee->arg_size(); ++I) {
+          auto *Actual = CB->getArgOperand(I);
+          auto *Formal = Callee->getArg(I);
+          if (!Formal->getType()->isPointerTy()) {
+            continue;
+          }
+          if (Formal->hasNonNullAttr() || TestFact(LocalOut, Actual)) {
+            SetFact(CalleeFacts, Formal);
+          }
+        }
+
+        for (auto *Start : ICFG.getStartPointsOf(Callee)) {
+          MergeState({Start, CalleeCtx}, CalleeFacts);
+        }
+      }
+
+      if (!HasDefinedCallee || HasExternalPath) {
+        for (auto *RetSite : ICFG.getReturnSitesOfCallAt(CB)) {
+          MergeState({RetSite, Key.Ctx}, LocalOut);
+        }
+      }
+      continue;
     }
-    Result += "]";
-    return Result;
+
+    if (auto *Ret = dyn_cast<ReturnInst>(Key.Inst)) {
+      auto ProvIt = ReturnProvenance.find({Ret->getFunction(), Key.Ctx});
+      if (ProvIt != ReturnProvenance.end()) {
+        for (const auto &Continuation : ProvIt->second) {
+          PropagateReturnToCall(Ret, Continuation.Call,
+                                Continuation.CallerCtx);
+        }
+      } else if (Key.Ctx.empty()) {
+        // Empty-context returns without recorded caller provenance correspond
+        // to top-level or externally initiated execution.
+        for (auto *CallerInst : ICFG.getCallersOf(Ret->getFunction())) {
+          auto *Caller = dyn_cast<CallBase>(CallerInst);
+          if (Caller == nullptr) {
+            continue;
+          }
+          PropagateReturnToCall(Ret, Caller, Context());
+        }
+      }
+      continue;
+    }
+
+    for (auto *Succ : ICFG.getSuccsOf(Key.Inst,
+                                      dataflow::controlflow::FlowDirection::Forward)) {
+      MergeState({Succ, Key.Ctx}, ApplyNormalEdgeTransfer(Key.Inst, Succ, LocalOut));
+    }
+  }
+
+  return false;
 }
 
-Context ContextSensitiveNullFlowAnalysis::extendContext(const Context& Ctx, CallInst* CI) const {
-    // Create a new context by appending the call instruction
-    Context NewCtx = Ctx;
-    NewCtx.push_back(CI);
-    
-    // Note: We don't limit the context here anymore - we'll handle k-limiting
-    // at analysis time to ensure soundness by properly merging results
-    return NewCtx;
-} 
+bool ContextSensitiveNullFlowAnalysis::notNull(Value *Ptr, Instruction *Inst,
+                                               const Context &Ctx) const {
+  if (!Ptr || !Inst || !Ptr->getType()->isPointerTy()) {
+    return false;
+  }
+  if (isGuaranteedNonNullValue(Ptr)) {
+    return true;
+  }
+
+  auto Canonicalize = [this](Value *V) -> Value * {
+    if (!V || !V->getType()->isPointerTy()) {
+      return nullptr;
+    }
+    V = V->stripPointerCastsAndAliases();
+    if (isa<ConstantPointerNull>(V)) {
+      return nullptr;
+    }
+    if (isa<GlobalValue>(V)) {
+      return V;
+    }
+    if (auto *Arg = dyn_cast<Argument>(V)) {
+      auto It = Equivalence.find(Arg->getParent());
+      return It == Equivalence.end() ? V : It->second->get(V);
+    }
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      auto It = Equivalence.find(I->getFunction());
+      return It == Equivalence.end() ? V : It->second->get(V);
+    }
+    return V;
+  };
+
+  auto It = InFacts.find({Inst, Ctx});
+  if (It == InFacts.end()) {
+    return false;
+  }
+
+  auto *Canonical = Canonicalize(Ptr);
+  if (!Canonical) {
+    return false;
+  }
+  auto IdIt = FactIds.find(Canonical);
+  return IdIt != FactIds.end() && IdIt->second < It->second.size() &&
+         It->second.test(IdIt->second);
+}
+
+std::vector<ContextSensitiveNullFlowAnalysis::Context>
+ContextSensitiveNullFlowAnalysis::getReachableContexts(Instruction *Inst) const {
+  std::vector<Context> Result;
+  auto It = ReachableContexts.find(Inst);
+  if (It == ReachableContexts.end()) {
+    return Result;
+  }
+  Result.insert(Result.end(), It->second.begin(), It->second.end());
+  return Result;
+}
+
+std::string
+ContextSensitiveNullFlowAnalysis::getContextString(const Context &Ctx) const {
+  return Ctx.str();
+}
+
+bool ContextSensitiveNullFlowAnalysis::isEntryFunction(const Function *F) const {
+  return F && EntryFunctions.count(const_cast<Function *>(F));
+}

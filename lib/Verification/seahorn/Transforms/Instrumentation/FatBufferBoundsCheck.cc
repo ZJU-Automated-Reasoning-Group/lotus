@@ -145,7 +145,7 @@ BasicBlock *FatBufferBoundsCheck::getErrorBB() {
   AB.addAttribute(Attribute::NoReturn);
   // AttributeList as = AttributeList::get(ctx, AttributeList::FunctionIndex,
   // AB);
-  auto errorFn = SBI->mkSeaBuiltinFn(seahorn::SeaBuiltinsOp::ERROR, M);
+  auto *errorFn = SBI->mkSeaBuiltinFn(seahorn::SeaBuiltinsOp::ERROR, M);
   CallInst *TrapCall = Builder->CreateCall(errorFn);
   TrapCall->setDoesNotReturn();
   TrapCall->setDoesNotThrow();
@@ -264,7 +264,7 @@ bool FatBufferBoundsCheck::instrument(Value *Ptr, Value *InstVal,
       ++ChecksFat;
       LOG("fat-bnd-check", errs() << "fatptr instrument " << *Ptr << " for "
                                   << Twine(NeededSize) << " bytes\n";);
-      auto isDerefCall = Builder->CreateCall(
+      auto *isDerefCall = Builder->CreateCall(
           m_seaIsDereferenceable,
           {Builder->CreateBitCast(Ptr, Builder->getInt8PtrTy()),
            NeededSizeVal});
@@ -297,7 +297,7 @@ bool FatBufferBoundsCheck::instrument(Value *Ptr, Value *InstVal,
   }
   if (addIsAllocCheck) {
     LOG("fat-bnd-check", errs() << "isAlloc instrument " << *Ptr << "\n";);
-    auto isAllocCall = Builder->CreateCall(
+    auto *isAllocCall = Builder->CreateCall(
         m_seaIsAllocated,
         {Builder->CreateBitCast(Ptr, Builder->getInt8PtrTy())});
     Or = Builder->CreateOr(Or, Builder->CreateNot(isAllocCall));
@@ -353,7 +353,7 @@ bool FatBufferBoundsCheck::instrumentAlloca(AllocaInst *Ptr,
   withBase->setArgOperand(1, argB);
 
   // set_fat_slot1(Ptr, Size)
-  auto argC = Builder->CreateBitCast(withBase, Builder->getInt8PtrTy());
+  auto *argC = Builder->CreateBitCast(withBase, Builder->getInt8PtrTy());
   withSize->setArgOperand(0, argC);
   Builder->SetInsertPoint(withSize);
   auto size = DL.getTypeStoreSize(AllocedTy);
@@ -378,7 +378,7 @@ bool FatBufferBoundsCheck::instrumentGep(GetElementPtrInst *Ptr,
      replace_all(ptr, copied)
  */
   // copy_fat_slots(Ptr, BasePtr)
-  auto GepTy = Ptr->getResultElementType();
+  auto *GepTy = Ptr->getResultElementType();
   auto *BasePtr = Ptr->getPointerOperand();
 
   Builder->SetInsertPoint(Ptr);

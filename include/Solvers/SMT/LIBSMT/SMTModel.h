@@ -1,10 +1,10 @@
 #pragma once
 
-#include <string>
-
 #include "Solvers/SMT/LIBSMT/SMTExpr.h"
 #include "Solvers/SMT/LIBSMT/SMTObject.h"
 #include "z3++.h"
+
+#include <string>
 
 class SMTFactory;
 

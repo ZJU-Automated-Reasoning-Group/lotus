@@ -239,11 +239,11 @@ bool MixedSemantics::runOnModule(Module &M) {
 
   AttributeList as =
       AttributeList::get(M.getContext(), AttributeList::FunctionIndex, B);
-  auto failureFn = dyn_cast<Function>(
+  auto *failureFn = dyn_cast<Function>(
       M.getOrInsertFunction("seahorn.fail", as, Type::getVoidTy(M.getContext()))
           .getCallee());
 
-  for (auto errB : errBlocks) {
+  for (auto *errB : errBlocks) {
     // --- add placeholder to indicate that the function can fail
     Builder.SetInsertPoint(errB, errB->begin());
     Builder.CreateCall(failureFn);

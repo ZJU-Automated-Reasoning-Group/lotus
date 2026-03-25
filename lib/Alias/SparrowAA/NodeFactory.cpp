@@ -8,18 +8,18 @@
  *
  * @author rainoftime
  */
+#include "Alias/SparrowAA/NodeFactory.h"
+
+#include "Alias/SparrowAA/Log.h"
+
+#include <limits>
+#include <sstream>
+#include <unordered_set>
+
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Analysis/ValueTracking.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/Support/raw_ostream.h>
-
-#include <limits>
-#include <sstream>
-
-#include "Alias/SparrowAA/NodeFactory.h"
-#include "Alias/SparrowAA/Log.h"
-
-#include <unordered_set>
 
 using namespace llvm;
 
@@ -59,7 +59,8 @@ AndersNodeFactory::AndersNodeFactory() {
   assert(nodes.size() == 4);
 }
 
-static constexpr AndersNodeFactory::CtxKey ctxKeyOrNull(AndersNodeFactory::CtxKey ctx) {
+static constexpr AndersNodeFactory::CtxKey
+ctxKeyOrNull(AndersNodeFactory::CtxKey ctx) {
   return ctx;
 }
 
@@ -174,25 +175,43 @@ NodeIndex AndersNodeFactory::getValueNodeFor(const Value *val,
       return getValueNodeForConstant(c, ctx);
 
   auto ctxIt = valueNodeMap.find(ctxKeyOrNull(ctx));
-  decltype(ctxIt->second.find(val)) itr;
-  if (ctxIt == valueNodeMap.end())
-    goto fallback;
-  itr = ctxIt->second.find(val);
-  if (itr == ctxIt->second.end())
-    goto fallback;
-  else
-    return itr->second;
+  if (ctxIt != valueNodeMap.end()) {
+    auto itr = ctxIt->second.find(val);
+    if (itr != ctxIt->second.end())
+      return itr->second;
+  }
 
-fallback:
+  // For context-insensitive analysis (ctx == nullptr / single context) there
+  // is only one bucket, so the fallback below is safe.  For context-sensitive
+  // analysis, crossing context boundaries is unsound for local values; we
+  // return InvalidIndex to signal "not found in this context".
+  //
+  // Exception: global variables and functions are context-independent — they
+  // are created once under initialCtx in collectConstraintsForGlobals() and
+  // must be accessible from any calling context.  Fall back to the
+  // valueNodeBuckets (which aggregates nodes across all contexts) for global
+  // values so that a store/load to a global inside a callee context does not
+  // trigger a spurious assertion failure.
+  if (ctx != nullptr) {
+    if (isa<GlobalValue>(val)) {
+      // Global: fall back to any context that has a node for this value.
+      auto bucket = valueNodeBuckets.find(val);
+      if (bucket != valueNodeBuckets.end() && !bucket->second.empty())
+        return bucket->second.front();
+    }
+    // Non-global local value not found in this context.
+    return InvalidIndex;
+  }
+
+  // Context-insensitive fallback: return the first (and only) node.
   auto bucket = valueNodeBuckets.find(val);
   if (bucket != valueNodeBuckets.end() && !bucket->second.empty())
     return bucket->second.front();
   return InvalidIndex;
 }
 
-NodeIndex
-AndersNodeFactory::getValueNodeForConstant(const llvm::Constant *c,
-                                           CtxKey ctx) const {
+NodeIndex AndersNodeFactory::getValueNodeForConstant(const llvm::Constant *c,
+                                                     CtxKey ctx) const {
   assert(isa<PointerType>(c->getType()) && "Not a constant pointer!");
 
   if (isa<ConstantPointerNull>(c) || isa<UndefValue>(c))
@@ -227,16 +246,32 @@ NodeIndex AndersNodeFactory::getObjectNodeFor(const Value *val,
       return getObjectNodeForConstant(c, ctx);
 
   auto ctxIt = objNodeMap.find(ctxKeyOrNull(ctx));
-  decltype(ctxIt->second.find(val)) itr;
-  if (ctxIt == objNodeMap.end())
-    goto fallback;
-  itr = ctxIt->second.find(val);
-  if (itr == ctxIt->second.end())
-    goto fallback;
-  else
-    return itr->second;
+  if (ctxIt != objNodeMap.end()) {
+    auto itr = ctxIt->second.find(val);
+    if (itr != ctxIt->second.end())
+      return itr->second;
+  }
 
-fallback:
+  // For context-sensitive analysis, do NOT fall back across contexts to avoid
+  // returning an object node from an unrelated calling context (Bug 1.4).
+  //
+  // Exception: global variables are context-independent — their object nodes
+  // are created once under initialCtx in collectConstraintsForGlobals() and
+  // must be accessible from any calling context.
+  if (ctx != nullptr) {
+    if (isa<GlobalValue>(val)) {
+      // Global: fall back to any context that has an object node for this
+      // value.
+      for (auto const &entry : objNodeMap) {
+        auto found = entry.second.find(val);
+        if (found != entry.second.end())
+          return found->second;
+      }
+    }
+    return InvalidIndex;
+  }
+
+  // Context-insensitive fallback: scan all (single) context.
   for (auto const &entry : objNodeMap) {
     auto found = entry.second.find(val);
     if (found != entry.second.end())
@@ -245,9 +280,8 @@ fallback:
   return InvalidIndex;
 }
 
-NodeIndex
-AndersNodeFactory::getObjectNodeForConstant(const llvm::Constant *c,
-                                            CtxKey ctx) const {
+NodeIndex AndersNodeFactory::getObjectNodeForConstant(const llvm::Constant *c,
+                                                      CtxKey ctx) const {
   assert(isa<PointerType>(c->getType()) && "Not a constant pointer!");
 
   if (isa<ConstantPointerNull>(c))
@@ -278,16 +312,17 @@ AndersNodeFactory::getObjectNodeForConstant(const llvm::Constant *c,
 NodeIndex AndersNodeFactory::getReturnNodeFor(const llvm::Function *f,
                                               CtxKey ctx) const {
   auto ctxIt = returnMap.find(ctxKeyOrNull(ctx));
-  decltype(ctxIt->second.find(f)) itr;
-  if (ctxIt == returnMap.end())
-    goto fallback;
-  itr = ctxIt->second.find(f);
-  if (itr == ctxIt->second.end())
-    goto fallback;
-  else
-    return itr->second;
+  if (ctxIt != returnMap.end()) {
+    auto itr = ctxIt->second.find(f);
+    if (itr != ctxIt->second.end())
+      return itr->second;
+  }
 
-fallback:
+  // For context-sensitive analysis, do NOT fall back across contexts (Bug 1.4).
+  if (ctx != nullptr)
+    return InvalidIndex;
+
+  // Context-insensitive fallback.
   for (auto const &entry : returnMap) {
     auto found = entry.second.find(f);
     if (found != entry.second.end())
@@ -299,16 +334,17 @@ fallback:
 NodeIndex AndersNodeFactory::getVarargNodeFor(const llvm::Function *f,
                                               CtxKey ctx) const {
   auto ctxIt = varargMap.find(ctxKeyOrNull(ctx));
-  decltype(ctxIt->second.find(f)) itr;
-  if (ctxIt == varargMap.end())
-    goto fallback;
-  itr = ctxIt->second.find(f);
-  if (itr == ctxIt->second.end())
-    goto fallback;
-  else
-    return itr->second;
+  if (ctxIt != varargMap.end()) {
+    auto itr = ctxIt->second.find(f);
+    if (itr != ctxIt->second.end())
+      return itr->second;
+  }
 
-fallback:
+  // For context-sensitive analysis, do NOT fall back across contexts (Bug 1.4).
+  if (ctx != nullptr)
+    return InvalidIndex;
+
+  // Context-insensitive fallback.
   for (auto const &entry : varargMap) {
     auto found = entry.second.find(f);
     if (found != entry.second.end())
@@ -337,7 +373,9 @@ NodeIndex AndersNodeFactory::getMergeTarget(NodeIndex n) {
   // guard here to avoid out-of-bounds access and hard crashes.
   if (LLVM_UNLIKELY(n >= nodes.size())) {
     if (InvalidMergeTargetWarnings < 10) {
-      LOG_WARN("Andersen: getMergeTarget called with invalid node index {} (numNodes = {})", n, nodes.size());
+      LOG_WARN("Andersen: getMergeTarget called with invalid node index {} "
+               "(numNodes = {})",
+               n, nodes.size());
       if (InvalidMergeTargetWarnings == 9)
         LOG_WARN("Andersen: further invalid node index warnings suppressed");
       ++InvalidMergeTargetWarnings;
@@ -363,7 +401,9 @@ NodeIndex AndersNodeFactory::getMergeTarget(NodeIndex n) {
 NodeIndex AndersNodeFactory::getMergeTarget(NodeIndex n) const {
   if (LLVM_UNLIKELY(n >= nodes.size())) {
     if (InvalidMergeTargetWarnings < 10) {
-      LOG_WARN("Andersen: getMergeTarget (const) called with invalid node index {} (numNodes = {})", n, nodes.size());
+      LOG_WARN("Andersen: getMergeTarget (const) called with invalid node "
+               "index {} (numNodes = {})",
+               n, nodes.size());
       if (InvalidMergeTargetWarnings == 9)
         LOG_WARN("Andersen: further invalid node index warnings suppressed");
       ++InvalidMergeTargetWarnings;
@@ -430,12 +470,14 @@ void AndersNodeFactory::dumpNodeInfo() const {
   LOG_DEBUG("\nReturn Map:");
   for (auto const &ctxEntry : returnMap) {
     for (auto const &mapping : ctxEntry.second)
-      LOG_DEBUG("{}  -->>  [Node #{}]", mapping.first->getName().str(), mapping.second);
+      LOG_DEBUG("{}  -->>  [Node #{}]", mapping.first->getName().str(),
+                mapping.second);
   }
   LOG_DEBUG("\nVararg Map:");
   for (auto const &ctxEntry : varargMap) {
     for (auto const &mapping : ctxEntry.second)
-      LOG_DEBUG("{}  -->>  [Node #{}]", mapping.first->getName().str(), mapping.second);
+      LOG_DEBUG("{}  -->>  [Node #{}]", mapping.first->getName().str(),
+                mapping.second);
   }
   LOG_DEBUG("----- End of Print -----");
 }

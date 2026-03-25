@@ -171,7 +171,7 @@ void SimulationMapper::write(llvm::raw_ostream&o) const
 
 bool SimulationMapper::isInjective (bool onlyModified)  const 
 {
-  boost::container::flat_set<Cell> inv_sim;
+  std::set<Cell> inv_sim;
   for (auto &kv: m_sim) 
     for (auto &c: kv.second) 
     {

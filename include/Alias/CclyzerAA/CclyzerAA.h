@@ -3,11 +3,12 @@
 /// Not integrated into AliasAnalysisWrapper; use this API directly.
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/Analysis/AliasAnalysis.h>
 #include <llvm/IR/Value.h>
-#include <memory>
-#include <vector>
 
 namespace llvm {
 class Module;

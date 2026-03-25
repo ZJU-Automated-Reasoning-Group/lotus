@@ -2,20 +2,19 @@
 
 #include "Alias/TPA/PointerAnalysis/FrontEnd/Type/PointerLayoutMap.h"
 
-namespace tpa
-{
+namespace tpa {
 
 class CastMap;
 class TypeSet;
 
-class PointerLayoutAnalysis
-{
+class PointerLayoutAnalysis {
 private:
-	const CastMap& castMap;
-public:
-	PointerLayoutAnalysis(const CastMap& c): castMap(c) {}
+  const CastMap &castMap;
 
-	PointerLayoutMap runOnTypes(const TypeSet&);
+public:
+  PointerLayoutAnalysis(const CastMap &c) : castMap(c) {}
+
+  PointerLayoutMap runOnTypes(const TypeSet &);
 };
 
 } // namespace tpa

@@ -3,9 +3,9 @@
 #include "Checker/FiTx/Frontend/State.h"
 
 namespace {
-class RefCountDetector : public framework::FrameworkPass {
+class RefCountDetector : public fitx::FrameworkPass {
   virtual void defineStates() override {
-    framework::StateManager manager;
+    fitx::StateManager manager;
     ReferenceCounter::defineStates(manager);
     addStateManager(manager);
   }
@@ -13,5 +13,5 @@ class RefCountDetector : public framework::FrameworkPass {
 
 }  // namespace
 
-std::vector<framework::FrameworkPass *> framework::FrameworkPass::passes = {
+std::vector<fitx::FrameworkPass *> fitx::FrameworkPass::passes = {
     new RefCountDetector()};

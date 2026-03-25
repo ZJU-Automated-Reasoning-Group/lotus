@@ -49,16 +49,21 @@ bool TransferFunction::copyWithOffset(const Pointer *dst, const Pointer *src,
   srcPtsSets.reserve(srcSet.size());
 
   for (const auto *srcObj : srcSet) {
-    // For unknown object, we need to return an unknown to the user. For null
-    // object, skip it for now
-    // TODO: report this to the user
-    if (srcObj->isNullObject())
-      continue;
-    else if (srcObj->isUniversalObject()) {
+    // Universal object: GEP on an unknown pointer yields an unknown pointer.
+    if (srcObj->isUniversalObject()) {
       srcPtsSets.emplace_back(
           PtsSet::getSingletonSet(MemoryManager::getUniversalObject()));
       break;
     }
+
+    // Null object: GEP on null is undefined behaviour; skip it.
+    // Previously this was silently skipped and then promoted to Universal when
+    // the result set was empty, which introduced spurious aliasing. Now we
+    // simply skip null objects and let the result remain empty (or be merged
+    // with other non-null contributions). A future improvement could report a
+    // potential null-pointer dereference here.
+    if (srcObj->isNullObject())
+      continue;
 
     auto pSet = offsetMemory(srcObj, offset, isArrayRef);
     srcPtsSets.emplace_back(pSet);
@@ -66,10 +71,13 @@ bool TransferFunction::copyWithOffset(const Pointer *dst, const Pointer *src,
 
   PtsSet resSet = PtsSet::mergeAll(srcPtsSets);
 
-  // For now let's assume that if srcSet contains only null loc, the result
-  // should be a universal loc
+  // Bug fix: do NOT promote an empty result to Universal. An empty result means
+  // the source set contained only null objects (GEP on null is UB) or the
+  // offset was out of bounds. Returning Universal here caused spurious aliasing
+  // throughout the analysis. Instead, return false (no environment change) so
+  // the worklist does not propagate stale information.
   if (resSet.empty())
-    resSet = PtsSet::getSingletonSet(MemoryManager::getUniversalObject());
+    return false;
 
   return env.strongUpdate(dst, resSet);
 }

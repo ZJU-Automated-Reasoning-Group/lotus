@@ -19,12 +19,18 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Pass.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 // include STL
+#include "Checker/FiTx/Core/AnalysisHelper.h"
+#include "Checker/FiTx/Core/Casting.h"
+#include "Checker/FiTx/Core/Instructions.h"
+#include "Checker/FiTx/Core/SFG/Converter.h"
+#include "Checker/FiTx/Core/Utils.h"
+#include "Checker/FiTx/Core/Value.h"
+
 #include <algorithm>
 #include <ctime>
 #include <iostream>
@@ -36,37 +42,25 @@
 #include <string>
 #include <vector>
 
-#include "Checker/FiTx/Core/AnalysisHelper.h"
-#include "Checker/FiTx/Core/Casting.h"
-#include "Checker/FiTx/Core/Instructions.h"
-#include "Checker/FiTx/Core/SFG/Converter.h"
-#include "Checker/FiTx/Core/Utils.h"
-#include "Checker/FiTx/Core/Value.h"
-
-namespace framework {
-Value::Value(llvm::Value* value, std::vector<Fields> fields,
+namespace fitx {
+Value::Value(llvm::Value *value, std::vector<Fields> fields,
              long array_element_num)
-    : value_(value),
-      fields_(fields),
-      array_element_num_(array_element_num),
+    : value_(value), fields_(fields), array_element_num_(array_element_num),
       is_global_var_(llvm::isa<llvm::GlobalValue>(value)),
       value_type_(value->getValueID()) {}
 
-Value::Value(std::shared_ptr<framework::Value> value,
+Value::Value(std::shared_ptr<fitx::Value> value,
              std::vector<Fields> fields, long array_element_num)
-    : value_(value->value_),
-      fields_(fields),
+    : value_(value->value_), fields_(fields),
       array_element_num_(array_element_num),
       is_global_var_(value->isGlobalVar()),
       is_return_value_(value->is_return_value_),
       value_type_(value->getValueID()) {}
 
-Value::Value(const Value& value)
-    : value_(value.value_),
-      fields_(value.fields_),
+Value::Value(const Value &value)
+    : value_(value.value_), fields_(value.fields_),
       array_element_num_(value.array_element_num_),
-      is_global_var_(value.is_global_var_),
-      value_type_(value.getValueID()) {}
+      is_global_var_(value.is_global_var_), value_type_(value.getValueID()) {}
 
 Value::Value(std::shared_ptr<Value> value) {
   value_ = value->value_;
@@ -77,8 +71,8 @@ Value::Value(std::shared_ptr<Value> value) {
   value_type_ = value->getValueID();
 }
 
-std::shared_ptr<Value> Value::CreateFromDefinition(llvm::Value* value) {
-  return framework::Converter::GetInstance().Convert(value);
+std::shared_ptr<Value> Value::CreateFromDefinition(llvm::Value *value) {
+  return fitx::Converter::GetInstance().Convert(value);
 }
 
 std::shared_ptr<Value> Value ::CreateAppend(std::shared_ptr<Value> src,
@@ -87,16 +81,15 @@ std::shared_ptr<Value> Value ::CreateAppend(std::shared_ptr<Value> src,
   auto target_front = target->GetFields().begin();
 
   if (!src->GetFields().empty() && !target->GetFields().empty()) {
-    llvm::Type* type = nullptr;
+    llvm::Type *type = nullptr;
     if (source_back->FieldType() == target_front->ElementType() &&
         !target_front->FieldType()) {
       target_front++;
     }
     while (source_back >= src->GetFields().begin() &&
            target_front < target->GetFields().end() &&
-           source_back->ElementType() == target_front->ElementType() && 
-           source_back->FieldType() != target_front->type
-           ) {
+           source_back->ElementType() == target_front->ElementType() &&
+           source_back->FieldType() != target_front->type) {
       if (type && type->isPointerTy() &&
           type->getPointerElementType() == source_back->type &&
           type->getPointerElementType() == target_front->type) {
@@ -118,39 +111,40 @@ std::shared_ptr<Value> Value ::CreateAppend(std::shared_ptr<Value> src,
     return managed;
   }
 
-  if (auto call_inst = shared_dyn_cast<framework::CallInst>(src))
-    return framework::CallInst::Create(call_inst, new_fields,
+  if (auto call_inst = shared_dyn_cast<fitx::CallInst>(src))
+    return fitx::CallInst::Create(call_inst, new_fields,
                                        array_element_num);
 
-  if (auto inst = shared_dyn_cast<framework::Instruction>(src))
-    return framework::Instruction::Create(inst, new_fields, array_element_num);
+  if (auto inst = shared_dyn_cast<fitx::Instruction>(src))
+    return fitx::Instruction::Create(inst, new_fields, array_element_num);
 
-  std::shared_ptr<framework::Value> value;
+  std::shared_ptr<fitx::Value> value;
   switch (src->getValueID()) {
-    case llvm::Value::ConstantIntVal:
-      value = std::make_shared<framework::ConstValue>(
-          framework::shared_dyn_cast<framework::ConstValue>(src));
-      break;
-    case llvm::Value::ConstantPointerNullVal:
-      value = std::make_shared<framework::NullValue>(
-          framework::shared_dyn_cast<framework::NullValue>(src));
-      break;
-    case llvm::Value::ArgumentVal:
-      value = std::make_shared<framework::Argument>(
-          framework::shared_dyn_cast<framework::Argument>(src), new_fields,
-          array_element_num);
-      break;
-    default:
-      value = std::make_shared<framework::Value>(src, new_fields,
-                                                 array_element_num);
+  case llvm::Value::ConstantIntVal:
+    value = std::make_shared<fitx::ConstValue>(
+        fitx::shared_dyn_cast<fitx::ConstValue>(src));
+    break;
+  case llvm::Value::ConstantPointerNullVal:
+    value = std::make_shared<fitx::NullValue>(
+        fitx::shared_dyn_cast<fitx::NullValue>(src));
+    break;
+  case llvm::Value::ArgumentVal:
+    value = std::make_shared<fitx::Argument>(
+        fitx::shared_dyn_cast<fitx::Argument>(src), new_fields,
+        array_element_num);
+    break;
+  default:
+    value =
+        std::make_shared<fitx::Value>(src, new_fields, array_element_num);
   }
 
   Converter::GetInstance().manageValue(&src->getLLVMValue_(), value);
   return value;
 }
 
-bool Value::operator<(const Value& V) const {
-  if (value_ != V.value_) return value_ < V.value_;
+bool Value::operator<(const Value &V) const {
+  if (value_ != V.value_)
+    return value_ < V.value_;
 
   if (array_element_num_ != V.array_element_num_)
     return array_element_num_ < V.array_element_num_;
@@ -158,7 +152,8 @@ bool Value::operator<(const Value& V) const {
   if (fields_.size() != V.fields_.size())
     return fields_.size() < V.fields_.size();
 
-  if (value_type_ != V.value_type_) return value_type_ < V.value_type_;
+  if (value_type_ != V.value_type_)
+    return value_type_ < V.value_type_;
 
   for (int i = 0; i < fields_.size(); i++) {
     if (fields_[i].type != V.fields_[i].type)
@@ -171,7 +166,7 @@ bool Value::operator<(const Value& V) const {
   return false;
 }
 
-bool Value::operator==(const Value& V) const {
+bool Value::operator==(const Value &V) const {
   if (value_ != V.value_ || fields_.size() != V.fields_.size() ||
       array_element_num_ != V.array_element_num_ ||
       value_type_ != V.value_type_)
@@ -185,12 +180,12 @@ bool Value::operator==(const Value& V) const {
   return true;
 }
 
-bool Value::operator==(const llvm::Value* V) const { return value_ == V; }
+bool Value::operator==(const llvm::Value *V) const { return value_ == V; }
 
-llvm::Value& Value::getLLVMValue_() const { return *value_; }
+llvm::Value &Value::getLLVMValue_() const { return *value_; }
 
-llvm::Type& Value::getLLVMType_() const {
-  const Fields& field = fields_.back();
+llvm::Type &Value::getLLVMType_() const {
+  const Fields &field = fields_.back();
   if (field.field >= 0 && field.type->isStructTy())
     return *field.type->getStructElementType(field.field);
   return *field.type;
@@ -198,7 +193,7 @@ llvm::Type& Value::getLLVMType_() const {
 
 long Value::Field() const { return fields_.back().field; }
 
-const std::vector<Value::Fields>& Value::GetFields() const { return fields_; };
+const std::vector<Value::Fields> &Value::GetFields() const { return fields_; };
 
 bool Value::isArgument() { return llvm::isa<llvm::Argument>(value_); }
 
@@ -211,7 +206,7 @@ void Value::setReturnValue(bool is_return_value) {
 
 long Value::ArrayElementNum() { return array_element_num_; }
 
-ConstValue::ConstValue(llvm::ConstantInt* value)
+ConstValue::ConstValue(llvm::ConstantInt *value)
     : Value(value), const_value_(value->getSExtValue()) {}
 
 ConstValue::ConstValue(int64_t const_value)
@@ -220,11 +215,11 @@ ConstValue::ConstValue(int64_t const_value)
 ConstValue::ConstValue(std::shared_ptr<ConstValue> value)
     : Value(value), const_value_(value->getConstValue()) {}
 
-NullValue::NullValue(llvm::ConstantPointerNull* value) : Value(value) {}
-NullValue::NullValue(std::shared_ptr<framework::NullValue> value)
+NullValue::NullValue(llvm::ConstantPointerNull *value) : Value(value) {}
+NullValue::NullValue(std::shared_ptr<fitx::NullValue> value)
     : Value(value) {}
 
-Argument::Argument(llvm::Argument* argument, std::vector<Value::Fields> fields,
+Argument::Argument(llvm::Argument *argument, std::vector<Value::Fields> fields,
                    long array_element_num)
     : Value(argument, fields, array_element_num),
       arg_num_(argument->getArgNo()) {}
@@ -236,8 +231,9 @@ Argument::Argument(std::shared_ptr<Argument> argument,
 
 /* Value Collection Class*/
 ValueCollection ValueCollection::createFromIntersection(
-    const std::vector<ValueCollection>& collections) {
-  if (collections.empty()) return ValueCollection();
+    const std::vector<ValueCollection> &collections) {
+  if (collections.empty())
+    return ValueCollection();
 
   ValueCollection result = *collections.begin();
   for (auto collection = collections.begin() + 1;
@@ -252,8 +248,9 @@ ValueCollection ValueCollection::createFromIntersection(
 }
 
 ValueCollection ValueCollection::createFromUnion(
-    const std::vector<ValueCollection>& collections) {
-  if (collections.empty()) return ValueCollection();
+    const std::vector<ValueCollection> &collections) {
+  if (collections.empty())
+    return ValueCollection();
 
   ValueCollection result = *collections.begin();
   for (auto collection = collections.begin() + 1;
@@ -271,8 +268,8 @@ bool ValueCollection::add(std::shared_ptr<Value> value) {
   return values_.insert(value).second;
 }
 
-void ValueCollection::add(const ValueCollection& value_collection) {
-  auto& values = value_collection.Values();
+void ValueCollection::add(const ValueCollection &value_collection) {
+  auto &values = value_collection.Values();
   std::merge(values_.begin(), values_.end(), values.begin(), values.end(),
              std::inserter(values_, values_.end()));
 }
@@ -283,7 +280,7 @@ void ValueCollection::remove(std::shared_ptr<Value> value) {
 
 void ValueCollection::clear() { values_.clear(); }
 
-bool ValueCollection::exists(framework::Value value) {
+bool ValueCollection::exists(fitx::Value value) {
   auto found_value =
       std::find_if(values_.begin(), values_.end(),
                    [&value](std::shared_ptr<Value> compared_value) {
@@ -293,7 +290,7 @@ bool ValueCollection::exists(framework::Value value) {
 }
 
 /* std::shared_ptr<Value> ValueCollection::get(llvm::Value* value) { */
-/*   auto framework_value = framework::Value::CreateFromDefinition(value); */
+/*   auto framework_value = fitx::Value::CreateFromDefinition(value); */
 
 /*   auto found_value = */
 /*       std::find_if(values_.begin(), values_.end(), */
@@ -312,15 +309,17 @@ bool ValueCollection::exists(std::shared_ptr<Value> value) {
   return values_.find(value) != values_.end();
 }
 
-std::set<std::shared_ptr<Value>> ValueCollection::getRelatedValues(
-    std::shared_ptr<Value> value) const {
+// Same base LLVM value and compatible field path (same or more specific);
+// used to apply store/branch transitions to all SSA/field variants (paper §3).
+std::set<std::shared_ptr<Value>>
+ValueCollection::getRelatedValues(std::shared_ptr<Value> value) const {
   std::set<std::shared_ptr<Value>> related_values;
   std::copy_if(
       values_.begin(), values_.end(),
       inserter(related_values, related_values.end()),
-      [&value](std::shared_ptr<framework::Value> new_value) {
+      [&value](std::shared_ptr<fitx::Value> new_value) {
         /* auto value_fields = value->GetFields(); */
-        /* const std::vector<framework::Value::Fields> sub_value_fields( */
+        /* const std::vector<fitx::Value::Fields> sub_value_fields( */
         /*     value_fields.begin(), */
         /*     value_fields.begin() + */
         /*         std::min(value_fields.size(),
@@ -337,12 +336,12 @@ std::set<std::shared_ptr<Value>> ValueCollection::getRelatedValues(
   return related_values;
 }
 
-std::set<std::shared_ptr<Value>> ValueCollection::getParentValues(
-    std::shared_ptr<Value> value) const {
+std::set<std::shared_ptr<Value>>
+ValueCollection::getParentValues(std::shared_ptr<Value> value) const {
   std::set<std::shared_ptr<Value>> related_values;
   std::copy_if(values_.begin(), values_.end(),
                inserter(related_values, related_values.end()),
-               [&value](std::shared_ptr<framework::Value> new_value) {
+               [&value](std::shared_ptr<fitx::Value> new_value) {
                  return *new_value == &value->getLLVMValue_() &&
                         new_value->GetFields().size() <=
                             value->GetFields().size();
@@ -352,8 +351,9 @@ std::set<std::shared_ptr<Value>> ValueCollection::getParentValues(
 
 AliasValues::AliasValues() : alias_size_(0) {}
 
-void AliasValues::addAlias(std::shared_ptr<framework::Value> src,
-                           std::shared_ptr<framework::Value> target) {
+// Record may-alias: both directions so getAliasInfo works for either value.
+void AliasValues::addAlias(std::shared_ptr<fitx::Value> src,
+                           std::shared_ptr<fitx::Value> target) {
   if (alias_info_[src].add(target)) {
     updated_values_.push_back(src);
     alias_size_++;
@@ -365,10 +365,11 @@ void AliasValues::addAlias(std::shared_ptr<framework::Value> src,
   }
 }
 
-void AliasValues::addAlias(AliasValues& collection) {
-  if (alias_size_ >= collection.Size()) return;
+void AliasValues::addAlias(AliasValues &collection) {
+  if (alias_size_ >= collection.Size())
+    return;
 
-  const std::vector<std::shared_ptr<framework::Value>>& updated =
+  const std::vector<std::shared_ptr<fitx::Value>> &updated =
       collection.UpdatedValues();
 
   if (!updated.empty()) {
@@ -386,27 +387,31 @@ void AliasValues::addAlias(AliasValues& collection) {
   }
 }
 
-const ValueCollection* AliasValues::getAliasInfo(
-    std::shared_ptr<framework::Value> value) {
-  if (alias_info_.find(value) != alias_info_.end()) return &alias_info_[value];
+const ValueCollection *
+AliasValues::getAliasInfo(std::shared_ptr<fitx::Value> value) {
+  if (alias_info_.find(value) != alias_info_.end())
+    return &alias_info_[value];
   return nullptr;
 }
 
-ManagedValues ManagedValues::GetInstance() {
-  static ManagedValues* managed_values = new ManagedValues();
+// Bug fix: return by reference (was returning by value, so addValue() calls
+// on the returned copy were silently discarded).
+ManagedValues &ManagedValues::GetInstance() {
+  static ManagedValues *managed_values = new ManagedValues();
   return *managed_values;
 }
 
 ManagedValues::ManagedValues() { managed_values_.reserve(kReserveSize); }
 
-std::shared_ptr<framework::Value> ManagedValues::getValueFromID(size_t id) {
-  if (id > Size()) return nullptr;
+std::shared_ptr<fitx::Value> ManagedValues::getValueFromID(size_t id) {
+  if (id > Size())
+    return nullptr;
   return managed_values_[id];
 }
 
-llvm::raw_ostream& operator<<(llvm::raw_ostream& ostream,
-                              const framework::Value& value) {
-  ostream << "[framework::Value] ";
+llvm::raw_ostream &operator<<(llvm::raw_ostream &ostream,
+                              const fitx::Value &value) {
+  ostream << "[fitx::Value] ";
   ostream << "ValueType: " << value.value_type_ << " ";
   ostream << "Array Element: " << value.array_element_num_ << " ";
   ostream << "(";
@@ -423,6 +428,6 @@ llvm::raw_ostream& operator<<(llvm::raw_ostream& ostream,
   return ostream;
 }
 
-/* std::vector<std::shared_ptr<framework::Value>> Value::managed_values_; */
+/* std::vector<std::shared_ptr<fitx::Value>> Value::managed_values_; */
 
-};  // namespace framework
+}; // namespace fitx

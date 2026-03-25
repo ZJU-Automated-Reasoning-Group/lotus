@@ -1,10 +1,10 @@
 #include "Analysis/CFG/TopologicalOrder.h"
-#include "Analysis/CFG/SortTopo.h"
 
 #include "llvm/Analysis/CFG.h"
 
-#include <algorithm>
+#include "Analysis/CFG/SortTopo.h"
 
+#include <algorithm>
 
 char TopologicalOrder::ID = 0;
 
@@ -34,14 +34,12 @@ bool TopologicalOrder::isBackEdge(const BasicBlock &src,
 void TopologicalOrder::print(raw_ostream &out, const Module *m) const {
   out << "TOPO BEGIN\n";
 
-  for (auto* bb : *this)
+  for (auto *bb : *this)
     out << bb->getName() << " ";
   out << "\n";
 
   out << "TOPO END\n";
 }
-
-
 
 static llvm::RegisterPass<TopologicalOrder>
     X("topo", "Topological order of CFG", true, true);

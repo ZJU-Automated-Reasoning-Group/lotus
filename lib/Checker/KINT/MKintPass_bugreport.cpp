@@ -1,5 +1,5 @@
 // Implementation of bug reporting methods for MKintPass
-// This file adds Clearblue-style bug reporting to BugReportMgr
+// This file adds shared bug reporting integration to BugReportMgr
 
 #include "Checker/KINT/Log.h"
 #include "Checker/KINT/MKintPass.h"
@@ -12,34 +12,46 @@ void MKintPass::reportBugsToManager() {
 
   MKINT_LOG() << "Reporting " << bug_paths.size() << " bugs to BugReportMgr";
 
+  // Report bugs that have path information. Track which instructions have
+  // already been reported to avoid duplicates with the raw sets below.
+  std::set<BugKey> reported;
   for (const auto &pair : bug_paths) {
-    const Instruction *inst = pair.first;
+    const BugKey &key = pair.first;
+    const Instruction *inst = key.first;
     const BugPath &bug_path = pair.second;
     reportBug(bug_path.bugType, inst, bug_path.path);
+    reported.insert(key);
   }
 
-  // Also report simple bugs without paths
+  // Report bugs from raw sets only if they were not already reported above.
   for (const auto *inst : m_overflow_insts) {
-    reportBug(interr::INT_OVERFLOW, inst);
+    if (!reported.count(BugKey(inst, interr::INT_OVERFLOW)))
+      reportBug(interr::INT_OVERFLOW, inst);
   }
 
   for (const auto *inst : m_div_zero_insts) {
-    reportBug(interr::DIV_BY_ZERO, inst);
+    if (!reported.count(BugKey(inst, interr::DIV_BY_ZERO)))
+      reportBug(interr::DIV_BY_ZERO, inst);
   }
 
   for (const auto *inst : m_bad_shift_insts) {
-    reportBug(interr::BAD_SHIFT, inst);
+    if (!reported.count(BugKey(inst, interr::BAD_SHIFT)))
+      reportBug(interr::BAD_SHIFT, inst);
   }
 
   for (const auto *gep : m_gep_oob) {
-    reportBug(interr::ARRAY_OOB, gep);
+    if (!reported.count(BugKey(gep, interr::ARRAY_OOB)))
+      reportBug(interr::ARRAY_OOB, gep);
   }
 
   for (const auto &pair : m_impossible_branches) {
     const ICmpInst *cmp = pair.first;
     bool is_true_branch = pair.second;
-    reportBug(is_true_branch ? interr::DEAD_TRUE_BR : interr::DEAD_FALSE_BR,
-              cmp);
+    interr type =
+        is_true_branch ? interr::DEAD_TRUE_BR : interr::DEAD_FALSE_BR;
+    if (!reported.count(BugKey(cmp, type))) {
+      reportBug(type, cmp);
+    }
   }
 }
 

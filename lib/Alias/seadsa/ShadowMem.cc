@@ -32,7 +32,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 
-#include "boost/range/algorithm/set_algorithm.hpp"
+#include <algorithm>
 
 llvm::cl::opt<bool> SplitFields("horn-sea-dsa-split",
                                 llvm::cl::desc("DSA: Split nodes by fields"),
@@ -146,14 +146,16 @@ void reachableNodes(const Function &fn, dsa::Graph &g, Set &inputReach,
 /// Wrapper around set difference
 template <typename Set> void set_difference(Set &s1, Set &s2) {
   Set s3;
-  boost::set_difference(s1, s2, std::inserter(s3, s3.end()));
+  std::set_difference(s1.begin(), s1.end(), s2.begin(), s2.end(),
+                      std::inserter(s3, s3.end()));
   std::swap(s3, s1);
 }
 
 /// Wrapper around set_union
 template <typename Set> void set_union(Set &s1, Set &s2) {
   Set s3;
-  boost::set_union(s1, s2, std::inserter(s3, s3.end()));
+  std::set_union(s1.begin(), s1.end(), s2.begin(), s2.end(),
+                 std::inserter(s3, s3.end()));
   std::swap(s3, s1);
 }
 
@@ -306,7 +308,7 @@ class ShadowMemImpl : public InstVisitor<ShadowMemImpl> {
   llvm::Type *m_Int32Ty;
 
   /// Used by doReadMod
-  using NodeSet = boost::container::flat_set<const dsa::Node *>;
+  using NodeSet = std::set<const dsa::Node *>;
   using NodeSetMap = llvm::DenseMap<const llvm::Function *, NodeSet>;
   /// \brief A map from Function to all DsaNode that are read by it
   NodeSetMap m_readList;

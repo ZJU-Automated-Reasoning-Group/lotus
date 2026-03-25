@@ -45,7 +45,7 @@ Value *coerceToBool(Value *arg, IRBuilder<> &builder, Instruction &I) {
 /// function call is returned.
 Value *extractPartialFnCall(Value *v) {
   // The partial call may be cast to bool by comparison to 0.
-  if (auto cmp = dyn_cast<ICmpInst>(v)) {
+  if (auto *cmp = dyn_cast<ICmpInst>(v)) {
     auto *lhs = cmp->getOperand(0);
     auto *rhs = cmp->getOperand(1);
     v = isa<CallInst>(lhs) ? lhs : rhs;
@@ -56,7 +56,7 @@ Value *extractPartialFnCall(Value *v) {
     v = ze->getOperand(0);
 
   // The value must now be a CallInst.
-  auto CI = dyn_cast<CallInst>(v);
+  auto *CI = dyn_cast<CallInst>(v);
   if (!CI)
     return nullptr;
 
@@ -248,9 +248,9 @@ bool PromoteVerifierCalls::runOnFunction(Function &F) {
       auto nameFromSuffix = fn->getName().substr(6, fn->getName().size());
       newFunctionName.append("nondet.sea");
       newFunctionName.append(nameFromSuffix);
-      auto retTy = fn->getReturnType();
+      auto *retTy = fn->getReturnType();
       // create new ND function
-      auto M = F.getParent();
+      auto *M = F.getParent();
       auto FC = M->getOrInsertFunction(newFunctionName.str(), retTy);
       auto *FN = dyn_cast<Function>(FC.getCallee());
       if (FN) {
@@ -276,10 +276,10 @@ bool PromoteVerifierCalls::runOnFunction(Function &F) {
                fn->getName().equals("llvm.invariant") ||
                /** my suggested name for pagai invariants */
                fn->getName().equals("pagai.invariant"))) {
-      auto arg0 = CI.getOperand(0);
+      auto *arg0 = CI.getOperand(0);
 
       CallInst *nfnCi = nullptr, *chkCi = nullptr;
-      if (auto partialFn = extractPartialFnCall(arg0)) {
+      if (auto *partialFn = extractPartialFnCall(arg0)) {
         // Selects proper synthesis call.
         Function *nfn;
         bool insert_assume;

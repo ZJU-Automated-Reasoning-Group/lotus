@@ -160,7 +160,10 @@ void VCGen::genVcForCpEdge(OpSemContext &ctx, const CpEdge &edge,
 }
 
 namespace sem_detail {
-struct FwdReachPred : public std::unary_function<const BasicBlock &, bool> {
+struct FwdReachPred {
+  using argument_type = const BasicBlock &;
+  using result_type = bool;
+
   const CutPointGraph &m_cpg;
   const CutPoint &m_cp;
 

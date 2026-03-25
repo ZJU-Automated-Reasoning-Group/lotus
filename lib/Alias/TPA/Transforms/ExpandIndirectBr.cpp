@@ -130,7 +130,8 @@ static bool convertFunction(Function *func) {
  *
  * @param M The module to transform
  * @param analysisManager Module analysis manager (unused)
- * @return PreservedAnalyses::none() if modified, PreservedAnalyses::all() otherwise
+ * @return PreservedAnalyses::none() if modified, PreservedAnalyses::all()
+ * otherwise
  */
 PreservedAnalyses
 ExpandIndirectBr::run(Module &M, ModuleAnalysisManager &analysisManager) {

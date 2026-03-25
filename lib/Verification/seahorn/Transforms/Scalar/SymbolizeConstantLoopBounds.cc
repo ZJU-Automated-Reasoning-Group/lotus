@@ -185,7 +185,7 @@ public:
     bool Change = false;
     for (auto *L : *LI) {
       // symbolize nested loops
-      for (auto SL : *L) {
+      for (auto *SL : *L) {
         Change |= SymbolizeLoop(SL, B);
       }
       // symbolize outermost loop

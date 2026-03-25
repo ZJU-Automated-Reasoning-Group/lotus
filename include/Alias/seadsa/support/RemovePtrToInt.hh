@@ -1,9 +1,9 @@
 #ifndef SEADSA_REMOVE_PTR_TO_INT
 #define SEADSA_REMOVE_PTR_TO_INT
 
-#include "llvm/Pass.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Pass.h"
 
 namespace seadsa {
 

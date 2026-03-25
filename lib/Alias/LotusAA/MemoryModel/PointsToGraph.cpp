@@ -63,12 +63,19 @@
 #include "Alias/LotusAA/MemoryModel/PointsToGraph.h"
 
 #include "Alias/LotusAA/Engine/InterProceduralPass.h"
+#include "Alias/LotusAA/Engine/IntraProceduralAnalysis.h"
 #include "Alias/LotusAA/Support/Config.h"
 
+#include <functional>
 #include <set>
 #include <tuple>
 
+#include <llvm/ADT/APInt.h>
+#include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/Analysis/DominanceFrontier.h>
+#include <llvm/IR/CFG.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/Operator.h>
 #include <llvm/Support/CommandLine.h>
 
 using namespace llvm;
@@ -76,13 +83,90 @@ using namespace std;
 
 static cl::opt<int> lotus_restrict_pts_count(
     "lotus-restrict-pts-count",
-    cl::desc("Maximum number of locators a pointer may point to"),
-    cl::init(100), cl::Hidden);
+    cl::desc("Maximum number of locators a pointer may point to"), cl::init(3),
+    cl::Hidden);
 
 static cl::opt<int> lotus_restrict_obj_ap_depth(
     "lotus-restrict-obj-ap-depth",
     cl::desc("Maximum AP-depth of objects considered for callees"), cl::init(5),
     cl::Hidden);
+
+namespace {
+
+template <typename T> static pair<T, T> canonicalCondPair(T lhs, T rhs) {
+  return (lhs < rhs) ? make_pair(lhs, rhs) : make_pair(rhs, lhs);
+}
+
+static bool isCompositeCond(path_cond_t cond) {
+  if (!cond)
+    return false;
+  switch (cond->getKind()) {
+  case PathCond::Kind::And:
+  case PathCond::Kind::Or:
+  case PathCond::Kind::Not:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static Type *getFieldTypeAtOffset(Type *type, int64_t offset,
+                                  const DataLayout &DL) {
+  if (!type || PTGraph::isUnknownOffset(offset) || offset <= 0)
+    return type;
+
+  if (auto *array_ty = dyn_cast<ArrayType>(type)) {
+    uint64_t elem_size = DL.getTypeSizeInBits(array_ty->getElementType());
+    if (elem_size == 0)
+      return type;
+    uint64_t idx = static_cast<uint64_t>(offset) / elem_size;
+    uint64_t remainder = static_cast<uint64_t>(offset) % elem_size;
+    if (idx >= array_ty->getNumElements())
+      return type;
+    return getFieldTypeAtOffset(array_ty->getElementType(),
+                                static_cast<int64_t>(remainder), DL);
+  }
+
+  if (auto *struct_ty = dyn_cast<StructType>(type)) {
+    int n_elem = struct_ty->getNumContainedTypes();
+    int cur_size = 0;
+    int last_size = 0;
+    int idx;
+    for (idx = 0; idx < n_elem; idx++) {
+      if ((uint64_t)cur_size >= (uint64_t)offset)
+        break;
+
+      Type *t = struct_ty->getContainedType(idx);
+      last_size = cur_size;
+      cur_size += (int)DL.getTypeSizeInBits(t);
+    }
+
+    if ((uint64_t)cur_size == (uint64_t)offset && idx < n_elem)
+      return getFieldTypeAtOffset(struct_ty->getContainedType(idx), 0, DL);
+    if ((uint64_t)cur_size > (uint64_t)offset &&
+        (uint64_t)last_size < (uint64_t)offset) {
+      return getFieldTypeAtOffset(struct_ty->getContainedType(idx - 1),
+                                  offset - last_size, DL);
+    }
+    return type;
+  }
+
+  if (auto *vec_ty = dyn_cast<VectorType>(type)) {
+    Type *elem_type = vec_ty->getElementType();
+    uint64_t elem_size = DL.getTypeSizeInBits(elem_type);
+    if (elem_size == 0)
+      return type;
+    uint64_t idx = static_cast<uint64_t>(offset) / elem_size;
+    uint64_t remainder = static_cast<uint64_t>(offset) % elem_size;
+    if (idx >= vec_ty->getElementCount().getKnownMinValue())
+      return type;
+    return getFieldTypeAtOffset(elem_type, static_cast<int64_t>(remainder), DL);
+  }
+
+  return type;
+}
+
+} // namespace
 
 // Static members
 Type *PTGraph::DEFAULT_NON_POINTER_TYPE = nullptr;
@@ -95,23 +179,24 @@ const int PTGraph::FUNC_OBJ_UNREACHABLE = -1;
 PTResultIterator::PTResultIterator(PTResult *target, PTGraph *parent_graph)
     : parent_graph(parent_graph) {
   set<PTResult *> visited;
-  visit(target, 0, visited);
+  visit(target, 0, parent_graph->getEmptyCond(), visited);
 
   // Optimize: cache results in target
   if (!target->is_optimized) {
+    target->derived_list.clear();
     target->pt_list.clear();
     int count = 0;
-    for (auto *loc : res) {
+    for (auto &item : res) {
       count++;
       if (lotus_restrict_pts_count != -1 && count > lotus_restrict_pts_count)
         break;
-      target->pt_list.push_back(PTResult::PtItem(loc));
+      target->pt_list.push_back(PTResult::PtItem(item.second, item.first));
     }
     target->is_optimized = true;
   }
 }
 
-void PTResultIterator::visit(PTResult *target, int64_t off,
+void PTResultIterator::visit(PTResult *target, int64_t off, path_cond_t cond,
                              set<PTResult *> &visited) {
   // In fuzzing / partially-built summaries we can see null derived targets.
   // Don't crash in release builds; just treat them as empty.
@@ -131,24 +216,31 @@ void PTResultIterator::visit(PTResult *target, int64_t off,
     ObjectLocator *locator = item.locator->offsetBy(off);
     if (!locator)
       continue;
-    res.insert(locator);
+    path_cond_t new_cond = parent_graph->findOrCreateAndRegion(cond, item.cond);
+    auto it = res.find(locator);
+    if (it == res.end()) {
+      res.insert(make_pair(locator, new_cond));
+    } else {
+      it->second = parent_graph->findOrCreateOrRegion(it->second, new_cond);
+    }
   }
 
   // Derived targets
   for (PTResult::DerivedPtItem &item : target->derived_list) {
     if (!item.src_pts)
       continue;
-    visit(item.src_pts, off + item.offset, visited);
+    path_cond_t new_cond = parent_graph->findOrCreateAndRegion(cond, item.cond);
+    visit(item.src_pts, off + item.offset, new_cond, visited);
   }
 
-  // Don't erase from visited - we want to prevent cycles
+  visited.erase(target);
 }
 
 namespace llvm {
 
 raw_ostream &operator<<(raw_ostream &out, PTResultIterator &pt_it) {
   for (auto it = pt_it.begin(); it != pt_it.end(); ++it) {
-    out << "  " << **it << "\n";
+    out << "  " << *it->first << "\n";
   }
   return out;
 }
@@ -158,13 +250,16 @@ raw_ostream &operator<<(raw_ostream &out, PTResultIterator &pt_it) {
 // PTGraph
 PTGraph::PTGraph(Function *F, LotusAA *lotus_aa)
     : analyzed_func(F), lotus_aa(lotus_aa), pt_index(0), obj_index(0),
-      load_load_match_performed(false) {
-
+      load_load_match_performed(false), control_dep_ready_(false) {
   // Get dominance information
   dom_tree = lotus_aa->getDomTree(F);
+  post_dom_tree = new PostDominatorTree(*F);
+
+  true_cond_ = nullptr;
+  false_cond_ = nullptr;
 
   // Create NULL points-to result
-  NullPTS = addPointsTo(nullptr, MemObject::NullObj, 0);
+  NullPTS = addPointsTo(nullptr, MemObject::NullObj, 0, getEmptyCond());
 }
 
 PTGraph::~PTGraph() {
@@ -182,6 +277,8 @@ PTGraph::~PTGraph() {
   for (auto &category : load_category_collection) {
     delete category;
   }
+
+  delete post_dom_tree;
 }
 
 PTResult *PTGraph::findPTResult(Value *ptr, bool is_create) {
@@ -211,20 +308,21 @@ MemObject *PTGraph::newObject(Value *alloc_site, MemObject::ObjKind obj_type) {
   return obj;
 }
 
-PTResult *PTGraph::addPointsTo(Value *ptr, MemObject *obj, int64_t offset) {
+PTResult *PTGraph::addPointsTo(Value *ptr, MemObject *obj, int64_t offset,
+                               path_cond_t cond) {
   assert(pt_results.find(ptr) == pt_results.end() &&
-         "Re-assigning value (SSA violation)");
+         "Re-assigning value -- violating SSA");
   PTResult *pts = findPTResult(ptr, true);
-  pts->add_target(obj, offset);
+  pts->add_target(cond, obj, offset);
   return pts;
 }
 
 PTResult *PTGraph::derivePtsFrom(Value *ptr, PTResult *other_pts,
-                                 int64_t offset) {
+                                 int64_t offset, path_cond_t cond) {
   assert(pt_results.find(ptr) == pt_results.end() &&
-         "Re-assigning value (SSA violation)");
+         "Re-assigning value -- violating SSA");
   PTResult *pts = findPTResult(ptr, true);
-  pts->add_derived_target(other_pts, offset);
+  pts->add_derived_target(cond, other_pts, offset);
   return pts;
 }
 
@@ -239,56 +337,87 @@ Type *PTGraph::normalizeType(Type *type) {
 }
 
 void PTGraph::refineResult(mem_value_t &to_refine) {
-  map<pair<Value *, Instruction *>, bool> seen;
-  mem_value_t refined;
-
-  for (auto &item : to_refine) {
-    auto key = make_pair(item.val, item.pos);
-    if (!seen.count(key)) {
-      seen[key] = true;
-      refined.push_back(item);
+  map<Value *, map<Instruction *, pair<path_cond_t, float>, llvm_cmp>, llvm_cmp>
+      tmp_to_merge_values;
+  for (auto &val_struct : to_refine) {
+    path_cond_t cond = val_struct.cond;
+    Value *val = val_struct.val;
+    Instruction *pos = val_struct.pos;
+    float confidence = val_struct.confidence;
+    if (tmp_to_merge_values.count(val) == 0 ||
+        tmp_to_merge_values[val].count(pos) == 0) {
+      tmp_to_merge_values[val][pos] = make_pair(cond, confidence);
+    } else {
+      path_cond_t pre_cond = tmp_to_merge_values[val][pos].first;
+      float pre_confidence = tmp_to_merge_values[val][pos].second;
+      tmp_to_merge_values[val][pos].first =
+          findOrCreateOrRegion(pre_cond, cond);
+      tmp_to_merge_values[val][pos].second =
+          mem_value_item_t::compute_or_confidence(pre_confidence, confidence);
     }
   }
 
-  to_refine = std::move(refined);
+  to_refine.clear();
+  for (auto &val_pair : tmp_to_merge_values) {
+    for (auto &pos_cond_pair : val_pair.second) {
+      to_refine.push_back(mem_value_item_t(pos_cond_pair.second.first,
+                                           pos_cond_pair.first, val_pair.first,
+                                           pos_cond_pair.second.second));
+    }
+  }
 }
 
 void PTGraph::trackPtrRightValue(Value *ptr, mem_value_t &res) {
-  set<Value *, llvm_cmp> visited;
-  trackPtrRightValueImpl(ptr, res, visited);
+  trackPtrRightValueUnderCondition(ptr, res, getEmptyCond(), 1.0f);
+  refineResult(res);
 }
 
-void PTGraph::trackPtrRightValueImpl(Value *ptr, mem_value_t &res,
-                                     set<Value *, llvm_cmp> &visited) {
-  // Cycle detection - prevent infinite recursion
-  if (visited.count(ptr))
+void PTGraph::trackPtrRightValueUnderCondition(Value *ptr, mem_value_t &res,
+                                               path_cond_t base_cond,
+                                               float base_confidence) {
+  if (IntraLotusAAConfig::lotus_restrict_right_value_count != -1 &&
+      static_cast<int>(res.size()) >=
+          IntraLotusAAConfig::lotus_restrict_right_value_count)
     return;
 
-  visited.insert(ptr);
-
   if (Argument *arg = dyn_cast<Argument>(ptr)) {
-    res.push_back(mem_value_item_t(nullptr, arg));
+    res.push_back(mem_value_item_t(base_cond, nullptr, arg, base_confidence));
   } else if (LoadInst *load = dyn_cast<LoadInst>(ptr)) {
     mem_value_t load_result;
     getLoadValues(load->getPointerOperand(), load, load_result);
     for (auto &item : load_result) {
-      trackPtrRightValueImpl(item.val, res, visited);
+      path_cond_t final_cond = findOrCreateAndRegion(base_cond, item.cond);
+      float final_confidence = mem_value_item_t::compute_and_confidence(
+          base_confidence, item.confidence);
+      trackPtrRightValueUnderCondition(item.val, res, final_cond,
+                                       final_confidence);
     }
   } else if (PHINode *phi = dyn_cast<PHINode>(ptr)) {
     for (unsigned i = 0; i < phi->getNumIncomingValues(); i++) {
-      trackPtrRightValueImpl(phi->getIncomingValue(i), res, visited);
+      Value *incoming_val = phi->getIncomingValue(i);
+      BasicBlock *incoming_bb = phi->getIncomingBlock(i);
+      path_cond_t phi_cond =
+          findOrCreateUnitPhiRegion(phi->getParent(), incoming_bb);
+      trackPtrRightValueUnderCondition(
+          incoming_val, res, findOrCreateAndRegion(base_cond, phi_cond),
+          base_confidence);
     }
   } else if (SelectInst *sel = dyn_cast<SelectInst>(ptr)) {
-    trackPtrRightValueImpl(sel->getTrueValue(), res, visited);
-
-    trackPtrRightValueImpl(sel->getFalseValue(), res, visited);
+    path_cond_t true_cond = getValueCond(sel->getCondition(), true);
+    path_cond_t false_cond = getValueCond(sel->getCondition(), false);
+    trackPtrRightValueUnderCondition(
+        sel->getTrueValue(), res, findOrCreateAndRegion(base_cond, true_cond),
+        base_confidence);
+    trackPtrRightValueUnderCondition(
+        sel->getFalseValue(), res, findOrCreateAndRegion(base_cond, false_cond),
+        base_confidence);
   } else if (CastInst *cast = dyn_cast<CastInst>(ptr)) {
-    trackPtrRightValueImpl(cast->getOperand(0), res, visited);
+    trackPtrRightValueUnderCondition(cast->getOperand(0), res, base_cond,
+                                     base_confidence);
   } else {
-    res.push_back(mem_value_item_t(nullptr, ptr));
+    res.push_back(mem_value_item_t(base_cond, dyn_cast<Instruction>(ptr), ptr,
+                                   base_confidence));
   }
-
-  refineResult(res);
 }
 
 void PTGraph::getLoadValues(Value *ptr, Instruction *from_loc, mem_value_t &res,
@@ -297,15 +426,21 @@ void PTGraph::getLoadValues(Value *ptr, Instruction *from_loc, mem_value_t &res,
 }
 
 void PTGraph::loadPtrAt(Value *ptr, Instruction *from_loc, mem_value_t &result,
-                        bool create_symbol, int64_t query_offset) {
+                        bool create_symbol, int64_t query_offset,
+                        int func_level, ObjectLocator *func_call_cache,
+                        bool is_include_func_summary,
+                        bool is_maintain_load_map) {
   // Use visited set to prevent infinite recursion
   std::set<std::tuple<Value *, Instruction *, int64_t>> visited;
-  loadPtrAtImpl(ptr, from_loc, result, create_symbol, query_offset, visited);
+  loadPtrAtImpl(ptr, from_loc, result, create_symbol, query_offset, func_level,
+                func_call_cache, is_include_func_summary, is_maintain_load_map,
+                visited);
 }
 
 void PTGraph::loadPtrAtImpl(
     Value *ptr, Instruction *from_loc, mem_value_t &result, bool create_symbol,
-    int64_t query_offset,
+    int64_t query_offset, int func_level, ObjectLocator *func_call_cache,
+    bool is_include_func_summary, bool is_maintain_load_map,
     std::set<std::tuple<Value *, Instruction *, int64_t>> &visited) {
   // Defensive: callers should pass real IR values/locations, but fuzzing and
   // summary edges can route nullptrs here. Avoid null-deref inside type queries
@@ -330,8 +465,7 @@ void PTGraph::loadPtrAtImpl(
     PointerType *ptr_type = dyn_cast<PointerType>(ptr->getType());
     if (ptr_type) {
       value_type = getPointerElementTypeCompat(ptr_type, &getDL());
-      // Adjust type for offset if needed
-      // Simplified: just use the element type
+      value_type = getFieldTypeAtOffset(value_type, query_offset, getDL());
     } else {
       value_type = DEFAULT_NON_POINTER_TYPE;
     }
@@ -342,7 +476,8 @@ void PTGraph::loadPtrAtImpl(
   if (lotus_restrict_pts_count != -1 && iter.size() > lotus_restrict_pts_count)
     return;
 
-  for (auto *loc : iter) {
+  for (auto &point_to_item : iter) {
+    ObjectLocator *loc = point_to_item.first;
     int64_t offset = loc->getOffset();
     MemObject *obj = loc->getObj();
 
@@ -352,43 +487,49 @@ void PTGraph::loadPtrAtImpl(
 
     // Adjust offset if query_offset provided
     if (query_offset != 0) {
-      loc = obj->findLocator(offset + query_offset, true);
+      loc =
+          obj->findLocator(PTGraph::composeOffset(offset, query_offset), true);
     }
 
     // Get values from this locator
     mem_value_t tmp_result;
     if (from_loc) {
-      loc->getValues(from_loc, tmp_result, value_type,
-                     ObjectLocator::FUNC_LEVEL_UNDEFINED, true);
+      loc->getValues(from_loc, point_to_item.second, tmp_result, value_type,
+                     func_level, true, func_call_cache,
+                     is_include_func_summary);
     } else {
       // No program point: fall back to the coarse per-object stored-value cache
       // at this offset. This is conservative and avoids requiring dominance
       // info.
-      const int64_t off_key = offset + query_offset;
+      const int64_t off_key = PTGraph::composeOffset(offset, query_offset);
       auto &stored = obj->getStoredValues();
       auto it = stored.find(off_key);
       if (it != stored.end()) {
         for (Value *v : it->second) {
-          tmp_result.push_back(mem_value_item_t(nullptr, v));
+          tmp_result.push_back(
+              mem_value_item_t(point_to_item.second, nullptr, v));
         }
       }
 
       // If nothing known was stored, mirror ObjectLocator::getValues() default.
       if (tmp_result.empty()) {
-        tmp_result.push_back(mem_value_item_t(
-            nullptr, obj->isReallyAllocated() ? LocValue::UNDEF_VALUE
-                                              : LocValue::FREE_VARIABLE));
+        tmp_result.push_back(mem_value_item_t(point_to_item.second, nullptr,
+                                              obj->isReallyAllocated()
+                                                  ? LocValue::UNDEF_VALUE
+                                                  : LocValue::FREE_VARIABLE));
       }
     }
 
     result.insert(result.end(), tmp_result.begin(), tmp_result.end());
 
     // Track loaded values for load instructions
-    if (from_loc && (isa<LoadInst>(from_loc) || isa<CallBase>(from_loc))) {
+    if (is_maintain_load_map && from_loc &&
+        (isa<LoadInst>(from_loc) || isa<CallBase>(from_loc))) {
       Value *val = from_loc;
       if (isa<LoadInst>(from_loc))
         val = from_loc;
-      obj->getLoadedValues()[offset + query_offset].insert(val);
+      obj->getLoadedValues()[PTGraph::composeOffset(offset, query_offset)]
+          .insert(val);
     }
   }
 }
@@ -429,6 +570,8 @@ void PTGraph::performLoadLoadMatch() {
 
 const set<LoadInst *, llvm_cmp> &
 PTGraph::getAllLoadWithSameValue(LoadInst *load_inst) {
+  if (!load_category.count(load_inst))
+    performLoadLoadMatch();
   assert(load_category.count(load_inst));
   int idx = load_category[load_inst];
   return *load_category_collection[idx];
@@ -458,10 +601,10 @@ bool PTGraph::isSameValue(Value *ptr1, Instruction *pos1, Value *ptr2,
 
   // Check if all locations match
   set<ObjectLocator *, obj_loc_cmp> locs1, locs2;
-  for (auto *loc : iter1)
-    locs1.insert(loc->offsetBy(offset1));
-  for (auto *loc : iter2)
-    locs2.insert(loc->offsetBy(offset2));
+  for (auto &item : iter1)
+    locs1.insert(item.first->offsetBy(offset1));
+  for (auto &item : iter2)
+    locs2.insert(item.first->offsetBy(offset2));
 
   if (locs1 != locs2)
     return false;
@@ -508,8 +651,8 @@ int PTGraph::getObjectToCallApDepth(MemObject *obj, CallInst *call) {
       PTResult *pts_result = findPTResult(arg, false);
       if (pts_result) {
         PTResultIterator result_iter(pts_result, this);
-        for (auto *pt_loc : result_iter) {
-          MemObject *pt_obj = pt_loc->getObj();
+        for (auto &pt_item : result_iter) {
+          MemObject *pt_obj = pt_item.first->getObj();
           if (!cache.count(pt_obj)) {
             cache[pt_obj] = 1;
             frontier.insert(pt_obj);
@@ -545,15 +688,15 @@ int PTGraph::getObjectToCallApDepth(MemObject *obj, CallInst *call) {
         ObjectLocator *locator = frontier_obj->findLocator(offset, false);
         if (locator) {
           mem_value_t pt_values;
-          locator->getValues(call, pt_values);
+          locator->getValues(call, getEmptyCond(), pt_values);
 
           for (mem_value_item_t &value_item : pt_values) {
             Value *val = value_item.val;
             PTResult *pts_result = findPTResult(val, false);
             if (pts_result) {
               PTResultIterator result_iter(pts_result, this);
-              for (auto *pt_loc : result_iter) {
-                MemObject *pt_obj = pt_loc->getObj();
+              for (auto &pt_item : result_iter) {
+                MemObject *pt_obj = pt_item.first->getObj();
                 if (!cache.count(pt_obj)) {
                   cache[pt_obj] = frontier_depth + 1;
                   new_frontier.insert(pt_obj);
@@ -584,3 +727,408 @@ int PTGraph::getObjectToCallApDepth(MemObject *obj, CallInst *call) {
 }
 
 const DataLayout &PTGraph::getDL() { return lotus_aa->getDataLayout(); }
+
+path_cond_t PTGraph::internCond(std::unique_ptr<PathCond> cond) {
+  const auto &summary = cond->getConstraintSummary();
+  auto it = formula_cond_cache_.find(summary);
+  if (it != formula_cond_cache_.end())
+    return it->second;
+
+  path_cond_t raw = cond.get();
+  formula_cond_cache_.emplace(summary, raw);
+  cond_nodes_.push_back(std::move(cond));
+  return raw;
+}
+
+path_cond_t PTGraph::getEmptyCond() {
+  if (!true_cond_) {
+    true_cond_ = internCond(std::unique_ptr<PathCond>(PathCond::createTrue()));
+  }
+  return true_cond_;
+}
+
+path_cond_t PTGraph::getFalseCond() {
+  if (!false_cond_) {
+    false_cond_ =
+        internCond(std::unique_ptr<PathCond>(PathCond::createFalse()));
+  }
+  return false_cond_;
+}
+
+bool PTGraph::isAlwaysSatisfied(path_cond_t cond) const {
+  if (!cond)
+    return true;
+  return cond->getConstraintSummary().always_true;
+}
+
+bool PTGraph::isSatisfiable(path_cond_t cond) const {
+  if (!cond)
+    return true;
+  return !cond->getConstraintSummary().always_false;
+}
+
+bool PTGraph::isNoEffectFunction(Function *F) const {
+  return lotus_aa && F && lotus_aa->getSpecManager().isNoEffect(F);
+}
+
+path_cond_t PTGraph::getValueCond(Value *value, bool sense) {
+  if (!value)
+    return sense ? getEmptyCond() : getFalseCond();
+
+  if (auto *CI = dyn_cast<ConstantInt>(value)) {
+    bool is_true = CI->isOne();
+    return (is_true == sense) ? getEmptyCond() : getFalseCond();
+  }
+
+  auto key = make_pair(value, sense);
+  auto it = value_cond_cache_.find(key);
+  if (it != value_cond_cache_.end())
+    return it->second;
+
+  path_cond_t cond =
+      internCond(std::unique_ptr<PathCond>(PathCond::createValueAtom(value, sense)));
+  value_cond_cache_[key] = cond;
+  return cond;
+}
+
+path_cond_t PTGraph::getBlockCond(BasicBlock *BB) { return getUnitRegion(BB); }
+
+void PTGraph::buildControlDependenceInfo() {
+  if (control_dep_ready_)
+    return;
+
+  control_dep_cache_.clear();
+  unit_region_cache_.clear();
+
+  if (!post_dom_tree) {
+    control_dep_ready_ = true;
+    return;
+  }
+
+  for (BasicBlock &BB : *analyzed_func) {
+    BasicBlock *controller = &BB;
+    auto *controller_node = post_dom_tree->getNode(controller);
+    if (!controller_node)
+      continue;
+
+    for (BasicBlock *succ : successors(controller)) {
+      auto *succ_node = post_dom_tree->getNode(succ);
+      if (!succ_node)
+        continue;
+      if (post_dom_tree->dominates(controller, succ))
+        continue;
+
+      path_cond_t edge_cond = getCFGEdgeCond(controller, succ);
+      if (!isSatisfiable(edge_cond))
+        continue;
+
+      while (succ_node && succ_node != controller_node) {
+        BasicBlock *curr = succ_node->getBlock();
+        path_cond_t &curr_cond = control_dep_cache_[curr][controller];
+        curr_cond =
+            curr_cond ? findOrCreateOrRegion(curr_cond, edge_cond) : edge_cond;
+        succ_node = succ_node->getIDom();
+      }
+    }
+  }
+
+  control_dep_ready_ = true;
+}
+
+path_cond_t PTGraph::getCFGEdgeCond(BasicBlock *src_bb, BasicBlock *succ_bb) {
+  if (!src_bb || !succ_bb)
+    return getFalseCond();
+
+  auto key = make_pair(src_bb, succ_bb);
+  auto it = edge_cond_cache_.find(key);
+  if (it != edge_cond_cache_.end())
+    return it->second;
+
+  path_cond_t cond = getEmptyCond();
+  Instruction *term = src_bb->getTerminator();
+  if (auto *br = dyn_cast<BranchInst>(term)) {
+    if (br->isConditional()) {
+      bool sense = succ_bb == br->getSuccessor(0);
+      cond = internCond(std::unique_ptr<PathCond>(
+          PathCond::createBranchAtom(src_bb, succ_bb, br->getCondition(), sense)));
+    }
+  } else if (auto *sw = dyn_cast<SwitchInst>(term)) {
+    path_cond_t edge_cond = nullptr;
+    for (const auto &case_it : sw->cases()) {
+      if (case_it.getCaseSuccessor() != succ_bb)
+        continue;
+      path_cond_t case_cond = internCond(std::unique_ptr<PathCond>(
+          PathCond::createSwitchCaseAtom(src_bb, succ_bb, sw->getCondition(),
+                                         case_it.getCaseValue())));
+      edge_cond =
+          edge_cond ? findOrCreateOrRegion(edge_cond, case_cond) : case_cond;
+    }
+
+    if (sw->getDefaultDest() == succ_bb) {
+      path_cond_t default_cond = internCond(std::unique_ptr<PathCond>(
+          PathCond::createSwitchDefaultAtom(src_bb, succ_bb,
+                                            sw->getCondition())));
+      edge_cond = edge_cond ? findOrCreateOrRegion(edge_cond, default_cond)
+                            : default_cond;
+    }
+
+    cond = edge_cond ? edge_cond : getFalseCond();
+  } else if (auto *invoke = dyn_cast<InvokeInst>(term)) {
+    if (invoke->getNormalDest() == succ_bb) {
+      cond = internCond(std::unique_ptr<PathCond>(
+          PathCond::createInvokeNormalAtom(src_bb, succ_bb)));
+    } else if (invoke->getUnwindDest() == succ_bb) {
+      cond = internCond(std::unique_ptr<PathCond>(
+          PathCond::createInvokeUnwindAtom(src_bb, succ_bb)));
+    } else {
+      cond = getFalseCond();
+    }
+  }
+
+  edge_cond_cache_[key] = cond;
+  return cond;
+}
+
+path_cond_t PTGraph::localizePathCond(path_cond_t cond) {
+  if (!cond)
+    return getEmptyCond();
+  if (cond->getOwnerFunc() == nullptr || cond->getOwnerFunc() == analyzed_func)
+    return cond;
+  return importPathCond(cond, nullptr, nullptr);
+}
+
+path_cond_t PTGraph::getComplementaryBranchCond(path_cond_t cond) {
+  if (!cond || cond->getKind() != PathCond::Kind::BranchAtom)
+    return nullptr;
+
+  BasicBlock *block = cond->getBlock();
+  BasicBlock *succ = cond->getSuccessor();
+  auto *br =
+      block ? dyn_cast_or_null<BranchInst>(block->getTerminator()) : nullptr;
+  if (!br || !br->isConditional() || br->getNumSuccessors() != 2)
+    return nullptr;
+
+  BasicBlock *other_succ =
+      (succ == br->getSuccessor(0)) ? br->getSuccessor(1) : br->getSuccessor(0);
+  if (!other_succ || other_succ == succ)
+    return nullptr;
+  return getCFGEdgeCond(block, other_succ);
+}
+
+path_cond_t PTGraph::getUnitRegion(BasicBlock *BB) {
+  if (!BB)
+    return getEmptyCond();
+
+  buildControlDependenceInfo();
+
+  auto cache_it = unit_region_cache_.find(BB);
+  if (cache_it != unit_region_cache_.end())
+    return cache_it->second;
+
+  path_cond_t result = getEmptyCond();
+  auto dep_it = control_dep_cache_.find(BB);
+  if (dep_it != control_dep_cache_.end()) {
+    bool has_dep = false;
+    for (auto &dep_item : dep_it->second) {
+      path_cond_t dep_region = getUnitRegion(dep_item.first);
+      path_cond_t dep_cond = findOrCreateAndRegion(dep_region, dep_item.second);
+      result = has_dep ? findOrCreateOrRegion(result, dep_cond) : dep_cond;
+      has_dep = true;
+    }
+  }
+
+  unit_region_cache_[BB] = result;
+  return result;
+}
+
+path_cond_t PTGraph::findOrCreateBBRegion(BasicBlock *src_bb,
+                                          BasicBlock *target_bb) {
+  if (!src_bb || !target_bb)
+    return getFalseCond();
+  if (src_bb == target_bb)
+    return getEmptyCond();
+
+  auto src_it = bb_region_cache.find(src_bb);
+  if (src_it != bb_region_cache.end()) {
+    auto target_it = src_it->second.find(target_bb);
+    if (target_it != src_it->second.end())
+      return target_it->second;
+  }
+
+  if (dom_tree && !dom_tree->dominates(src_bb, target_bb)) {
+    bb_region_cache[src_bb][target_bb] = getFalseCond();
+    return getFalseCond();
+  }
+
+  buildControlDependenceInfo();
+
+  path_cond_t result = getEmptyCond();
+  bool has_dep = false;
+  auto dep_it = control_dep_cache_.find(target_bb);
+  if (dep_it != control_dep_cache_.end()) {
+    for (auto &dep_item : dep_it->second) {
+      BasicBlock *dep_bb = dep_item.first;
+      if (dep_bb != src_bb && dom_tree && !dom_tree->dominates(src_bb, dep_bb))
+        continue;
+
+      path_cond_t dep_region = (dep_bb == src_bb)
+                                   ? getEmptyCond()
+                                   : findOrCreateBBRegion(src_bb, dep_bb);
+      path_cond_t dep_cond = findOrCreateAndRegion(dep_region, dep_item.second);
+      result = has_dep ? findOrCreateOrRegion(result, dep_cond) : dep_cond;
+      has_dep = true;
+    }
+  }
+
+  bb_region_cache[src_bb][target_bb] = result;
+  return result;
+}
+
+path_cond_t PTGraph::importPathCond(path_cond_t cond, Value *callsite,
+                                    Function *callee) {
+  if (!cond)
+    return getEmptyCond();
+  if (cond->getOwnerFunc() == analyzed_func || cond->getOwnerFunc() == nullptr)
+    return cond;
+  if (isAlwaysSatisfied(cond))
+    return getEmptyCond();
+  if (!isSatisfiable(cond))
+    return getFalseCond();
+
+  auto it = imported_cond_cache_.find(cond);
+  if (it != imported_cond_cache_.end())
+    return it->second;
+
+  path_cond_t imported = internCond(std::unique_ptr<PathCond>(
+      PathCond::createImportedAtom(analyzed_func, cond)));
+  imported_cond_cache_[cond] = imported;
+  return imported;
+}
+
+path_cond_t PTGraph::getCallTargetCond(Value *called_value, Function *callee) {
+  if (!called_value || !callee)
+    return getEmptyCond();
+
+  auto key = make_pair(called_value, callee);
+  auto it = call_target_cond_cache_.find(key);
+  if (it != call_target_cond_cache_.end())
+    return it->second;
+
+  path_cond_t cond = internCond(std::unique_ptr<PathCond>(
+      PathCond::createCallTargetAtom(called_value, callee)));
+  call_target_cond_cache_[key] = cond;
+  return cond;
+}
+
+path_cond_t PTGraph::findOrCreateAndRegion(path_cond_t lhs, path_cond_t rhs) {
+  if (!lhs)
+    lhs = getEmptyCond();
+  if (!rhs)
+    rhs = getEmptyCond();
+  lhs = localizePathCond(lhs);
+  rhs = localizePathCond(rhs);
+  if (!isSatisfiable(lhs) || !isSatisfiable(rhs))
+    return getFalseCond();
+  if (isAlwaysSatisfied(lhs))
+    return rhs;
+  if (isAlwaysSatisfied(rhs))
+    return lhs;
+  if (lhs == rhs)
+    return lhs;
+
+  auto key = canonicalCondPair(lhs, rhs);
+  auto it = and_cond_cache_.find(key);
+  if (it != and_cond_cache_.end())
+    return it->second;
+
+  path_cond_t cond =
+      internCond(std::unique_ptr<PathCond>(PathCond::createAnd(key.first, key.second)));
+  and_cond_cache_[key] = cond;
+  return cond;
+}
+
+path_cond_t PTGraph::findOrCreateOrRegion(path_cond_t lhs, path_cond_t rhs) {
+  if (!lhs)
+    lhs = getEmptyCond();
+  if (!rhs)
+    rhs = getEmptyCond();
+  lhs = localizePathCond(lhs);
+  rhs = localizePathCond(rhs);
+  if (isAlwaysSatisfied(lhs) || isAlwaysSatisfied(rhs))
+    return getEmptyCond();
+  if (!isSatisfiable(lhs))
+    return rhs;
+  if (!isSatisfiable(rhs))
+    return lhs;
+  if (lhs == rhs)
+    return lhs;
+
+  auto key = canonicalCondPair(lhs, rhs);
+  auto it = or_cond_cache_.find(key);
+  if (it != or_cond_cache_.end())
+    return it->second;
+
+  path_cond_t cond =
+      internCond(std::unique_ptr<PathCond>(PathCond::createOr(key.first, key.second)));
+  or_cond_cache_[key] = cond;
+  return cond;
+}
+
+path_cond_t PTGraph::findOrCreateNotRegion(path_cond_t cond) {
+  if (!cond)
+    return getFalseCond();
+  cond = localizePathCond(cond);
+  if (isAlwaysSatisfied(cond))
+    return getFalseCond();
+  if (!isSatisfiable(cond))
+    return getEmptyCond();
+  if (cond->getKind() == PathCond::Kind::ValueAtom)
+    return getValueCond(cond->getValue(), !cond->getSense());
+  if (cond->getKind() == PathCond::Kind::BranchAtom) {
+    if (path_cond_t complement = getComplementaryBranchCond(cond))
+      return complement;
+  }
+  if (cond->getKind() == PathCond::Kind::Not)
+    return cond->getLhs() ? cond->getLhs() : getEmptyCond();
+
+  auto it = not_cond_cache_.find(cond);
+  if (it != not_cond_cache_.end())
+    return it->second;
+
+  path_cond_t neg =
+      internCond(std::unique_ptr<PathCond>(PathCond::createNot(cond)));
+  not_cond_cache_[cond] = neg;
+  return neg;
+}
+
+path_cond_t PTGraph::findOrCreateUnitPhiRegion(BasicBlock *cur_bb,
+                                               BasicBlock *incoming_bb) {
+  auto cache_it = phi_region_cache.find(cur_bb);
+  if (cache_it != phi_region_cache.end()) {
+    auto cond_it = cache_it->second.find(incoming_bb);
+    if (cond_it != cache_it->second.end())
+      return cond_it->second;
+  }
+
+  path_cond_t cond = getEmptyCond();
+  if (incoming_bb) {
+    if (IntraLotusAAConfig::lotus_use_full_phi_cond) {
+      cond = getUnitRegion(incoming_bb);
+    } else {
+      BasicBlock *dom_bb = nullptr;
+      if (dom_tree) {
+        if (DomTreeNode *sink_node = dom_tree->getNode(cur_bb)) {
+          if (DomTreeNode *idom_node = sink_node->getIDom())
+            dom_bb = idom_node->getBlock();
+        }
+      }
+
+      cond = dom_bb ? findOrCreateBBRegion(dom_bb, incoming_bb)
+                    : getUnitRegion(incoming_bb);
+    }
+
+    cond = findOrCreateAndRegion(cond, getCFGEdgeCond(incoming_bb, cur_bb));
+  }
+  phi_region_cache[cur_bb][incoming_bb] = cond;
+  return cond;
+}

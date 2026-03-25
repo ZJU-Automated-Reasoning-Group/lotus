@@ -2,6 +2,23 @@
 
 C++/LLVM port of **Ultimate Library-Sifa** (Symbolic Interpretation with Fluid Abstractions) for lotus, aligned with `ultimate-0.3.1/trunk/source/Library-Sifa`.
 
+## Algorithm overview
+
+Sifa implements the symbolic interpretation engine described in:
+
+> *D. Dietsch, M. Heizmann, A. Nutz, C. Schätzle, F. Schüssele. Ultimate Taipan with Symbolic Interpretation and Fluid Abstractions (Competition Contribution). TACAS 2020, LNCS 12079, pp. 418–422.*
+
+The approach is inspired by **Algebraic Program Analysis** (Tarjan, Brzozowski) and **Logical Interpretation** (Tiwari & Gulwani). It consists of two main components:
+
+1. **ICFG interpreter** — For a (partial) ICFG and a subset of program locations (LOIs), generates path expressions represented as **RegexDAGs**. A RegexDAG is a directed acyclic graph whose vertices are labeled with regular expressions over transitions (with summary and enter statements for interprocedural paths). Each RegexDAG has a sink representing a location of interest.
+
+2. **DAG interpreter** — Analyzes a RegexDAG in topological order by applying three operators:
+   - **Post operator** — Computes strongest postcondition for star-free regular expressions; optionally applies an abstraction function (controlled by fluids).
+   - **Call summarization** — Computes a summary for procedure calls (with or without context).
+   - **Loop summarization** — Computes a summary for the Kleene-star operator via fixpoint iteration, resolving nested loops by recursively inserting summaries.
+
+When a vertex has multiple incoming edges, the input states are joined (logical disjunction). The **fluid** abstraction policy decides when to apply abstraction to avoid blow-up; different heuristics (NeverFluid, SizeLimitFluid, etc.) can be swapped.
+
 ## Abstract domains (include/Verification/Sifa/Domain/)
 
 Domain implementations are Ultimate-aligned and follow the same roles as in Ultimate's Library-Sifa and Sifa plugin.
@@ -39,13 +56,13 @@ switch (options.domainKind) {
 
 ## Bitcode Support (C/C++ roadmap)
 
-The primary “real LLVM IR” entry point is `lotus::sifa::analyzeSymAbs*()` (see `include/Verification/Sifa/SifaSymAbs.h`), which runs Sifa with a SymbolicAbstraction-backed abstract domain.
+The primary “real LLVM IR” entry point is `lotus::sifa::analyzeSymAbs*()` (see `include/Verification/Sifa/SifaSymAbs.h`), which runs Sifa with a SymAbsAI-backed abstract domain.
 
 ### Supported subset (strict mode)
 
 By default, `SifaSymAbsOptions::validateLlvmSubset` is enabled. The current *well-defined* supported subset is:
 
-- LLVM IR compatible with lotus’ LLVM build (SymbolicAbstraction currently targets LLVM 14).
+- LLVM IR compatible with lotus’ LLVM build (SymAbsAI currently targets LLVM 14).
 - Scalar integers (`i1`…`i64`) and pointers.
 - Control-flow: `br`, `switch`, `phi`, `select`, `ret`.
 - Scalar ops: integer arith/bitwise (`add/sub/mul/div/rem/shifts/and/or/xor`), casts (`zext/sext/trunc`, `ptrtoint/inttoptr/bitcast`), `icmp`.

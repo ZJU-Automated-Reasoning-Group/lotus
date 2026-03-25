@@ -226,7 +226,7 @@ Compile and Analyze
 .. code-block:: bash
 
    clang -emit-llvm -c -g nullpointer.c -o nullpointer.bc
-   ./build/bin/lotus-gvfa -vuln-type=nullpointer -verbose nullpointer.bc
+   ./build/bin/lotus-pulse -v nullpointer.bc
 
 Expected Output
 ~~~~~~~~~~~~~~~

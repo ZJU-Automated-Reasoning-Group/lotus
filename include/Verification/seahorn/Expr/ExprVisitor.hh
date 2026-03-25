@@ -237,7 +237,10 @@ inline void clearDagVisitCache(DagVisitCache &cache) {
 }
 
 template <typename ExprVisitor>
-struct DagVisit : public std::unary_function<Expr, Expr> {
+struct DagVisit {
+  using argument_type = Expr;
+  using result_type = Expr;
+
   ExprVisitor &m_v;
   DagVisitCache m_cache;
 
@@ -305,7 +308,10 @@ template <typename ExprVisitor> Expr treeVisit(ExprVisitor &v, Expr expr) {
 namespace expr {
 namespace {
 template <typename T>
-struct RW : public std::unary_function<Expr, VisitAction> {
+struct RW {
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   std::shared_ptr<T> _r;
 
   typedef RW<T> this_type;
@@ -328,7 +334,10 @@ template <typename T> Expr rewrite(std::shared_ptr<T> r, Expr e) {
 namespace {
 
 template <typename F, typename OutputIterator>
-struct FV : public std::unary_function<Expr, VisitAction> {
+struct FV {
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   F filter;
 
   OutputIterator out;
@@ -395,7 +404,10 @@ template <typename F> struct fn_map {
 };
 
 template <typename M>
-struct RV : public std::unary_function<Expr, VisitAction> {
+struct RV {
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   typedef typename M::const_iterator const_iterator;
 
   const M &map;

@@ -54,7 +54,7 @@ void AddBranchSentinelPass::augmentBranchInstWithSentinel(BranchInst &BI,
   // -- a hack to locate a near-by debug location
   if (BI.getDebugLoc())
     ci->setDebugLoc(BI.getDebugLoc());
-  else if (auto condInst = dyn_cast<Instruction>(BI.getCondition())) {
+  else if (auto *condInst = dyn_cast<Instruction>(BI.getCondition())) {
     ci->setDebugLoc(condInst->getDebugLoc());
   }
 }

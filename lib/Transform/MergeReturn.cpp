@@ -35,9 +35,22 @@
 bool unifyReturnBlocks(Function &F) {
   std::vector<BasicBlock *> ReturningBlocks;
 
-  for (BasicBlock &I : F)
+  for (BasicBlock &I : F) {
     if (isa<ReturnInst>(I.getTerminator()))
       ReturningBlocks.push_back(&I);
+
+    // musttail requires call to be immediately followed by ret in the same
+    // block. Merging returns would violate this invariant.
+    if (auto *RI = dyn_cast<ReturnInst>(I.getTerminator())) {
+      (void)RI;
+      if (Instruction *Prev = I.getTerminator()->getPrevNonDebugInstruction()) {
+        if (auto *CI = dyn_cast<CallInst>(Prev)) {
+          if (CI->isMustTailCall())
+            return false;
+        }
+      }
+    }
+  }
 
   if (ReturningBlocks.size() <= 1)
     return false;
@@ -76,7 +89,7 @@ bool unifyReturnBlocks(Function &F) {
 
 // New Pass Manager entry point. Applies return unification to all defined
 // functions.
-PreservedAnalyses MergeReturnPass::run(Module &M, ModuleAnalysisManager &MAM) {
+PreservedAnalyses MergeReturnPass::run(Module &M, ModuleAnalysisManager &) {
   bool Changed = false;
   for (auto &F : M) {
     if (F.isDeclaration())

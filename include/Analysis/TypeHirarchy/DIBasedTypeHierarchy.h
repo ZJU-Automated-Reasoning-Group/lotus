@@ -10,15 +10,15 @@
 #ifndef LOTUS_ANALYSIS_TYPEHIERARCHY_DIBASEDTYPEHIERARCHY_H
 #define LOTUS_ANALYSIS_TYPEHIERARCHY_DIBASEDTYPEHIERARCHY_H
 
-#include "Analysis/TypeHirarchy/DIBasedTypeHierarchyData.h"
-#include "Analysis/TypeHirarchy/LLVMVFTable.h"
-#include "Analysis/TypeHirarchy/TypeHierarchy.h"
-
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/Casting.h"
+
+#include "Analysis/TypeHirarchy/DIBasedTypeHierarchyData.h"
+#include "Analysis/TypeHirarchy/LLVMVFTable.h"
+#include "Analysis/TypeHirarchy/TypeHierarchy.h"
 
 #include <deque>
 

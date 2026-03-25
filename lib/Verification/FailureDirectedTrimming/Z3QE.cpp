@@ -1,18 +1,19 @@
-// Optional quantifier elimination for trimming conditions (paper §6 Eliminating quantifiers).
-// Negation of safety conditions yields ∃ from ∀ (havoc); Z3 QE eliminates existentials
-// to reduce nondeterminism in inserted assume conditions.
+// Optional quantifier elimination for trimming conditions (paper §6 Eliminating
+// quantifiers). Negation of safety conditions yields ∃ from ∀ (havoc); Z3 QE
+// eliminates existentials to reduce nondeterminism in inserted assume
+// conditions.
 #include "FailureDirectedTrimmingImpl.h"
-
-#include <llvm/IR/DerivedTypes.h>
-#include <llvm/IR/LLVMContext.h>
-
-#include <z3++.h>
 
 #include <stdexcept>
 
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/LLVMContext.h>
+#include <z3++.h>
+
 using namespace llvm;
 
-// Z3-based QE: eliminate exists binders from trimming conditions (paper §6, first alternative).
+// Z3-based QE: eliminate exists binders from trimming conditions (paper §6,
+// first alternative).
 
 namespace {
 
@@ -52,7 +53,8 @@ struct Z3QESession {
   std::unordered_map<std::string, Z3UFInfo> UFInfo;
 
   explicit Z3QESession(const ExprFactory &EF, Module &Mod, Z3IntSemanticsKind S)
-      : F(EF), M(Mod), Ctx(), PtrSort(Ctx.uninterpreted_sort("Ptr")), IntSem(S) {}
+      : F(EF), M(Mod), Ctx(), PtrSort(Ctx.uninterpreted_sort("Ptr")),
+        IntSem(S) {}
 
   z3::sort sortOf(Type *Ty) {
     if (!Ty)
@@ -108,9 +110,9 @@ struct Z3QESession {
     auto It = UFDecls.find(Name);
     if (It != UFDecls.end())
       return It->second;
-    z3::func_decl D = Ctx.function(
-        Name.c_str(), static_cast<unsigned>(Args.size()),
-        const_cast<z3::sort *>(Args.data()), Ret);
+    z3::func_decl D =
+        Ctx.function(Name.c_str(), static_cast<unsigned>(Args.size()),
+                     const_cast<z3::sort *>(Args.data()), Ret);
     UFDecls.emplace(Name, D);
     UFInfo.emplace(Name, Info);
     return D;
@@ -175,8 +177,8 @@ struct Z3QESession {
             "fdtrim.band." + std::to_string(reinterpret_cast<uintptr_t>(E->Ty));
         Z3UFInfo Info;
         Info.K = Z3UFInfo::Kind::Cast; // UF is never decoded in math mode
-        z3::func_decl D = uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)},
-                             Info);
+        z3::func_decl D =
+            uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)}, Info);
         Out = D(A, B);
       } else {
         Out = z3::to_expr(Ctx, Z3_mk_bvand(Ctx, A, B));
@@ -191,8 +193,8 @@ struct Z3QESession {
             "fdtrim.bor." + std::to_string(reinterpret_cast<uintptr_t>(E->Ty));
         Z3UFInfo Info;
         Info.K = Z3UFInfo::Kind::Cast;
-        z3::func_decl D = uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)},
-                             Info);
+        z3::func_decl D =
+            uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)}, Info);
         Out = D(A, B);
       } else {
         Out = z3::to_expr(Ctx, Z3_mk_bvor(Ctx, A, B));
@@ -207,8 +209,8 @@ struct Z3QESession {
             "fdtrim.bxor." + std::to_string(reinterpret_cast<uintptr_t>(E->Ty));
         Z3UFInfo Info;
         Info.K = Z3UFInfo::Kind::Cast;
-        z3::func_decl D = uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)},
-                             Info);
+        z3::func_decl D =
+            uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)}, Info);
         Out = D(A, B);
       } else {
         Out = z3::to_expr(Ctx, Z3_mk_bvxor(Ctx, A, B));
@@ -223,8 +225,8 @@ struct Z3QESession {
             "fdtrim.shl." + std::to_string(reinterpret_cast<uintptr_t>(E->Ty));
         Z3UFInfo Info;
         Info.K = Z3UFInfo::Kind::Cast;
-        z3::func_decl D = uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)},
-                             Info);
+        z3::func_decl D =
+            uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)}, Info);
         Out = D(A, B);
       } else {
         Out = z3::to_expr(Ctx, Z3_mk_bvshl(Ctx, A, B));
@@ -239,8 +241,8 @@ struct Z3QESession {
             "fdtrim.lshr." + std::to_string(reinterpret_cast<uintptr_t>(E->Ty));
         Z3UFInfo Info;
         Info.K = Z3UFInfo::Kind::Cast;
-        z3::func_decl D = uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)},
-                             Info);
+        z3::func_decl D =
+            uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)}, Info);
         Out = D(A, B);
       } else {
         Out = z3::to_expr(Ctx, Z3_mk_bvlshr(Ctx, A, B));
@@ -255,8 +257,8 @@ struct Z3QESession {
             "fdtrim.ashr." + std::to_string(reinterpret_cast<uintptr_t>(E->Ty));
         Z3UFInfo Info;
         Info.K = Z3UFInfo::Kind::Cast;
-        z3::func_decl D = uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)},
-                             Info);
+        z3::func_decl D =
+            uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)}, Info);
         Out = D(A, B);
       } else {
         Out = z3::to_expr(Ctx, Z3_mk_bvashr(Ctx, A, B));
@@ -271,8 +273,8 @@ struct Z3QESession {
             "fdtrim.udiv." + std::to_string(reinterpret_cast<uintptr_t>(E->Ty));
         Z3UFInfo Info;
         Info.K = Z3UFInfo::Kind::Cast;
-        z3::func_decl D = uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)},
-                             Info);
+        z3::func_decl D =
+            uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)}, Info);
         Out = D(A, B);
       } else {
         Out = z3::to_expr(Ctx, Z3_mk_bvudiv(Ctx, A, B));
@@ -287,8 +289,8 @@ struct Z3QESession {
             "fdtrim.sdiv." + std::to_string(reinterpret_cast<uintptr_t>(E->Ty));
         Z3UFInfo Info;
         Info.K = Z3UFInfo::Kind::Cast;
-        z3::func_decl D = uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)},
-                             Info);
+        z3::func_decl D =
+            uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)}, Info);
         Out = D(A, B);
       } else {
         Out = z3::to_expr(Ctx, Z3_mk_bvsdiv(Ctx, A, B));
@@ -303,8 +305,8 @@ struct Z3QESession {
             "fdtrim.urem." + std::to_string(reinterpret_cast<uintptr_t>(E->Ty));
         Z3UFInfo Info;
         Info.K = Z3UFInfo::Kind::Cast;
-        z3::func_decl D = uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)},
-                             Info);
+        z3::func_decl D =
+            uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)}, Info);
         Out = D(A, B);
       } else {
         Out = z3::to_expr(Ctx, Z3_mk_bvurem(Ctx, A, B));
@@ -319,8 +321,8 @@ struct Z3QESession {
             "fdtrim.srem." + std::to_string(reinterpret_cast<uintptr_t>(E->Ty));
         Z3UFInfo Info;
         Info.K = Z3UFInfo::Kind::Cast;
-        z3::func_decl D = uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)},
-                             Info);
+        z3::func_decl D =
+            uf(Name, sortOf(E->Ty), {sortOf(E->Ty), sortOf(E->Ty)}, Info);
         Out = D(A, B);
       } else {
         Out = z3::to_expr(Ctx, Z3_mk_bvsrem(Ctx, A, B));
@@ -407,8 +409,9 @@ struct Z3QESession {
       break;
     }
     case ExprKind::Deref: {
-      std::string Name = "fdtrim.drf." +
-                         std::to_string(reinterpret_cast<uintptr_t>(E->DerefValueTy));
+      std::string Name =
+          "fdtrim.drf." +
+          std::to_string(reinterpret_cast<uintptr_t>(E->DerefValueTy));
       Z3UFInfo Info;
       Info.K = Z3UFInfo::Kind::Drf;
       Info.RetTy = E->DerefValueTy;
@@ -417,9 +420,9 @@ struct Z3QESession {
       break;
     }
     case ExprKind::Cast: {
-      std::string Name = "fdtrim.cast." +
-                         std::to_string(static_cast<unsigned>(E->CastOp)) + "." +
-                         std::to_string(reinterpret_cast<uintptr_t>(E->Ty));
+      std::string Name =
+          "fdtrim.cast." + std::to_string(static_cast<unsigned>(E->CastOp)) +
+          "." + std::to_string(reinterpret_cast<uintptr_t>(E->Ty));
       Z3UFInfo Info;
       Info.K = Z3UFInfo::Kind::Cast;
       Info.RetTy = E->Ty;
@@ -659,7 +662,7 @@ struct Z3QESession {
 } // namespace
 
 ExprRef tryEliminateExistsByZ3QE(const ExprFactory &F, Module &M,
-                                  const ExprRef &TrimCond) {
+                                 const ExprRef &TrimCond) {
   if (!TrimCond)
     return nullptr;
 
@@ -674,7 +677,7 @@ ExprRef tryEliminateExistsByZ3QE(const ExprFactory &F, Module &M,
     z3::params P(S.Ctx);
     P.set("timeout", FDTrimQETTimeoutMs);
 
-    z3::tactic QE(S.Ctx, "qe");    
+    z3::tactic QE(S.Ctx, "qe");
     // z3::tactic QE(S.Ctx, "qe2");
     QE = z3::with(QE, P);
     z3::apply_result R = QE(G);

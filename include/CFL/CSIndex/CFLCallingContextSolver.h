@@ -2,10 +2,9 @@
 
 #include <cassert>
 #include <cstddef>
-//#include <unordered_map>
-//#include <unordered_set>
+// #include <unordered_map>
+// #include <unordered_set>
 #include <vector>
-
 
 /// A parenthesis is represented as a non-zero integer. A left-parenthesis
 /// is a positive integer and a right-parenthesis is a negative integer.

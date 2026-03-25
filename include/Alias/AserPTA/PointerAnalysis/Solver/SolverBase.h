@@ -353,6 +353,12 @@ public:
         PT::clearAll();
     }
 
+    /// Expose language model for clients outside the solver (e.g., SVFGBuilder).
+    /// This is read-only access; mutating the model from outside is unsupported.
+    [[nodiscard]] inline LangModel *getLangModelForClients() const {
+        return langModel.get();
+    }
+
     // analyze the give module with specified entry function
     bool analyze(llvm::Module *module, llvm::StringRef entry = "main") {
         assert(langModel == nullptr && "can not run pointer analysis twice");

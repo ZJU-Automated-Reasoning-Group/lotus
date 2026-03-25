@@ -7,13 +7,67 @@ TPA is an **inclusion-based**, **flow- and context-sensitive** pointer analysis 
 - **Flow-sensitivity**: Respects program order and control flow
 - **Context-sensitivity**: Distinguishes different calling contexts (with k-limiting support)
 - **Semi-sparse representation**: Only analyzes relevant program points (def-use chains)
-- **Field-sensitive memory model**: Tracks memory objects at the field/element level
+- **Type/offset-aware memory model**: Tracks objects with field/offset precision,
+  with conservative summarization in cases such as arrays
 
 ## Architecture
 
 ```
 LLVM IR → IR Transforms → Front-End Processing → Global Initialization → Semi-Sparse Analysis → Points-to Sets
 ```
+
+## End-to-End Pipeline (What Happens Internally)
+
+1. **IR normalization (`Transforms/`)**
+   - Canonicalizes pointer-relevant IR forms (e.g., GEP/constant expr/byval/indirectbr)
+   - Reduces edge cases so transfer functions operate on a smaller instruction surface
+
+2. **Program construction (`FrontEnd/`, `Program/`)**
+   - Builds `SemiSparseProgram` and per-function `CFG`
+   - Keeps only pointer-relevant flow edges (`uses`/`succs`) for sparse propagation
+   - Collects type/layout metadata (`TypeMap`, `PointerLayoutMap`, `ArrayLayoutMap`)
+
+3. **Global bootstrap (`Analysis/GlobalPointerAnalysis`)**
+   - Creates abstract pointers/objects for globals and functions
+   - Seeds universal/null roots
+   - Evaluates nested global initializers into initial `Env`/`Store`
+
+4. **Fixpoint propagation (`Engine/`)**
+   - `Initializer` seeds entry point + argv/envp roots
+   - `TransferFunction` evaluates node semantics
+   - `SemiSparsePropagator` updates `Memo` and worklist until convergence
+
+5. **Query/output (`Analysis/`, `Output/`)**
+   - Final top-level points-to queries are served from computed `Env`
+   - `Memo` stores per-program-point incoming `Store` states used during propagation
+   - Optional graph/text dumps for debugging and inspection
+
+## Core Abstract Domains
+
+- **`Env`**: top-level pointer bindings (`Pointer* -> PtsSet<MemoryObject*>`)
+- **`Store`**: memory-cell contents (`MemoryObject* -> PtsSet<MemoryObject*>`)
+- **`Memo`**: per-program-point incoming `Store` cache (join lattice)
+
+This split is central to TPA's semi-sparse design: top-level updates can flow
+without carrying store snapshots, while memory-level nodes join/propagate stores.
+
+## Non-Obvious Design Choices
+
+- **Two-level propagation**
+  - Top-level nodes (`Alloc/Copy/Offset`) mostly mutate `Env`
+  - Memory-level nodes (`Load/Store/Call/Ret`) consume and produce `Store`
+
+- **Conservative unknown handling**
+  - External/unknown pointer sources are mapped to `UniversalObject`
+  - Keeps soundness when full program information is unavailable
+
+- **Array modeling**
+  - Arrays are often treated in a collapsed fashion through memory offset/layout policy
+  - Precision/scale tradeoff is localized in memory-model helpers
+
+- **Context sensitivity via `ContextPolicy`**
+  - `KLimitContext` and `AdaptiveContext` provide controllable context growth
+  - Keeps recursion/call-chain explosion bounded
 
 ## Directory Structure
 
@@ -48,12 +102,13 @@ tpa [options] <input bitcode file>
 
 ```cpp
 SemiSparseProgramBuilder builder;
-auto ssProg = builder.build(module);
+auto ssProg = builder.runOnModule(module);
 
 SemiSparsePointerAnalysis analysis;
 analysis.runOnProgram(ssProg);
 
-auto ptsSet = analysis.getPtsSet(pointer);
+const llvm::Value *some_ptr_value = /* pointer-typed LLVM value */;
+auto ptsSet = analysis.getPtsSet(some_ptr_value);
 ```
 
 ## Analysis Characteristics
@@ -63,7 +118,7 @@ auto ptsSet = analysis.getPtsSet(pointer);
 | **Analysis Type** | Inclusion-based (Andersen-style) |
 | **Flow-Sensitive** | ✅ Yes |
 | **Context-Sensitive** | ✅ Yes (with k-limiting) |
-| **Field-Sensitive** | ✅ Yes (type-based) |
+| **Field-Sensitive** | Partial (type/offset-aware, arrays may be summarized) |
 | **Representation** | Semi-sparse |
 
 ## See Also

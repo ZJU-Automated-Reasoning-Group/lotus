@@ -23,16 +23,18 @@ public:
   void store(LocationT location, const StateT &state) override {
     auto res = map_.emplace(location, state);
     if (!res.second) {
-      throw std::logic_error("Tried to register predicate/state for LOI which already had one.");
+      throw std::logic_error(
+          "Tried to register predicate/state for LOI which already had one.");
     }
   }
 
   const std::unordered_map<LocationT, StateT> &getMap() const { return map_; }
 
-  /// Ultimate-aligned: put default for each location not yet stored; return map.
+  /// Ultimate-aligned: put default for each location not yet stored; return
+  /// map.
   template <typename Container>
-  const std::unordered_map<LocationT, StateT> &addDefaultsAndGetMap(const Container &locations,
-                                                                      const StateT &defaultState) {
+  const std::unordered_map<LocationT, StateT> &
+  addDefaultsAndGetMap(const Container &locations, const StateT &defaultState) {
     for (const LocationT &loc : locations)
       map_.emplace(loc, defaultState);
     return map_;
@@ -55,10 +57,12 @@ private:
 } // namespace sifa
 } // namespace lotus
 
-#include "Verification/Sifa/SifaSymAbs.h"
 #include "llvm/IR/BasicBlock.h"
-extern template class lotus::sifa::MapBasedStorage<const llvm::BasicBlock *, bool>;
-extern template class lotus::sifa::MapBasedStorage<const llvm::BasicBlock *, lotus::sifa::SymAbsState>;
+
+#include "Verification/Sifa/SifaSymAbs.h"
+extern template class lotus::sifa::MapBasedStorage<const llvm::BasicBlock *,
+                                                   bool>;
+extern template class lotus::sifa::MapBasedStorage<const llvm::BasicBlock *,
+                                                   lotus::sifa::SymAbsState>;
 
 #endif // LOTUS_VERIFICATION_SIFA_STORAGE_MAPBASEDSTORAGE_H
-

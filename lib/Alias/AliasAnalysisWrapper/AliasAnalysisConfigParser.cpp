@@ -75,13 +75,15 @@ std::string toLower(const std::string &str) {
  * - "underapprox" -> UnderApprox()
  * 
  * @param str String representation of the alias analysis configuration
- * @param fallback Default configuration to return if the string is unknown
- *                 (defaults to SparrowAA_NoCtx())
+ * @param fallback Configuration to return if the string is unknown - MUST be explicitly specified.
+ *                 This ensures users are aware of what fallback analysis will be used.
  * @return AAConfig corresponding to the string, or fallback if the string
  *         is not recognized
  * 
  * @note Matching is case-insensitive
  * @note If the string is empty or unrecognized, returns the fallback config
+ * @note The fallback parameter is required - there is no default. This ensures
+ *       users explicitly choose what analysis to use when parsing fails.
  * @note For TPA, supports parsing custom k-CFA levels from strings like
  *       "tpa-5" or "tpa-5cfa" to create TPA_KCFA(5)
  * @note This function is designed for command-line tools and configuration
@@ -89,15 +91,15 @@ std::string toLower(const std::string &str) {
  * 
  * @example
  * ```cpp
- * // Parse common formats
- * auto config1 = parseAAConfigFromString("andersen-1cfa");
- * auto config2 = parseAAConfigFromString("tpa-2cfa");
- * auto config3 = parseAAConfigFromString("dyck");
+ * // Parse common formats - fallback MUST be explicitly specified
+ * auto config1 = parseAAConfigFromString("andersen-1cfa", AAConfig::SparrowAA_NoCtx());
+ * auto config2 = parseAAConfigFromString("tpa-2cfa", AAConfig::TPA_NoCtx());
+ * auto config3 = parseAAConfigFromString("dyck", AAConfig::DyckAA());
  * 
  * // Custom k-CFA for TPA
- * auto config4 = parseAAConfigFromString("tpa-5cfa");
+ * auto config4 = parseAAConfigFromString("tpa-5cfa", AAConfig::TPA_NoCtx());
  * 
- * // With fallback
+ * // With explicit fallback for unknown strings
  * auto config5 = parseAAConfigFromString("unknown", AAConfig::DyckAA());
  * ```
  */
@@ -132,6 +134,11 @@ AAConfig lotus::parseAAConfigFromString(const std::string &str, const AAConfig &
   }
   if (lower == "aser-pta-origin" || lower == "aserpta-origin") {
     return AAConfig::AserPTA_Origin();
+  }
+  
+  // DDA (demand-driven on SVFG)
+  if (lower == "dda" || lower == "demand-driven" || lower == "demanddriven") {
+    return AAConfig::DDA_NoCtx();
   }
   
   // TPA variants

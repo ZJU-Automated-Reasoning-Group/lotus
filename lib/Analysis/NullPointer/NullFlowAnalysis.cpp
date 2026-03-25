@@ -36,6 +36,7 @@
 #include "Analysis/NullPointer/API.h"
 #include "Utils/LLVM/RecursiveTimer.h"
 
+#include <limits>
 #include <llvm/IR/InstIterator.h>
 
 /**
@@ -47,6 +48,79 @@
 static cl::opt<int> IncrementalLimits(
     "nfa-limit", cl::init(10), cl::Hidden,
     cl::desc("Determine how many non-null edges we consider a round."));
+
+namespace lotus {
+namespace nullpointer {
+namespace testing {
+
+static int IncrementalLimitOverride = std::numeric_limits<int>::min();
+
+void setNullFlowIncrementalLimitOverrideForTesting(int Limit) {
+  IncrementalLimitOverride = Limit;
+}
+
+unsigned getNullFlowIncrementalLimitForTesting() {
+  if (IncrementalLimitOverride != std::numeric_limits<int>::min()) {
+    return IncrementalLimitOverride <= 0 ? UINT32_MAX
+                                         : static_cast<unsigned>(
+                                               IncrementalLimitOverride);
+  }
+  return IncrementalLimits <= 0 ? UINT32_MAX
+                                : static_cast<unsigned>(IncrementalLimits);
+}
+
+} // namespace testing
+} // namespace nullpointer
+} // namespace lotus
+
+namespace {
+
+bool hasGuaranteedNonNullReturn(const CallBase *CB) {
+  if (!CB || !CB->getType()->isPointerTy()) {
+    return false;
+  }
+  if (CB->hasRetAttr(Attribute::NonNull)) {
+    return true;
+  }
+  auto *Callee = CB->getCalledFunction();
+  return Callee && Callee->getAttributes().hasRetAttr(Attribute::NonNull);
+}
+
+bool isContextInsensitiveGuaranteedNonNullValue(Value *V) {
+  if (!V || !V->getType()->isPointerTy()) {
+    return false;
+  }
+  V = V->stripPointerCastsAndAliases();
+  if (isa<GlobalValue>(V)) {
+    return true;
+  }
+  if (auto *Arg = dyn_cast<Argument>(V)) {
+    return Arg->hasNonNullAttr();
+  }
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    if (API::isStackAllocate(I)) {
+      return true;
+    }
+    if (auto *CB = dyn_cast<CallBase>(I)) {
+      return hasGuaranteedNonNullReturn(CB);
+    }
+  }
+  return false;
+}
+
+} // namespace
+
+namespace lotus {
+namespace nullpointer {
+namespace testing {
+
+bool isContextInsensitiveGuaranteedNonNullValueForTesting(Value *V) {
+  return ::isContextInsensitiveGuaranteedNonNullValue(V);
+}
+
+} // namespace testing
+} // namespace nullpointer
+} // namespace lotus
 
 char NullFlowAnalysis::ID = 0;
 static RegisterPass<NullFlowAnalysis> X("nfa", "null value flow");
@@ -85,11 +159,8 @@ bool NullFlowAnalysis::runOnModule(Module &M) {
 
   // init may-null nodes
   auto MustNotNull = [this](Value *V) -> bool {
-    V = V->stripPointerCastsAndAliases();
-    if (isa<GlobalValue>(V))
+    if (isContextInsensitiveGuaranteedNonNullValue(V))
       return true;
-    if (auto *CI = dyn_cast<Instruction>(V))
-      return API::isMemoryAllocate(CI);
     return !DAA->mayNull(V);
   };
   std::set<DyckVFGNode *> MayNullNodes;
@@ -145,8 +216,9 @@ bool NullFlowAnalysis::runOnModule(Module &M) {
  */
 bool NullFlowAnalysis::recompute(std::set<Function *> &NewNonNullFunctions) {
   std::set<DyckVFGNode *> PossibleNonNullNodes;
-  unsigned K = 0,
-           Limits = IncrementalLimits < 0 ? UINT32_MAX : IncrementalLimits;
+  unsigned K = 0;
+  unsigned Limits =
+      lotus::nullpointer::testing::getNullFlowIncrementalLimitForTesting();
   for (auto &NIt : NewNonNullEdges) {
     auto EIt = NIt.second.begin();
     while (EIt != NIt.second.end()) {

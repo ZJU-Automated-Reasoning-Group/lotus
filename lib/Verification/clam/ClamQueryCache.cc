@@ -53,7 +53,7 @@ static const Instruction* getInstruction(statement_t &s) {
     var_t v = *(s.get_live().defs_begin());
     if (v.name().get()) {
       // The result of the cast can be null if llvm Value handler becomes invalid.
-      if (auto I = dyn_cast_or_null<const Instruction>(*(v.name().get()))) {
+      if (const auto *I = dyn_cast_or_null<const Instruction>(*(v.name().get()))) {
 	return I;
       }
     }
@@ -113,7 +113,7 @@ void ClamQueryCache::populateInstCache(const BasicBlock &BB, clam_abstract_domai
   const Function &fParent = *(BB.getParent());
   assert(m_crab_builder_man.hasCfg(fParent));
   auto &crabCfg = m_crab_builder_man.getCfg(fParent);
-  auto crabCfgBuilder = m_crab_builder_man.getCfgBuilder(fParent);
+  auto *crabCfgBuilder = m_crab_builder_man.getCfgBuilder(fParent);
   assert(crabCfgBuilder);
   auto &crabBB = crabCfg.get_node(crabCfgBuilder->getCrabBasicBlock(&BB));
   // Forward propagation through the basic block but ignoring
@@ -194,7 +194,7 @@ ConstantRange ClamQueryCache::range(const BasicBlock &BB, const Value &V,
       return getEmptyRange(bitwidth);
     }
     const Function &F = *(BB.getParent());
-    if (auto crabCfgBuilder = m_crab_builder_man.getCfgBuilder(F)) {
+    if (auto *crabCfgBuilder = m_crab_builder_man.getCfgBuilder(F)) {
       Optional<var_t> crabVar = crabCfgBuilder->getCrabVariable(V);
       if (crabVar.hasValue()) {
 	auto crabInterval = invAtEntry.getValue().at(crabVar.getValue());
@@ -219,7 +219,7 @@ void ClamQueryCache::populateTagCache(const BasicBlock &BB, clam_abstract_domain
   const Function &fParent = *(BB.getParent());
   assert(m_crab_builder_man.hasCfg(fParent));
   auto &crabCfg = m_crab_builder_man.getCfg(fParent);
-  auto crabCfgBuilder = m_crab_builder_man.getCfgBuilder(fParent);
+  auto *crabCfgBuilder = m_crab_builder_man.getCfgBuilder(fParent);
   assert(crabCfgBuilder);
   auto &crabBB = crabCfg.get_node(crabCfgBuilder->getCrabBasicBlock(&BB));
   // Forward propagation through the basic block but ignoring

@@ -12,82 +12,169 @@
 
 #ifndef UBIANALYSIS_CONFIG_H
 #define UBIANALYSIS_CONFIG_H
-#include "Alias/TypeQualifier/Common.h"
+#include "Alias/TypeQualifier/IntGlobal.h"
 
+#include <array>
 #include <stack>
-#define _ID 1
-#define _UD 0
-// Setup functions for heap allocations.
-static void SetHeapAllocFuncs(std::set<std::string> &HeapAllocFuncs) {
+enum class FunctionModelKind {
+  Unknown,
+  Allocator,
+  ZeroAllocator,
+  Init,
+  Copy,
+  Transfer,
+  ObjectSize,
+  Ignore,
+  Passthrough,
+};
 
-  std::string HeapAllocFN[] = {
-      "__kmalloc", "__vmalloc",        "vmalloc",
-      "krealloc",  "devm_kzalloc",     "vzalloc",
-      "malloc",    "kmem_cache_alloc", "__alloc_skb",
-  };
+struct FunctionModel {
+  FunctionModelKind kind = FunctionModelKind::Unknown;
 
-  for (auto &F : HeapAllocFN) {
-    HeapAllocFuncs.insert(F);
+  bool isAllocator() const {
+    return kind == FunctionModelKind::Allocator ||
+           kind == FunctionModelKind::ZeroAllocator;
   }
-}
-static void SetZeroMallocFuncs(std::set<std::string> &ZeroMallocFuncs) {
-  std::string ZeroAllocFN[] = {
-      "kzalloc",
-  };
-  for (auto &F : ZeroAllocFN) {
-    ZeroMallocFuncs.insert(F);
+
+  bool zeroInitializes() const { return kind == FunctionModelKind::ZeroAllocator; }
+};
+
+class FunctionModelRegistry {
+public:
+  static FunctionModel lookup(llvm::StringRef name) {
+    if (contains(kZeroAllocators(), name))
+      return {FunctionModelKind::ZeroAllocator};
+    if (contains(kAllocators(), name))
+      return {FunctionModelKind::Allocator};
+    if (contains(kTransferFns(), name))
+      return {FunctionModelKind::Transfer};
+    if (contains(kCopyFns(), name))
+      return {FunctionModelKind::Copy};
+    if (contains(kInitFns(), name))
+      return {FunctionModelKind::Init};
+    if (contains(kObjectSizeFns(), name))
+      return {FunctionModelKind::ObjectSize};
+    if (contains(kIgnoredFns(), name))
+      return {FunctionModelKind::Ignore};
+    if (name.startswith("printf"))
+      return {FunctionModelKind::Passthrough};
+    return {FunctionModelKind::Unknown};
   }
-}
-static void SetTransferFuncs(std::set<std::string> &TransferFuncs) {
-  std::string TransferFN[] = {
-      "copy_to_user",
-      "__copy_to_user",
-      "copy_from_user",
-      "__copy_from_user",
-  };
-  for (auto &F : TransferFN) {
-    TransferFuncs.insert(F);
+
+  template <typename Inserter>
+  static void forEachName(FunctionModelKind kind, Inserter inserter) {
+    switch (kind) {
+    case FunctionModelKind::Allocator:
+      for (const char *name : kAllocators())
+        inserter(name);
+      break;
+    case FunctionModelKind::ZeroAllocator:
+      for (const char *name : kZeroAllocators())
+        inserter(name);
+      break;
+    case FunctionModelKind::Init:
+      for (const char *name : kInitFns())
+        inserter(name);
+      break;
+    case FunctionModelKind::Copy:
+      for (const char *name : kCopyFns())
+        inserter(name);
+      break;
+    case FunctionModelKind::Transfer:
+      for (const char *name : kTransferFns())
+        inserter(name);
+      break;
+    case FunctionModelKind::ObjectSize:
+      for (const char *name : kObjectSizeFns())
+        inserter(name);
+      break;
+    case FunctionModelKind::Ignore:
+      for (const char *name : kIgnoredFns())
+        inserter(name);
+      break;
+    case FunctionModelKind::Passthrough:
+    case FunctionModelKind::Unknown:
+      break;
+    }
   }
-}
-static void SetCopyFuncs(std::set<std::string> &CopyFuncs) {
-  std::string CopyFN[] = {
-      "memcpy",  "llvm.memcpy.p0i8.p0i8.i32",  "llvm.memcpy.p0i8.p0i8.i64",
-      "memmove", "llvm.memmove.p0i8.p0i8.i32", "llvm.memmove.p0i8.p0i8.i64",
-  };
-  for (auto &F : CopyFN) {
-    CopyFuncs.insert(F);
+
+private:
+  template <size_t N>
+  static bool contains(const std::array<const char *, N> &names,
+                       llvm::StringRef name) {
+    for (const char *candidate : names) {
+      if (name == candidate)
+        return true;
+    }
+    return false;
   }
-}
-static void SetInitFuncs(std::set<std::string> &InitFuncs) {
-  std::string InitFN[] = {
-      "llvm.va_start",
-      "memset",
-      "llvm.memset.p0i8.i32",
-      "llvm.memset.p0i8.i64",
-  };
-  for (auto &F : InitFN) {
-    InitFuncs.insert(F);
+
+  static const std::array<const char *, 9> &kAllocators() {
+    static const std::array<const char *, 9> names = {{
+        "__kmalloc", "__vmalloc", "vmalloc", "krealloc", "devm_kzalloc",
+        "vzalloc", "malloc", "kmem_cache_alloc", "__alloc_skb",
+    }};
+    return names;
   }
-}
-static void SetOtherFuncs(std::set<std::string> &OtherFuncs) {
-  std::string OtherFN[] = {
-      "mcount",
-      "llvm.dbg.declare",
-      "llvm.dbg.value",
-      "llvm.dbg.addr",
-  };
-  for (auto &F : OtherFN) {
-    OtherFuncs.insert(F);
+  static const std::array<const char *, 1> &kZeroAllocators() {
+    static const std::array<const char *, 1> names = {{
+        "kzalloc",
+    }};
+    return names;
   }
-}
-static void SetObjSizeFuncs(std::set<std::string> &ObjSizeFuncs) {
-  std::string ObjSizeFN[] = {
-      "llvm.objectsize.i64.p0i8",
-  };
-  for (auto &F : ObjSizeFN) {
-    ObjSizeFuncs.insert(F);
+  static const std::array<const char *, 4> &kTransferFns() {
+    static const std::array<const char *, 4> names = {{
+        "copy_to_user", "__copy_to_user", "copy_from_user", "__copy_from_user",
+    }};
+    return names;
   }
+  static const std::array<const char *, 6> &kCopyFns() {
+    static const std::array<const char *, 6> names = {{
+        "memcpy", "llvm.memcpy.p0i8.p0i8.i32", "llvm.memcpy.p0i8.p0i8.i64",
+        "memmove", "llvm.memmove.p0i8.p0i8.i32", "llvm.memmove.p0i8.p0i8.i64",
+    }};
+    return names;
+  }
+  static const std::array<const char *, 4> &kInitFns() {
+    static const std::array<const char *, 4> names = {{
+        "llvm.va_start", "memset", "llvm.memset.p0i8.i32",
+        "llvm.memset.p0i8.i64",
+    }};
+    return names;
+  }
+  static const std::array<const char *, 1> &kObjectSizeFns() {
+    static const std::array<const char *, 1> names = {{
+        "llvm.objectsize.i64.p0i8",
+    }};
+    return names;
+  }
+  static const std::array<const char *, 4> &kIgnoredFns() {
+    static const std::array<const char *, 4> names = {{
+        "mcount", "llvm.dbg.declare", "llvm.dbg.value", "llvm.dbg.addr",
+    }};
+    return names;
+  }
+};
+
+template <typename SetLike>
+static void insertModelNames(SetLike &set, FunctionModelKind kind) {
+  FunctionModelRegistry::forEachName(kind,
+                                     [&](const char *name) { set.insert(name); });
 }
+
+static void initializeFunctionModelSets(GlobalContext &ctx) {
+  if (ctx.functionModelsInitialized)
+    return;
+  insertModelNames(ctx.HeapAllocFuncs, FunctionModelKind::Allocator);
+  insertModelNames(ctx.ZeroMallocFuncs, FunctionModelKind::ZeroAllocator);
+  insertModelNames(ctx.TransferFuncs, FunctionModelKind::Transfer);
+  insertModelNames(ctx.CopyFuncs, FunctionModelKind::Copy);
+  insertModelNames(ctx.InitFuncs, FunctionModelKind::Init);
+  insertModelNames(ctx.OtherFuncs, FunctionModelKind::Ignore);
+  insertModelNames(ctx.ObjSizeFuncs, FunctionModelKind::ObjectSize);
+  ctx.functionModelsInitialized = true;
+}
+
 static void SetStrFuncs(std::set<std::string> &StrFuncs) {
   std::string StrFN[] = {
       "strcmp", "strncmp", "strcpy",  "strlwr",  "strcat",

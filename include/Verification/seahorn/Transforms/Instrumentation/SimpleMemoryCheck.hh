@@ -4,6 +4,6 @@
 namespace llvm {
 class ModulePass;
 
-}
+} // namespace llvm
 
 #endif

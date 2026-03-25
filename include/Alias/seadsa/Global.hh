@@ -12,7 +12,7 @@
 #include "Alias/seadsa/Graph.hh"
 #include "Alias/seadsa/Mapper.hh"
 
-#include "boost/container/flat_set.hpp"
+#include <set>
 
 namespace llvm {
 class DataLayout;
@@ -91,7 +91,7 @@ private:
   SetFactory &m_setFactory;
   GraphRef m_graph;
   // functions represented in m_graph
-  boost::container::flat_set<const llvm::Function *> m_fns;
+  std::set<const llvm::Function *> m_fns;
 
 public:
   ContextInsensitiveGlobalAnalysis(
@@ -156,7 +156,7 @@ private:
   enum PropagationKind { DOWN, UP, NONE };
 
   typedef std::shared_ptr<SimulationMapper> SimulationMapperRef;
-  typedef boost::container::flat_map<DsaCallSite, SimulationMapperRef>
+  typedef std::map<DsaCallSite, SimulationMapperRef>
       CalleeCallerMapping;
 
   const llvm::DataLayout &m_dl;

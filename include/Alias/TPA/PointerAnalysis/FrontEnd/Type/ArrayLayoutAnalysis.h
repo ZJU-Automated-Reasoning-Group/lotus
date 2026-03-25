@@ -2,17 +2,15 @@
 
 #include "Alias/TPA/PointerAnalysis/FrontEnd/Type/ArrayLayoutMap.h"
 
-namespace tpa
-{
+namespace tpa {
 
 class TypeSet;
 
-class ArrayLayoutAnalysis
-{
+class ArrayLayoutAnalysis {
 public:
-	ArrayLayoutAnalysis() = default;
+  ArrayLayoutAnalysis() = default;
 
-	ArrayLayoutMap runOnTypes(const TypeSet&);
+  ArrayLayoutMap runOnTypes(const TypeSet &);
 };
 
 } // namespace tpa

@@ -346,9 +346,12 @@ inline Expr reapp(Expr fapp, Expr fdecl) {
 
 namespace bind {
 /// returns true if an expression is a constant
-class IsConst : public std::unary_function<Expr, bool> {
+class IsConst {
 public:
-  bool operator()(Expr e) {
+  using argument_type = Expr;
+  using result_type = bool;
+
+  bool operator()(Expr e) const {
     if (isOpX<VARIANT>(e))
       return this->operator()(variant::mainVariant(e));
     // A const is a nullary function application of ConstDecl.
@@ -357,9 +360,12 @@ public:
   }
 };
 
-class IsConstDecl : public std::unary_function<Expr, bool> {
+class IsConstDecl {
 public:
-  bool operator()(Expr e) {
+  using argument_type = Expr;
+  using result_type = bool;
+
+  bool operator()(Expr e) const {
     // A const decl is a nullary function declaration
     // of unit -> SomeConstType (e.g. bv(32)).
     // A function decl has two args -- name and SomeConstType.

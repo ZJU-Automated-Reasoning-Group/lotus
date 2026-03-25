@@ -220,7 +220,7 @@ bool UnfoldLoopForDsa::OneUnfoldLoop(Loop *L) {
   getLoopExitBlocks(L, VExitBlocks);
   // XXX: ExitBlocks can have duplicates
   SmallSet<BasicBlock *, 8> ExitBlocks;
-  for (auto B : VExitBlocks)
+  for (auto *B : VExitBlocks)
     ExitBlocks.insert(B);
 
   BranchInst *BI = dyn_cast<BranchInst>(LatchBlock->getTerminator());
@@ -231,7 +231,7 @@ bool UnfoldLoopForDsa::OneUnfoldLoop(Loop *L) {
   }
 
   std::vector<PHINode *> OrigExitPHINode;
-  for (auto ExitBlock : ExitBlocks)
+  for (auto *ExitBlock : ExitBlocks)
     for (BasicBlock::iterator I = ExitBlock->begin(); isa<PHINode>(I); ++I) {
       OrigExitPHINode.push_back(cast<PHINode>(I));
     }
@@ -286,7 +286,7 @@ bool UnfoldLoopForDsa::OneUnfoldLoop(Loop *L) {
       RemapInstruction(&*I, VMap);
 
   // Update phi nodes at the loop exits with new map
-  for (auto PN : OrigExitPHINode)
+  for (auto *PN : OrigExitPHINode)
     for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
       Value *NewPHIIncVal = VMap[PN->getIncomingValue(i)];
       if (!NewPHIIncVal)

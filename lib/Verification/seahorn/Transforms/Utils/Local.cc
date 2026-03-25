@@ -76,7 +76,7 @@ void reduceToRegion(Function &F, DenseSet<const BasicBlock *> &region,
 
   // -- drop all references to allow dropping basic blocks with circular
   // dependencies
-  for (auto BB : dead) {
+  for (auto *BB : dead) {
     BB->dropAllReferences();
   }
 

@@ -1,4 +1,13 @@
-# Handle Boost dependencies for sea-dsa
+# Handle Boost dependencies for SeaHorn, CLAM, and CclyzerAA
+# This file is only included when ENABLE_CLAM, ENABLE_SEAHORN, or LOTUS_USE_CCLYZER is ON.
+# If all three are disabled, Boost is not configured.
+#
+# Modules that require Boost:
+#   - SeaHorn: Expr, HornClauseDB, BoogieWriter, graph traits, etc.
+#   - CLAM: CfgBuilder (hash), read_json (Boost.JSON >= 1.80), Optimizer (optional)
+#   - CclyzerAA: flyweight
+# Sea-DSA no longer requires Boost.
+
 option(DOWNLOAD_BOOST "Download and build Boost if not found" ON)
 set(CUSTOM_BOOST_ROOT "" CACHE PATH "Path to custom boost installation.")
 
@@ -50,13 +59,25 @@ if((NOT Boost_FOUND OR NOT BOOST_SYSTEM_AVAILABLE OR NOT BOOST_THREAD_AVAILABLE)
     set(BOOST_SYSTEM_AVAILABLE ON)
     set(BOOST_THREAD_AVAILABLE ON)
     set(BOOST_EXTERNAL_PROJECT ON)
+    # Set Boost_SYSTEM_LIBRARY for SeaHorn tools (system is header-only in Boost 1.69+)
+    set(Boost_SYSTEM_LIBRARY "")
 elseif(Boost_FOUND)
     message(STATUS "Found Boost: ${Boost_INCLUDE_DIRS}")
     include_directories(${Boost_INCLUDE_DIRS})
+    # Ensure Boost_SYSTEM_LIBRARY is set for SeaHorn tools that reference it
+    if(TARGET Boost::system)
+        set(Boost_SYSTEM_LIBRARY Boost::system)
+    elseif(Boost_SYSTEM_LIBRARY)
+        # Already set by find_package
+    else()
+        # System is header-only in Boost 1.69+, so no library needed
+        set(Boost_SYSTEM_LIBRARY "")
+    endif()
     if(NOT LLVM_ENABLE_EH)
         add_definitions(-DBOOST_NO_EXCEPTIONS)
     endif()
 else()
-    message(FATAL_ERROR "Boost not found and DOWNLOAD_BOOST=OFF. Please provide a valid CUSTOM_BOOST_ROOT or set DOWNLOAD_BOOST=ON.")
+    message(FATAL_ERROR "Boost is required for SeaHorn, CLAM, and/or CclyzerAA but was not found. "
+                        "Set DOWNLOAD_BOOST=ON to auto-download, or provide CUSTOM_BOOST_ROOT.")
 endif()
 

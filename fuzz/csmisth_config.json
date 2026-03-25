@@ -1,0 +1,6 @@
+{
+    "CSMITH": "/Users/rainoftime/Work/analysis/lotus/build/csmith-install/bin/csmith",
+    "CSMITH_HOME": "/Users/rainoftime/Work/analysis/lotus/build/csmith-install/include",
+    "CLANG": "/usr/bin/clang",
+    "GCC": "/usr/bin/gcc"
+}

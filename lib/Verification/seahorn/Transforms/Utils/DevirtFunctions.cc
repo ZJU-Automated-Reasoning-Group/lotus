@@ -136,7 +136,7 @@ void CallSiteResolverByTypes::populateTypeAliasSets() {
     AliasSet &Targets = m_targets_map[devirt_impl::typeAliasId(F)];
     // XXX: ordered by pointer addresses. Ideally we should use
     // something more deterministic.
-    auto it = std::upper_bound(Targets.begin(), Targets.end(), &F);
+    auto *it = std::upper_bound(Targets.begin(), Targets.end(), &F);
     Targets.insert(it, &F);
   }
 }
@@ -624,7 +624,7 @@ bool DevirtualizeFunctions::resolveCallSites(Module &M, CallSiteResolver *CSR) {
   // need transforming.
   bool Changed = !m_worklist.empty();
   while (!m_worklist.empty()) {
-    auto I = m_worklist.back();
+    auto *I = m_worklist.back();
     m_worklist.pop_back();
     mkDirectCall(*cast<CallBase>(I), CSR);
   }

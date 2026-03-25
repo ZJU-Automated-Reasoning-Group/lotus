@@ -18,6 +18,7 @@
  */
 
 #include "Solvers/SMT/LIBSMT/SMTFactory.h"
+
 #include "Solvers/SMT/LIBSMT/SMTConfigure.h"
 
 #define DEBUG_TYPE "smt-fctry"

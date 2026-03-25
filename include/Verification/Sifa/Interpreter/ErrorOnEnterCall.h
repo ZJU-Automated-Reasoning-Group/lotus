@@ -20,15 +20,19 @@ namespace sifa {
 template <typename StateT>
 class ErrorOnEnterCall final : public IEnterCallRegistrar<StateT> {
 public:
-  /// Ultimate-aligned: ErrorOnEnterCall.instance() — singleton for intraprocedural use.
+  /// Ultimate-aligned: ErrorOnEnterCall.instance() — singleton for
+  /// intraprocedural use.
   static ErrorOnEnterCall &instance() {
     static ErrorOnEnterCall inst;
     return inst;
   }
 
-  void registerEnterCall(const std::string &calleeName, const StateT &calleeInput) override {
+  void registerEnterCall(const std::string &calleeName,
+                         const StateT &calleeInput) override {
     (void)calleeInput;
-    throw std::logic_error("Did not expect any enter calls but received enter call " + calleeName + ".");
+    throw std::logic_error(
+        "Did not expect any enter calls but received enter call " + calleeName +
+        ".");
   }
 };
 

@@ -1,13 +1,14 @@
 #ifndef ESCAPE_ANALYSIS_H
 #define ESCAPE_ANALYSIS_H
 
+#include <unordered_map>
+#include <unordered_set>
+
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Value.h>
 #include <llvm/Pass.h>
-#include <unordered_map>
-#include <unordered_set>
 
 namespace lotus {
 
@@ -46,4 +47,3 @@ private:
 } // namespace lotus
 
 #endif // ESCAPE_ANALYSIS_H
-

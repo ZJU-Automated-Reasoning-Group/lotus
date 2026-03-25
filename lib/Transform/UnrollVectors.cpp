@@ -67,6 +67,11 @@ handleKnownInst(Instruction *I,
 // Helper function to unroll a function (used by both legacy and new pass
 // managers)
 static bool unrollVectorsInFunction(Function &F) {
+  if (F.isDeclaration() || F.empty()) {
+    return false;
+  }
+
+  bool Changed = false;
   DenseMap<Value *, SmallVector<Value *, 2>> UnrollMap;
   std::vector<PHINode *> UnrolledPHIs;
   Module *M = F.getParent();
@@ -87,6 +92,7 @@ static bool unrollVectorsInFunction(Function &F) {
         }
         UnrollMap.try_emplace(&PHI, std::move(Elems));
         UnrolledPHIs.push_back(&PHI);
+        Changed = true;
       }
     }
   }
@@ -94,7 +100,11 @@ static bool unrollVectorsInFunction(Function &F) {
   // Walk all instructions in dominance order.
   DominatorTree Dom(F);
   std::vector<DomTreeNode *> Pending;
-  Pending.push_back(Dom.getRootNode());
+  DomTreeNode *Root = Dom.getRootNode();
+  if (!Root) {
+    return Changed;
+  }
+  Pending.push_back(Root);
 
   while (Pending.size() > 0) {
     DomTreeNode *Node = Pending.back();
@@ -107,6 +117,8 @@ static bool unrollVectorsInFunction(Function &F) {
     for (Instruction &I : *BB) {
       if (!handleKnownInst(&I, UnrollMap)) {
         // TODO: Error if this instruction uses any unrolled value.
+      } else {
+        Changed = true;
       }
     }
   }
@@ -121,14 +133,20 @@ static bool unrollVectorsInFunction(Function &F) {
       Value *IncVal = PHI->getIncomingValue(i);
 
       auto it = UnrollMap.find(IncVal);
+      SmallVector<Value *, 2> IncElems;
       if (it == UnrollMap.end()) {
-        llvm::errs()
-            << "failed to find incoming value for unrolled phi node:\n";
-        llvm::errs() << "  phi node: " << *PHI << "\n";
-        llvm::errs() << "  incoming value: " << *IncVal << "\n";
-        abort();
+        Instruction *InsertPt = IncBB->getTerminator();
+        for (unsigned j = 0; j < Count; ++j) {
+          Value *Idx =
+              ConstantInt::get(IntegerType::get(M->getContext(), 32), j);
+          auto *EE = ExtractElementInst::Create(
+              IncVal, Idx, Twine(PHI->getName()).concat(".inc"), InsertPt);
+          IncElems.push_back(EE);
+        }
+        Changed = true;
+      } else {
+        IncElems = it->second;
       }
-      SmallVector<Value *, 2> &IncElems = it->second;
 
       for (unsigned j = 0; j < Count; ++j) {
         PHINode *ElemPHI = cast<PHINode>(Unrolled[j]);
@@ -138,7 +156,7 @@ static bool unrollVectorsInFunction(Function &F) {
     }
   }
 
-  return true;
+  return Changed;
 }
 
 static bool
@@ -167,6 +185,9 @@ handleKnownInst(Instruction *I,
       return false;
     }
     SmallVector<Value *, 2> Elems = it->second;
+    if (Index >= Elems.size()) {
+      return false;
+    }
     Elems[Index] = Elem;
     UnrollMap.try_emplace(InsertElement, std::move(Elems));
     return true;
@@ -191,6 +212,9 @@ handleKnownInst(Instruction *I,
       return false;
     }
     SmallVector<Value *, 2> &Elems = it->second;
+    if (Index >= Elems.size()) {
+      return false;
+    }
     ExtractElement->replaceAllUsesWith(Elems[Index]);
     return true;
 

@@ -8,13 +8,13 @@ terms.
 */
 
 #include "llvm/IR/Module.h"
-#include "llvm/Pass.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "seahorn/Transforms/Utils/Local.hh"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
@@ -201,13 +201,13 @@ namespace
   };
   char StripUselessDeclarations::ID = 0;
 
-}
+} // namespace
 
 namespace seahorn
 {
   Pass *createStripUselessDeclarationsPass ()
   {return new StripUselessDeclarations ();}
-}
+} // namespace seahorn
 
 static llvm::RegisterPass<StripUselessDeclarations> X ("strip-useless-decls",
                                                        "Replace declarations by nondet");

@@ -1,24 +1,22 @@
 #ifndef TPA_EXTERNAL_POINTER_TABLE_PRINTER_H
 #define TPA_EXTERNAL_POINTER_TABLE_PRINTER_H
 
-namespace llvm
-{
-	class raw_ostream;
+namespace llvm {
+class raw_ostream;
 } // namespace llvm
 
-namespace annotation
-{
+namespace annotation {
 
 class ExternalPointerTable;
 
-class ExternalPointerTablePrinter
-{
+class ExternalPointerTablePrinter {
 private:
-	llvm::raw_ostream& os;
-public:
-	ExternalPointerTablePrinter(llvm::raw_ostream& o): os(o) {}
+  llvm::raw_ostream &os;
 
-	void printTable(const ExternalPointerTable&);
+public:
+  ExternalPointerTablePrinter(llvm::raw_ostream &o) : os(o) {}
+
+  void printTable(const ExternalPointerTable &);
 };
 
 } // namespace annotation

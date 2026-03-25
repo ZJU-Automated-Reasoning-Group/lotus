@@ -1,7 +1,7 @@
 #ifndef ASER_LOGGING_H
 #define ASER_LOGGING_H
 
-#include "Utils/General/spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 
 #define LOG_TRACE(...) SPDLOG_TRACE(__VA_ARGS__)
 #define LOG_DEBUG(...) SPDLOG_DEBUG(__VA_ARGS__)

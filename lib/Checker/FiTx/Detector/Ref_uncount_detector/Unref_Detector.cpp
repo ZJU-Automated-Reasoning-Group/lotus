@@ -4,9 +4,9 @@
 #include "Checker/FiTx/Detector/Unref_Detector.h"
 
 namespace {
-class UnrefCountDetector : public framework::FrameworkPass {
+class UnrefCountDetector : public fitx::FrameworkPass {
   virtual void defineStates() override {
-    framework::StateManager manager;
+    fitx::StateManager manager;
     UnreferenceCounter::defineStates(manager);
     addStateManager(manager);
   }
@@ -14,5 +14,5 @@ class UnrefCountDetector : public framework::FrameworkPass {
 
 }  // namespace
 
-std::vector<framework::FrameworkPass *> framework::FrameworkPass::passes = {
+std::vector<fitx::FrameworkPass *> fitx::FrameworkPass::passes = {
     new UnrefCountDetector()};

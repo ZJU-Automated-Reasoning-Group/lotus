@@ -16,30 +16,31 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Alias/DyckAA/DyckAliasAnalysis.h"
 #include "Alias/DyckAA/DyckModRefAnalysis.h"
+
+#include "Alias/DyckAA/DyckAliasAnalysis.h"
 #include "Alias/DyckAA/MRAnalyzer.h"
 #include "Utils/LLVM/RecursiveTimer.h"
 
 char DyckModRefAnalysis::ID = 0;
-static RegisterPass<DyckModRefAnalysis> X("dyckmr", "m/r based on the unification based alias analysis");
+static RegisterPass<DyckModRefAnalysis>
+    X("dyckmr", "m/r based on the unification based alias analysis");
 
-DyckModRefAnalysis::DyckModRefAnalysis() : ModulePass(ID) {
-}
+DyckModRefAnalysis::DyckModRefAnalysis() : ModulePass(ID) {}
 
 DyckModRefAnalysis::~DyckModRefAnalysis() = default;
 
 void DyckModRefAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.setPreservesAll();
-    AU.addRequired<DyckAliasAnalysis>();
+  AU.setPreservesAll();
+  AU.addRequired<DyckAliasAnalysis>();
 }
 
 bool DyckModRefAnalysis::runOnModule(Module &M) {
-    RecursiveTimer DyckMRA("Running DyckMRA");
-    auto *DyckAA = &getAnalysis<DyckAliasAnalysis>();
-    MRAnalyzer MR(&M, DyckAA->getDyckGraph(), DyckAA->getDyckCallGraph());
-    MR.intraProcedureAnalysis();
-    MR.interProcedureAnalysis();
-    MR.swap(Func2MR); // get the result
-    return false;
+  RecursiveTimer DyckMRA("Running DyckMRA");
+  auto *DyckAA = &getAnalysis<DyckAliasAnalysis>();
+  MRAnalyzer MR(&M, DyckAA->getDyckGraph(), DyckAA->getDyckCallGraph());
+  MR.intraProcedureAnalysis();
+  MR.interProcedureAnalysis();
+  MR.swap(Func2MR); // get the result
+  return false;
 }

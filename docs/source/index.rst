@@ -16,6 +16,9 @@ Lotus is a comprehensive program analysis, verification, and optimization framew
    user_guide/tutorials
    user_guide/bug_detection
    user_guide/pdg_query_language
+   user_guide/property_based_slicing
+   user_guide/verification_backends
+   user_guide/instrumentation_passes
    user_guide/troubleshooting
    tools/index
 

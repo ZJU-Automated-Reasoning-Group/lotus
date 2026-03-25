@@ -117,6 +117,6 @@ namespace horn_verification {
 			
 	};
 
-};
+} // namespace horn_verification
 
 #endif /* HORN_CONSTRAINT_H_ */

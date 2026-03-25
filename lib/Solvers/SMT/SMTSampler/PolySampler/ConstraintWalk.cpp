@@ -1,32 +1,23 @@
 /**
  * @file ConstraintWalk.cpp
  * @brief Walk that moves along constraint normals
+ *
+ * Fixes applied:
+ *  B25/B26 – t_low / t_high cast via WalkUtils::safe_cast_t (UB fix).
+ *  L10 – dot_ld moved to WalkUtils.h; local duplicate removed.
  */
 
 #include "Solvers/SMT/SMTSampler/PolySampler/ConstraintWalk.h"
 
-#include <algorithm>
+#include "Solvers/SMT/SMTSampler/PolySampler/WalkUtils.h"
+
 #include <cmath>
 #include <limits>
 
 namespace RegionSampling {
-namespace {
-
-static long double dot_ld(const std::vector<int64_t> &a,
-                          const std::vector<int64_t> &b) {
-  long double sum = 0.0L;
-  for (size_t i = 0; i < a.size(); ++i) {
-    sum += static_cast<long double>(a[i]) *
-           static_cast<long double>(b[i]);
-  }
-  return sum;
-}
-
-} // namespace
 
 bool constraint_walk_step(const std::vector<LinearConstraint> &constraints,
-                          std::vector<int64_t> &point,
-                          std::mt19937_64 &rng) {
+                          std::vector<int64_t> &point, std::mt19937_64 &rng) {
   if (point.empty() || constraints.empty())
     return false;
 
@@ -55,8 +46,8 @@ bool constraint_walk_step(const std::vector<LinearConstraint> &constraints,
     bool feasible = true;
 
     for (const auto &c : constraints) {
-      long double a_dot_x = dot_ld(c.coeffs, point);
-      long double a_dot_d = dot_ld(c.coeffs, direction);
+      long double a_dot_x = WalkUtils::dot_ld(c.coeffs, point);
+      long double a_dot_d = WalkUtils::dot_ld(c.coeffs, direction);
       long double slack = static_cast<long double>(c.bound) - a_dot_x;
 
       if (a_dot_d > 0.0L) {
@@ -70,17 +61,20 @@ bool constraint_walk_step(const std::vector<LinearConstraint> &constraints,
     }
 
     if (!feasible || !std::isfinite(t_min) || !std::isfinite(t_max) ||
-        t_min > t_max) {
+        t_min > t_max)
       continue;
-    }
 
     long double t_low_ld = std::ceil(t_min);
     long double t_high_ld = std::floor(t_max);
     if (t_low_ld > t_high_ld)
       continue;
 
-    int64_t t_low = static_cast<int64_t>(t_low_ld);
-    int64_t t_high = static_cast<int64_t>(t_high_ld);
+    // Fix B25/B26: safe cast.
+    int64_t t_low = 0, t_high = 0;
+    if (!WalkUtils::safe_cast_t(t_low_ld, t_low) ||
+        !WalkUtils::safe_cast_t(t_high_ld, t_high))
+      continue;
+
     if (t_low == 0 && t_high == 0)
       continue;
 
@@ -95,18 +89,19 @@ bool constraint_walk_step(const std::vector<LinearConstraint> &constraints,
       continue;
 
     std::vector<int64_t> candidate(point);
+    bool overflow = false;
     for (size_t i = 0; i < n; ++i) {
       __int128 next = static_cast<__int128>(point[i]) +
                       static_cast<__int128>(t) * direction[i];
       if (next < std::numeric_limits<int64_t>::min() ||
           next > std::numeric_limits<int64_t>::max()) {
-        feasible = false;
+        overflow = true;
         break;
       }
       candidate[i] = static_cast<int64_t>(next);
     }
 
-    if (feasible) {
+    if (!overflow) {
       point.swap(candidate);
       return true;
     }

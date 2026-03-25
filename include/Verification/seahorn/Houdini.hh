@@ -2,11 +2,11 @@
 #define HOUDINI__HH_
 
 #include "llvm/Pass.h"
-#include "llvm/IR/Module.h"
-#include "seahorn/HornClauseDB.hh"
-#include "seahorn/HornifyModule.hh"
 #include "seahorn/GuessCandidates.hh"
+#include "seahorn/HornClauseDB.hh"
 #include "seahorn/HornDbModel.hh"
+#include "seahorn/HornifyModule.hh"
+#include "llvm/IR/Module.h"
 
 #include "seahorn/Expr/Expr.hh"
 #include "seahorn/Expr/Smt/EZ3.hh"
@@ -108,6 +108,6 @@ class Houdini_Each_Solver_Per_Relation : public HoudiniContext {
 	  bool validateRule(HornRule r, ZSolver<EZ3> &solver) override;
 	  std::map<Expr, ZSolver<EZ3>> assignEachRelationASolver();
   };
-}
+} // namespace seahorn
 
 #endif /* HOUDNINI__HH_ */

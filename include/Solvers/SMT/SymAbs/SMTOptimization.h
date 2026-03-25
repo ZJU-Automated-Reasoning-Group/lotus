@@ -23,6 +23,10 @@
 
 #include "z3++.h"
 #include "z3.h"
+
+#include <cstdint>
+#include <limits>
+#include <vector>
 using namespace z3;
 
 class optutil {
@@ -64,6 +68,7 @@ private:
 
   double m_qsmt_time = 0; // seems unsound
 
+public:
   // parameters for partitioned search
   typedef enum { disjoint, shared } partition_strategy;
 
@@ -75,14 +80,29 @@ private:
     g_min_max // get min and max
   } opt_mode;
 
-public:
   opt_solver() {}
 
   ~opt_solver() {}
 
-  static int32_t get_signed_max(unsigned sz) { return (1 << (sz - 1)) - 1; }
+  static int64_t get_signed_max(unsigned sz) {
+    if (sz == 0) {
+      return 0;
+    }
+    if (sz >= 64) {
+      return std::numeric_limits<int64_t>::max();
+    }
+    return static_cast<int64_t>((1ULL << (sz - 1)) - 1ULL);
+  }
 
-  static int32_t get_unsigned_max(unsigned sz) { return (1 << sz) - 1; }
+  static uint64_t get_unsigned_max(unsigned sz) {
+    if (sz == 0) {
+      return 0;
+    }
+    if (sz >= 64) {
+      return std::numeric_limits<uint64_t>::max();
+    }
+    return (1ULL << sz) - 1ULL;
+  }
 
   // multiple objectives optimizations
   void sound_max_all(expr &pre_cond, expr_vector &queries,

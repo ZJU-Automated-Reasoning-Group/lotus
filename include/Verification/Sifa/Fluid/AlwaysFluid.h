@@ -12,8 +12,7 @@
 namespace lotus {
 namespace sifa {
 
-template <typename StateT>
-class AlwaysFluid final : public IFluid<StateT> {
+template <typename StateT> class AlwaysFluid final : public IFluid<StateT> {
 public:
   bool shallBeAbstracted(const StateT &state) const override {
     (void)state;
@@ -25,4 +24,3 @@ public:
 } // namespace lotus
 
 #endif // LOTUS_VERIFICATION_SIFA_FLUID_ALWAYSFLUID_H
-

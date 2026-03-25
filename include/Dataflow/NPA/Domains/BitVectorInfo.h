@@ -2,6 +2,7 @@
 #define NPA_BIT_VECTOR_INFO_H
 
 #include "Utils/LLVM/SystemHeaders.h"
+
 #include <llvm/ADT/APInt.h>
 
 namespace npa {
@@ -25,9 +26,9 @@ struct BitVectorInfo {
   virtual bool isForward() const = 0;
 
   /// Returns the boundary value (e.g., for Entry in forward analysis)
-  virtual llvm::APInt getBoundaryVal() const { 
-      // Default to Empty Set (All Zeros)
-      return llvm::APInt(getBitWidth(), 0); 
+  virtual llvm::APInt getBoundaryVal() const {
+    // Default to Empty Set (All Zeros)
+    return llvm::APInt(getBitWidth(), 0);
   }
 };
 

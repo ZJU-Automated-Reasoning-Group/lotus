@@ -38,7 +38,7 @@ ifstream in("dotfile/exp-2020");
     string x;                                                                  \
     unsigned mem;                                                              \
     inl >> x >> mem;                                                           \
-    cout << "mem  = " << (double)mem / 1024 << "M" << endl;                    \
+    cout << "mem  = " << (double)mem / 1024 << "M\n";                          \
     in.close();                                                                \
   }
 
@@ -102,7 +102,7 @@ public:
     cout << LTerm << " -> " << RTerm1;
     if (termNum == 3)
       cout << " " << RTerm2;
-    cout << endl;
+    cout << '\n';
   }
 
 private:
@@ -180,22 +180,22 @@ unsigned SimpleDotParser::BuildNodeMap(
 
       string from, to;
       // EdgeTy edgTy = GetEdgeTy(line);
-      // cout<<"line "<< line<< "of type"<<GetEdgeTy(line)<<endl;
+      // cout<<"line "<< line<< "of type"<<GetEdgeTy(line)<<'\n';
 
       pair<string, string> nodes = ReturnNodePair(line, "->");
       from = nodes.first;
       to = nodes.second;
-      // cout<<"from "<<from<<" to "<<to<<endl;
+      // cout<<"from "<<from<<" to "<<to<<'\n';
 
       if (NodeID.find(from) == NodeID.end()) { // can't find from
         unsigned id = NodeID.size();
-        // cout<<from<<" should assign "<<id<<endl;
+        // cout<<from<<" should assign "<<id<<'\n';
         NodeID[from] = id;
       }
 
       if (NodeID.find(to) == NodeID.end()) { // can't find to
         unsigned id = NodeID.size();
-        // cout<<to<<" should assign "<<id<<endl;
+        // cout<<to<<" should assign "<<id<<'\n';
         NodeID[to] = id;
       }
     }
@@ -215,7 +215,7 @@ void SimpleDotParser::BuildMyHashTable(const string &infile,
 
   // edgeTy edg;
   while (getline(in, line)) {
-    // cout<<line<< "haha  " <<endl;
+    // cout<<line<< "haha  " <<'\n';
     if (IsEdge(line)) {
 
       string from, to;
@@ -231,8 +231,8 @@ void SimpleDotParser::BuildMyHashTable(const string &infile,
       }
 
       // Matrix *q;
-      // cout<<"line "<< line<< "of type"<<GetEdgeTy(line)<<endl;
-      // cout<<"label "<<edgelabel<<" hash "<<EdgeID[edgelabel]<<endl;
+      // cout<<"line "<< line<< "of type"<<GetEdgeTy(line)<<'\n';
+      // cout<<"label "<<edgelabel<<" hash "<<EdgeID[edgelabel]<<'\n';
       pair<string, string> nodes = ReturnNodePair(line, "->");
       from = nodes.first;
       to = nodes.second;
@@ -271,7 +271,7 @@ void SimpleDotParser::BuildHashTable(const string &infile,
 
   // edgeTy edg;
   while (getline(in, line)) {
-    // cout<<line<< "haha  " <<endl;
+    // cout<<line<< "haha  " <<'\n';
     if (IsEdge(line)) {
 
       string from, to;
@@ -287,8 +287,8 @@ void SimpleDotParser::BuildHashTable(const string &infile,
       }
 
       // Matrix *q;
-      // cout<<"line "<< line<< "of type"<<GetEdgeTy(line)<<endl;
-      // cout<<"label "<<edgelabel<<" hash "<<EdgeID[edgelabel]<<endl;
+      // cout<<"line "<< line<< "of type"<<GetEdgeTy(line)<<'\n';
+      // cout<<"label "<<edgelabel<<" hash "<<EdgeID[edgelabel]<<'\n';
       pair<string, string> nodes = ReturnNodePair(line, "->");
       from = nodes.first;
       to = nodes.second;

@@ -37,12 +37,12 @@ namespace expr
       return hasher (cp);
     }
   };
-}
+} // namespace expr
 
 namespace seahorn
 {
   typedef expr::Terminal<const seahorn::CutPoint*> CP;
-}
+} // namespace seahorn
 
 
 

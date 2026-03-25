@@ -144,7 +144,6 @@ Examples
    # Reaching definitions analysis
    ./build/bin/lotus-taint -analysis=1 input.bc
 
-For other command-line tools that build on IFDS/IDE (e.g., GVFA, KINT),
-see :doc:`../analysis/gvfa` and :doc:`../tools/checker/index`.
-
+For other command-line tools that build on IFDS/IDE, see
+:doc:`../tools/checker/index`.
 

@@ -38,8 +38,7 @@ Bug Detection
    ./build/bin/lotus-kint -check-all example.ll           # All checks
    
    # Memory safety bugs
-   ./build/bin/lotus-gvfa -vuln-type=nullpointer example.bc  # Null pointer dereference
-   ./build/bin/lotus-gvfa -vuln-type=uaf example.bc          # Use-after-free
+   ./build/bin/lotus-pulse example.bc                        # Memory safety checks
 
     # IFDS-based, taint-style bugs  
    ./build/bin/lotus-taint example.bc                # Basic taint analysis
@@ -107,4 +106,4 @@ Analysis commands:
    clang -emit-llvm -S example.c -o example.ll
    ./build/bin/lotus-taint example.bc                   # Detect taint flow
    ./build/bin/lotus-kint -check-array-oob example.ll   # Check buffer overflow
-   ./build/bin/lotus-gvfa -vuln-type=nullpointer example.bc  # Null pointer checks
+   ./build/bin/lotus-pulse example.bc                        # Memory safety checks

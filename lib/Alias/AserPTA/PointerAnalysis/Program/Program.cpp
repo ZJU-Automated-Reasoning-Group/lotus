@@ -7,8 +7,8 @@
  *
  * @author peiming
  */
+#include <llvm/IR/Constants.h>
 #include <llvm/Support/CommandLine.h>
-#include <set>
 
 #include "Alias/AserPTA/PointerAnalysis/Program/CallSite.h"
 #include "Alias/AserPTA/Util/Log.h"
@@ -31,26 +31,45 @@ llvm::cl::opt<size_t> MaxIndirectTarget("max-indirect-target",
  * @return The resolved Function pointer, or nullptr if resolution fails
  */
 const Function* aser::CallSite::resolveTargetFunction(const Value* calledValue) {
-    // TODO: In this case, a constant expression/global aliases, which can be
-    // resolved directly
-    if (auto* bitcast = dyn_cast<BitCastOperator>(calledValue)) {
-        if (auto* function = dyn_cast<Function>(bitcast->getOperand(0))) {
-            return function;
-        }
+    if (calledValue == nullptr) {
+        return nullptr;
     }
 
-    if (auto* globalAlias = dyn_cast<GlobalAlias>(calledValue)) {
-        auto* globalSymbol = globalAlias->getAliasee()->stripPointerCasts();
-        if (auto* function = dyn_cast<Function>(globalSymbol)) {
+    const Value* current = calledValue;
+    SmallPtrSet<const Value*, 8> visited;
+    while (current != nullptr && visited.insert(current).second) {
+        if (auto* function = dyn_cast<Function>(current)) {
             return function;
         }
-        LOG_ERROR("Unhandled Global Alias. alias={}", *globalAlias);
-        llvm_unreachable(
-            "resolveTargetFunction matched globalAlias but symbol was not "
-            "Function");
+
+        if (auto* globalAlias = dyn_cast<GlobalAlias>(current)) {
+            const Constant* aliasee = globalAlias->getAliasee();
+            current = aliasee ? aliasee->stripPointerCasts() : nullptr;
+            continue;
+        }
+
+        if (auto* constExpr = dyn_cast<ConstantExpr>(current)) {
+            if (constExpr->isCast() && constExpr->getNumOperands() > 0) {
+                current = constExpr->getOperand(0);
+                continue;
+            }
+        }
+
+        if (auto* op = dyn_cast<Operator>(current)) {
+            if (op->getOpcode() == Instruction::BitCast ||
+                op->getOpcode() == Instruction::AddrSpaceCast) {
+                current = op->getOperand(0);
+                continue;
+            }
+        }
+
+        const Value* stripped = current->stripPointerCasts();
+        if (stripped == current) {
+            break;
+        }
+        current = stripped;
     }
 
-    LOG_ERROR("Unable to resolveTargetFunction from calledValue. called={}", *calledValue);
-    //return nullptr;
-    llvm_unreachable("Unable to resolveTargetFunction from calledValue");
+    LOG_WARN("Unable to resolve target function from calledValue: {}", *calledValue);
+    return nullptr;
 }

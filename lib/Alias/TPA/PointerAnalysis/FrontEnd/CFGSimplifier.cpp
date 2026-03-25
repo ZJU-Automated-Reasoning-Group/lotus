@@ -1,12 +1,14 @@
 // Implementation of CFGSimplifier.
 //
-// This class performs graph transformations to reduce the size and complexity of the CFG.
+// This class performs graph transformations to reduce the size and complexity
+// of the CFG.
 //
 // Optimization: Redundant Node Elimination
 // 1. Identify nodes that are "identity" transforms:
 //    - Copy nodes with a single source (dst = src).
 //    - Offset nodes with 0 offset (dst = src + 0).
-// 2. These nodes can be removed, and all their uses replaced by their definitions.
+// 2. These nodes can be removed, and all their uses replaced by their
+// definitions.
 //    (effectively merging the pointer equivalence classes).
 // 3. Updates Def-Use chains to bypass the removed nodes.
 
@@ -48,7 +50,7 @@ public:
 
   void visitEntryNode(EntryCFGNode &) {}
   void visitAllocNode(AllocCFGNode &) {}
-  
+
   void visitCopyNode(CopyCFGNode &copyNode) {
     if (redundantSet.count(&copyNode))
       return;
@@ -167,21 +169,34 @@ void CFGSimplifier::adjustCFG(
 
 // Rewires Def-Use edges to bypass redundant nodes.
 void CFGSimplifier::adjustDefUseChain(
-    const util::VectorSet<tpa::CFGNode *> &redundantNodes) {
+    CFG &cfg, const util::VectorSet<tpa::CFGNode *> &redundantNodes) {
   for (auto *node : redundantNodes) {
     // node may be assigned #null or #universal, in which cases the def size may
-    // be 0
+    // be 0 (no definition drives this node).
     if (node->def_size() > 0u) {
       assert(node->def_size() == 1u);
       auto *defNode = *node->def_begin();
       defNode->removeDefUseEdge(node);
-      
-      // Connect definition directly to all uses
+
+      // Connect definition directly to all uses, bypassing the redundant node.
       for (auto *useNode : node->uses())
         defNode->insertDefUseEdge(useNode);
     }
+    // Bug fix: when def_size() == 0, the redundant node has no definition
+    // driving it (e.g., it was assigned null/universal). In this case we
+    // cannot rewire the def-use edges to a parent def. The use nodes that
+    // depended on this redundant node will lose their def-use connection.
+    // To avoid leaving them completely disconnected (which would cause
+    // premature fixpoints), we connect them to the CFG entry node, which
+    // acts as the universal definition root for constants and externals.
+    else if (node->use_size() > 0u) {
+      auto *entryNode = cfg.getEntryNode();
+      for (auto *useNode : node->uses())
+        entryNode->insertDefUseEdge(useNode);
+    }
 
-    // Clean up node's edges
+    // Clean up node's edges (snapshot uses first since we're modifying the
+    // list)
     auto uses = SmallVector<CFGNode *, 8>(node->use_begin(), node->use_end());
     for (auto *useNode : uses)
       node->removeDefUseEdge(useNode);
@@ -205,7 +220,7 @@ void CFGSimplifier::simplify(CFG &cfg) {
 
     flattenEquivalentMap();
     adjustCFG(cfg, redundantNodes);
-    adjustDefUseChain(redundantNodes);
+    adjustDefUseChain(cfg, redundantNodes);
     removeNodes(cfg, redundantNodes);
 
     eqMap.clear();

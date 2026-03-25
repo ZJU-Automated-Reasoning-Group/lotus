@@ -2,6 +2,7 @@
 #define NPA_REACHING_DEFINITIONS_H
 
 #include "Dataflow/NPA/Analyses/BitVectorSolver.h"
+
 #include <llvm/IR/Function.h>
 
 namespace npa {
@@ -11,8 +12,8 @@ namespace npa {
  */
 class ReachingDefinitions {
 public:
-    static BitVectorSolver::Result run(llvm::Function &F, 
-                                       SolverStrategy strategy = SolverStrategy::Newton);
+  static BitVectorSolver::Result
+  run(llvm::Function &F, SolverStrategy strategy = SolverStrategy::Newton);
 };
 
 } // namespace npa

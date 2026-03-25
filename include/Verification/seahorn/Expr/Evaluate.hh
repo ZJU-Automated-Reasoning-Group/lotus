@@ -381,10 +381,13 @@ public:
   T getValue(Expr exp) { return m_cache.at(exp).num; }
 };
 
-template <typename T> class EV : public std::unary_function<Expr, VisitAction> {
+template <typename T> class EV {
   std::shared_ptr<EVR<T>> m_rw;
 
 public:
+  using argument_type = Expr;
+  using result_type = VisitAction;
+
   EV(EvalModel<T> *evalModel) : m_rw(std::make_shared<EVR<T>>(evalModel)) {}
   VisitAction operator()(Expr exp) {
     if (m_rw->preVisit(exp))

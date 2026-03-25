@@ -19,65 +19,53 @@
  OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
  OR OTHER DEALINGS IN THE SOFTWARE.
  */
- #include "Analysis/CFG/DominatorNode.h"
+#include "Analysis/CFG/DominatorNode.h"
 
- namespace noelle {
- 
- DominatorNode::DominatorNode(const DTAliases::Node &node)
-   : B{ node.getBlock() },
-     level{ node.getLevel() },
-     parent{ nullptr },
-     children{} {
- 
-   return;
- }
- 
- DominatorNode::DominatorNode(const DominatorNode &node)
-   : B{ node.getBlock() },
-     level{ node.getLevel() },
-     parent{ nullptr },
-     children{} {
- 
-   return;
- }
- 
- raw_ostream &DominatorNode::print(raw_ostream &stream, std::string prefix) {
-   stream << prefix << "Block: ";
-   if (getBlock())
-     getBlock()->printAsOperand(stream);
-   else
-     stream << "null";
-   stream << " Level: " << getLevel() << " Parent: ";
-   if (getParent() && getParent()->getBlock())
-     getParent()->getBlock()->printAsOperand(stream);
-   else
-     stream << "null";
-   stream << " I Dom: ";
-   if (getParent() && getParent()->getBlock())
-     getParent()->getBlock()->printAsOperand(stream);
-   else
-     stream << "null";
-   stream << "\n" << prefix << "Children: ";
-   for (auto* child : getChildren()) {
-     child->getBlock()->printAsOperand(stream << "\t");
-   }
-   return stream << "\n";
- }
- 
- BasicBlock *DominatorNode::getBlock(void) const {
-   return B;
- }
- 
- DominatorNode *DominatorNode::getParent(void) const {
-   return parent;
- }
- 
- std::vector<DominatorNode *> DominatorNode::getChildren(void) const {
-   return children;
- }
- 
- uint32_t DominatorNode::getLevel(void) const {
-   return level;
- }
- 
- } // namespace noelle
+namespace noelle {
+
+DominatorNode::DominatorNode(const DTAliases::Node &node)
+    : B{node.getBlock()}, level{node.getLevel()}, parent{nullptr}, children{} {
+
+  return;
+}
+
+DominatorNode::DominatorNode(const DominatorNode &node)
+    : B{node.getBlock()}, level{node.getLevel()}, parent{nullptr}, children{} {
+
+  return;
+}
+
+raw_ostream &DominatorNode::print(raw_ostream &stream, std::string prefix) {
+  stream << prefix << "Block: ";
+  if (getBlock())
+    getBlock()->printAsOperand(stream);
+  else
+    stream << "null";
+  stream << " Level: " << getLevel() << " Parent: ";
+  if (getParent() && getParent()->getBlock())
+    getParent()->getBlock()->printAsOperand(stream);
+  else
+    stream << "null";
+  stream << " I Dom: ";
+  if (getParent() && getParent()->getBlock())
+    getParent()->getBlock()->printAsOperand(stream);
+  else
+    stream << "null";
+  stream << "\n" << prefix << "Children: ";
+  for (auto *child : getChildren()) {
+    child->getBlock()->printAsOperand(stream << "\t");
+  }
+  return stream << "\n";
+}
+
+BasicBlock *DominatorNode::getBlock(void) const { return B; }
+
+DominatorNode *DominatorNode::getParent(void) const { return parent; }
+
+std::vector<DominatorNode *> DominatorNode::getChildren(void) const {
+  return children;
+}
+
+uint32_t DominatorNode::getLevel(void) const { return level; }
+
+} // namespace noelle

@@ -16,6 +16,8 @@
 #include "Alias/seadsa/Printer.hh"
 #include "Alias/seadsa/support/Debug.h"
 
+#include <sstream>
+
 /*
    Convert each DSA graph to .dot file.
  */

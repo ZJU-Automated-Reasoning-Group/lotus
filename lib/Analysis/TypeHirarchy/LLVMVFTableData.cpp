@@ -8,24 +8,27 @@
  *****************************************************************************/
 
 #include "Analysis/TypeHirarchy/LLVMVFTableData.h"
-#include "Utils/General/spdlog/spdlog.h"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
+
 #include <fstream>
 #include <sstream>
+
+#include <spdlog/spdlog.h>
 
 namespace lotus {
 
 static LLVMVFTableData getDataFromJson(const std::string &JsonStr) {
   LLVMVFTableData Data;
-  
+
   // Simple JSON parsing for VFT array
-  // This is a simplified version - for full JSON support, consider using a library
+  // This is a simplified version - for full JSON support, consider using a
+  // library
   std::istringstream iss(JsonStr);
   std::string line;
   bool inVFT = false;
-  
+
   while (std::getline(iss, line)) {
     if (line.find("\"VFT\"") != std::string::npos) {
       inVFT = true;
@@ -44,7 +47,7 @@ static LLVMVFTableData getDataFromJson(const std::string &JsonStr) {
       }
     }
   }
-  
+
   return Data;
 }
 
@@ -62,13 +65,13 @@ void LLVMVFTableData::printAsJson(llvm::raw_ostream &OS) const {
 
 LLVMVFTableData LLVMVFTableData::deserializeJson(const llvm::Twine &Path) {
   std::string PathStr = Path.str();
-  
+
   std::ifstream file(PathStr);
   if (!file.is_open()) {
     SPDLOG_ERROR("Failed to open file: {}", PathStr);
     return LLVMVFTableData();
   }
-  
+
   std::stringstream buffer;
   buffer << file.rdbuf();
   return loadJsonString(buffer.str());

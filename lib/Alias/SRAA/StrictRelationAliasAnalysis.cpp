@@ -1,11 +1,5 @@
 #define DEBUG_TYPE "sraa"
 #include "Alias/SRAA/StrictRelationAliasAnalysis.h"
-#include "Alias/SRAA/RangeAnalysis.h"
-
-#include <ctime>
-#include <queue>
-#include <set>
-#include <utility>
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Argument.h"
@@ -16,10 +10,16 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/User.h"
 #include "llvm/Pass.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include "Alias/SRAA/RangeAnalysis.h"
+
+#include <ctime>
+#include <queue>
+#include <set>
+#include <utility>
 
 using namespace llvm;
 
@@ -44,9 +44,8 @@ STATISTIC(NumEvil, "Number of evil things that happened");
 
 // Register this pass...
 char StrictRelations::ID = 0;
-static RegisterPass<StrictRelations> X("sraa",
-                                       "Strict relations alias analysis", false,
-                                       false);
+static RegisterPass<StrictRelations>
+    X("sraa", "Strict relations alias analysis", false, false);
 // AnalysisGroup<AliasAnalysis> was removed in newer LLVM; registration omitted.
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -62,7 +61,7 @@ int Primitives::getSumBehind(std::vector<int> v, unsigned int i) {
 }
 
 // Returns the type of the ith element inside type
-Type* Primitives::getTypeInside(Type* type, int i) {
+Type *Primitives::getTypeInside(Type *type, int i) {
   if (type->isPointerTy())
     return type->getPointerElementType();
   else if (type->isArrayTy())
@@ -76,7 +75,7 @@ Type* Primitives::getTypeInside(Type* type, int i) {
 }
 
 // Returns the number of primitive elements of type
-int Primitives::getNumPrimitives(Type* type) {
+int Primitives::getNumPrimitives(Type *type) {
   // Verifies if this number of primitives was calculated already
   for (unsigned int i = 0; i < NumPrimitives.size(); i++)
     if (NumPrimitives[i]->type == type)
@@ -86,19 +85,19 @@ int Primitives::getNumPrimitives(Type* type) {
   int np;
   if (type->isArrayTy()) {
     int num = type->getArrayNumElements();
-    Type* arrtype = type->getArrayElementType();
+    Type *arrtype = type->getArrayElementType();
     int arrtypenum = getNumPrimitives(arrtype);
     np = num * arrtypenum;
   } else if (type->isStructTy()) {
     int num = type->getStructNumElements();
     np = 0;
     for (int i = 0; i < num; i++) {
-      Type* structelemtype = type->getStructElementType(i);
+      Type *structelemtype = type->getStructElementType(i);
       np += getNumPrimitives(structelemtype);
     }
   } else if (type->isVectorTy()) {
     int num = cast<VectorType>(type)->getElementCount().getKnownMinValue();
-    Type* arrtype = type->getScalarType();
+    Type *arrtype = type->getScalarType();
     int arrtypenum = getNumPrimitives(arrtype);
     np = num * arrtypenum;
   } else {
@@ -115,7 +114,7 @@ int Primitives::getNumPrimitives(Type* type) {
 }
 
 // Returns a vector with the primitive layout of type
-std::vector<int> Primitives::getPrimitiveLayout(Type* type) {
+std::vector<int> Primitives::getPrimitiveLayout(Type *type) {
   // Verifies if this layout was calculated already
   for (unsigned int i = 0; i < PrimitiveLayouts.size(); i++)
     if (PrimitiveLayouts[i]->type == type)
@@ -126,7 +125,7 @@ std::vector<int> Primitives::getPrimitiveLayout(Type* type) {
   if (type->isArrayTy()) {
     int num = type->getArrayNumElements();
     std::vector<int> pm(num);
-    Type* arrtype = type->getArrayElementType();
+    Type *arrtype = type->getArrayElementType();
     int arrtypenum = getNumPrimitives(arrtype);
     for (int i = 0; i < num; i++)
       pm[i] = arrtypenum;
@@ -137,7 +136,7 @@ std::vector<int> Primitives::getPrimitiveLayout(Type* type) {
     int num = type->getStructNumElements();
     std::vector<int> pm(num);
     for (int i = 0; i < num; i++) {
-      Type* structelemtype = type->getStructElementType(i);
+      Type *structelemtype = type->getStructElementType(i);
       pm[i] = getNumPrimitives(structelemtype);
     }
     PrimitiveLayouts.insert(PrimitiveLayouts.end(),
@@ -146,7 +145,7 @@ std::vector<int> Primitives::getPrimitiveLayout(Type* type) {
   } else if (type->isVectorTy()) {
     int num = cast<VectorType>(type)->getElementCount().getKnownMinValue();
     std::vector<int> pm(num);
-    Type* arrtype = type->getScalarType();
+    Type *arrtype = type->getScalarType();
     int arrtypenum = getNumPrimitives(arrtype);
     for (int i = 0; i < num; i++)
       pm[i] = arrtypenum;
@@ -179,14 +178,14 @@ StrictRelations::~StrictRelations() {
   errs() << "------------------------------------------\n";
 }
 
-void StrictRelations::getAnalysisUsage(AnalysisUsage& AU) const {
+void StrictRelations::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<InterProceduralRA<Cousot>>();
   AU.setPreservesAll();
 }
 
 // Compares Values
-StrictRelations::CompareResult StrictRelations::compareValues(const Value* V1,
-                                                              const Value* V2) {
+StrictRelations::CompareResult StrictRelations::compareValues(const Value *V1,
+                                                              const Value *V2) {
   if (variables.count(V1) and variables.count(V2)) {
     if (variables[V1]->GT.count(variables[V2]))
       return L;
@@ -216,8 +215,8 @@ StrictRelations::CompareResult StrictRelations::compareValues(const Value* V1,
 }
 
 // Compares GEPs by comparing pairs of operands
-bool StrictRelations::disjointGEPs(const GetElementPtrInst* G1,
-                                   const GetElementPtrInst* G2) {
+bool StrictRelations::disjointGEPs(const GetElementPtrInst *G1,
+                                   const GetElementPtrInst *G2) {
   // return N;
   CompareResult r = E;
   const auto *i1 = G1->idx_begin();
@@ -262,7 +261,7 @@ bool StrictRelations::disjointGEPs(const GetElementPtrInst* G1,
     return false;
 }
 
-bool diff(Range& r1, Range& r2) {
+bool diff(Range &r1, Range &r2) {
   if (r1.getLower().sgt(r2.getUpper()))
     return true;
   else if (r2.getLower().sgt(r1.getUpper()))
@@ -271,8 +270,8 @@ bool diff(Range& r1, Range& r2) {
     return false;
 }
 
-AliasResult StrictRelations::alias(
-    const MemoryLocation& LocA, const MemoryLocation& LocB) {
+AliasResult StrictRelations::alias(const MemoryLocation &LocA,
+                                   const MemoryLocation &LocB) {
   NumQueries++;
   const Value *p1, *p2;
   p1 = LocA.Ptr;
@@ -307,19 +306,19 @@ AliasResult StrictRelations::alias(
   return AliasResult::MayAlias;
 }
 
-bool StrictRelations::aliastest1(const Value* p1, const Value* p2) {
+bool StrictRelations::aliastest1(const Value *p1, const Value *p2) {
   clock_t t;
   t = clock();
 
   if (nodes.count(p1) and nodes.count(p2)) {
-    DepNode* dp1 = nodes[p1];
-    DepNode* dp2 = nodes[p2];
+    DepNode *dp1 = nodes[p1];
+    DepNode *dp2 = nodes[p2];
 
     // Local tree verification
     if (dp1->local_root == dp2->local_root) {
       int index = -1;
-      DepNode* ancestor = NULL;
-      for (auto&i : dp1->path_to_root) {
+      DepNode *ancestor = NULL;
+      for (auto &i : dp1->path_to_root) {
         if (index > -1 and i.second.first > index) {
           continue;
         } else if (dp2->path_to_root.count(i.first)) {
@@ -344,7 +343,7 @@ bool StrictRelations::aliastest1(const Value* p1, const Value* p2) {
   return false;
 }
 
-bool StrictRelations::aliastest2(const Value* p1, const Value* p2) {
+bool StrictRelations::aliastest2(const Value *p1, const Value *p2) {
   clock_t t;
   t = clock();
 
@@ -352,16 +351,16 @@ bool StrictRelations::aliastest2(const Value* p1, const Value* p2) {
     variables[p1] = new StrictRelations::Variable(p1);
   if (!variables.count(p2))
     variables[p2] = new StrictRelations::Variable(p2);
-  Variable* v1 = variables[p1];
-  Variable* v2 = variables[p2];
+  Variable *v1 = variables[p1];
+  Variable *v2 = variables[p2];
   if (v1->LT.count(v2) or v1->GT.count(v2)) {
     NumNoAlias2++;
     t = clock() - t;
     test2 += ((float)t) / CLOCKS_PER_SEC;
     return true;
   }
-  if (const GetElementPtrInst* gep1 = dyn_cast<GetElementPtrInst>(p1))
-    if (const GetElementPtrInst* gep2 = dyn_cast<GetElementPtrInst>(p2)) {
+  if (const GetElementPtrInst *gep1 = dyn_cast<GetElementPtrInst>(p1))
+    if (const GetElementPtrInst *gep2 = dyn_cast<GetElementPtrInst>(p2)) {
       if (nodes[gep1->getPointerOperand()]->mustalias ==
           nodes[gep2->getPointerOperand()]->mustalias) {
         t = clock() - t;
@@ -379,12 +378,12 @@ bool StrictRelations::aliastest2(const Value* p1, const Value* p2) {
   return false;
 }
 
-bool StrictRelations::aliastest3(const Value* p1, const Value* p2) {
+bool StrictRelations::aliastest3(const Value *p1, const Value *p2) {
   clock_t t;
   t = clock();
 
-  DepNode* dp1 = nodes[p1];
-  DepNode* dp2 = nodes[p2];
+  DepNode *dp1 = nodes[p1];
+  DepNode *dp2 = nodes[p2];
 
   if (dp1->unk or dp2->unk) {
     t = clock() - t;
@@ -437,13 +436,14 @@ bool StrictRelations::aliastest3(const Value* p1, const Value* p2) {
   return true;
 }
 
-bool StrictRelations::runOnModule(Module& M) {
-  // Initialize Alias Analysis is not needed with AAResults-style interface in LLVM 14
+bool StrictRelations::runOnModule(Module &M) {
+  // Initialize Alias Analysis is not needed with AAResults-style interface in
+  // LLVM 14
   specMgr_.initialize(M);
   RA = &getAnalysis<InterProceduralRACousot>();
   wle = new WorkListEngine();
   global_variable_translator =
-      (void*)new BitVectorPositionTranslator<Variable*>();
+      (void *)new BitVectorPositionTranslator<Variable *>();
   test1 = 0;
   test2 = 0;
   test3 = 0;
@@ -489,18 +489,18 @@ bool StrictRelations::runOnModule(Module& M) {
 
 // This function processes the indexes of a GEP operation and returns
 // the actual bitwise range of its offset;
-Range StrictRelations::processGEP(const Value* Base, const Use* idx_begin,
-                                  const Use* idx_end) {
+Range StrictRelations::processGEP(const Value *Base, const Use *idx_begin,
+                                  const Use *idx_end) {
   Range r;
   // Number of primitive elements
-  Type* base_ptr_type = Base->getType();
+  Type *base_ptr_type = Base->getType();
   int base_ptr_num_primitive = StrictRelations::P.getNumPrimitives(
       base_ptr_type->getPointerElementType());
 
   // parse first index
-  Value* indx = idx_begin->get();
+  Value *indx = idx_begin->get();
 
-  if (ConstantInt* cint = dyn_cast<ConstantInt>(indx)) {
+  if (ConstantInt *cint = dyn_cast<ConstantInt>(indx)) {
     int constant = cint->getSExtValue();
     // updating lower and higher ranges
     r.setLower(APInt(MAX_BIT_INT, base_ptr_num_primitive * constant));
@@ -526,8 +526,8 @@ Range StrictRelations::processGEP(const Value* Base, const Use* idx_begin,
     std::vector<int> base_ptr_primitive_layout =
         StrictRelations::P.getPrimitiveLayout(base_ptr_type);
 
-    Value* indx = (idx_begin + i)->get();
-    if (ConstantInt* cint = dyn_cast<ConstantInt>(indx)) {
+    Value *indx = (idx_begin + i)->get();
+    if (ConstantInt *cint = dyn_cast<ConstantInt>(indx)) {
       int constant = cint->getSExtValue();
 
       APInt addons(MAX_BIT_INT, StrictRelations::P.getSumBehind(
@@ -552,11 +552,11 @@ Range StrictRelations::processGEP(const Value* Base, const Use* idx_begin,
   return r;
 }
 
-void StrictRelations::collectConstraintsFromModule(Module& M) {
+void StrictRelations::collectConstraintsFromModule(Module &M) {
   // Map that holds the comparisons anf sigmas
   // cmp -> leftside<truesigma, falsesigma> , rightside<truesigma, falsesigma>
-  std::map<const CmpInst*, std::pair<std::pair<const Value*, const Value*>,
-                                     std::pair<const Value*, const Value*>>>
+  std::map<const CmpInst *, std::pair<std::pair<const Value *, const Value *>,
+                                      std::pair<const Value *, const Value *>>>
       sigmas;
 
   // Going through the module collecting constraints and sigmas
@@ -569,8 +569,8 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
         if (isa<llvm::BinaryOperator>(&(*I)) &&
             (&(*I))->getOpcode() == Instruction::Add) {
           // a = x + y
-          Value* op1 = (&*I)->getOperand(0);
-          Value* op2 = (&*I)->getOperand(1);
+          Value *op1 = (&*I)->getOperand(0);
+          Value *op2 = (&*I)->getOperand(1);
           Range r1 = RA->getRange(op1);
           Range r2 = RA->getRange(op2);
           // Evaluating the first operand
@@ -578,7 +578,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case a = 0 + y then a = y
             if (!variables.count(op2))
               variables[op2] = new StrictRelations::Variable(op2);
-            Constraint* c = new REQ(wle, variables[&*I], variables[op2]);
+            Constraint *c = new REQ(wle, variables[&*I], variables[op2]);
             variables[&*I]->coalesce(variables[op2]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
@@ -588,7 +588,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case x > 0 then y < a
             if (!variables.count(op2))
               variables[op2] = new StrictRelations::Variable(op2);
-            Constraint* c = new LT(wle, variables[op2], variables[&*I]);
+            Constraint *c = new LT(wle, variables[op2], variables[&*I]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
             variables[op2]->constraints.insert(c);
@@ -597,7 +597,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case x >= 0 then y <= a
             if (!variables.count(op2))
               variables[op2] = new StrictRelations::Variable(op2);
-            Constraint* c = new LE(wle, variables[op2], variables[&*I]);
+            Constraint *c = new LE(wle, variables[op2], variables[&*I]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
             variables[op2]->constraints.insert(c);
@@ -606,7 +606,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case x < 0 then a < y
             if (!variables.count(op2))
               variables[op2] = new StrictRelations::Variable(op2);
-            Constraint* c = new LT(wle, variables[&*I], variables[op2]);
+            Constraint *c = new LT(wle, variables[&*I], variables[op2]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
             variables[op2]->constraints.insert(c);
@@ -615,7 +615,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case x <= 0 then a <= y
             if (!variables.count(op2))
               variables[op2] = new StrictRelations::Variable(op2);
-            Constraint* c = new LE(wle, variables[&*I], variables[op2]);
+            Constraint *c = new LE(wle, variables[&*I], variables[op2]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
             variables[op2]->constraints.insert(c);
@@ -627,7 +627,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case a = x + 0 then a = x
             if (!variables.count(op1))
               variables[op1] = new StrictRelations::Variable(op1);
-            Constraint* c = new REQ(wle, variables[&*I], variables[op1]);
+            Constraint *c = new REQ(wle, variables[&*I], variables[op1]);
             variables[&*I]->coalesce(variables[op1]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
@@ -637,7 +637,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case y > 0 then x < a
             if (!variables.count(op1))
               variables[op1] = new StrictRelations::Variable(op1);
-            Constraint* c = new LT(wle, variables[op1], variables[&*I]);
+            Constraint *c = new LT(wle, variables[op1], variables[&*I]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
             variables[op1]->constraints.insert(c);
@@ -646,7 +646,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case y >= 0 then x <= a
             if (!variables.count(op1))
               variables[op1] = new StrictRelations::Variable(op1);
-            Constraint* c = new LE(wle, variables[op1], variables[&*I]);
+            Constraint *c = new LE(wle, variables[op1], variables[&*I]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
             variables[op1]->constraints.insert(c);
@@ -655,7 +655,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case y < 0 then a < x
             if (!variables.count(op1))
               variables[op1] = new StrictRelations::Variable(op1);
-            Constraint* c = new LT(wle, variables[&*I], variables[op1]);
+            Constraint *c = new LT(wle, variables[&*I], variables[op1]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
             variables[op1]->constraints.insert(c);
@@ -664,7 +664,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case y <= 0 then a <= x
             if (!variables.count(op1))
               variables[op1] = new StrictRelations::Variable(op1);
-            Constraint* c = new LE(wle, variables[&*I], variables[op1]);
+            Constraint *c = new LE(wle, variables[&*I], variables[op1]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
             variables[op1]->constraints.insert(c);
@@ -676,8 +676,8 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
         else if (isa<llvm::BinaryOperator>(&(*I)) &&
                  (&(*I))->getOpcode() == Instruction::Sub) {
           // a = x - y
-          Value* op1 = (&*I)->getOperand(0);
-          Value* op2 = (&*I)->getOperand(1);
+          Value *op1 = (&*I)->getOperand(0);
+          Value *op2 = (&*I)->getOperand(1);
           Range r1 = RA->getRange(op1);
           Range r2 = RA->getRange(op2);
           // Evaluating the first operand
@@ -687,7 +687,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
               // Case a = 0 - 0 then a = y
               if (!variables.count(op2))
                 variables[op2] = new StrictRelations::Variable(op2);
-              Constraint* c = new REQ(wle, variables[&*I], variables[op2]);
+              Constraint *c = new REQ(wle, variables[&*I], variables[op2]);
               variables[&*I]->coalesce(variables[op2]);
               NumConstraints++;
               variables[&*I]->constraints.insert(c);
@@ -697,7 +697,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
               // Case y > 0 then a < y
               if (!variables.count(op2))
                 variables[op2] = new StrictRelations::Variable(op2);
-              Constraint* c = new LT(wle, variables[&*I], variables[op2]);
+              Constraint *c = new LT(wle, variables[&*I], variables[op2]);
               NumConstraints++;
               variables[&*I]->constraints.insert(c);
               variables[op2]->constraints.insert(c);
@@ -706,7 +706,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
               // Case y >= 0 then a <= y
               if (!variables.count(op2))
                 variables[op2] = new StrictRelations::Variable(op2);
-              Constraint* c = new LE(wle, variables[&*I], variables[op2]);
+              Constraint *c = new LE(wle, variables[&*I], variables[op2]);
               NumConstraints++;
               variables[&*I]->constraints.insert(c);
               variables[op2]->constraints.insert(c);
@@ -715,7 +715,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
               // Case y < 0 then y < a
               if (!variables.count(op2))
                 variables[op2] = new StrictRelations::Variable(op2);
-              Constraint* c = new LT(wle, variables[op2], variables[&*I]);
+              Constraint *c = new LT(wle, variables[op2], variables[&*I]);
               NumConstraints++;
               variables[&*I]->constraints.insert(c);
               variables[op2]->constraints.insert(c);
@@ -724,7 +724,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
               // Case y <= 0 then y <= a
               if (!variables.count(op2))
                 variables[op2] = new StrictRelations::Variable(op2);
-              Constraint* c = new LE(wle, variables[op2], variables[&*I]);
+              Constraint *c = new LE(wle, variables[op2], variables[&*I]);
               NumConstraints++;
               variables[&*I]->constraints.insert(c);
               variables[op2]->constraints.insert(c);
@@ -736,7 +736,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
               // Case a = (>0) - 0 then y < a
               if (!variables.count(op2))
                 variables[op2] = new StrictRelations::Variable(op2);
-              Constraint* c = new LT(wle, variables[op2], variables[&*I]);
+              Constraint *c = new LT(wle, variables[op2], variables[&*I]);
               NumConstraints++;
               variables[&*I]->constraints.insert(c);
               variables[op2]->constraints.insert(c);
@@ -749,7 +749,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
               // Case y < 0, a = (>0) - (<0) then y < a
               if (!variables.count(op2))
                 variables[op2] = new StrictRelations::Variable(op2);
-              Constraint* c = new LT(wle, variables[op2], variables[&*I]);
+              Constraint *c = new LT(wle, variables[op2], variables[&*I]);
               NumConstraints++;
               variables[&*I]->constraints.insert(c);
               variables[op2]->constraints.insert(c);
@@ -758,7 +758,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
               // Case y <= 0, a = (>0) - (<=0) then y < a
               if (!variables.count(op2))
                 variables[op2] = new StrictRelations::Variable(op2);
-              Constraint* c = new LT(wle, variables[op2], variables[&*I]);
+              Constraint *c = new LT(wle, variables[op2], variables[&*I]);
               NumConstraints++;
               variables[&*I]->constraints.insert(c);
               variables[op2]->constraints.insert(c);
@@ -770,7 +770,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
               // Case a = (>=0) - 0 then y <= a
               if (!variables.count(op2))
                 variables[op2] = new StrictRelations::Variable(op2);
-              Constraint* c = new LE(wle, variables[op2], variables[&*I]);
+              Constraint *c = new LE(wle, variables[op2], variables[&*I]);
               NumConstraints++;
               variables[&*I]->constraints.insert(c);
               variables[op2]->constraints.insert(c);
@@ -783,7 +783,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
               // Case y < 0, a = (>=0) - (<0) then y < a
               if (!variables.count(op2))
                 variables[op2] = new StrictRelations::Variable(op2);
-              Constraint* c = new LT(wle, variables[op2], variables[&*I]);
+              Constraint *c = new LT(wle, variables[op2], variables[&*I]);
               NumConstraints++;
               variables[&*I]->constraints.insert(c);
               variables[op2]->constraints.insert(c);
@@ -792,7 +792,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
               // Case y <= 0, a = (>=0) - (<=0) then y <= a
               if (!variables.count(op2))
                 variables[op2] = new StrictRelations::Variable(op2);
-              Constraint* c = new LE(wle, variables[op2], variables[&*I]);
+              Constraint *c = new LE(wle, variables[op2], variables[&*I]);
               NumConstraints++;
               variables[&*I]->constraints.insert(c);
               variables[op2]->constraints.insert(c);
@@ -804,7 +804,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
               // Case a = (<0) - 0 then a < y
               if (!variables.count(op2))
                 variables[op2] = new StrictRelations::Variable(op2);
-              Constraint* c = new LT(wle, variables[&*I], variables[op2]);
+              Constraint *c = new LT(wle, variables[&*I], variables[op2]);
               NumConstraints++;
               variables[&*I]->constraints.insert(c);
               variables[op2]->constraints.insert(c);
@@ -813,7 +813,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
               // Case y > 0, a = (<0) - (>0) then  a < y
               if (!variables.count(op2))
                 variables[op2] = new StrictRelations::Variable(op2);
-              Constraint* c = new LT(wle, variables[&*I], variables[op2]);
+              Constraint *c = new LT(wle, variables[&*I], variables[op2]);
               NumConstraints++;
               variables[&*I]->constraints.insert(c);
               variables[op2]->constraints.insert(c);
@@ -822,7 +822,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
               // Case y >= 0, a = (<0) - (>=0)  then a < y
               if (!variables.count(op2))
                 variables[op2] = new StrictRelations::Variable(op2);
-              Constraint* c = new LT(wle, variables[&*I], variables[op2]);
+              Constraint *c = new LT(wle, variables[&*I], variables[op2]);
               NumConstraints++;
               variables[&*I]->constraints.insert(c);
               variables[op2]->constraints.insert(c);
@@ -838,7 +838,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
               // Case a = (<=0) - 0 then a <= y
               if (!variables.count(op2))
                 variables[op2] = new StrictRelations::Variable(op2);
-              Constraint* c = new LE(wle, variables[&*I], variables[op2]);
+              Constraint *c = new LE(wle, variables[&*I], variables[op2]);
               NumConstraints++;
               variables[&*I]->constraints.insert(c);
               variables[op2]->constraints.insert(c);
@@ -847,7 +847,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
               // Case y > 0, a = (<=0) - (>0) then  a < y
               if (!variables.count(op2))
                 variables[op2] = new StrictRelations::Variable(op2);
-              Constraint* c = new LT(wle, variables[&*I], variables[op2]);
+              Constraint *c = new LT(wle, variables[&*I], variables[op2]);
               NumConstraints++;
               variables[&*I]->constraints.insert(c);
               variables[op2]->constraints.insert(c);
@@ -856,7 +856,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
               // Case y >= 0, a = (<=0) - (>=0)  then a <= y
               if (!variables.count(op2))
                 variables[op2] = new StrictRelations::Variable(op2);
-              Constraint* c = new LE(wle, variables[&*I], variables[op2]);
+              Constraint *c = new LE(wle, variables[&*I], variables[op2]);
               NumConstraints++;
               variables[&*I]->constraints.insert(c);
               variables[op2]->constraints.insert(c);
@@ -873,7 +873,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case a = x - 0 then a = x
             if (!variables.count(op1))
               variables[op1] = new StrictRelations::Variable(op1);
-            Constraint* c = new REQ(wle, variables[&*I], variables[op1]);
+            Constraint *c = new REQ(wle, variables[&*I], variables[op1]);
             variables[&*I]->coalesce(variables[op1]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
@@ -883,7 +883,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case y > 0 then a < x
             if (!variables.count(op1))
               variables[op1] = new StrictRelations::Variable(op1);
-            Constraint* c = new LT(wle, variables[&*I], variables[op1]);
+            Constraint *c = new LT(wle, variables[&*I], variables[op1]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
             variables[op1]->constraints.insert(c);
@@ -892,7 +892,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case y >= 0 then a <= x
             if (!variables.count(op1))
               variables[op1] = new StrictRelations::Variable(op1);
-            Constraint* c = new LE(wle, variables[&*I], variables[op1]);
+            Constraint *c = new LE(wle, variables[&*I], variables[op1]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
             variables[op1]->constraints.insert(c);
@@ -901,7 +901,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case y < 0 then x < a
             if (!variables.count(op1))
               variables[op1] = new StrictRelations::Variable(op1);
-            Constraint* c = new LT(wle, variables[op1], variables[&*I]);
+            Constraint *c = new LT(wle, variables[op1], variables[&*I]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
             variables[op1]->constraints.insert(c);
@@ -910,7 +910,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case y <= 0 then x <= a
             if (!variables.count(op1))
               variables[op1] = new StrictRelations::Variable(op1);
-            Constraint* c = new LE(wle, variables[op1], variables[&*I]);
+            Constraint *c = new LE(wle, variables[op1], variables[&*I]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
             variables[op1]->constraints.insert(c);
@@ -918,16 +918,16 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
           }
         }
         // GEP Instruction
-        else if (const GetElementPtrInst* p = dyn_cast<GetElementPtrInst>(I)) {
+        else if (const GetElementPtrInst *p = dyn_cast<GetElementPtrInst>(I)) {
           // Getting base pointer
-          const Value* base = p->getPointerOperand();
+          const Value *base = p->getPointerOperand();
           // Geting bit range of offset
           Range r = processGEP(base, p->idx_begin(), p->idx_end());
           if (r.getLower().eq(Zero) and r.getUpper().eq(Zero)) {
             // Case p = b + 0 then p = b
             if (!variables.count(base))
               variables[base] = new StrictRelations::Variable(base);
-            Constraint* c = new REQ(wle, variables[&*I], variables[base]);
+            Constraint *c = new REQ(wle, variables[&*I], variables[base]);
             variables[&*I]->coalesce(variables[base]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
@@ -937,7 +937,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case p = b + (>0) then b < p
             if (!variables.count(base))
               variables[base] = new StrictRelations::Variable(base);
-            Constraint* c = new LT(wle, variables[base], variables[&*I]);
+            Constraint *c = new LT(wle, variables[base], variables[&*I]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
             variables[base]->constraints.insert(c);
@@ -946,7 +946,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case p = b + (>=0) then b <= p
             if (!variables.count(base))
               variables[base] = new StrictRelations::Variable(base);
-            Constraint* c = new LE(wle, variables[base], variables[&*I]);
+            Constraint *c = new LE(wle, variables[base], variables[&*I]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
             variables[base]->constraints.insert(c);
@@ -955,7 +955,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case p = b + (<0) then p < b
             if (!variables.count(base))
               variables[base] = new StrictRelations::Variable(base);
-            Constraint* c = new LT(wle, variables[&*I], variables[base]);
+            Constraint *c = new LT(wle, variables[&*I], variables[base]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
             variables[base]->constraints.insert(c);
@@ -964,7 +964,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             // Case p = b + (<=0) then p <= b
             if (!variables.count(base))
               variables[base] = new StrictRelations::Variable(base);
-            Constraint* c = new LE(wle, variables[&*I], variables[base]);
+            Constraint *c = new LE(wle, variables[&*I], variables[base]);
             NumConstraints++;
             variables[&*I]->constraints.insert(c);
             variables[base]->constraints.insert(c);
@@ -973,31 +973,31 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
         }
         // Sigma
         else if (isa<PHINode>(&(*I)) && ((&*I)->getNumOperands() == 1)) {
-          const PHINode* p = dyn_cast<PHINode>(I);
+          const PHINode *p = dyn_cast<PHINode>(I);
 
-          const BasicBlock* cmpBB = p->getIncomingBlock(0);
+          const BasicBlock *cmpBB = p->getIncomingBlock(0);
 
           if (!isa<BranchInst>(cmpBB->getTerminator())) {
             errs() << "Error on evaluating sigma!\n";
             continue;
           }
-          const BranchInst* br = dyn_cast<BranchInst>(cmpBB->getTerminator());
+          const BranchInst *br = dyn_cast<BranchInst>(cmpBB->getTerminator());
           // Getting weather true or false sigma
-          const BasicBlock* curBB = (&*I)->getParent();
+          const BasicBlock *curBB = (&*I)->getParent();
           bool trueSigma = curBB == br->getSuccessor(0);
 
           if (!br->isConditional()) {
             errs() << "Error on evaluating sigma!\n";
             continue;
           }
-          const Value* cmpV = br->getCondition();
+          const Value *cmpV = br->getCondition();
 
           if (!isa<CmpInst>(cmpV)) {
             errs() << "Error on evaluating sigma!\n";
             continue;
           }
           // Getting comparison instruction
-          const CmpInst* cmpInst = dyn_cast<CmpInst>(cmpV);
+          const CmpInst *cmpInst = dyn_cast<CmpInst>(cmpV);
           // Getting side of predicate
           bool leftSide = p->getIncomingValue(0) == cmpInst->getOperand(0);
           // Adding to sigmas structures
@@ -1011,10 +1011,10 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
             sigmas[cmpInst].second.second = p;
 
           // Adding eq constraint
-          const Value* op = p->getIncomingValue(0);
+          const Value *op = p->getIncomingValue(0);
           if (!variables.count(op))
             variables[op] = new StrictRelations::Variable(op);
-          Constraint* c = new EQ(wle, variables[&*I], variables[op]);
+          Constraint *c = new EQ(wle, variables[&*I], variables[op]);
 
           NumConstraints++;
           variables[&*I]->constraints.insert(c);
@@ -1022,15 +1022,15 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
           wle->add(c);
         }
         // Phi function
-        else if (const PHINode* p = dyn_cast<PHINode>(I)) {
-          std::unordered_set<StrictRelations::Variable*> vset;
+        else if (const PHINode *p = dyn_cast<PHINode>(I)) {
+          std::unordered_set<StrictRelations::Variable *> vset;
           for (int i = 0, e = p->getNumIncomingValues(); i < e; i++) {
-            const Value* op = p->getIncomingValue(i);
+            const Value *op = p->getIncomingValue(i);
             if (!variables.count(op))
               variables[op] = new StrictRelations::Variable(op);
             vset.insert(variables.at(op));
           }
-          Constraint* c = new PHI(wle, variables[&*I], vset);
+          Constraint *c = new PHI(wle, variables[&*I], vset);
 
           NumConstraints++;
           variables[&*I]->constraints.insert(c);
@@ -1041,10 +1041,10 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
         // Bitcasts and such
         else if (isa<BitCastInst>(&(*I)) || isa<SExtInst>(&(*I)) ||
                  isa<ZExtInst>(&(*I))) {
-          const Value* op = (&*I)->getOperand(0);
+          const Value *op = (&*I)->getOperand(0);
           if (!variables.count(op))
             variables[op] = new StrictRelations::Variable(op);
-          Constraint* c = new REQ(wle, variables[&*I], variables[op]);
+          Constraint *c = new REQ(wle, variables[&*I], variables[op]);
           variables[&*I]->coalesce(variables[op]);
 
           NumConstraints++;
@@ -1075,7 +1075,7 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
     if (i.second.second.second == NULL and i.second.first.second != NULL)
       i.second.second.second = i.first->getOperand(1);*/
 
-    Constraint* c;
+    Constraint *c;
     if (pred == CmpInst::ICMP_UGT or pred == CmpInst::ICMP_SGT) {
       if (i.second.second.first != NULL and i.second.first.first != NULL and
           variables.count(i.second.second.first) and
@@ -1200,18 +1200,18 @@ void StrictRelations::collectConstraintsFromModule(Module& M) {
   }
 }
 
-void StrictRelations::DepNode::coalesce(StrictRelations::DepNode* other) {
+void StrictRelations::DepNode::coalesce(StrictRelations::DepNode *other) {
   if (mustalias == other->mustalias)
     return;
-  std::unordered_set<DepNode*>* to_coalesce = other->mustalias;
+  std::unordered_set<DepNode *> *to_coalesce = other->mustalias;
   for (auto *i : *to_coalesce)
     i->mustalias = mustalias;
   mustalias->insert(to_coalesce->begin(), to_coalesce->end());
   delete to_coalesce;
 }
 
-void StrictRelations::buildDepGraph(Module& M) {
-  std::set<const Value*> pointers;
+void StrictRelations::buildDepGraph(Module &M) {
+  std::set<const Value *> pointers;
   /// Go through global variables to find arrays, structs and pointers
   for (auto i = M.global_begin(), e = M.global_end(); i != e; i++) {
     // Since all globals are pointers, all are inserted
@@ -1221,22 +1221,22 @@ void StrictRelations::buildDepGraph(Module& M) {
   for (auto F = M.begin(), Fe = M.end(); F != Fe; F++) {
     /// Go through parameters (add if they are pointers)
     for (auto i = F->arg_begin(), e = F->arg_end(); i != e; i++) {
-      Type* const arg_type = i->getType();
+      Type *const arg_type = i->getType();
       if (arg_type->isPointerTy()) {
         pointers.insert(&*i);
       }
     }
     /// Run through instructions from function
     for (inst_iterator I = inst_begin(&*F), E = inst_end(&*F); I != E; ++I) {
-      const Instruction* i = &(*I);
-      const Type* type = i->getType();
+      const Instruction *i = &(*I);
+      const Type *type = i->getType();
       if (type->isPointerTy()) {
         pointers.insert(&*i);
       }
       /// verify intruction operands
       for (auto oi = i->op_begin(), oe = i->op_end(); oi != oe; oi++) {
-        const Value* oper = *oi;
-        const Type* op_type = oper->getType();
+        const Value *oper = *oi;
+        const Type *op_type = oper->getType();
         if (op_type->isPointerTy()) {
           pointers.insert(oper);
         }
@@ -1251,17 +1251,17 @@ void StrictRelations::buildDepGraph(Module& M) {
 
   // Finding edges
   for (auto i : nodes) {
-    if (const Argument* p = dyn_cast<Argument>(i.first)) {
-      const Function* F = p->getParent();
+    if (const Argument *p = dyn_cast<Argument>(i.first)) {
+      const Function *F = p->getParent();
       // Go through all the uses of the argument's function, the calls are
       //  the addresses bases
       for (auto ui = F->user_begin(), ue = F->user_end(); ui != ue; ui++) {
-        const User* u = *ui;
-        if (const CallInst* caller = dyn_cast<CallInst>(u)) {
+        const User *u = *ui;
+        if (const CallInst *caller = dyn_cast<CallInst>(u)) {
           int anum = caller->arg_size();
           int ano = p->getArgNo();
           if (ano <= anum) {
-            const Value* base = caller->getArgOperand(ano);
+            const Value *base = caller->getArgOperand(ano);
             if (!nodes.count(base))
               nodes[base] = new DepNode(base);
             DepNode::addEdge(i.second, nodes[base], Range(Zero, Zero));
@@ -1274,7 +1274,7 @@ void StrictRelations::buildDepGraph(Module& M) {
             DEBUG_WITH_TYPE("errors", errs() << *p << " " << ano << "\n");
             DEBUG_WITH_TYPE("errors", errs() << *u << "\n");
             i.second->unk = true;
-            std::set<DepEdge*> to_remove;
+            std::set<DepEdge *> to_remove;
             for (auto *e : i.second->inedges)
               to_remove.insert(e);
             for (auto *e : to_remove)
@@ -1283,12 +1283,13 @@ void StrictRelations::buildDepGraph(Module& M) {
           }
         }
       }
-    } else if (const CallInst* p = dyn_cast<CallInst>(i.first)) {
-      Function* CF = p->getCalledFunction();
+    } else if (const CallInst *p = dyn_cast<CallInst>(i.first)) {
+      Function *CF = p->getCalledFunction();
       if (CF) {
-        if (specMgr_.getCategory(CF) == lotus::alias::FunctionCategory::Reallocator) {
+        if (specMgr_.getCategory(CF) ==
+            lotus::alias::FunctionCategory::Reallocator) {
           /// realloc is connected with it's first argument
-          const Value* base = p->getOperand(0);
+          const Value *base = p->getOperand(0);
           if (!nodes.count(base))
             nodes[base] = new DepNode(base);
           DepNode::addEdge(i.second, nodes[base], Range(Zero, Zero));
@@ -1297,7 +1298,7 @@ void StrictRelations::buildDepGraph(Module& M) {
           for (auto j = inst_begin(CF), e = inst_end(CF); j != e; j++)
             if (isa<const ReturnInst>(*j)) {
               /// create edge
-              const Value* ret_ptr = ((ReturnInst*)&(*j))->getReturnValue();
+              const Value *ret_ptr = ((ReturnInst *)&(*j))->getReturnValue();
               if (!nodes.count(ret_ptr))
                 nodes[ret_ptr] = new DepNode(ret_ptr);
               DepNode::addEdge(i.second, nodes[ret_ptr], Range(Zero, Zero));
@@ -1305,10 +1306,10 @@ void StrictRelations::buildDepGraph(Module& M) {
             }
         }
       }
-    } else if (const GetElementPtrInst* p =
+    } else if (const GetElementPtrInst *p =
                    dyn_cast<GetElementPtrInst>(i.first)) {
       // Getting base pointer
-      const Value* base = p->getPointerOperand();
+      const Value *base = p->getPointerOperand();
       // Geting bit range of offset
       Range r = processGEP(base, p->idx_begin(), p->idx_end());
 
@@ -1318,38 +1319,38 @@ void StrictRelations::buildDepGraph(Module& M) {
         nodes[base]->coalesce(i.second);
       DepNode::addEdge(i.second, nodes[base], r);
       NumEdges++;
-    } else if (const BitCastInst* p = dyn_cast<BitCastInst>(i.first)) {
-      const Value* base = p->getOperand(0);
+    } else if (const BitCastInst *p = dyn_cast<BitCastInst>(i.first)) {
+      const Value *base = p->getOperand(0);
       if (!nodes.count(base))
         nodes[base] = new DepNode(base);
       nodes[base]->coalesce(i.second);
       DepNode::addEdge(i.second, nodes[base], Range(Zero, Zero));
       NumEdges++;
-    } else if (const SExtInst* p = dyn_cast<SExtInst>(i.first)) {
-      const Value* base = p->getOperand(0);
+    } else if (const SExtInst *p = dyn_cast<SExtInst>(i.first)) {
+      const Value *base = p->getOperand(0);
       if (!nodes.count(base))
         nodes[base] = new DepNode(base);
       nodes[base]->coalesce(i.second);
       DepNode::addEdge(i.second, nodes[base], Range(Zero, Zero));
       NumEdges++;
-    } else if (const ZExtInst* p = dyn_cast<ZExtInst>(i.first)) {
-      const Value* base = p->getOperand(0);
+    } else if (const ZExtInst *p = dyn_cast<ZExtInst>(i.first)) {
+      const Value *base = p->getOperand(0);
       if (!nodes.count(base))
         nodes[base] = new DepNode(base);
       nodes[base]->coalesce(i.second);
       DepNode::addEdge(i.second, nodes[base], Range(Zero, Zero));
       NumEdges++;
-    } else if (const PHINode* p = dyn_cast<PHINode>(i.first)) {
+    } else if (const PHINode *p = dyn_cast<PHINode>(i.first)) {
       for (unsigned int j = 0; j < p->getNumIncomingValues(); j++) {
-        const Value* base = p->getIncomingValue(j);
+        const Value *base = p->getIncomingValue(j);
         if (!nodes.count(base))
           nodes[base] = new DepNode(base);
         DepNode::addEdge(i.second, nodes[base], Range(Zero, Zero));
         NumEdges++;
       }
-    } else if (const GEPOperator* p = dyn_cast<GEPOperator>(i.first)) {
+    } else if (const GEPOperator *p = dyn_cast<GEPOperator>(i.first)) {
       // Getting base pointer
-      const Value* base = p->getPointerOperand();
+      const Value *base = p->getPointerOperand();
       // Geting bit range of offset
       Range r = processGEP(base, p->idx_begin(), p->idx_end());
 
@@ -1357,10 +1358,10 @@ void StrictRelations::buildDepGraph(Module& M) {
         nodes[base] = new DepNode(base);
       DepNode::addEdge(i.second, nodes[base], r);
       NumEdges++;
-    } else if (const ConstantExpr* p = dyn_cast<ConstantExpr>(i.first)) {
-      const char* operation = p->getOpcodeName();
+    } else if (const ConstantExpr *p = dyn_cast<ConstantExpr>(i.first)) {
+      const char *operation = p->getOpcodeName();
       if (strcmp(operation, "bitcast") == 0) {
-        const Value* base = p->getOperand(0);
+        const Value *base = p->getOperand(0);
         if (!nodes.count(base))
           nodes[base] = new DepNode(base);
         nodes[base]->coalesce(i.second);
@@ -1380,8 +1381,8 @@ void StrictRelations::collectTypes() {
       i.second->alloca = true;
     } else if (isa<const AllocaInst>(*(i.first))) {
       i.second->alloca = true;
-    } else if (const CallInst* p = dyn_cast<CallInst>(i.first)) {
-      Function* CF = p->getCalledFunction();
+    } else if (const CallInst *p = dyn_cast<CallInst>(i.first)) {
+      Function *CF = p->getCalledFunction();
       if (CF) {
         if (specMgr_.isAllocator(CF)) {
           i.second->alloca = true;
@@ -1394,8 +1395,8 @@ void StrictRelations::collectTypes() {
       i.second->alloca = true;
     } else if (isa<const Function>(*(i.first))) {
       i.second->alloca = true;
-    } else if (const ConstantExpr* p = dyn_cast<ConstantExpr>(i.first)) {
-      const char* operation = p->getOpcodeName();
+    } else if (const ConstantExpr *p = dyn_cast<ConstantExpr>(i.first)) {
+      const char *operation = p->getOpcodeName();
       if (strcmp(operation, "bitcast") != 0)
         i.second->unk = true;
     }
@@ -1403,10 +1404,10 @@ void StrictRelations::collectTypes() {
 }
 
 void StrictRelations::propagateTypes() {
-  std::set<DepNode*> args;
-  std::set<DepNode*> globals;
-  std::set<DepNode*> unks;
-  std::set<DepNode*> allocas;
+  std::set<DepNode *> args;
+  std::set<DepNode *> globals;
+  std::set<DepNode *> unks;
+  std::set<DepNode *> allocas;
   for (auto i : nodes) {
     if (i.second->arg) {
       args.insert(i.second);
@@ -1421,8 +1422,8 @@ void StrictRelations::propagateTypes() {
       allocas.insert(i.second);
     }
   }
-  std::queue<DepNode*> to_visit;
-  std::unordered_set<DepNode*> visited;
+  std::queue<DepNode *> to_visit;
+  std::unordered_set<DepNode *> visited;
   // Propagating args
   propagateArgs(args);
   // Propagating globals
@@ -1435,14 +1436,14 @@ void StrictRelations::propagateTypes() {
   }
 }
 
-void StrictRelations::propagateArgs(std::set<DepNode*>& args) {
-  std::queue<DepNode*> to_visit;
-  std::unordered_set<DepNode*> visited;
+void StrictRelations::propagateArgs(std::set<DepNode *> &args) {
+  std::queue<DepNode *> to_visit;
+  std::unordered_set<DepNode *> visited;
 
   for (auto *i : args)
     to_visit.push(i);
   while (!(to_visit.empty())) {
-    DepNode* current = to_visit.front();
+    DepNode *current = to_visit.front();
     to_visit.pop();
     visited.insert(current);
     if (!(current->call)) {
@@ -1456,14 +1457,14 @@ void StrictRelations::propagateArgs(std::set<DepNode*>& args) {
   }
 }
 
-void StrictRelations::propagateGlobals(std::set<DepNode*>& globals) {
-  std::queue<DepNode*> to_visit;
-  std::unordered_set<DepNode*> visited;
+void StrictRelations::propagateGlobals(std::set<DepNode *> &globals) {
+  std::queue<DepNode *> to_visit;
+  std::unordered_set<DepNode *> visited;
 
   for (auto *i : globals)
     to_visit.push(i);
   while (!(to_visit.empty())) {
-    DepNode* current = to_visit.front();
+    DepNode *current = to_visit.front();
     to_visit.pop();
     current->global = true;
     visited.insert(current);
@@ -1476,14 +1477,14 @@ void StrictRelations::propagateGlobals(std::set<DepNode*>& globals) {
   }
 }
 
-void StrictRelations::propagateUnks(std::set<DepNode*>& unks) {
-  std::queue<DepNode*> to_visit;
-  std::unordered_set<DepNode*> visited;
+void StrictRelations::propagateUnks(std::set<DepNode *> &unks) {
+  std::queue<DepNode *> to_visit;
+  std::unordered_set<DepNode *> visited;
 
   for (auto *i : unks)
     to_visit.push(i);
   while (!(to_visit.empty())) {
-    DepNode* current = to_visit.front();
+    DepNode *current = to_visit.front();
     to_visit.pop();
     current->unk = true;
     visited.insert(current);
@@ -1496,14 +1497,14 @@ void StrictRelations::propagateUnks(std::set<DepNode*>& unks) {
   }
 }
 
-void StrictRelations::propagateAlloca(DepNode* alloca) {
-  std::queue<DepNode*> to_visit;
-  std::unordered_set<DepNode*> visited;
+void StrictRelations::propagateAlloca(DepNode *alloca) {
+  std::queue<DepNode *> to_visit;
+  std::unordered_set<DepNode *> visited;
 
   to_visit.push(alloca);
-  const Value* a = alloca->v;
+  const Value *a = alloca->v;
   while (!(to_visit.empty())) {
-    DepNode* current = to_visit.front();
+    DepNode *current = to_visit.front();
     to_visit.pop();
     current->locs.insert(a);
     visited.insert(current);
@@ -1517,20 +1518,20 @@ void StrictRelations::propagateAlloca(DepNode* alloca) {
 }
 
 void StrictRelations::DepNode::getPathToRoot() {
-  DepNode* current = this;
+  DepNode *current = this;
   int index = 0;
   Range offset = Range(Zero, Zero);
   while (true) {
     path_to_root[current] = std::pair<int, Range>(index, offset);
     if (current->inedges.size() == 1) {
-      DepEdge* addr = *(current->inedges.begin());
+      DepEdge *addr = *(current->inedges.begin());
       current = addr->out;
       if (path_to_root.count(current)) {
         // This means that the local tree is actually a lonely loop
         //  so the local tree's root will be the pointer with the highest
         //  address
-        DepNode* root = NULL;
-        for (auto& i : path_to_root) {
+        DepNode *root = NULL;
+        for (auto &i : path_to_root) {
           if (root < i.first)
             root = i.first;
         }
@@ -1554,7 +1555,7 @@ void WorkListEngine::solve() {
     push(i.first);
 
   while (!worklist.empty()) {
-    const Constraint* c = worklist.front();
+    const Constraint *c = worklist.front();
     worklist.pop();
     constraints[c] = false;
     DEBUG_WITH_TYPE("worklist", errs() << "=> ");
@@ -1564,7 +1565,7 @@ void WorkListEngine::solve() {
   }
 }
 
-void WorkListEngine::add(const Constraint* C) {
+void WorkListEngine::add(const Constraint *C) {
   if (!constraints.count(C))
     constraints[C] = false;
 }
@@ -1574,7 +1575,7 @@ WorkListEngine::~WorkListEngine() {
     delete i.first;
 }
 
-void WorkListEngine::printConstraints(raw_ostream& OS) {
+void WorkListEngine::printConstraints(raw_ostream &OS) {
   OS << "Constraints:\n";
   OS << "-------------------------------------------------\n";
   for (auto i : constraints)
@@ -1582,7 +1583,7 @@ void WorkListEngine::printConstraints(raw_ostream& OS) {
   OS << "-------------------------------------------------\n";
 }
 
-void WorkListEngine::push(const Constraint* C) {
+void WorkListEngine::push(const Constraint *C) {
   if (constraints.count(C) and !constraints.at(C)) {
     worklist.push(C);
     constraints[C] = true;
@@ -1592,8 +1593,8 @@ void WorkListEngine::push(const Constraint* C) {
 // Constraints definitions
 
 // LT(x) U= {y}
-void insertLT(StrictRelations::Variable* x, StrictRelations::Variable* y,
-              StrictRelations::VariableSet& changed) {
+void insertLT(StrictRelations::Variable *x, StrictRelations::Variable *y,
+              StrictRelations::VariableSet &changed) {
   if (!x->LT.count(y) and x != y) {
     x->LT.insert(y);
     changed.insert(x);
@@ -1605,8 +1606,8 @@ void insertLT(StrictRelations::Variable* x, StrictRelations::Variable* y,
 }
 
 // GT(x) U= {y}
-void insertGT(StrictRelations::Variable* x, StrictRelations::Variable* y,
-              StrictRelations::VariableSet& changed) {
+void insertGT(StrictRelations::Variable *x, StrictRelations::Variable *y,
+              StrictRelations::VariableSet &changed) {
   if (!x->GT.count(y) and x != y) {
     x->GT.insert(y);
     changed.insert(x);
@@ -1618,23 +1619,23 @@ void insertGT(StrictRelations::Variable* x, StrictRelations::Variable* y,
 }
 
 // LT(x) U= LT(y)
-void unionLT(StrictRelations::Variable* x, StrictRelations::Variable* y,
-             StrictRelations::VariableSet& changed) {
+void unionLT(StrictRelations::Variable *x, StrictRelations::Variable *y,
+             StrictRelations::VariableSet &changed) {
   for (auto *i : y->LT) {
     insertLT(x, i, changed);
   }
 }
 
 // GT(x) U= GT(y)
-void unionGT(StrictRelations::Variable* x, StrictRelations::Variable* y,
-             StrictRelations::VariableSet& changed) {
+void unionGT(StrictRelations::Variable *x, StrictRelations::Variable *y,
+             StrictRelations::VariableSet &changed) {
   for (auto *i : y->GT) {
     insertGT(x, i, changed);
   }
 }
 
-StrictRelations::VariableSet intersect(StrictRelations::VariableSet& s1,
-                                       StrictRelations::VariableSet& s2) {
+StrictRelations::VariableSet intersect(StrictRelations::VariableSet &s1,
+                                       StrictRelations::VariableSet &s2) {
   StrictRelations::VariableSet r;
   for (auto *i : s1)
     if (s2.count(i))
@@ -1817,7 +1818,7 @@ void PHI::resolve() const {
   }
 }
 
-void LT::print(raw_ostream& OS) const {
+void LT::print(raw_ostream &OS) const {
   if (!left->v->hasName())
     OS << *(left->v);
   else
@@ -1829,7 +1830,7 @@ void LT::print(raw_ostream& OS) const {
     OS << right->v->getName();
   OS << "\n";
 }
-void LE::print(raw_ostream& OS) const {
+void LE::print(raw_ostream &OS) const {
   if (!left->v->hasName())
     OS << *(left->v);
   else
@@ -1841,7 +1842,7 @@ void LE::print(raw_ostream& OS) const {
     OS << right->v->getName();
   OS << "\n";
 }
-void REQ::print(raw_ostream& OS) const {
+void REQ::print(raw_ostream &OS) const {
   if (!left->v->hasName())
     OS << *(left->v);
   else
@@ -1853,7 +1854,7 @@ void REQ::print(raw_ostream& OS) const {
     OS << right->v->getName();
   OS << "\n";
 }
-void EQ::print(raw_ostream& OS) const {
+void EQ::print(raw_ostream &OS) const {
   if (!left->v->hasName())
     OS << *(left->v);
   else
@@ -1865,7 +1866,7 @@ void EQ::print(raw_ostream& OS) const {
     OS << right->v->getName();
   OS << "\n";
 }
-void PHI::print(raw_ostream& OS) const {
+void PHI::print(raw_ostream &OS) const {
   if (left->v->getValueName() == NULL)
     OS << *(left->v);
   else
@@ -1881,17 +1882,17 @@ void PHI::print(raw_ostream& OS) const {
   OS << "\n";
 }
 
-void StrictRelations::Variable::coalesce(StrictRelations::Variable* other) {
+void StrictRelations::Variable::coalesce(StrictRelations::Variable *other) {
   if (mustalias == other->mustalias)
     return;
-  std::unordered_set<Variable*>* to_coalesce = other->mustalias;
+  std::unordered_set<Variable *> *to_coalesce = other->mustalias;
   for (auto *i : *to_coalesce)
     i->mustalias = mustalias;
   mustalias->insert(to_coalesce->begin(), to_coalesce->end());
   delete to_coalesce;
 }
 
-void StrictRelations::Variable::printStrictRelations(raw_ostream& OS) {
+void StrictRelations::Variable::printStrictRelations(raw_ostream &OS) {
   if (!v->hasName())
     OS << *(v);
   else

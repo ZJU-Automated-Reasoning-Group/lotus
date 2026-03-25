@@ -2,8 +2,8 @@
 
 #include <string>
 
-#include <gtest/gtest.h>
 #include <llvm/Support/raw_ostream.h>
+#include <gtest/gtest.h>
 
 TEST(StringUtilsTest, RemovePrefix) {
   std::string base = "prefix_value";

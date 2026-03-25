@@ -3,5 +3,5 @@
 #include "Checker/FiTx/Frontend/State.h"
 
 namespace NullPointer {
-void defineStates(framework::StateManager& manager);
+void defineStates(fitx::StateManager &manager);
 } // namespace NullPointer

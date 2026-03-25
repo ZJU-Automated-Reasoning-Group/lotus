@@ -161,7 +161,6 @@ protected:
                     super::updateFunPtr(start->getNodeID());
                     //LOG_INFO("function pointer updated");
                 }
-                pts = PT::getPointsTo(start->getNodeID());
             }
             changed = true;
             // line 10 of algo 7

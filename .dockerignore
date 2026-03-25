@@ -1,0 +1,7 @@
+.git/
+.cache/
+
+build*/
+
+result*
+

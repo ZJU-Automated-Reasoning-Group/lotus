@@ -18,7 +18,7 @@ extern llvm::cl::opt<bool> ConfigUseBDDPts;
 extern llvm::cl::opt<bool> ConfigBDDPtsReorder;
 extern llvm::cl::opt<std::string> ConfigBDDPtsReorderMethod;
 
-// BDDAndersPtsSet backended points-to set implementation for AserPTA.
+// BDDAndersPtsSet backed points-to set implementation for AserPTA.
 class BDDPts {
 private:
   using TargetID = NodeID;

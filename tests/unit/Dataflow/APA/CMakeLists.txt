@@ -7,4 +7,5 @@ add_lotus_test_suite(apa_tests
     InterAffineEqualitiesTest.cpp
     InterSummaryTransferTest.cpp
     PathSummaryEquationSolverTest.cpp
-  LINK_LIBS APADataFlow)
+    EAN/RoundtripTest.cpp
+  LINK_LIBS APADataFlow LotusEGraph)

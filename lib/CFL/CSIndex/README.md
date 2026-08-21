@@ -92,6 +92,20 @@ The public entry points are:
 Existing `Graph`, `csr`, and FLARE query behavior is unchanged. Summary-path
 provenance is recorded only when `SCSIndexOptions::retain_witnesses` is enabled.
 
+`SCSIndex::stats()` exposes evaluation counters without printing from the
+library. Construction metrics include base/product/FLARE/index/DAG sizes and
+nanosecond timings for validation, product construction, graph copying,
+summary construction, FLARE transformation, endpoint augmentation, SCC
+condensation, and GRAIL construction. Point, fixed-batch, and witness queries
+record their count, positive count, cumulative latency, and maximum latency.
+Raw times use nanoseconds so benchmark drivers can choose their own reporting
+unit; convenience methods provide construction milliseconds, average query
+microseconds, and the fraction of the explicit product materialized.
+`writeCsvHeader()` and `writeCsvRow()` emit a stable, one-row-per-run format for
+benchmark scripts. On POSIX systems the row also includes process-wide peak RSS
+before and after construction; run each benchmark configuration in a fresh
+process when using those high-water marks for comparisons.
+
 ## File Structure
 
 - **Graph.cpp**: Core graph data structure and CFL operations

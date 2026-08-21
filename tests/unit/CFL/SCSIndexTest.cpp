@@ -3,6 +3,7 @@
 #include "CFL/CSIndex/Tabulation.h"
 
 #include <set>
+#include <sstream>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -324,6 +325,65 @@ TEST(SCSIndexTest, NormalizesSourceAndSinkVertexEventsToEdges) {
 
   SCSIndex index(graph, buildTaintPolicy(), {source}, {sink});
   EXPECT_TRUE(index.reachable(source, sink));
+}
+
+TEST(SCSIndexTest, RecordsConstructionAndQueryMetrics) {
+  SCSGraph graph;
+  addNestedPath(graph, false, true, 0);
+  addNestedPath(graph, true, true, 10);
+
+  SCSIndexOptions options;
+  options.retain_witnesses = true;
+  SCSBatchQuery batch{"all", {0, 10}, {6, 16}};
+  SCSIndex index(graph, buildTaintPolicy(), {0, 10}, {6, 16}, options, {batch});
+
+  const SCSIndexStats &construction = index.stats();
+  EXPECT_EQ(construction.base_vertices, 17U);
+  EXPECT_EQ(construction.base_edges, 12U);
+  EXPECT_EQ(construction.policy_states, 3U);
+  EXPECT_EQ(construction.accepting_policy_states, 1U);
+  EXPECT_EQ(construction.indexed_sources, 2U);
+  EXPECT_EQ(construction.indexed_sinks, 2U);
+  EXPECT_EQ(construction.indexed_batches, 1U);
+  EXPECT_GT(construction.total_construction_time_ns, 0U);
+  EXPECT_GT(construction.product_vertices, 0U);
+  EXPECT_GT(construction.flare_vertices, construction.product_vertices);
+  EXPECT_GT(construction.indexing_vertices, construction.flare_vertices);
+  EXPECT_GT(construction.dag_vertices, 0U);
+  EXPECT_GT(construction.materializedProductFraction(), 0.0);
+  EXPECT_LE(construction.materializedProductFraction(), 1.0);
+
+  EXPECT_TRUE(index.reachable(0, 6));
+  EXPECT_FALSE(index.reachable(10, 16));
+  EXPECT_TRUE(index.reachableBatch("all"));
+  EXPECT_TRUE(index.witness(0, 6).has_value());
+  EXPECT_FALSE(index.witness(10, 16).has_value());
+
+  const SCSIndexStats &queries = index.stats();
+  EXPECT_EQ(queries.point_queries.queries, 2U);
+  EXPECT_EQ(queries.point_queries.positive_queries, 1U);
+  EXPECT_EQ(queries.batch_queries.queries, 1U);
+  EXPECT_EQ(queries.batch_queries.positive_queries, 1U);
+  EXPECT_EQ(queries.witness_queries.queries, 2U);
+  EXPECT_EQ(queries.witness_queries.positive_queries, 1U);
+  EXPECT_LE(queries.point_queries.max_time_ns,
+            queries.point_queries.total_time_ns);
+  EXPECT_LE(queries.batch_queries.max_time_ns,
+            queries.batch_queries.total_time_ns);
+  EXPECT_LE(queries.witness_queries.max_time_ns,
+            queries.witness_queries.total_time_ns);
+  EXPECT_GE(queries.point_queries.averageMicroseconds(), 0.0);
+
+  std::ostringstream header;
+  std::ostringstream row;
+  SCSIndexStats::writeCsvHeader(header);
+  queries.writeCsvRow(row);
+  const std::string header_text = header.str();
+  const std::string row_text = row.str();
+  EXPECT_NE(header_text.find("total_construction_time_ns"), std::string::npos);
+  EXPECT_NE(header_text.find("point_average_us"), std::string::npos);
+  EXPECT_EQ(std::count(header_text.begin(), header_text.end(), ','),
+            std::count(row_text.begin(), row_text.end(), ','));
 }
 
 } // namespace

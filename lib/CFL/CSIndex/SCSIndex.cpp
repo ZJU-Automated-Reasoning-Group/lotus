@@ -4,8 +4,90 @@
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <deque>
+#include <ostream>
 #include <stdexcept>
+
+#if defined(__unix__) || defined(__APPLE__)
+#include <sys/resource.h>
+#endif
+
+namespace {
+
+using Clock = std::chrono::steady_clock;
+
+uint64_t elapsedNanoseconds(Clock::time_point start) {
+  return static_cast<uint64_t>(
+      std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - start)
+          .count());
+}
+
+uint64_t processPeakResidentSetBytes() {
+#if defined(__unix__) || defined(__APPLE__)
+  rusage usage{};
+  if (getrusage(RUSAGE_SELF, &usage) != 0)
+    return 0;
+#if defined(__APPLE__)
+  return static_cast<uint64_t>(usage.ru_maxrss);
+#else
+  return static_cast<uint64_t>(usage.ru_maxrss) * 1024;
+#endif
+#else
+  return 0;
+#endif
+}
+
+} // namespace
+
+void SCSIndexStats::writeCsvHeader(std::ostream &output) {
+  output
+      << "base_vertices,base_edges,policy_states,accepting_policy_states,"
+         "indexed_sources,indexed_sinks,indexed_batches,"
+         "explicit_product_states,materialized_product_states,"
+         "materialized_product_fraction,product_vertices,product_edges,"
+         "normalized_product_edges,summary_edges,flare_vertices,flare_edges,"
+         "indexing_vertices,indexing_edges,dag_vertices,dag_edges,"
+         "validation_time_ns,product_construction_time_ns,product_copy_time_ns,"
+         "summary_construction_time_ns,flare_transformation_time_ns,"
+         "endpoint_augmentation_time_ns,scc_condensation_time_ns,"
+         "reachability_index_time_ns,total_construction_time_ns,"
+         "process_peak_rss_before_bytes,process_peak_rss_after_bytes,"
+         "point_queries,positive_point_queries,point_total_time_ns,"
+         "point_max_time_ns,point_average_us,batch_queries,"
+         "positive_batch_queries,batch_total_time_ns,batch_max_time_ns,"
+         "batch_average_us,witness_queries,positive_witness_queries,"
+         "witness_total_time_ns,witness_max_time_ns,witness_average_us";
+}
+
+void SCSIndexStats::writeCsvRow(std::ostream &output) const {
+  output << base_vertices << ',' << base_edges << ',' << policy_states << ','
+         << accepting_policy_states << ',' << indexed_sources << ','
+         << indexed_sinks << ',' << indexed_batches << ','
+         << explicit_product_states << ',' << materialized_product_states << ','
+         << materializedProductFraction() << ',' << product_vertices << ','
+         << product_edges << ',' << normalized_product_edges << ','
+         << summary_edges << ',' << flare_vertices << ',' << flare_edges << ','
+         << indexing_vertices << ',' << indexing_edges << ',' << dag_vertices
+         << ',' << dag_edges << ',' << validation_time_ns << ','
+         << product_construction_time_ns << ',' << product_copy_time_ns << ','
+         << summary_construction_time_ns << ',' << flare_transformation_time_ns
+         << ',' << endpoint_augmentation_time_ns << ','
+         << scc_condensation_time_ns << ',' << reachability_index_time_ns << ','
+         << total_construction_time_ns << ',' << process_peak_rss_before_bytes
+         << ',' << process_peak_rss_after_bytes << ',' << point_queries.queries
+         << ',' << point_queries.positive_queries << ','
+         << point_queries.total_time_ns << ',' << point_queries.max_time_ns
+         << ',' << point_queries.averageMicroseconds() << ','
+         << batch_queries.queries << ',' << batch_queries.positive_queries
+         << ',' << batch_queries.total_time_ns << ','
+         << batch_queries.max_time_ns << ','
+         << batch_queries.averageMicroseconds() << ','
+         << witness_queries.queries << ',' << witness_queries.positive_queries
+         << ',' << witness_queries.total_time_ns << ','
+         << witness_queries.max_time_ns << ','
+         << witness_queries.averageMicroseconds();
+}
 
 SCSIndex::SCSIndex(const SCSGraph &graph, const PolicyAutomaton &policy,
                    std::vector<int> sources, std::vector<int> sinks,
@@ -13,6 +95,9 @@ SCSIndex::SCSIndex(const SCSGraph &graph, const PolicyAutomaton &policy,
     : base_graph_(graph), policy_(policy), sources_(std::move(sources)),
       sinks_(std::move(sinks)), options_(options),
       product_graph_(std::make_unique<Graph>()) {
+  const auto construction_start = Clock::now();
+  stats_.process_peak_rss_before_bytes = processPeakResidentSetBytes();
+  const auto validation_start = Clock::now();
   validateCatalog();
 
   std::string policy_error;
@@ -20,14 +105,27 @@ SCSIndex::SCSIndex(const SCSGraph &graph, const PolicyAutomaton &policy,
     throw std::invalid_argument(policy_error);
   if (options_.grail_dimensions <= 0)
     throw std::invalid_argument("GRAIL dimensions must be positive");
+  stats_.validation_time_ns = elapsedNanoseconds(validation_start);
+
+  stats_.base_vertices = base_graph_.num_vertices();
+  stats_.base_edges = base_graph_.num_edges();
+  stats_.policy_states = policy_.stateCount();
+  stats_.accepting_policy_states = policy_.acceptingStates().size();
+  stats_.indexed_sources = sources_.size();
+  stats_.indexed_sinks = sinks_.size();
+  stats_.indexed_batches = batches.size();
 
   stats_.explicit_product_states =
       static_cast<size_t>(base_graph_.num_vertices()) * policy_.stateCount();
+  const auto product_start = Clock::now();
   if (options_.product_construction == ProductConstruction::Explicit)
     buildExplicitProduct();
   else
     buildLazyProduct();
+  stats_.product_construction_time_ns = elapsedNanoseconds(product_start);
   buildIndex(batches);
+  stats_.total_construction_time_ns = elapsedNanoseconds(construction_start);
+  stats_.process_peak_rss_after_bytes = processPeakResidentSetBytes();
 }
 
 SCSIndex::~SCSIndex() = default;
@@ -153,13 +251,23 @@ void SCSIndex::buildIndex(const std::vector<SCSBatchQuery> &batches) {
   stats_.product_vertices = product_graph_->num_vertices();
   stats_.product_edges = product_graph_->num_edges();
 
+  auto phase_start = Clock::now();
   indexing_graph_ = std::make_unique<Graph>(*product_graph_);
+  stats_.product_copy_time_ns = elapsedNanoseconds(phase_start);
+
+  phase_start = Clock::now();
   indexing_graph_->build_summary_edges(options_.retain_witnesses);
+  stats_.summary_construction_time_ns = elapsedNanoseconds(phase_start);
   stats_.summary_edges = indexing_graph_->summary_edge_size();
 
   flare_vertex_count_ = indexing_graph_->num_vertices();
+  phase_start = Clock::now();
   indexing_graph_->to_indexing_graph();
+  stats_.flare_transformation_time_ns = elapsedNanoseconds(phase_start);
+  stats_.flare_vertices = indexing_graph_->num_vertices();
+  stats_.flare_edges = indexing_graph_->num_edges();
 
+  phase_start = Clock::now();
   for (int source : sources_)
     start_vertices_[source] = productVertex(source, policy_.initialState());
 
@@ -192,30 +300,46 @@ void SCSIndex::buildIndex(const std::vector<SCSBatchQuery> &batches) {
       indexing_graph_->addEdge(acceptVertex(sink), virtual_target);
     batch_vertices_[batch.name] = {virtual_source, virtual_target};
   }
+  stats_.endpoint_augmentation_time_ns = elapsedNanoseconds(phase_start);
 
   stats_.indexing_vertices = indexing_graph_->num_vertices();
   stats_.indexing_edges = indexing_graph_->num_edges();
 
+  phase_start = Clock::now();
   dag_graph_ = std::make_unique<Graph>(*indexing_graph_);
   scc_map_.resize(indexing_graph_->num_vertices());
   std::vector<int> reverse_topological_order;
   GraphUtil::mergeSCC(*dag_graph_, scc_map_.data(), reverse_topological_order);
   GraphUtil::topo_leveler(*dag_graph_);
+  stats_.scc_condensation_time_ns = elapsedNanoseconds(phase_start);
+  stats_.dag_vertices = dag_graph_->num_vertices();
+  stats_.dag_edges = dag_graph_->num_edges();
+
+  phase_start = Clock::now();
   grail_ = std::make_unique<Grail>(*dag_graph_, options_.grail_dimensions, 1,
                                    false, 100);
+  stats_.reachability_index_time_ns = elapsedNanoseconds(phase_start);
 }
 
 bool SCSIndex::reachable(int source, int sink) {
-  return grail_->reach(scc_map_.at(startVertex(source)),
-                       scc_map_.at(acceptVertex(sink)));
+  const int start = scc_map_.at(startVertex(source));
+  const int accept = scc_map_.at(acceptVertex(sink));
+  const auto query_start = Clock::now();
+  const bool result = grail_->reach(start, accept);
+  recordQuery(stats_.point_queries, elapsedNanoseconds(query_start), result);
+  return result;
 }
 
 bool SCSIndex::reachableBatch(const std::string &batch_name) {
   const auto batch_it = batch_vertices_.find(batch_name);
   if (batch_it == batch_vertices_.end())
     throw std::out_of_range("Unknown SCS batch query");
-  return grail_->reach(scc_map_.at(batch_it->second.first),
-                       scc_map_.at(batch_it->second.second));
+  const int start = scc_map_.at(batch_it->second.first);
+  const int accept = scc_map_.at(batch_it->second.second);
+  const auto query_start = Clock::now();
+  const bool result = grail_->reach(start, accept);
+  recordQuery(stats_.batch_queries, elapsedNanoseconds(query_start), result);
+  return result;
 }
 
 int SCSIndex::startVertex(int source) const {
@@ -283,6 +407,15 @@ void SCSIndex::appendPath(std::vector<int> &path,
   if (!path.empty() && path.back() == suffix.front())
     begin = 1;
   path.insert(path.end(), suffix.begin() + begin, suffix.end());
+}
+
+void SCSIndex::recordQuery(SCSQueryStats &query_stats, uint64_t elapsed_ns,
+                           bool positive) {
+  ++query_stats.queries;
+  if (positive)
+    ++query_stats.positive_queries;
+  query_stats.total_time_ns += elapsed_ns;
+  query_stats.max_time_ns = std::max(query_stats.max_time_ns, elapsed_ns);
 }
 
 std::optional<std::vector<int>>
@@ -364,41 +497,50 @@ bool SCSIndex::policyAccepting(const std::vector<int> &event_labels) const {
 }
 
 std::optional<SCSWitness> SCSIndex::witness(int source, int sink) const {
-  if (!options_.retain_witnesses)
-    return std::nullopt;
-
-  const std::vector<int> ordinary_path =
-      findOrdinaryPath(startVertex(source), acceptVertex(sink));
-  const auto product_path = expandProductPath(ordinary_path);
-  if (!product_path)
-    return std::nullopt;
-
-  SCSWitness result;
-  result.base_vertices.push_back(source);
-  int current_vertex = source;
-  for (size_t index = 1; index < product_path->size(); ++index) {
-    const auto origin_it = product_edge_origins_.find(
-        {product_path->at(index - 1), product_path->at(index)});
-    if (origin_it == product_edge_origins_.end())
+  const auto query_start = Clock::now();
+  const auto result = [&]() -> std::optional<SCSWitness> {
+    if (!options_.retain_witnesses)
       return std::nullopt;
-    if (origin_it->second < 0)
-      continue;
 
-    const SCSEdge &edge = base_graph_.edge(origin_it->second);
-    if (edge.source != current_vertex)
+    const std::vector<int> ordinary_path =
+        findOrdinaryPath(startVertex(source), acceptVertex(sink));
+    const auto product_path = expandProductPath(ordinary_path);
+    if (!product_path)
       return std::nullopt;
-    current_vertex = edge.target;
-    result.base_edges.push_back(edge.id);
-    result.base_vertices.push_back(edge.target);
-    result.structural_labels.push_back(edge.structural_label);
-    result.event_labels.push_back(edge.event_label);
-  }
 
-  if (current_vertex != sink)
-    return std::nullopt;
-  result.context_valid = contextValid(result.structural_labels);
-  result.policy_accepting = policyAccepting(result.event_labels);
-  if (!result.context_valid || !result.policy_accepting)
-    return std::nullopt;
+    SCSWitness witness_result;
+    witness_result.base_vertices.push_back(source);
+    int current_vertex = source;
+    for (size_t index = 1; index < product_path->size(); ++index) {
+      const auto origin_it = product_edge_origins_.find(
+          {product_path->at(index - 1), product_path->at(index)});
+      if (origin_it == product_edge_origins_.end())
+        return std::nullopt;
+      if (origin_it->second < 0)
+        continue;
+
+      const SCSEdge &edge = base_graph_.edge(origin_it->second);
+      if (edge.source != current_vertex)
+        return std::nullopt;
+      current_vertex = edge.target;
+      witness_result.base_edges.push_back(edge.id);
+      witness_result.base_vertices.push_back(edge.target);
+      witness_result.structural_labels.push_back(edge.structural_label);
+      witness_result.event_labels.push_back(edge.event_label);
+    }
+
+    if (current_vertex != sink)
+      return std::nullopt;
+    witness_result.context_valid =
+        contextValid(witness_result.structural_labels);
+    witness_result.policy_accepting =
+        policyAccepting(witness_result.event_labels);
+    if (!witness_result.context_valid || !witness_result.policy_accepting)
+      return std::nullopt;
+    return witness_result;
+  }();
+
+  recordQuery(stats_.witness_queries, elapsedNanoseconds(query_start),
+              result.has_value());
   return result;
 }

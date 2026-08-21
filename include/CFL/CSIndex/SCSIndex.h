@@ -5,6 +5,8 @@
 #include "CFL/CSIndex/SCSGraph.h"
 
 #include <cstddef>
+#include <cstdint>
+#include <iosfwd>
 #include <map>
 #include <memory>
 #include <optional>
@@ -27,15 +29,69 @@ struct SCSIndexOptions {
   int grail_dimensions = 2;
 };
 
+struct SCSQueryStats {
+  size_t queries = 0;
+  size_t positive_queries = 0;
+  uint64_t total_time_ns = 0;
+  uint64_t max_time_ns = 0;
+
+  double averageMicroseconds() const {
+    return queries == 0 ? 0.0
+                        : static_cast<double>(total_time_ns) / queries / 1000.0;
+  }
+};
+
 struct SCSIndexStats {
+  size_t base_vertices = 0;
+  size_t base_edges = 0;
+  size_t policy_states = 0;
+  size_t accepting_policy_states = 0;
+  size_t indexed_sources = 0;
+  size_t indexed_sinks = 0;
+  size_t indexed_batches = 0;
+
   size_t explicit_product_states = 0;
   size_t materialized_product_states = 0;
   size_t product_vertices = 0;
   size_t product_edges = 0;
   size_t normalized_product_edges = 0;
   size_t summary_edges = 0;
+  size_t flare_vertices = 0;
+  size_t flare_edges = 0;
   size_t indexing_vertices = 0;
   size_t indexing_edges = 0;
+  size_t dag_vertices = 0;
+  size_t dag_edges = 0;
+
+  uint64_t validation_time_ns = 0;
+  uint64_t product_construction_time_ns = 0;
+  uint64_t product_copy_time_ns = 0;
+  uint64_t summary_construction_time_ns = 0;
+  uint64_t flare_transformation_time_ns = 0;
+  uint64_t endpoint_augmentation_time_ns = 0;
+  uint64_t scc_condensation_time_ns = 0;
+  uint64_t reachability_index_time_ns = 0;
+  uint64_t total_construction_time_ns = 0;
+  uint64_t process_peak_rss_before_bytes = 0;
+  uint64_t process_peak_rss_after_bytes = 0;
+
+  SCSQueryStats point_queries;
+  SCSQueryStats batch_queries;
+  SCSQueryStats witness_queries;
+
+  double materializedProductFraction() const {
+    return explicit_product_states == 0
+               ? 0.0
+               : static_cast<double>(materialized_product_states) /
+                     explicit_product_states;
+  }
+
+  double totalConstructionMilliseconds() const {
+    return static_cast<double>(total_construction_time_ns) / 1000000.0;
+  }
+
+  static void writeCsvHeader(std::ostream &output);
+  void writeCsvRow(std::ostream &output) const;
 };
 
 struct SCSWitness {
@@ -96,6 +152,8 @@ private:
   expandProductPath(const std::vector<int> &ordinary_path) const;
   static void appendPath(std::vector<int> &path,
                          const std::vector<int> &suffix);
+  static void recordQuery(SCSQueryStats &query_stats, uint64_t elapsed_ns,
+                          bool positive);
   bool contextValid(const std::vector<int> &structural_labels) const;
   bool policyAccepting(const std::vector<int> &event_labels) const;
 
@@ -119,5 +177,5 @@ private:
   std::vector<int> scc_map_;
 
   int flare_vertex_count_ = 0;
-  SCSIndexStats stats_;
+  mutable SCSIndexStats stats_;
 };

@@ -81,6 +81,8 @@ bool contains(const IDSet &set, const GraphNode *node) {
 }
 
 class DODComputer {
+  struct ColoredAP;
+
 public:
   DependenceResult compute(Graph &graph, bool includeNTSCD) {
     DependenceMap dependencies;
@@ -97,6 +99,32 @@ public:
         computeNTSCD(predicate, graph, allPaths, dependencies, dependents);
     }
     return {std::move(dependencies), std::move(dependents)};
+  }
+
+  void enumerate(Graph &graph,
+                 const std::function<void(GraphNode *, GraphNode *,
+                                          GraphNode *)> &callback) {
+    AllMaxPathResult allPaths = computeAllMaxPaths(graph);
+    for (GraphNode *predicate : graph.predicates()) {
+      if (predicate->successors().size() != 2)
+        continue;
+      ColoredAP colored = createColoredAP(allPaths, graph, predicate);
+      if (!colored.graph.empty())
+        enumerateDOD(colored, predicate, callback);
+    }
+  }
+
+  size_t preprocess(Graph &graph) {
+    size_t nonemptyDecisions = 0;
+    AllMaxPathResult allPaths = computeAllMaxPaths(graph);
+    for (GraphNode *predicate : graph.predicates()) {
+      if (predicate->successors().size() != 2)
+        continue;
+      ColoredAP colored = createColoredAP(allPaths, graph, predicate);
+      nonemptyDecisions +=
+          !colored.graph.empty() && hasDODRangeBoundaries(colored);
+    }
+    return nonemptyDecisions;
   }
 
 private:
@@ -290,6 +318,68 @@ private:
     addRange(red2, blue3);
   }
 
+  static bool hasDODRangeBoundaries(ColoredAP &colored) {
+    if (!isSimpleAP(colored))
+      return false;
+    GraphNode *blue1 = colored.graph.getNode(*colored.blue.begin());
+    auto isBlue = [&](GraphNode *node) { return colored.isBlue(node); };
+    auto isRed = [&](GraphNode *node) { return colored.isRed(node); };
+    GraphNode *blue2 = nullptr;
+    GraphNode *red1 = nullptr;
+    std::tie(blue2, red1) = findOnCycle(blue1, blue1, isBlue, isRed);
+    if (!blue2 || !red1)
+      return false;
+    GraphNode *red2 = nullptr;
+    GraphNode *blue3 = nullptr;
+    std::tie(red2, blue3) = findOnCycle(red1, blue1, isRed, isBlue);
+    if (!red2)
+      return false;
+    if (blue3 && findOnCycle(blue3, blue1, isRed, isRed).first)
+      return false;
+    return true;
+  }
+
+  static void enumerateDOD(ColoredAP &colored, GraphNode *predicate,
+                           const std::function<void(GraphNode *, GraphNode *,
+                                                    GraphNode *)> &callback) {
+    if (!isSimpleAP(colored))
+      return;
+
+    GraphNode *blue1 = colored.graph.getNode(*colored.blue.begin());
+    auto isBlue = [&](GraphNode *node) { return colored.isBlue(node); };
+    auto isRed = [&](GraphNode *node) { return colored.isRed(node); };
+    GraphNode *blue2 = nullptr;
+    GraphNode *red1 = nullptr;
+    std::tie(blue2, red1) = findOnCycle(blue1, blue1, isBlue, isRed);
+    if (!blue2 || !red1)
+      return;
+    GraphNode *red2 = nullptr;
+    GraphNode *blue3 = nullptr;
+    std::tie(red2, blue3) = findOnCycle(red1, blue1, isRed, isBlue);
+    if (!red2)
+      return;
+    if (blue3) {
+      if (findOnCycle(blue3, blue1, isRed, isRed).first)
+        return;
+    } else {
+      blue3 = blue1;
+    }
+
+    GraphNode *left = blue2;
+    do {
+      GraphNode *originalLeft = colored.getOriginal(left);
+      assert(originalLeft);
+      GraphNode *right = red2;
+      do {
+        GraphNode *originalRight = colored.getOriginal(right);
+        assert(originalRight);
+        callback(predicate, originalLeft, originalRight);
+        right = right->successors().front();
+      } while (right != blue3);
+      left = left->successors().front();
+    } while (left != red1);
+  }
+
   static void computeDOD(GraphNode *predicate, Graph &graph,
                          const AllMaxPathResult &allPaths,
                          DependenceMap &dependencies,
@@ -325,6 +415,16 @@ DependenceResult computeDOD(Graph &graph) {
 
 DependenceResult computeDODNTSCD(Graph &graph) {
   return DODComputer().compute(graph, true);
+}
+
+size_t preprocessBaselineDOD(Graph &graph) {
+  return DODComputer().preprocess(graph);
+}
+
+void forEachBaselineDODPair(Graph &graph,
+                            const std::function<void(GraphNode *, GraphNode *,
+                                                     GraphNode *)> &callback) {
+  DODComputer().enumerate(graph, callback);
 }
 
 DependenceResult computeDODRanganath(Graph &graph) {

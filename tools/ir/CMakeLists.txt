@@ -9,3 +9,13 @@ target_link_libraries(lotus-ir-pdg-query
   CanaryAliasAnalysisWrapper
   LLVMIRReader
 )
+
+add_executable(lotus-ir-control-dependence
+  lotus-ir-control-dependence.cpp
+)
+
+target_link_libraries(lotus-ir-control-dependence
+  PRIVATE
+  CanaryControlDependence
+  LLVMIRReader
+)

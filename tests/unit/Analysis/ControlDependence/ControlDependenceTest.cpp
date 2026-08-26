@@ -8,6 +8,7 @@
 #include "llvm/Support/SourceMgr.h"
 
 #include "Analysis/ControlDependence/CompactControlDependence.h"
+#include "Analysis/ControlDependence/DOD.h"
 #include "Analysis/ControlDependence/ICFGControlDependence.h"
 #include "IR/ICFG/ICFG.h"
 #include "IR/ICFG/ICFGBuilder.h"
@@ -405,6 +406,35 @@ TEST(ControlDependenceTest, CompactDODExposesCanonicalBicliqueAndClosure) {
 
   auto closure = analysis.getDependencyClosure({blueBody, redBody});
   EXPECT_NE(std::find(closure.begin(), closure.end(), entry), closure.end());
+}
+
+TEST(ControlDependenceTest, BaselineAndCompactStreamTheSameExactDODPairs) {
+  lotus::cd::detail::Graph graph;
+  std::vector<lotus::cd::detail::GraphNode *> nodes;
+  for (unsigned index = 0; index < 5; ++index)
+    nodes.push_back(&graph.createNode());
+  graph.addEdge(*nodes[0], *nodes[1]);
+  graph.addEdge(*nodes[0], *nodes[3]);
+  graph.addEdge(*nodes[1], *nodes[2]);
+  graph.addEdge(*nodes[2], *nodes[3]);
+  graph.addEdge(*nodes[3], *nodes[4]);
+  graph.addEdge(*nodes[4], *nodes[1]);
+
+  auto inevitability = lotus::cd::detail::computeInevitability(graph);
+  auto bicliques = lotus::cd::detail::computeCompactDOD(graph, inevitability);
+  std::set<Triple> compact = enumerateCompactDOD(graph, bicliques);
+  std::set<Triple> baseline;
+  size_t baselineCount = 0;
+  lotus::cd::detail::forEachBaselineDODPair(
+      graph, [&](auto *decision, auto *first, auto *second) {
+        ++baselineCount;
+        unsigned firstID = std::min(first->getID(), second->getID());
+        unsigned secondID = std::max(first->getID(), second->getID());
+        baseline.insert({decision->getID(), firstID, secondID});
+      });
+  EXPECT_EQ(baseline, compact);
+  EXPECT_EQ(baselineCount, compact.size());
+  EXPECT_EQ(compact.size(), 4u);
 }
 
 TEST(ControlDependenceTest, EveryBinaryAlgorithmMaintainsInverseRelation) {

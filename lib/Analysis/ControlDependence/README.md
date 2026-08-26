@@ -1,8 +1,9 @@
 # Control-dependence analysis
 
-This library provides a Lotus-native LLVM basic-block adapter for the
+This library provides Lotus-native LLVM basic-block adapters for baseline
 control-dependence algorithms migrated from
-[dg](https://github.com/mchalupa/dg). Include
+[dg](https://github.com/mchalupa/dg) and newer compact inevitability/biclique
+algorithms. Include
 `Analysis/ControlDependence/ControlDependence.h` and construct
 `lotus::cd::ControlDependenceAnalysis` for a function.
 
@@ -11,8 +12,10 @@ Whole-ICFG clients include
 `CanaryICFGControlDependence` adapter target.
 
 Reusable declarations live under `include/Analysis/ControlDependence/`.
-Implementations are split by algorithm into `SCD.cpp`, `NTSCD.cpp`, `DOD.cpp`,
-and `ControlClosure.cpp`; `ControlDependence.cpp` and
+Baseline implementations are split into `SCD.cpp`, `NTSCD.cpp`, `DOD.cpp`,
+and `ControlClosure.cpp`. The new compact algorithms live separately in
+`CompactNTSCD.cpp`, `CompactDOD.cpp`, and `CompactClosure.cpp`, preserving the
+old implementations as experimental baselines. `ControlDependence.cpp` and
 `ICFGControlDependence.cpp` are LLVM/Lotus graph adapters.
 
 The core algorithms and function adapter are linked as
@@ -34,11 +37,25 @@ Supported algorithms:
 | `DODRanganath` | Ranganath et al.'s DOD algorithm |
 | `DODNTSCD` | Combined DOD and NTSCD relation |
 | `StrongControlClosure` | Experimental strong control closure |
+| `NTSCDCompact` | All-target inevitability matrix plus multiway NTSCD |
+| `DODCompact` | SCC-based canonical DOD bicliques |
+| `DODNTSCDCompact` | Shared inevitability, compact DOD, and incidence closure |
 
 `getDependencies(block)` returns the predicate blocks on which `block`
 depends. `getDependents(predicate)` returns the inverse relation. Results use
 LLVM function order. Strong closure is queried with `getClosure()` and has no
 binary dependence relation.
+
+Compact DOD additionally exposes `hasDODBiclique`, `getDODLeft`,
+`getDODRight`, and exact pair membership through `isDOD`. These queries keep
+the canonical complete-bipartite representation instead of enumerating its
+Cartesian product. `getDependencyClosure` computes the least seed superset
+closed under compact NTSCD and DOD using reverse incidences and two side-hit
+bits per decision.
+
+For a graph with `n` vertices and `m` edges, compact preprocessing takes
+`O(n(n+m))` time. On binary CFGs this is `O(n^2)`. Exact enumeration of `K`
+DOD triples takes `O(n(n+m)+K)`, while membership does not enumerate pairs.
 
 As in dg, DOD is represented as a binary over-approximation of its underlying
 ternary relation. The migrated DOD implementation accepts binary predicates;

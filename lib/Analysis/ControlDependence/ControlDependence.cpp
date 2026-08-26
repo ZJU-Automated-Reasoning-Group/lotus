@@ -5,6 +5,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Function.h"
 
+#include "Analysis/ControlDependence/CompactControlDependence.h"
 #include "Analysis/ControlDependence/ControlClosure.h"
 #include "Analysis/ControlDependence/ControlDependenceGraph.h"
 #include "Analysis/ControlDependence/DOD.h"
@@ -74,6 +75,60 @@ public:
     return result;
   }
 
+  bool hasDODBiclique(const llvm::BasicBlock *decision) const {
+    auto nodeIt = m_blockToNode.find(decision);
+    return nodeIt != m_blockToNode.end() &&
+           m_bicliques.count(nodeIt->second) != 0;
+  }
+
+  BlockVector getDODSide(const llvm::BasicBlock *decision, bool left) const {
+    BlockVector result;
+    auto nodeIt = m_blockToNode.find(decision);
+    if (nodeIt == m_blockToNode.end())
+      return result;
+    auto bicliqueIt = m_bicliques.find(nodeIt->second);
+    if (bicliqueIt == m_bicliques.end())
+      return result;
+    const auto &side =
+        left ? bicliqueIt->second.left : bicliqueIt->second.right;
+    result.reserve(side.count());
+    for (unsigned id : side)
+      result.push_back(m_nodeToBlock[id - 1]);
+    return result;
+  }
+
+  bool isDOD(const llvm::BasicBlock *decision, const llvm::BasicBlock *first,
+             const llvm::BasicBlock *second) const {
+    auto decisionIt = m_blockToNode.find(decision);
+    auto firstIt = m_blockToNode.find(first);
+    auto secondIt = m_blockToNode.find(second);
+    if (decisionIt == m_blockToNode.end() || firstIt == m_blockToNode.end() ||
+        secondIt == m_blockToNode.end())
+      return false;
+    auto bicliqueIt = m_bicliques.find(decisionIt->second);
+    return bicliqueIt != m_bicliques.end() &&
+           bicliqueIt->second.contains(firstIt->second, secondIt->second);
+  }
+
+  BlockVector
+  getDependencyClosure(llvm::ArrayRef<const llvm::BasicBlock *> seed) const {
+    if (m_options.algorithm != Algorithm::DODNTSCDCompact)
+      return {};
+    NodeSet initial;
+    for (const llvm::BasicBlock *block : seed) {
+      auto it = m_blockToNode.find(block);
+      if (it != m_blockToNode.end())
+        initial.insert(it->second);
+    }
+    NodeSet closure = detail::computeCompactDependencyClosure(
+        const_cast<Graph &>(m_graph), initial, m_compactNTSCD, m_bicliques);
+    BlockVector result;
+    for (const llvm::BasicBlock &block : m_function)
+      if (closure.count(m_blockToNode.lookup(&block)))
+        result.push_back(&block);
+    return result;
+  }
+
   llvm::Function &m_function;
   ControlDependenceOptions m_options;
 
@@ -124,7 +179,43 @@ private:
       return;
     case Algorithm::StrongControlClosure:
       return;
+    case Algorithm::NTSCDCompact: {
+      detail::Inevitability inevitability =
+          detail::computeInevitability(m_graph);
+      m_compactNTSCD = detail::computeCompactNTSCD(m_graph, inevitability);
+      materialize(m_compactNTSCD);
+      return;
     }
+    case Algorithm::DODCompact: {
+      detail::Inevitability inevitability =
+          detail::computeInevitability(m_graph);
+      m_bicliques = detail::computeCompactDOD(m_graph, inevitability);
+      materialize(
+          detail::materializeCompactDODDependencies(m_graph, m_bicliques));
+      return;
+    }
+    case Algorithm::DODNTSCDCompact: {
+      detail::Inevitability inevitability =
+          detail::computeInevitability(m_graph);
+      m_compactNTSCD = detail::computeCompactNTSCD(m_graph, inevitability);
+      m_bicliques = detail::computeCompactDOD(m_graph, inevitability);
+      DependenceResult combined = m_compactNTSCD;
+      mergeInto(combined, detail::materializeCompactDODDependencies(
+                              m_graph, m_bicliques));
+      materialize(std::move(combined));
+      return;
+    }
+    }
+  }
+
+  static void mergeInto(DependenceResult &destination,
+                        const DependenceResult &source) {
+    for (const auto &entry : source.first)
+      destination.first[entry.first].insert(entry.second.begin(),
+                                            entry.second.end());
+    for (const auto &entry : source.second)
+      destination.second[entry.first].insert(entry.second.begin(),
+                                             entry.second.end());
   }
 
   void materialize(DependenceResult result) {
@@ -158,6 +249,8 @@ private:
   std::vector<const llvm::BasicBlock *> m_nodeToBlock;
   llvm::DenseMap<const llvm::BasicBlock *, BlockVector> m_dependencies;
   llvm::DenseMap<const llvm::BasicBlock *, BlockVector> m_dependents;
+  DependenceResult m_compactNTSCD;
+  detail::DODBicliqueMap m_bicliques;
 };
 
 ControlDependenceAnalysis::ControlDependenceAnalysis(
@@ -202,6 +295,33 @@ bool ControlDependenceAnalysis::dependsOn(
 ControlDependenceAnalysis::BlockVector ControlDependenceAnalysis::getClosure(
     llvm::ArrayRef<const llvm::BasicBlock *> blocks) const {
   return m_impl->getClosure(blocks);
+}
+
+bool ControlDependenceAnalysis::hasDODBiclique(
+    const llvm::BasicBlock *decision) const {
+  return m_impl->hasDODBiclique(decision);
+}
+
+ControlDependenceAnalysis::BlockVector
+ControlDependenceAnalysis::getDODLeft(const llvm::BasicBlock *decision) const {
+  return m_impl->getDODSide(decision, true);
+}
+
+ControlDependenceAnalysis::BlockVector
+ControlDependenceAnalysis::getDODRight(const llvm::BasicBlock *decision) const {
+  return m_impl->getDODSide(decision, false);
+}
+
+bool ControlDependenceAnalysis::isDOD(const llvm::BasicBlock *decision,
+                                      const llvm::BasicBlock *first,
+                                      const llvm::BasicBlock *second) const {
+  return m_impl->isDOD(decision, first, second);
+}
+
+ControlDependenceAnalysis::BlockVector
+ControlDependenceAnalysis::getDependencyClosure(
+    llvm::ArrayRef<const llvm::BasicBlock *> seed) const {
+  return m_impl->getDependencyClosure(seed);
 }
 
 } // namespace lotus::cd

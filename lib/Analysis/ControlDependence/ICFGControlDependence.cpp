@@ -2,6 +2,7 @@
 
 #include "Analysis/ControlDependence/ICFGControlDependence.h"
 
+#include "Analysis/ControlDependence/CompactControlDependence.h"
 #include "Analysis/ControlDependence/ControlClosure.h"
 #include "Analysis/ControlDependence/ControlDependenceGraph.h"
 #include "Analysis/ControlDependence/DOD.h"
@@ -58,6 +59,59 @@ public:
     }
     NodeSet closure = detail::computeStrongControlClosure(
         const_cast<Graph &>(m_graph), initial);
+    NodeVector result;
+    for (const ICFGNode *node : m_nodes)
+      if (closure.count(m_icfgToGraph.lookup(node)))
+        result.push_back(node);
+    return result;
+  }
+
+  bool hasDODBiclique(const ICFGNode *decision) const {
+    auto nodeIt = m_icfgToGraph.find(decision);
+    return nodeIt != m_icfgToGraph.end() &&
+           m_bicliques.count(nodeIt->second) != 0;
+  }
+
+  NodeVector getDODSide(const ICFGNode *decision, bool left) const {
+    NodeVector result;
+    auto nodeIt = m_icfgToGraph.find(decision);
+    if (nodeIt == m_icfgToGraph.end())
+      return result;
+    auto bicliqueIt = m_bicliques.find(nodeIt->second);
+    if (bicliqueIt == m_bicliques.end())
+      return result;
+    const auto &side =
+        left ? bicliqueIt->second.left : bicliqueIt->second.right;
+    result.reserve(side.count());
+    for (unsigned id : side)
+      result.push_back(m_nodes[id - 1]);
+    return result;
+  }
+
+  bool isDOD(const ICFGNode *decision, const ICFGNode *first,
+             const ICFGNode *second) const {
+    auto decisionIt = m_icfgToGraph.find(decision);
+    auto firstIt = m_icfgToGraph.find(first);
+    auto secondIt = m_icfgToGraph.find(second);
+    if (decisionIt == m_icfgToGraph.end() || firstIt == m_icfgToGraph.end() ||
+        secondIt == m_icfgToGraph.end())
+      return false;
+    auto bicliqueIt = m_bicliques.find(decisionIt->second);
+    return bicliqueIt != m_bicliques.end() &&
+           bicliqueIt->second.contains(firstIt->second, secondIt->second);
+  }
+
+  NodeVector getDependencyClosure(llvm::ArrayRef<const ICFGNode *> seed) const {
+    if (m_options.algorithm != Algorithm::DODNTSCDCompact)
+      return {};
+    NodeSet initial;
+    for (const ICFGNode *node : seed) {
+      auto it = m_icfgToGraph.find(node);
+      if (it != m_icfgToGraph.end())
+        initial.insert(it->second);
+    }
+    NodeSet closure = detail::computeCompactDependencyClosure(
+        const_cast<Graph &>(m_graph), initial, m_compactNTSCD, m_bicliques);
     NodeVector result;
     for (const ICFGNode *node : m_nodes)
       if (closure.count(m_icfgToGraph.lookup(node)))
@@ -125,7 +179,43 @@ private:
       return;
     case Algorithm::StrongControlClosure:
       return;
+    case Algorithm::NTSCDCompact: {
+      detail::Inevitability inevitability =
+          detail::computeInevitability(m_graph);
+      m_compactNTSCD = detail::computeCompactNTSCD(m_graph, inevitability);
+      materialize(m_compactNTSCD);
+      return;
     }
+    case Algorithm::DODCompact: {
+      detail::Inevitability inevitability =
+          detail::computeInevitability(m_graph);
+      m_bicliques = detail::computeCompactDOD(m_graph, inevitability);
+      materialize(
+          detail::materializeCompactDODDependencies(m_graph, m_bicliques));
+      return;
+    }
+    case Algorithm::DODNTSCDCompact: {
+      detail::Inevitability inevitability =
+          detail::computeInevitability(m_graph);
+      m_compactNTSCD = detail::computeCompactNTSCD(m_graph, inevitability);
+      m_bicliques = detail::computeCompactDOD(m_graph, inevitability);
+      DependenceResult combined = m_compactNTSCD;
+      mergeInto(combined, detail::materializeCompactDODDependencies(
+                              m_graph, m_bicliques));
+      materialize(std::move(combined));
+      return;
+    }
+    }
+  }
+
+  static void mergeInto(DependenceResult &destination,
+                        const DependenceResult &source) {
+    for (const auto &entry : source.first)
+      destination.first[entry.first].insert(entry.second.begin(),
+                                            entry.second.end());
+    for (const auto &entry : source.second)
+      destination.second[entry.first].insert(entry.second.begin(),
+                                             entry.second.end());
   }
 
   void materialize(DependenceResult result) {
@@ -157,6 +247,8 @@ private:
   llvm::DenseMap<const ICFGNode *, GraphNode *> m_icfgToGraph;
   llvm::DenseMap<const ICFGNode *, NodeVector> m_dependencies;
   llvm::DenseMap<const ICFGNode *, NodeVector> m_dependents;
+  DependenceResult m_compactNTSCD;
+  detail::DODBicliqueMap m_bicliques;
 };
 
 ICFGControlDependenceAnalysis::ICFGControlDependenceAnalysis(
@@ -196,6 +288,33 @@ ICFGControlDependenceAnalysis::NodeVector
 ICFGControlDependenceAnalysis::getClosure(
     llvm::ArrayRef<const ICFGNode *> nodes) const {
   return m_impl->getClosure(nodes);
+}
+
+bool ICFGControlDependenceAnalysis::hasDODBiclique(
+    const ICFGNode *decision) const {
+  return m_impl->hasDODBiclique(decision);
+}
+
+ICFGControlDependenceAnalysis::NodeVector
+ICFGControlDependenceAnalysis::getDODLeft(const ICFGNode *decision) const {
+  return m_impl->getDODSide(decision, true);
+}
+
+ICFGControlDependenceAnalysis::NodeVector
+ICFGControlDependenceAnalysis::getDODRight(const ICFGNode *decision) const {
+  return m_impl->getDODSide(decision, false);
+}
+
+bool ICFGControlDependenceAnalysis::isDOD(const ICFGNode *decision,
+                                          const ICFGNode *first,
+                                          const ICFGNode *second) const {
+  return m_impl->isDOD(decision, first, second);
+}
+
+ICFGControlDependenceAnalysis::NodeVector
+ICFGControlDependenceAnalysis::getDependencyClosure(
+    llvm::ArrayRef<const ICFGNode *> seed) const {
+  return m_impl->getDependencyClosure(seed);
 }
 
 } // namespace lotus::cd

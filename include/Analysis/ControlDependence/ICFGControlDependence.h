@@ -37,6 +37,12 @@ public:
   llvm::ArrayRef<const ICFGNode *> getDependents(const ICFGNode *node) const;
   bool dependsOn(const ICFGNode *node, const ICFGNode *predicate) const;
   NodeVector getClosure(llvm::ArrayRef<const ICFGNode *> nodes) const;
+  bool hasDODBiclique(const ICFGNode *decision) const;
+  NodeVector getDODLeft(const ICFGNode *decision) const;
+  NodeVector getDODRight(const ICFGNode *decision) const;
+  bool isDOD(const ICFGNode *decision, const ICFGNode *first,
+             const ICFGNode *second) const;
+  NodeVector getDependencyClosure(llvm::ArrayRef<const ICFGNode *> seed) const;
 
 private:
   class Impl;

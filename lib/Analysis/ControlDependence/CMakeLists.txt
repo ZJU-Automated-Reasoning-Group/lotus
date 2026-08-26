@@ -1,4 +1,7 @@
 add_library(CanaryControlDependence STATIC
+  CompactClosure.cpp
+  CompactDOD.cpp
+  CompactNTSCD.cpp
   ControlClosure.cpp
   ControlDependence.cpp
   DOD.cpp

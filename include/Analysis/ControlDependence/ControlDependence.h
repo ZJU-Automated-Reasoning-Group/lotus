@@ -6,8 +6,9 @@
 // control dependence (NTSCD), decisive-order dependence (DOD), their historic
 // algorithmic variants, and strong control closure.
 //
-// The NTSCD, DOD, and strong-closure algorithms are derived from dg by Marek
-// Chalupa, distributed under the MIT license. See the repository LICENSE.
+// The baseline NTSCD, DOD, and strong-closure algorithms are derived from dg
+// by Marek Chalupa, distributed under the MIT license. Compact variants use
+// Lotus's inevitability-matrix and canonical-biclique algorithms.
 //
 //===----------------------------------------------------------------------===//
 
@@ -38,6 +39,9 @@ enum class Algorithm {
   DODRanganath,
   DODNTSCD,
   StrongControlClosure,
+  NTSCDCompact,
+  DODCompact,
+  DODNTSCDCompact,
 };
 
 struct ControlDependenceOptions {
@@ -86,6 +90,19 @@ public:
   /// and foreign blocks are ignored. The returned order follows function
   /// order, making results stable across runs.
   BlockVector getClosure(llvm::ArrayRef<const llvm::BasicBlock *> blocks) const;
+
+  /// Compact DOD queries. These are available for DODCompact and
+  /// DODNTSCDCompact analyses.
+  bool hasDODBiclique(const llvm::BasicBlock *decision) const;
+  BlockVector getDODLeft(const llvm::BasicBlock *decision) const;
+  BlockVector getDODRight(const llvm::BasicBlock *decision) const;
+  bool isDOD(const llvm::BasicBlock *decision, const llvm::BasicBlock *first,
+             const llvm::BasicBlock *second) const;
+
+  /// Least set containing \p seed and closed under compact NTSCD and DOD.
+  /// Available for DODNTSCDCompact.
+  BlockVector
+  getDependencyClosure(llvm::ArrayRef<const llvm::BasicBlock *> seed) const;
 
 private:
   class Impl;

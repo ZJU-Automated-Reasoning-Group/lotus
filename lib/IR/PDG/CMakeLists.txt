@@ -31,4 +31,6 @@ add_library(CanaryPDG STATIC
   Support/DebugInfoUtils.cpp
   Support/GraphWriter.cpp
   Support/PDGUtils.cpp
-) 
+)
+
+target_link_libraries(CanaryPDG PUBLIC CanaryControlDependence)

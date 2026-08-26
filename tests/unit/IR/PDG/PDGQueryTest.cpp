@@ -113,6 +113,88 @@ protected:
   std::unique_ptr<LoopInfo> loop_info;
 };
 
+TEST_F(PDGQueryTest, ControlDependencyGraphUsesStandardControlDependence) {
+  constexpr const char *IR = R"(
+    define void @diamond(i1 %condition) {
+    entry:
+      br i1 %condition, label %left, label %right
+    left:
+      br label %exit
+    right:
+      br label %exit
+    exit:
+      ret void
+    }
+  )";
+  ASSERT_TRUE(loadModule(IR));
+  graph.build(*module);
+
+  legacy::PassManager pm;
+  pm.add(new ControlDependencyGraph());
+  pm.run(*module);
+
+  Function *function = module->getFunction("diamond");
+  ASSERT_NE(function, nullptr);
+  auto *predicate = function->getEntryBlock().getTerminator();
+  auto *left = predicate->getSuccessor(0)->getTerminator();
+  auto *right = predicate->getSuccessor(1)->getTerminator();
+  auto *exit = left->getSuccessor(0)->getTerminator();
+
+  Node *predicate_node = graph.getNode(*predicate);
+  Node *left_node = graph.getNode(*left);
+  Node *right_node = graph.getNode(*right);
+  Node *exit_node = graph.getNode(*exit);
+  ASSERT_NE(predicate_node, nullptr);
+  ASSERT_NE(left_node, nullptr);
+  ASSERT_NE(right_node, nullptr);
+  ASSERT_NE(exit_node, nullptr);
+  EXPECT_TRUE(predicate_node->hasOutNeighborWithEdgeType(
+      *left_node, EdgeType::CONTROLDEP_BR));
+  EXPECT_TRUE(predicate_node->hasOutNeighborWithEdgeType(
+      *right_node, EdgeType::CONTROLDEP_BR));
+  EXPECT_FALSE(predicate_node->hasOutNeighborWithEdgeType(
+      *exit_node, EdgeType::CONTROLDEP_BR));
+}
+
+TEST_F(PDGQueryTest, ControlDependencyGraphPreservesIndirectBranchEdgeType) {
+  constexpr const char *IR = R"(
+    define void @dispatch(i8* %address) {
+    entry:
+      indirectbr i8* %address, [label %left, label %right]
+    left:
+      br label %exit
+    right:
+      br label %exit
+    exit:
+      ret void
+    }
+  )";
+  ASSERT_TRUE(loadModule(IR));
+  graph.build(*module);
+
+  legacy::PassManager pm;
+  pm.add(new ControlDependencyGraph());
+  pm.run(*module);
+
+  Function *function = module->getFunction("dispatch");
+  ASSERT_NE(function, nullptr);
+  auto *predicate = function->getEntryBlock().getTerminator();
+  auto *left = predicate->getSuccessor(0)->getTerminator();
+  auto *right = predicate->getSuccessor(1)->getTerminator();
+  Node *predicate_node = graph.getNode(*predicate);
+  Node *left_node = graph.getNode(*left);
+  Node *right_node = graph.getNode(*right);
+  ASSERT_NE(predicate_node, nullptr);
+  ASSERT_NE(left_node, nullptr);
+  ASSERT_NE(right_node, nullptr);
+  EXPECT_TRUE(predicate_node->hasOutNeighborWithEdgeType(
+      *left_node, EdgeType::CONTROLDEP_IND_BR));
+  EXPECT_TRUE(predicate_node->hasOutNeighborWithEdgeType(
+      *right_node, EdgeType::CONTROLDEP_IND_BR));
+  EXPECT_FALSE(predicate_node->hasOutNeighborWithEdgeType(
+      *left_node, EdgeType::CONTROLDEP_BR));
+}
+
 TEST_F(PDGQueryTest, SliceAndDependenceQueriesTrackExactPredecessors) {
   Node *a = addNode();
   Node *b = addNode();

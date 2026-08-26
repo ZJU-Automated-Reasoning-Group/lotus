@@ -77,6 +77,7 @@ endforeach()
 add_custom_target(noelle_loop_parity_ll_fixtures DEPENDS ${NOELLE_LOOP_PARITY_LL_OUTPUTS})
 
 add_subdirectory(CFG)
+add_subdirectory(ControlDependence)
 add_subdirectory(DebugInfo)
 add_subdirectory(General)
 add_subdirectory(Loop)

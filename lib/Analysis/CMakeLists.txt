@@ -1,4 +1,5 @@
 add_subdirectory(CFG)
+add_subdirectory(ControlDependence)
 add_subdirectory(NullPointer)
 add_subdirectory(TypeHierarchy)
 add_subdirectory(DebugInfo)

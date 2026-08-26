@@ -8,7 +8,7 @@
  *
  * Key features:
  * - Analysis of branch instructions and their targets
- * - Construction of post-dominator trees for control flow analysis
+ * - Reuse of Lotus's standard control-dependence analysis
  * - Function-level control dependency analysis
  * - Integration with the overall PDG framework
  * - Support for different types of control dependencies
@@ -20,14 +20,14 @@
 
 #include "IR/PDG/Core/ControlDependencyGraph.h"
 
+#include "Analysis/ControlDependence/ControlDependence.h"
+
 char pdg::ControlDependencyGraph::ID = 0;
 
 using namespace llvm;
 bool pdg::ControlDependencyGraph::runOnFunction(Function &F) {
-  _PDT = &getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
   addControlDepFromEntryNodeToInsts(F);
-  addControlDepFromDominatedBlockToDominator(F);
-  addControlDepFromIndirectBranches(F);
+  addStandardControlDependencies(F);
   return false;
 }
 
@@ -55,84 +55,34 @@ void pdg::ControlDependencyGraph::addControlDepFromEntryNodeToInsts(
   }
 }
 
-void pdg::ControlDependencyGraph::addControlDepFromDominatedBlockToDominator(
-    Function &F) {
+void pdg::ControlDependencyGraph::addStandardControlDependencies(Function &F) {
   ProgramGraph &g = ProgramGraph::getInstance();
-  for (auto &BB : F) {
+  lotus::cd::ControlDependenceAnalysis analysis(
+      F, {lotus::cd::Algorithm::Standard});
+
+  for (BasicBlock &BB : F) {
     Instruction *terminator = BB.getTerminator();
-    if (!terminator)
-      continue;
-    // Skip blocks with 0 or 1 successors (no branching decision).
-    // Also skip IndirectBr — handled by addControlDepFromIndirectBranches().
-    if (terminator->getNumSuccessors() <= 1)
-      continue;
-    if (isa<IndirectBrInst>(terminator))
+    if (!terminator || terminator->getNumSuccessors() <= 1)
       continue;
 
     Node *terminator_node = g.getNode(*terminator);
-    if (terminator_node == nullptr)
+    if (!terminator_node)
       continue;
 
-    for (auto succ_iter = succ_begin(&BB); succ_iter != succ_end(&BB);
-         succ_iter++) {
-      BasicBlock *succ_bb = *succ_iter;
-      // Skip self-loops: a block cannot be control-dependent on itself.
-      if (succ_bb == &BB)
+    EdgeType edge_type = isa<IndirectBrInst>(terminator)
+                             ? EdgeType::CONTROLDEP_IND_BR
+                             : EdgeType::CONTROLDEP_BR;
+    for (const BasicBlock *dependent : analysis.getDependents(&BB)) {
+      // Preserve the PDG convention that a branch does not control itself.
+      if (dependent == &BB)
         continue;
-      // Only process edges where succ_bb does NOT post-dominate BB.
-      if (_PDT->dominates(succ_bb, &BB))
-        continue;
-
-      // Walk up the post-dominator tree from succ_bb to (but not including)
-      // the nearest common post-dominator of BB and succ_bb.
-      BasicBlock *ncd = _PDT->findNearestCommonDominator(&BB, succ_bb);
-      auto *ncd_node = _PDT->getNode(ncd);
-      for (auto *cur = _PDT->getNode(succ_bb); cur && cur != ncd_node;
-           cur = cur->getIDom()) {
-        addControlDepFromNodeToBB(*terminator_node, *cur->getBlock(),
-                                  EdgeType::CONTROLDEP_BR);
-      }
-    }
-  }
-}
-
-void pdg::ControlDependencyGraph::addControlDepFromIndirectBranches(
-    Function &F) {
-  // Handle IndirectBrInst: emit CONTROLDEP_IND_BR edges using the same
-  // post-dominator-tree walk as for conditional branches.
-  ProgramGraph &g = ProgramGraph::getInstance();
-  for (auto &BB : F) {
-    auto *terminator = BB.getTerminator();
-    if (!terminator)
-      continue;
-    auto *ind_br = dyn_cast<IndirectBrInst>(terminator);
-    if (!ind_br)
-      continue;
-
-    Node *terminator_node = g.getNode(*terminator);
-    if (terminator_node == nullptr)
-      continue;
-
-    for (unsigned i = 0; i < ind_br->getNumSuccessors(); ++i) {
-      BasicBlock *succ_bb = ind_br->getSuccessor(i);
-      if (succ_bb == &BB)
-        continue;
-      if (_PDT->dominates(succ_bb, &BB))
-        continue;
-
-      BasicBlock *ncd = _PDT->findNearestCommonDominator(&BB, succ_bb);
-      auto *ncd_node = _PDT->getNode(ncd);
-      for (auto *cur = _PDT->getNode(succ_bb); cur && cur != ncd_node;
-           cur = cur->getIDom()) {
-        addControlDepFromNodeToBB(*terminator_node, *cur->getBlock(),
-                                  EdgeType::CONTROLDEP_IND_BR);
-      }
+      addControlDepFromNodeToBB(
+          *terminator_node, *const_cast<BasicBlock *>(dependent), edge_type);
     }
   }
 }
 
 void pdg::ControlDependencyGraph::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<PostDominatorTreeWrapperPass>();
   AU.setPreservesAll();
 }
 

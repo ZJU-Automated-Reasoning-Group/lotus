@@ -53,6 +53,11 @@ DependenceResult computeCompactNTSCD(Graph &graph,
 DODBicliqueMap computeCompactDOD(Graph &graph,
                                  const Inevitability &inevitability);
 
+/// Ablation variant that propagates complete first-hit sets over the SCC
+/// condensation instead of capped cardinalities.
+DODBicliqueMap computeCompactDODExactSets(Graph &graph,
+                                          const Inevitability &inevitability);
+
 /// Materialize dg-compatible binary dependence edges without enumerating the
 /// Cartesian product of each biclique.
 DependenceResult
@@ -68,5 +73,10 @@ void forEachDODPair(
 NodeSet computeCompactDependencyClosure(Graph &graph, const NodeSet &seed,
                                         const DependenceResult &ntscd,
                                         const DODBicliqueMap &bicliques);
+
+/// Ablation variant that expands and indexes every DOD pair before closure.
+NodeSet computeEagerPairDependencyClosure(Graph &graph, const NodeSet &seed,
+                                          const DependenceResult &ntscd,
+                                          const DODBicliqueMap &bicliques);
 
 } // namespace lotus::cd::detail

@@ -60,7 +60,8 @@ struct OutsideSCCInfo {
 };
 
 OutsideSCCInfo computeOutsideSCCs(Graph &graph,
-                                  const llvm::SparseBitVector<> &set) {
+                                  const llvm::SparseBitVector<> &set,
+                                  bool exactSets) {
   const size_t nodeCount = graph.size();
   std::vector<bool> seen(nodeCount + 1, false);
   std::vector<GraphNode *> finish;
@@ -114,6 +115,9 @@ OutsideSCCInfo computeOutsideSCCs(Graph &graph,
 
   std::vector<std::vector<unsigned>> dag(componentCount);
   std::vector<int> labels(componentCount, EMPTY);
+  std::vector<llvm::SparseBitVector<>> exactLabels;
+  if (exactSets)
+    exactLabels.resize(componentCount);
   for (GraphNode *node : graph.nodes()) {
     if (inSet(set, node))
       continue;
@@ -121,8 +125,11 @@ OutsideSCCInfo computeOutsideSCCs(Graph &graph,
     assert(sourceComponent >= 0);
     for (GraphNode *successor : node->successors()) {
       if (inSet(set, successor)) {
-        labels[sourceComponent] =
-            joinCapped(labels[sourceComponent], successor->getID());
+        if (exactSets)
+          exactLabels[sourceComponent].set(successor->getID());
+        else
+          labels[sourceComponent] =
+              joinCapped(labels[sourceComponent], successor->getID());
       } else {
         const int targetComponent = component[successor->getID()];
         assert(targetComponent >= 0);
@@ -152,9 +159,25 @@ OutsideSCCInfo computeOutsideSCCs(Graph &graph,
   }
   assert(topologicalOrder.size() == static_cast<size_t>(componentCount) &&
          "SCC condensation must be acyclic");
-  for (auto it = topologicalOrder.rbegin(); it != topologicalOrder.rend(); ++it)
-    for (unsigned target : dag[*it])
-      labels[*it] = joinCapped(labels[*it], labels[target]);
+  for (auto it = topologicalOrder.rbegin(); it != topologicalOrder.rend();
+       ++it) {
+    for (unsigned target : dag[*it]) {
+      if (exactSets)
+        exactLabels[*it] |= exactLabels[target];
+      else
+        labels[*it] = joinCapped(labels[*it], labels[target]);
+    }
+  }
+  if (exactSets) {
+    for (int componentID = 0; componentID < componentCount; ++componentID) {
+      if (exactLabels[componentID].empty())
+        labels[componentID] = EMPTY;
+      else if (exactLabels[componentID].count() == 1)
+        labels[componentID] = *exactLabels[componentID].begin();
+      else
+        labels[componentID] = MANY;
+    }
+  }
 
   return {std::move(component), std::move(labels)};
 }
@@ -169,7 +192,7 @@ llvm::SparseBitVector<> cyclicInterval(llvm::ArrayRef<GraphNode *> cycle,
 
 std::optional<DODBiclique>
 computeBicliqueFor(Graph &graph, GraphNode *decision,
-                   const Inevitability &inevitability) {
+                   const Inevitability &inevitability, bool exactSets) {
   if (decision->successors().size() != 2)
     return std::nullopt;
   const auto &set = inevitability.row(decision);
@@ -187,7 +210,7 @@ computeBicliqueFor(Graph &graph, GraphNode *decision,
       allEntries.test(decision->getID()))
     return std::nullopt;
 
-  OutsideSCCInfo outside = computeOutsideSCCs(graph, set);
+  OutsideSCCInfo outside = computeOutsideSCCs(graph, set, exactSets);
   std::vector<int> successorByID(graph.size() + 1, EMPTY);
   for (GraphNode *node : graph.nodes()) {
     if (!set.test(node->getID()) || node == decision)
@@ -304,19 +327,30 @@ size_t DODBiclique::pairCount() const {
   return static_cast<size_t>(left.count()) * right.count();
 }
 
-DODBicliqueMap computeCompactDOD(Graph &graph,
-                                 const Inevitability &inevitability) {
+DODBicliqueMap computeCompactDODImpl(Graph &graph,
+                                     const Inevitability &inevitability,
+                                     bool exactSets) {
   assert(inevitability.size() == graph.size());
   DODBicliqueMap result;
   for (GraphNode *decision : graph.predicates()) {
     if (decision->successors().size() != 2)
       continue;
     std::optional<DODBiclique> biclique =
-        computeBicliqueFor(graph, decision, inevitability);
+        computeBicliqueFor(graph, decision, inevitability, exactSets);
     if (biclique)
       result.emplace(decision, std::move(*biclique));
   }
   return result;
+}
+
+DODBicliqueMap computeCompactDOD(Graph &graph,
+                                 const Inevitability &inevitability) {
+  return computeCompactDODImpl(graph, inevitability, false);
+}
+
+DODBicliqueMap computeCompactDODExactSets(Graph &graph,
+                                          const Inevitability &inevitability) {
+  return computeCompactDODImpl(graph, inevitability, true);
 }
 
 DependenceResult

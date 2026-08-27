@@ -22,6 +22,8 @@
 #include <string>
 #include <vector>
 
+#include <sys/resource.h>
+
 using namespace llvm;
 using namespace lotus::cd::detail;
 
@@ -33,7 +35,8 @@ cl::opt<std::string> InputFilename(cl::Positional,
 cl::opt<std::string> AlgorithmName(
     "algorithm",
     cl::desc("ntscd2, ntscd-compact, dod, dod-compact, dod-ntscd, "
-             "dod-ntscd-compact, strong-closure, compact-closure"),
+             "dod-compact-exact-set, dod-ntscd-compact, strong-closure, "
+             "compact-closure, compact-closure-eager-pairs"),
     cl::init("dod-compact"));
 cl::opt<bool> VisitPairs(
     "visit-pairs",
@@ -55,10 +58,12 @@ enum class Algorithm {
   NTSCDCompact,
   DOD,
   DODCompact,
+  DODCompactExactSet,
   DODNTSCD,
   DODNTSCDCompact,
   StrongClosure,
   CompactClosure,
+  CompactClosureEagerPairs,
 };
 
 Algorithm parseAlgorithm(StringRef name) {
@@ -70,6 +75,8 @@ Algorithm parseAlgorithm(StringRef name) {
     return Algorithm::DOD;
   if (name == "dod-compact")
     return Algorithm::DODCompact;
+  if (name == "dod-compact-exact-set")
+    return Algorithm::DODCompactExactSet;
   if (name == "dod-ntscd")
     return Algorithm::DODNTSCD;
   if (name == "dod-ntscd-compact")
@@ -78,6 +85,8 @@ Algorithm parseAlgorithm(StringRef name) {
     return Algorithm::StrongClosure;
   if (name == "compact-closure")
     return Algorithm::CompactClosure;
+  if (name == "compact-closure-eager-pairs")
+    return Algorithm::CompactClosureEagerPairs;
   report_fatal_error(Twine("unknown algorithm: ") + name);
 }
 
@@ -91,6 +100,8 @@ StringRef nameOf(Algorithm algorithm) {
     return "dod";
   case Algorithm::DODCompact:
     return "dod-compact";
+  case Algorithm::DODCompactExactSet:
+    return "dod-compact-exact-set";
   case Algorithm::DODNTSCD:
     return "dod-ntscd";
   case Algorithm::DODNTSCDCompact:
@@ -99,15 +110,19 @@ StringRef nameOf(Algorithm algorithm) {
     return "strong-closure";
   case Algorithm::CompactClosure:
     return "compact-closure";
+  case Algorithm::CompactClosureEagerPairs:
+    return "compact-closure-eager-pairs";
   }
   llvm_unreachable("unknown algorithm");
 }
 
 bool isDOD(Algorithm a) {
-  return a == Algorithm::DOD || a == Algorithm::DODCompact;
+  return a == Algorithm::DOD || a == Algorithm::DODCompact ||
+         a == Algorithm::DODCompactExactSet;
 }
 bool isClosure(Algorithm a) {
-  return a == Algorithm::StrongClosure || a == Algorithm::CompactClosure;
+  return a == Algorithm::StrongClosure || a == Algorithm::CompactClosure ||
+         a == Algorithm::CompactClosureEagerPairs;
 }
 
 struct FunctionGraph {
@@ -171,7 +186,34 @@ struct Record {
   size_t bicliques{}, incidences{}, pairs{}, closureSize{};
   uint64_t totalNS{}, inevitableNS{}, ntscdNS{}, dodNS{}, visitNS{},
       closureNS{};
+  uint64_t peakRSSKB{}, resultFingerprint{};
 };
+
+uint64_t mixFingerprint(uint64_t value) {
+  value += 0x9e3779b97f4a7c15ULL;
+  value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ULL;
+  value = (value ^ (value >> 27)) * 0x94d049bb133111ebULL;
+  return value ^ (value >> 31);
+}
+
+uint64_t pairFingerprint(GraphNode *decision, GraphNode *first,
+                         GraphNode *second) {
+  uint64_t value = mixFingerprint(decision->getID());
+  value ^= mixFingerprint(first->getID() + 0x100000001b3ULL);
+  value ^= mixFingerprint(second->getID() + 0x9e3779b9ULL);
+  return mixFingerprint(value);
+}
+
+uint64_t peakRSSKB() {
+  rusage usage{};
+  if (getrusage(RUSAGE_SELF, &usage) != 0)
+    return 0;
+#if defined(__APPLE__)
+  return static_cast<uint64_t>(usage.ru_maxrss) / 1024;
+#else
+  return static_cast<uint64_t>(usage.ru_maxrss);
+#endif
+}
 
 Record run(Function &function, FunctionGraph &fg, Algorithm algorithm) {
   Record r;
@@ -202,7 +244,11 @@ Record run(Function &function, FunctionGraph &fg, Algorithm algorithm) {
     if (VisitPairs) {
       auto start = Clock::now();
       forEachBaselineDODPair(
-          fg.graph, [&](GraphNode *, GraphNode *, GraphNode *) { ++r.pairs; });
+          fg.graph,
+          [&](GraphNode *decision, GraphNode *first, GraphNode *second) {
+            ++r.pairs;
+            r.resultFingerprint += pairFingerprint(decision, first, second);
+          });
       r.visitNS = elapsed(start);
     } else {
       r.bicliques = preprocessBaselineDOD(fg.graph);
@@ -217,8 +263,31 @@ Record run(Function &function, FunctionGraph &fg, Algorithm algorithm) {
     r.dodNS = elapsed(start);
     if (VisitPairs) {
       start = Clock::now();
-      forEachDODPair(fg.graph, bicliques,
-                     [&](GraphNode *, GraphNode *, GraphNode *) { ++r.pairs; });
+      forEachDODPair(
+          fg.graph, bicliques,
+          [&](GraphNode *decision, GraphNode *first, GraphNode *second) {
+            ++r.pairs;
+            r.resultFingerprint += pairFingerprint(decision, first, second);
+          });
+      r.visitNS = elapsed(start);
+    }
+    break;
+  }
+  case Algorithm::DODCompactExactSet: {
+    auto start = Clock::now();
+    Inevitability inevitable = computeInevitability(fg.graph);
+    r.inevitableNS = elapsed(start);
+    start = Clock::now();
+    bicliques = computeCompactDODExactSets(fg.graph, inevitable);
+    r.dodNS = elapsed(start);
+    if (VisitPairs) {
+      start = Clock::now();
+      forEachDODPair(
+          fg.graph, bicliques,
+          [&](GraphNode *decision, GraphNode *first, GraphNode *second) {
+            ++r.pairs;
+            r.resultFingerprint += pairFingerprint(decision, first, second);
+          });
       r.visitNS = elapsed(start);
     }
     break;
@@ -262,6 +331,22 @@ Record run(Function &function, FunctionGraph &fg, Algorithm algorithm) {
     r.closureNS = elapsed(start);
     break;
   }
+  case Algorithm::CompactClosureEagerPairs: {
+    auto start = Clock::now();
+    Inevitability inevitable = computeInevitability(fg.graph);
+    r.inevitableNS = elapsed(start);
+    start = Clock::now();
+    ntscd = computeCompactNTSCD(fg.graph, inevitable);
+    r.ntscdNS = elapsed(start);
+    start = Clock::now();
+    bicliques = computeCompactDOD(fg.graph, inevitable);
+    r.dodNS = elapsed(start);
+    start = Clock::now();
+    closure = computeEagerPairDependencyClosure(fg.graph, fg.seed(), ntscd,
+                                                bicliques);
+    r.closureNS = elapsed(start);
+    break;
+  }
   }
 
   r.totalNS = elapsed(totalStart);
@@ -273,8 +358,18 @@ Record run(Function &function, FunctionGraph &fg, Algorithm algorithm) {
       if (!VisitPairs)
         r.pairs += entry.second.pairCount();
     }
+    if (isDOD(algorithm) && !VisitPairs)
+      forEachDODPair(
+          fg.graph, bicliques,
+          [&](GraphNode *decision, GraphNode *first, GraphNode *second) {
+            r.resultFingerprint += pairFingerprint(decision, first, second);
+          });
   }
   r.closureSize = closure.size();
+  if (isClosure(algorithm))
+    for (GraphNode *node : closure)
+      r.resultFingerprint += mixFingerprint(node->getID());
+  r.peakRSSKB = peakRSSKB();
   return r;
 }
 
@@ -288,20 +383,23 @@ void printText(const std::vector<Record> &records) {
            << " inevitability_ns=" << r.inevitableNS
            << " ntscd_ns=" << r.ntscdNS << " dod_ns=" << r.dodNS
            << " pair_visit_ns=" << r.visitNS << " closure_ns=" << r.closureNS
-           << "\n";
+           << " peak_rss_kb=" << r.peakRSSKB
+           << " result_fingerprint=" << r.resultFingerprint << "\n";
 }
 
 void printCSV(const std::vector<Record> &records) {
   outs() << "function,algorithm,nodes,edges,decisions,dependencies,bicliques,"
             "incidences,dod_pairs,closure_size,analysis_ns,inevitability_ns,"
-            "ntscd_ns,dod_ns,pair_visit_ns,closure_ns\n";
+            "ntscd_ns,dod_ns,pair_visit_ns,closure_ns,peak_rss_kb,"
+            "result_fingerprint\n";
   for (const Record &r : records)
     outs() << '"' << r.function << "\"," << r.algorithm << ',' << r.nodes << ','
            << r.edges << ',' << r.decisions << ',' << r.dependencies << ','
            << r.bicliques << ',' << r.incidences << ',' << r.pairs << ','
            << r.closureSize << ',' << r.totalNS << ',' << r.inevitableNS << ','
            << r.ntscdNS << ',' << r.dodNS << ',' << r.visitNS << ','
-           << r.closureNS << '\n';
+           << r.closureNS << ',' << r.peakRSSKB << ',' << r.resultFingerprint
+           << '\n';
 }
 
 void printJSON(const std::vector<Record> &records) {
@@ -324,6 +422,8 @@ void printJSON(const std::vector<Record> &records) {
     o["dod_ns"] = int64_t(r.dodNS);
     o["pair_visit_ns"] = int64_t(r.visitNS);
     o["closure_ns"] = int64_t(r.closureNS);
+    o["peak_rss_kb"] = int64_t(r.peakRSSKB);
+    o["result_fingerprint"] = int64_t(r.resultFingerprint);
     array.push_back(std::move(o));
   }
   outs() << formatv("{0:2}\n", json::Value(std::move(array)));
@@ -339,7 +439,7 @@ int main(int argc, char **argv) {
     report_fatal_error("--format must be text, json, or csv");
   Algorithm algorithm = parseAlgorithm(AlgorithmName);
   if (VisitPairs && !isDOD(algorithm))
-    report_fatal_error("--visit-pairs is valid only for dod and dod-compact");
+    report_fatal_error("--visit-pairs is valid only for DOD algorithms");
   if (!SeedIndices.empty() && !isClosure(algorithm))
     report_fatal_error("--seed-index is valid only for closure algorithms");
 

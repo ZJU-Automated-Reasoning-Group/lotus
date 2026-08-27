@@ -541,9 +541,13 @@ TEST(ControlDependenceTest,
             << ", target " << target->getID();
     auto ntscd = lotus::cd::detail::computeCompactNTSCD(graph, inevitability);
     auto bicliques = lotus::cd::detail::computeCompactDOD(graph, inevitability);
+    auto exactSetBicliques =
+        lotus::cd::detail::computeCompactDODExactSets(graph, inevitability);
     std::set<Triple> expectedDOD = bruteDOD(graph, inevitability);
     std::set<Triple> compactDOD = enumerateCompactDOD(graph, bicliques);
     EXPECT_EQ(compactDOD, expectedDOD) << "graph mask " << mask;
+    EXPECT_EQ(enumerateCompactDOD(graph, exactSetBicliques), expectedDOD)
+        << "graph mask " << mask;
 
     for (unsigned seedMask = 0; seedMask < (1u << nodeCount); ++seedMask) {
       lotus::cd::detail::NodeSet seed;
@@ -575,10 +579,17 @@ TEST(ControlDependenceTest,
 
       auto closure = lotus::cd::detail::computeCompactDependencyClosure(
           graph, seed, ntscd, bicliques);
+      auto eagerClosure = lotus::cd::detail::computeEagerPairDependencyClosure(
+          graph, seed, ntscd, bicliques);
       std::set<unsigned> actual;
       for (auto *node : closure)
         actual.insert(node->getID());
       EXPECT_EQ(actual, expected)
+          << "graph mask " << mask << ", seed mask " << seedMask;
+      std::set<unsigned> eagerActual;
+      for (auto *node : eagerClosure)
+        eagerActual.insert(node->getID());
+      EXPECT_EQ(eagerActual, expected)
           << "graph mask " << mask << ", seed mask " << seedMask;
     }
   }

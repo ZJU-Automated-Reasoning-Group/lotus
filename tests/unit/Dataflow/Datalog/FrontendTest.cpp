@@ -137,16 +137,16 @@ TEST(DatalogJsonFrontendTest, EmitsPlanAndAnalyzeDiagnostics) {
   const llvm::json::Object *explain_root = explained.getAsObject();
   ASSERT_NE(explain_root, nullptr);
   EXPECT_EQ(explain_root->getString("status").getValueOr(""), "explained");
-  EXPECT_NE(explain_root->getString("plan").getValueOr("").find("Scan input"),
-            llvm::StringRef::npos);
+  EXPECT_TRUE(
+      explain_root->getString("plan").getValueOr("").contains("Scan input"));
 
   explain_options.explain_analyze = true;
   const llvm::json::Value analyzed = parseOutput(
       executeInput(program, frontend::InputFormat::Json, explain_options));
   const llvm::json::Object *analyze_root = analyzed.getAsObject();
   ASSERT_NE(analyze_root, nullptr);
-  EXPECT_NE(analyze_root->getString("plan").getValueOr("").find("actual["),
-            llvm::StringRef::npos);
+  EXPECT_TRUE(
+      analyze_root->getString("plan").getValueOr("").contains("actual["));
   EXPECT_NE(analyze_root->getObject("stats"), nullptr);
 }
 

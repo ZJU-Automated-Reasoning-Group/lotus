@@ -175,4 +175,27 @@ TEST(DatalogTest, EmitsSccRuleAndDeltaTrace) {
   EXPECT_NE(trace.str().find("iteration"), std::string::npos);
 }
 
+TEST(DatalogTest, DeduplicatesSetCandidatesWithinParallelTasks) {
+  context ctx;
+  auto source = ctx.relation<int, int>("source");
+  auto output = ctx.relation<int>("output");
+  auto item = ctx.var<int>("item");
+  auto bucket = ctx.var<int>("bucket");
+  for (int value = 0; value < 1024; ++value)
+    source.insert(value, 0);
+  program p(ctx);
+  p.rule(output(bucket), source(item, bucket));
+  auto compiled = p.compile();
+  ExecutionOptions options;
+  options.worker_count = 4;
+  options.parallel_grain_size = 64;
+  compiled.run(options);
+
+  EXPECT_EQ(output.rows().size(), 1U);
+  EXPECT_EQ(compiled.stats().head_derivations, 1024U);
+  EXPECT_LT(compiled.stats().local_unique_candidates,
+            compiled.stats().head_derivations);
+  EXPECT_EQ(compiled.stats().global_unique_candidates, 1U);
+}
+
 } // namespace

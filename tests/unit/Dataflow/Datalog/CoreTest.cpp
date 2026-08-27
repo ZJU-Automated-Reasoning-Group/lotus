@@ -595,4 +595,93 @@ TEST(DatalogTest, RejectsNaNConstantsInRelationKeys) {
   EXPECT_THROW(p.compile(), CompileError);
 }
 
+TEST(DatalogTest, ExplainsPhysicalPlanAndCollectedOperationProfile) {
+  context ctx;
+  auto edge = ctx.relation<int, int>("edge");
+  auto path = ctx.relation<int, int>("path");
+  auto x = ctx.var<int>("x");
+  auto y = ctx.var<int>("y");
+  edge.insert(1, 2);
+
+  program p(ctx);
+  p.rule(path(x, y), edge(x, y));
+  auto compiled = p.compile();
+
+  const std::string plan = compiled.explain();
+  EXPECT_NE(plan.find("SCC"), std::string::npos);
+  EXPECT_NE(plan.find("Scan edge"), std::string::npos);
+  EXPECT_NE(plan.find("estimate[input="), std::string::npos);
+
+  ExecutionOptions options;
+  options.collect_profile = true;
+  compiled.run(options);
+
+  ASSERT_TRUE(compiled.profile().collected);
+  ASSERT_EQ(compiled.profile().rules.size(), 1U);
+  ASSERT_EQ(compiled.profile().rules[0].operations.size(), 1U);
+  EXPECT_EQ(compiled.profile().rules[0].head_candidates, 1U);
+  EXPECT_EQ(compiled.profile().rules[0].operations[0].candidate_rows, 1U);
+  EXPECT_EQ(compiled.profile().rules[0].operations[0].matched_rows, 1U);
+
+  const std::string analyzed = compiled.explain(ExplainMode::Analyze);
+  EXPECT_NE(analyzed.find("actual[invocations="), std::string::npos);
+  EXPECT_NE(analyzed.find("head candidates=1"), std::string::npos);
+}
+
+TEST(DatalogTest, AnalyzeExplainReportsWhenProfileWasNotCollected) {
+  context ctx;
+  auto input = ctx.relation<int>("input");
+  auto output = ctx.relation<int>("output");
+  auto x = ctx.var<int>("x");
+  input.insert(1);
+  program p(ctx);
+  p.rule(output(x), input(x));
+  auto compiled = p.compile();
+  compiled.run();
+
+  EXPECT_FALSE(compiled.profile().collected);
+  EXPECT_NE(compiled.explain(ExplainMode::Analyze)
+                .find("profile: not collected"),
+            std::string::npos);
+}
+
+TEST(DatalogTest, TypedColumnsUseLessPayloadStorageThanDynamicCells) {
+  context ctx;
+  auto facts = ctx.relation<std::uint64_t, std::uint64_t>("facts");
+  constexpr std::size_t FACT_COUNT = 1024;
+  for (std::size_t index = 0; index < FACT_COUNT; ++index)
+    facts.insert(index, index + 1);
+
+  program p(ctx);
+  auto compiled = p.compile();
+  compiled.run();
+
+  EXPECT_EQ(compiled.stats().total_facts, FACT_COUNT);
+  EXPECT_LT(compiled.stats().tuple_memory_bytes,
+            FACT_COUNT * 2 * sizeof(std::any));
+  EXPECT_GT(compiled.stats().uniqueness_memory_bytes, 0U);
+  EXPECT_GE(compiled.stats().base_memory_bytes, FACT_COUNT);
+}
+
+TEST(DatalogTest, PromotingDerivedFactToBaseSurvivesRecomputation) {
+  context ctx;
+  auto source = ctx.relation<int>("source");
+  auto output = ctx.relation<int>("output");
+  auto x = ctx.var<int>("x");
+  source.insert(1);
+  program p(ctx);
+  p.rule(output(x), source(x));
+  auto compiled = p.compile();
+  compiled.run();
+  ASSERT_TRUE(output.contains(1));
+
+  output.insert(1);
+  source.insert(2);
+  compiled.run();
+
+  EXPECT_TRUE(output.contains(1));
+  EXPECT_TRUE(output.contains(2));
+  EXPECT_EQ(output.rows().size(), 2U);
+}
+
 } // namespace

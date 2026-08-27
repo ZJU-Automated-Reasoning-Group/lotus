@@ -31,6 +31,15 @@ std::string executeInput(llvm::StringRef input, frontend::InputFormat format) {
   return output;
 }
 
+std::string executeInput(llvm::StringRef input, frontend::InputFormat format,
+                         const frontend::RunOptions &options) {
+  std::string output;
+  llvm::raw_string_ostream stream(output);
+  frontend::executeInput(input, format, options, stream);
+  stream.flush();
+  return output;
+}
+
 std::string executeInputs(llvm::ArrayRef<frontend::SourceUnit> inputs,
                           frontend::InputFormat format) {
   std::string output;
@@ -106,6 +115,39 @@ TEST(DatalogJsonFrontendTest, SupportsNullaryPredicates) {
   const llvm::json::Array *row = (*rows)[0].getAsArray();
   ASSERT_NE(row, nullptr);
   EXPECT_TRUE(row->empty());
+}
+
+TEST(DatalogJsonFrontendTest, EmitsPlanAndAnalyzeDiagnostics) {
+  constexpr llvm::StringLiteral program = R"json({
+    "schema_version": 1,
+    "relations": [
+      {"name": "input", "columns": ["i64"], "facts": [[1]]},
+      {"name": "output", "columns": ["i64"]}
+    ],
+    "rules": [{
+      "head": {"relation": "output", "args": ["$x"]},
+      "body": [{"atom": {"relation": "input", "args": ["$x"]}}]
+    }]
+  })json";
+
+  frontend::RunOptions explain_options;
+  explain_options.explain = true;
+  const llvm::json::Value explained = parseOutput(executeInput(
+      program, frontend::InputFormat::Json, explain_options));
+  const llvm::json::Object *explain_root = explained.getAsObject();
+  ASSERT_NE(explain_root, nullptr);
+  EXPECT_EQ(explain_root->getString("status").getValueOr(""), "explained");
+  EXPECT_NE(explain_root->getString("plan").getValueOr("").find("Scan input"),
+            llvm::StringRef::npos);
+
+  explain_options.explain_analyze = true;
+  const llvm::json::Value analyzed = parseOutput(executeInput(
+      program, frontend::InputFormat::Json, explain_options));
+  const llvm::json::Object *analyze_root = analyzed.getAsObject();
+  ASSERT_NE(analyze_root, nullptr);
+  EXPECT_NE(analyze_root->getString("plan").getValueOr("").find("actual["),
+            llvm::StringRef::npos);
+  EXPECT_NE(analyze_root->getObject("stats"), nullptr);
 }
 
 TEST(DatalogJsonFrontendTest, AcceptsTheCompleteU64RangeAsDecimalStrings) {

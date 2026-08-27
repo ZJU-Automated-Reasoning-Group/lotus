@@ -28,6 +28,8 @@ struct RunOptions {
   // frontend itself performs no filesystem access.
   SourceResolver source_resolver;
   bool validate_only = false;
+  bool explain = false;
+  bool explain_analyze = false;
   bool pretty = false;
 };
 

@@ -3,10 +3,12 @@
 #include "Dataflow/Datalog/Core/Context.h"
 #include "Dataflow/Datalog/Core/Error.h"
 #include "Dataflow/Datalog/Core/Rule.h"
+#include "Dataflow/Datalog/Runtime/Diagnostics.h"
 #include "Dataflow/Datalog/Runtime/Scheduler.h"
 
 #include <initializer_list>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace lotus::datalog {
@@ -52,6 +54,8 @@ public:
   RunStatus run();
   RunStatus run(const ExecutionOptions &options);
   const ExecutionStats &stats() const;
+  const ExecutionProfile &profile() const;
+  std::string explain(ExplainMode mode = ExplainMode::Plan) const;
 
   // A compiled program retains the Context's internal storage, so it may be
   // executed after the Context wrapper that produced it has been destroyed.

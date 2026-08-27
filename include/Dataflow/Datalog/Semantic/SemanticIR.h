@@ -3,6 +3,7 @@
 #include <any>
 #include <cstddef>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <typeindex>
@@ -14,6 +15,69 @@ namespace lotus::datalog {
 using RelationId = std::size_t;
 using VarId = std::size_t;
 using ColumnMask = std::size_t;
+
+class ValueRef {
+public:
+  ValueRef() = default;
+
+  static ValueRef fromAny(const std::any &value) {
+    ValueRef result;
+    result.dynamic_ = &value;
+    result.type_ = value.type();
+    return result;
+  }
+
+  template <typename T> static ValueRef direct(const T &value) {
+    ValueRef result;
+    result.data_ = &value;
+    result.type_ = typeid(T);
+    result.copy_ = [](const void *data) {
+      return std::any(*static_cast<const T *>(data));
+    };
+    return result;
+  }
+
+  explicit operator bool() const { return data_ || dynamic_; }
+  std::type_index type() const { return type_; }
+
+  template <typename T> const T &get() const {
+    if (type_ != typeid(T))
+      throw std::bad_any_cast();
+    if (dynamic_)
+      return std::any_cast<const T &>(*dynamic_);
+    return *static_cast<const T *>(data_);
+  }
+
+  std::any materialize() const {
+    if (dynamic_)
+      return *dynamic_;
+    if (!data_ || !copy_)
+      return {};
+    return copy_(data_);
+  }
+
+private:
+  const void *data_ = nullptr;
+  const std::any *dynamic_ = nullptr;
+  std::type_index type_ = typeid(void);
+  std::any (*copy_)(const void *) = nullptr;
+};
+
+class ColumnStorage {
+public:
+  virtual ~ColumnStorage() = default;
+
+  virtual std::size_t size() const = 0;
+  virtual void reserve(std::size_t count) = 0;
+  virtual void append(std::any value) = 0;
+  virtual void update(std::size_t row, std::any value) = 0;
+  virtual void truncate(std::size_t count) = 0;
+  virtual ValueRef value(std::size_t row) const = 0;
+  virtual std::any materialize(std::size_t row) const = 0;
+  virtual std::unique_ptr<ColumnStorage>
+  select(const std::vector<std::size_t> &rows) const = 0;
+  virtual std::size_t approximateMemoryBytes() const = 0;
+};
 
 // Body scans bind variables to immutable relation cells. Keeping a reference
 // here avoids copying a std::any (and often its heap allocation) at every join
@@ -47,22 +111,31 @@ public:
     return *this;
   }
 
-  explicit operator bool() const { return value_ != nullptr; }
-  const std::any &operator*() const { return *value_; }
+  explicit operator bool() const { return static_cast<bool>(value_); }
+  const ValueRef &operator*() const { return value_; }
+
+  template <typename T> const T &get() const { return value_.get<T>(); }
+
+  std::any materialize() const { return value_.materialize(); }
 
   void bindReference(const std::any &value) {
     owned_.reset();
-    value_ = &value;
+    value_ = ValueRef::fromAny(value);
+  }
+
+  void bindReference(ValueRef value) {
+    owned_.reset();
+    value_ = value;
   }
 
   void bindOwned(std::any value) {
     owned_.emplace(std::move(value));
-    value_ = &*owned_;
+    value_ = ValueRef::fromAny(*owned_);
   }
 
   void reset() {
     owned_.reset();
-    value_ = nullptr;
+    value_ = {};
   }
 
   bool ownsValue() const { return owned_.has_value(); }
@@ -71,7 +144,7 @@ private:
   void copyFrom(const BindingSlot &other) {
     if (other.owned_) {
       owned_ = other.owned_;
-      value_ = &*owned_;
+      value_ = ValueRef::fromAny(*owned_);
     } else {
       owned_.reset();
       value_ = other.value_;
@@ -81,7 +154,7 @@ private:
   void moveFrom(BindingSlot &&other) {
     if (other.owned_) {
       owned_ = std::move(other.owned_);
-      value_ = &*owned_;
+      value_ = ValueRef::fromAny(*owned_);
     } else {
       owned_.reset();
       value_ = other.value_;
@@ -90,7 +163,7 @@ private:
   }
 
   std::optional<std::any> owned_;
-  const std::any *value_ = nullptr;
+  ValueRef value_;
 };
 
 using Binding = std::vector<BindingSlot>;
@@ -111,6 +184,9 @@ struct ColumnType {
   std::string name;
   std::function<std::size_t(const std::any &)> hash;
   std::function<bool(const std::any &, const std::any &)> equal;
+  std::function<std::size_t(ValueRef)> hash_value;
+  std::function<bool(ValueRef, ValueRef)> equal_value;
+  std::function<std::unique_ptr<ColumnStorage>()> make_storage;
   std::function<void(const std::any &)> validate;
   std::function<void(const std::any &)> validate_key;
 };

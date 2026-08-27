@@ -69,7 +69,7 @@ public:
               if (id >= binding.size() || !binding[id])
                 throw std::logic_error(
                     "evaluating an unbound Datalog variable");
-              return std::any_cast<T>(*binding[id]);
+              return binding[id].get<T>();
             },
             name),
         id_(id), name_(std::move(name)) {}

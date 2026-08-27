@@ -319,7 +319,9 @@ AtomPlan lowerAtomPlan(const AtomIR &atom, const std::vector<bool> &grounded) {
   return result;
 }
 
-RulePlan lowerRulePlan(const RuleIR &rule) {
+RulePlan lowerRulePlan(
+    const RuleIR &rule,
+    const std::vector<std::unique_ptr<RelationStorage>> &relations) {
   RulePlan result;
   result.head_relation = rule.head.relation;
   result.head.reserve(rule.head.args.size());
@@ -356,11 +358,22 @@ RulePlan lowerRulePlan(const RuleIR &rule) {
         grounded.resize(aggregate->output_var + 1, false);
     }
   }
+  std::size_t estimated_rows = 1;
   for (const BodyItemIR &item : rule.body) {
     PhysicalOp operation;
+    operation.estimated_input_rows = estimated_rows;
     if (const auto *atom = std::get_if<AtomIR>(&item)) {
       operation.code = OpCode::Scan;
       operation.atom = lowerAtomPlan(*atom, grounded);
+      operation.estimated_lookup_rows =
+          relations[atom->relation]->estimatedLookupCardinality(
+              operation.atom.lookup_mask);
+      if (estimated_rows > std::numeric_limits<std::size_t>::max() /
+                               operation.estimated_lookup_rows) {
+        estimated_rows = std::numeric_limits<std::size_t>::max();
+      } else {
+        estimated_rows *= operation.estimated_lookup_rows;
+      }
       for (const TermIR &term : atom->args) {
         if (term.kind == TermIR::Kind::Variable)
           grounded[term.variable] = true;
@@ -368,18 +381,27 @@ RulePlan lowerRulePlan(const RuleIR &rule) {
     } else if (const auto *filter = std::get_if<FilterIR>(&item)) {
       operation.code = OpCode::Filter;
       operation.filter = filter->predicate;
+      estimated_rows = std::max<std::size_t>(1, estimated_rows / 2);
     } else if (const auto *negation = std::get_if<NegAtomIR>(&item)) {
       operation.code = OpCode::AntiLookup;
       operation.atom = lowerAtomPlan(negation->atom, grounded);
+      operation.estimated_lookup_rows =
+          relations[negation->atom.relation]->estimatedLookupCardinality(
+              operation.atom.lookup_mask);
+      estimated_rows = std::max<std::size_t>(1, estimated_rows / 2);
     } else {
       const auto &aggregate = std::get<AggregateIR>(item);
       operation.code = OpCode::Aggregate;
       operation.atom = lowerAtomPlan(aggregate.source, grounded);
       operation.aggregate = aggregate;
+      operation.estimated_lookup_rows =
+          relations[aggregate.source.relation]->estimatedLookupCardinality(
+              operation.atom.lookup_mask);
       if (aggregate.output_var >= grounded.size())
         grounded.resize(aggregate.output_var + 1, false);
       grounded[aggregate.output_var] = true;
     }
+    operation.estimated_output_rows = estimated_rows;
     result.body.push_back(std::move(operation));
   }
   return result;

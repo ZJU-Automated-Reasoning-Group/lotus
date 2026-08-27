@@ -48,9 +48,11 @@ jobs:
 
       - name: Build and install
         run: |
+          set -euo pipefail
           export CCACHE_BASEDIR="$GITHUB_WORKSPACE"
           export CCACHE_COMPILERCHECK=content
           ccache --zero-stats
+          trap 'ccache --show-stats' EXIT
 
           debug_flags=()
           if [[ "${{ matrix.build-type }}" == "Debug" ]]; then
@@ -75,10 +77,12 @@ jobs:
                 -DCMAKE_C_COMPILER_LAUNCHER=ccache \
                 -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
                 "${debug_flags[@]}" ..
-          make -j$(nproc) && make install
-          ccache --show-stats
+          cmake --build . --parallel "$(nproc)"
+          cmake --install .
       - name: Add Lotus to the path
         run: |
           echo "$HOME/lotus/bin" >> $GITHUB_PATH
       - name: Test installation
-        run: lotus --version || echo "Lotus built successfully"
+        run: |
+          test -x "$HOME/lotus/bin/lotus-check"
+          lotus-check --help >/dev/null

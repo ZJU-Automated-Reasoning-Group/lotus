@@ -18,6 +18,7 @@ namespace {
 void usage(llvm::raw_ostream &output) {
   output << "usage:\n"
             "  lotus-datalog run <source...|-> [options]\n"
+            "  lotus-datalog explain <source...|-> [--analyze] [options]\n"
             "  lotus-datalog validate <source...|-> [options]\n"
             "  lotus-datalog schema\n\n"
             "options:\n"
@@ -27,7 +28,8 @@ void usage(llvm::raw_ostream &output) {
             "  --pretty\n"
             "  --trace-scc\n"
             "  --trace-rule\n"
-            "  --trace-delta\n";
+            "  --trace-delta\n"
+            "  --analyze\n";
 }
 
 std::size_t parseSize(const char *value, const char *option) {
@@ -52,7 +54,7 @@ int main(int argc, char **argv) {
     lotus::datalog::frontend::printSchema(llvm::outs());
     return 0;
   }
-  if (command != "run" && command != "validate") {
+  if (command != "run" && command != "validate" && command != "explain") {
     usage(llvm::errs());
     return 2;
   }
@@ -60,6 +62,7 @@ int main(int argc, char **argv) {
   lotus::datalog::frontend::InputFormat format =
       lotus::datalog::frontend::InputFormat::Auto;
   options.validate_only = command == "validate";
+  options.explain = command == "explain";
   options.execution.trace_stream = &std::cerr;
   options.source_resolver =
       [](llvm::StringRef including_source, llvm::StringRef requested_path)
@@ -101,6 +104,8 @@ int main(int argc, char **argv) {
       options.execution.trace_rule = true;
     } else if (argument == "--trace-delta") {
       options.execution.trace_delta = true;
+    } else if (argument == "--analyze" && options.explain) {
+      options.explain_analyze = true;
     } else if (!argument.empty() && argument.front() != '-') {
       paths.push_back(argument);
     } else if (argument == "-") {

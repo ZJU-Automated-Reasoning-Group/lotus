@@ -24,6 +24,22 @@ namespace lotus::datalog::internal {
 
 using Row = std::vector<std::any>;
 
+class RelationStorage;
+
+class RowView {
+public:
+  RowView(const RelationStorage &storage, std::size_t row_id);
+  explicit RowView(const Row &row);
+
+  std::size_t size() const;
+  ValueRef operator[](std::size_t column) const;
+
+private:
+  const RelationStorage *storage_ = nullptr;
+  const Row *dynamic_ = nullptr;
+  std::size_t row_id_ = 0;
+};
+
 // A lookup key borrows constant terms and binding cells.  It is deliberately
 // fixed-size: relation arity is already bounded by ColumnMask, so constructing
 // a key in the join loop must not allocate or copy std::any values.
@@ -31,10 +47,11 @@ struct KeyView {
   static constexpr std::size_t MAX_COLUMNS = sizeof(ColumnMask) * CHAR_BIT;
 
   ColumnMask mask = 0;
-  std::array<const std::any *, MAX_COLUMNS> values{};
+  std::array<ValueRef, MAX_COLUMNS> values{};
   std::size_t size = 0;
 
-  void push(const std::any &value) { values[size++] = &value; }
+  void push(const std::any &value) { values[size++] = ValueRef::fromAny(value); }
+  void push(ValueRef value) { values[size++] = value; }
 };
 
 void combineHash(std::size_t &seed, std::size_t value);
@@ -63,23 +80,23 @@ class RuntimeIndex {
 public:
   RuntimeIndex(ColumnMask mask, const std::vector<ColumnType> &all_columns);
 
-  void rebuild(const std::vector<Row> &rows, std::size_t version);
-  void append(const std::vector<Row> &rows, std::size_t row_index,
+  void rebuild(const RelationStorage &storage, std::size_t version);
+  void append(const RelationStorage &storage, std::size_t row_index,
               std::size_t version);
-  void update(const std::vector<Row> &rows, std::size_t row_index,
+  void update(const RelationStorage &storage, std::size_t row_index,
               const Row &previous_row, std::size_t version);
   bool isCurrent(std::size_t version) const;
   const std::vector<std::size_t> *lookup(const KeyView &key) const;
-  bool matches(const Row &row, const KeyView &key) const;
+  bool matches(RowView row, const KeyView &key) const;
   std::size_t bucketCount() const;
   std::size_t entryCount() const;
   std::size_t approximateMemoryBytes() const;
 
 private:
-  std::size_t hash(const Row &row) const;
+  std::size_t hash(RowView row) const;
   std::size_t hash(const KeyView &key) const;
   void erase(std::size_t key_hash, std::size_t row_index);
-  void insert(const std::vector<Row> &rows, std::size_t row_index);
+  void insert(const RelationStorage &storage, std::size_t row_index);
 
   std::vector<std::size_t> columns_;
   std::vector<ColumnType> column_types_;
@@ -90,6 +107,8 @@ private:
 class RelationStorage {
 public:
   using KeyMap = std::unordered_map<Row, std::size_t, KeyHash, KeyEqual>;
+  using SetDirectory =
+      std::unordered_map<std::size_t, std::vector<std::size_t>>;
 
   struct BatchMergeResult {
     std::vector<std::size_t> changed_row_ids;
@@ -106,45 +125,62 @@ public:
   explicit RelationStorage(RelationIR definition);
 
   const RelationIR &definition() const;
-  const std::vector<Row> &rows() const;
+  std::size_t rowCount() const;
+  RowView row(std::size_t row_id) const;
+  ValueRef value(std::size_t row_id, std::size_t column) const;
+  Row materializeRow(std::size_t row_id) const;
+  std::vector<Row> materializeRows() const;
 
   bool insertBase(Row row);
   bool contains(const Row &row) const;
   std::vector<Row> coalesce(std::vector<Row> candidates) const;
   std::size_t candidateHash(const Row &row) const;
+  std::size_t candidateHash(RowView row) const;
   bool rowsEqual(const Row &lhs, const Row &rhs) const;
+  bool rowsEqual(RowView lhs, RowView rhs) const;
   BatchMergeResult mergeDerivedCoalesced(std::vector<Row> candidates,
                                          Scheduler &scheduler,
                                          std::size_t grain_size);
   void discardDerived();
   std::size_t baseVersion() const;
+  std::vector<std::size_t>
+  baseSetDeltaSince(std::size_t completed_base_version) const;
   std::size_t estimatedLookupCardinality(ColumnMask mask) const;
   void ensureIndex(ColumnMask mask);
   std::size_t indexCount() const;
   std::size_t indexEntries() const;
   std::size_t indexMemoryBytes() const;
+  std::size_t tupleMemoryBytes() const;
+  std::size_t uniquenessMemoryBytes() const;
+  std::size_t baseMemoryBytes() const;
 
   void forEachMatching(const KeyView &key, ExecutionStats &stats,
-                       const std::function<void(const Row &)> &callback);
+                       const std::function<void(RowView)> &callback);
   std::size_t matchingCandidateCount(const KeyView &key, ExecutionStats &stats);
   void forEachMatchingSlice(const KeyView &key, std::size_t begin,
                             std::size_t end,
-                            const std::function<void(const Row &)> &callback);
+                            const std::function<void(RowView)> &callback);
 
 private:
   void validateRow(const Row &row) const;
   RuntimeIndex &getIndex(ColumnMask mask);
+  RuntimeIndex &preparedIndex(ColumnMask mask);
   void appendRow(Row row);
   void updateRow(std::size_t row_index, Row row);
   void rebuildFromBase();
+  std::optional<std::size_t> findSetRow(const Row &row) const;
+  void addSetRow(std::size_t row_id);
+  void rebuildSetDirectory();
   Row latticeKey(const Row &row) const;
 
   RelationIR definition_;
-  std::vector<Row> rows_;
-  std::unordered_set<Row, RowHash, RowEqual> set_;
+  std::vector<std::unique_ptr<ColumnStorage>> columns_;
+  std::size_t row_count_ = 0;
+  SetDirectory set_directory_;
+  std::vector<unsigned char> base_flags_;
+  std::vector<std::size_t> base_add_versions_;
   std::unique_ptr<KeyMap> lattice_keys_;
   std::vector<Row> base_rows_;
-  std::unordered_set<Row, RowHash, RowEqual> base_set_;
   std::unique_ptr<KeyMap> base_lattice_keys_;
   bool has_derived_state_ = false;
   std::unordered_map<ColumnMask, std::unique_ptr<RuntimeIndex>> indices_;
@@ -189,6 +225,9 @@ struct PhysicalOp {
   AtomPlan atom;
   ExprIR filter;
   AggregateIR aggregate;
+  std::size_t estimated_input_rows = 1;
+  std::size_t estimated_lookup_rows = 1;
+  std::size_t estimated_output_rows = 1;
 };
 
 struct RulePlan {
@@ -198,7 +237,9 @@ struct RulePlan {
 };
 
 AtomPlan lowerAtomPlan(const AtomIR &atom, const std::vector<bool> &grounded);
-RulePlan lowerRulePlan(const RuleIR &rule);
+RulePlan lowerRulePlan(
+    const RuleIR &rule,
+    const std::vector<std::unique_ptr<RelationStorage>> &relations);
 
 struct VariableDefinition {
   std::string name;
@@ -222,7 +263,11 @@ struct ExecutionPlan {
   // The SCC dependency DAG covers positive, negative, and aggregate reads.
   // Reruns invalidate only the transitive dependents of changed base facts.
   std::vector<std::size_t> relation_scc;
-  std::vector<std::vector<std::size_t>> scc_dependents;
+  struct SccDependency {
+    std::size_t target = 0;
+    DependencyKind kind = DependencyKind::Positive;
+  };
+  std::vector<std::vector<SccDependency>> scc_dependents;
 };
 
 struct DependencyEdge {

@@ -241,14 +241,14 @@ TEST(DatalogTest, BindingSlotsReferenceRowsAndOwnComputedValues) {
 
   BindingSlot copied = referenced;
   std::any_cast<std::string &>(row_value) = "after";
-  EXPECT_EQ(std::any_cast<const std::string &>(*copied), "after");
+  EXPECT_EQ(copied.get<std::string>(), "after");
 
   BindingSlot owned;
   owned.bindOwned(std::any(std::string("computed")));
   BindingSlot owned_copy = owned;
   owned.reset();
   EXPECT_TRUE(owned_copy.ownsValue());
-  EXPECT_EQ(std::any_cast<const std::string &>(*owned_copy), "computed");
+  EXPECT_EQ(owned_copy.get<std::string>(), "computed");
 }
 
 TEST(DatalogTest, PlannerUsesObservedIndexDistinctCounts) {

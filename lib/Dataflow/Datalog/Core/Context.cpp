@@ -94,7 +94,7 @@ bool Context::contains(RelationId relation,
 }
 
 std::vector<std::vector<std::any>> Context::rows(RelationId relation) const {
-  return impl_->relations.at(relation)->rows();
+  return impl_->relations.at(relation)->materializeRows();
 }
 
 } // namespace lotus::datalog

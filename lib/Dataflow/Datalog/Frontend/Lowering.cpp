@@ -393,7 +393,7 @@ DynamicExpr variableExpr(const VariableSpec &variable) {
   expression.evaluate = [id = variable.id](const Binding &binding) {
     if (id >= binding.size() || !binding[id])
       throw std::logic_error("evaluating an unbound Datalog variable");
-    return *binding[id];
+    return binding[id].materialize();
   };
   return {variable.type, std::move(expression)};
 }
@@ -453,15 +453,27 @@ public:
   Object execute(const RunOptions &options) {
     CompiledProgram compiled = program_.compile();
     RunStatus status = RunStatus::Completed;
-    if (!options.validate_only)
-      status = compiled.run(options.execution);
+    ExecutionOptions execution = options.execution;
+    if (options.explain_analyze)
+      execution.collect_profile = true;
+    const bool execute_program =
+        !options.validate_only && (!options.explain || options.explain_analyze);
+    if (execute_program)
+      status = compiled.run(execution);
 
     Object result;
     result["schema_version"] = JSON_SCHEMA_VERSION;
     result["status"] = options.validate_only            ? "valid"
+                       : options.explain                 ? "explained"
                        : status == RunStatus::Completed ? "ok"
                                                         : "cancelled";
-    if (!options.validate_only) {
+    if (options.explain) {
+      result["plan"] = compiled.explain(options.explain_analyze
+                                             ? ExplainMode::Analyze
+                                             : ExplainMode::Plan);
+      if (options.explain_analyze)
+        result["stats"] = encodeStats(compiled.stats());
+    } else if (!options.validate_only) {
       Object relations;
       for (RelationId relation_id : outputs_) {
         const RelationSpec &relation = relations_.at(relation_id);
@@ -620,7 +632,24 @@ private:
         {"index_count", static_cast<std::int64_t>(stats.index_count)},
         {"index_entries", static_cast<std::int64_t>(stats.index_entries)},
         {"index_memory_bytes",
-         static_cast<std::int64_t>(stats.index_memory_bytes)}};
+         static_cast<std::int64_t>(stats.index_memory_bytes)},
+        {"tuple_memory_bytes",
+         static_cast<std::int64_t>(stats.tuple_memory_bytes)},
+        {"uniqueness_memory_bytes",
+         static_cast<std::int64_t>(stats.uniqueness_memory_bytes)},
+        {"base_memory_bytes",
+         static_cast<std::int64_t>(stats.base_memory_bytes)},
+        {"head_derivations",
+         static_cast<std::int64_t>(stats.head_derivations)},
+        {"local_unique_candidates",
+         static_cast<std::int64_t>(stats.local_unique_candidates)},
+        {"global_unique_candidates",
+         static_cast<std::int64_t>(stats.global_unique_candidates)},
+        {"incremental_sccs",
+         static_cast<std::int64_t>(stats.incremental_sccs)},
+        {"rebuilt_sccs", static_cast<std::int64_t>(stats.rebuilt_sccs)},
+        {"base_delta_facts",
+         static_cast<std::int64_t>(stats.base_delta_facts)}};
   }
 
   void parse(const internal::FrontendIR &root) {

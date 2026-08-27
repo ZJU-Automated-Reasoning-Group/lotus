@@ -32,6 +32,15 @@ struct ExecutionStats {
   std::size_t index_count = 0;
   std::size_t index_entries = 0;
   std::size_t index_memory_bytes = 0;
+  std::size_t tuple_memory_bytes = 0;
+  std::size_t uniqueness_memory_bytes = 0;
+  std::size_t base_memory_bytes = 0;
+  std::size_t head_derivations = 0;
+  std::size_t local_unique_candidates = 0;
+  std::size_t global_unique_candidates = 0;
+  std::size_t incremental_sccs = 0;
+  std::size_t rebuilt_sccs = 0;
+  std::size_t base_delta_facts = 0;
 };
 
 class Scheduler {
@@ -79,6 +88,7 @@ struct ExecutionOptions {
   bool trace_scc = false;
   bool trace_rule = false;
   bool trace_delta = false;
+  bool collect_profile = false;
   std::ostream *trace_stream = nullptr;
 };
 

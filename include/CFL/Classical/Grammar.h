@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace lotus::cfl::aria {
+namespace lotus::cfl::classical {
 
 struct BinaryRule {
   std::string lhs;
@@ -53,4 +53,4 @@ private:
   unsigned next_nonterminal_id_ = 0;
 };
 
-} // namespace lotus::cfl::aria
+} // namespace lotus::cfl::classical

@@ -1,4 +1,4 @@
-#include "CFL/Aria/CNF.h"
+#include "CFL/Classical/CNF.h"
 
 #include <algorithm>
 #include <fstream>
@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <unordered_map>
 
-namespace lotus::cfl::aria {
+namespace lotus::cfl::classical {
 namespace {
 
 std::string trim(const std::string &text) {
@@ -312,4 +312,4 @@ void CNFGrammar::unitTransform() {
   productions_ = std::move(next);
 }
 
-} // namespace lotus::cfl::aria
+} // namespace lotus::cfl::classical

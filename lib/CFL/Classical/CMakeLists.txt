@@ -1,4 +1,4 @@
-add_library(CanaryAriaCFL STATIC
+add_library(CanaryClassicalCFL STATIC
     CNF.cpp
     Grammar.cpp
     Graph.cpp

@@ -1,4 +1,4 @@
-#include "CFL/Aria/Grammar.h"
+#include "CFL/Classical/Grammar.h"
 
 #include <algorithm>
 #include <cctype>
@@ -8,7 +8,7 @@
 #include <string>
 #include <utility>
 
-namespace lotus::cfl::aria {
+namespace lotus::cfl::classical {
 namespace {
 
 std::string trim(const std::string &text) {
@@ -238,4 +238,4 @@ void Grammar::buildIndices() {
   }
 }
 
-} // namespace lotus::cfl::aria
+} // namespace lotus::cfl::classical

@@ -1,11 +1,11 @@
-#include "CFL/Aria/SCSolver.h"
+#include "CFL/Classical/SCSolver.h"
 
 #include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-namespace lotus::cfl::aria {
+namespace lotus::cfl::classical {
 namespace {
 
 std::string nodeVariable(std::size_t id) {
@@ -231,4 +231,4 @@ SCStatistics SCSolver::solve(const LabeledGraph &graph,
   return stats;
 }
 
-} // namespace lotus::cfl::aria
+} // namespace lotus::cfl::classical

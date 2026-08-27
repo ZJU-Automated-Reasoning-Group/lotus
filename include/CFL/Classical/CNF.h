@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-namespace lotus::cfl::aria {
+namespace lotus::cfl::classical {
 
 struct CNFRule {
   std::string lhs;
@@ -39,4 +39,4 @@ private:
   std::vector<std::string> variable_jar_;
 };
 
-} // namespace lotus::cfl::aria
+} // namespace lotus::cfl::classical

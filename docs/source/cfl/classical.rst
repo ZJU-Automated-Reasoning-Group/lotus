@@ -1,11 +1,11 @@
-Aria: Grammar-Driven CFL Reachability
-=====================================
+Classical Grammar-Driven CFL Reachability
+==========================================
 
-``include/CFL/Aria/`` and ``lib/CFL/Aria/`` provide a compact CFL reachability
-toolkit centered on explicit grammars, labeled graphs, and reusable solver
-front-ends.
+``include/CFL/Classical/`` and ``lib/CFL/Classical/`` provide a compact CFL
+reachability toolkit centered on explicit grammars, labeled graphs, and
+reusable solver front-ends.
 
-**Location**: ``include/CFL/Aria/``, ``lib/CFL/Aria/``
+**Location**: ``include/CFL/Classical/``, ``lib/CFL/Classical/``
 
 **Main components**:
 
@@ -21,8 +21,8 @@ front-ends.
   iteration and edge-growth statistics.
 - ``SCSolver`` builds a set-constraint system over the same graph and grammar
   inputs and returns constraint-system statistics.
-- ``SVFPort`` bridges Aria to Lotus IR analyses by encoding alias-constraint
-  graphs and SVFG instances into labeled graphs and grammars.
+- ``SVFPort`` bridges the classical solvers to Lotus IR analyses by encoding
+  alias-constraint graphs and SVFG instances into labeled graphs and grammars.
 
 **Integration points**:
 
@@ -30,8 +30,9 @@ front-ends.
   PAG or PEG constraint graphs.
 - ``ValueFlowClient`` answers reachability queries over encoded SVFG value-flow
   graphs.
-- ``lib/CFL/Aria/CMakeLists.txt`` builds the ``CanaryAriaCFL`` library target.
-- ``tests/unit/CFL/AriaCFLTest.cpp`` covers grammar parsing, graph loading,
+- ``lib/CFL/Classical/CMakeLists.txt`` builds the
+  ``CanaryClassicalCFL`` library target.
+- ``tests/unit/CFL/ClassicalCFLTest.cpp`` covers grammar parsing, graph loading,
   classical solving, set-constraint solving, and CNF normalization.
 
 See also :doc:`cfl_components`.

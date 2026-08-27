@@ -1,11 +1,11 @@
-#include "CFL/Aria/Graph.h"
+#include "CFL/Classical/Graph.h"
 
 #include <fstream>
 #include <regex>
 #include <stdexcept>
 #include <string>
 
-namespace lotus::cfl::aria {
+namespace lotus::cfl::classical {
 namespace {
 
 std::string trim(const std::string &text) {
@@ -209,4 +209,4 @@ void LabeledGraph::loadFromDotFile(const std::string &path, GraphMode mode) {
   }
 }
 
-} // namespace lotus::cfl::aria
+} // namespace lotus::cfl::classical

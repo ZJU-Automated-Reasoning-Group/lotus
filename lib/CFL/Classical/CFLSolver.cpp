@@ -1,8 +1,8 @@
-#include "CFL/Aria/CFLSolver.h"
+#include "CFL/Classical/CFLSolver.h"
 
 #include <vector>
 
-namespace lotus::cfl::aria {
+namespace lotus::cfl::classical {
 
 ReachabilityStats CFLSolver::solve(LabeledGraph &graph,
                                    const Grammar &grammar) const {
@@ -94,4 +94,4 @@ ReachabilityStats CFLSolver::solve(LabeledGraph &graph,
   return stats;
 }
 
-} // namespace lotus::cfl::aria
+} // namespace lotus::cfl::classical

@@ -3,12 +3,12 @@ CFL Reachability Components
 
 Advanced CFL reachability algorithms and graph analysis frameworks.
 
-Aria
-----
+Classical CFL Reachability
+--------------------------
 
 Grammar-driven CFL reachability utilities, solver backends, and SVF adapters.
 
-**Location**: ``include/CFL/Aria/``, ``lib/CFL/Aria/``
+**Location**: ``include/CFL/Classical/``, ``lib/CFL/Classical/``
 
 **Features**:
 * Grammar parsing and CNF/STBDU normalization helpers
@@ -16,8 +16,25 @@ Grammar-driven CFL reachability utilities, solver backends, and SVF adapters.
 * Classical and set-constraint solvers for reachability closure
 * Adapters for alias and value-flow problems built on SVF structures
 
+Interleaved-Dyck Approximation
+------------------------------
+
+Staged under- and overapproximation for reachability under two interleaved
+families of Dyck constraints.
+
+**Location**: ``include/CFL/InterleavedDyck/``,
+``lib/CFL/InterleavedDyck/``
+
+**Features**:
+
+* DOT parsing for parenthesis, bracket, and neutral edges
+* Dyck-over-the-union underapproximation
+* Projected-language intersection and derivation-tracing mutual refinement
+* Stronger parity grammar and pairwise on-demand refinement
+* Taint and value-flow benchmark modes
+
 CSIndex (Context-Sensitive Indexing)
------------------------------------
+------------------------------------
 
 Context-sensitive indexing for CFL reachability.
 
@@ -32,7 +49,7 @@ Context-sensitive indexing for CFL reachability.
 
 
 InterDyckGraphReduce
--------------------
+--------------------
 
 Interprocedural Dyck graph reduction algorithms.
 
@@ -41,7 +58,7 @@ Interprocedural Dyck graph reduction algorithms.
 **Features**: Interprocedural analysis with graph reduction techniques for Dyck languages.
 
 MutualRefinement
----------------
+----------------
 
 Mutual refinement algorithms for CFL analysis.
 
@@ -51,7 +68,8 @@ Mutual refinement algorithms for CFL analysis.
 
 See also:
 
-- :doc:`aria`
+- :doc:`classical`
 - :doc:`csindex`
+- :doc:`interleaved_dyck_approximation`
 - :doc:`inter_dyck_graph_reduce`
 - :doc:`mutual_refinement`

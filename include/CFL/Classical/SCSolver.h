@@ -1,7 +1,7 @@
 #pragma once
 
-#include "CFL/Aria/Grammar.h"
-#include "CFL/Aria/Graph.h"
+#include "CFL/Classical/Grammar.h"
+#include "CFL/Classical/Graph.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -11,7 +11,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace lotus::cfl::aria {
+namespace lotus::cfl::classical {
 
 struct SCStatistics {
   std::uint64_t classical_iterations = 0;
@@ -43,4 +43,4 @@ private:
   static std::vector<std::string> splitConstraint(const std::string &value);
 };
 
-} // namespace lotus::cfl::aria
+} // namespace lotus::cfl::classical

@@ -1,4 +1,4 @@
-#include "CFL/Aria/SVFPort.h"
+#include "CFL/Classical/SVFPort.h"
 #include "IR/SVFG/SVFG.h"
 #include "IR/SVFG/SVFGNode.h"
 #include "TestUtils/LLVMHelpers.h"
@@ -6,12 +6,12 @@
 #include <gtest/gtest.h>
 
 using namespace lotus::analysis;
-using namespace lotus::cfl::aria;
+using namespace lotus::cfl::classical;
 using namespace lotus::unittest;
 
 namespace {
 
-TEST(AriaSVFPortTest,
+TEST(ClassicalSVFPortTest,
      PagAliasClientEncodesBidirectionalEdgesAndAnswersQueries) {
   AliasConstraintGraph graph;
   const auto obj = graph.addNode("obj");
@@ -33,7 +33,8 @@ TEST(AriaSVFPortTest,
   EXPECT_GT(stats.added_edges, 0u);
 }
 
-TEST(AriaSVFPortTest, PegEncodingRewritesLoadsAndStoresThroughSyntheticDeref) {
+TEST(ClassicalSVFPortTest,
+     PegEncodingRewritesLoadsAndStoresThroughSyntheticDeref) {
   AliasConstraintGraph graph;
   const auto obj = graph.addNode("obj");
   const auto slot = graph.addNode("slot");
@@ -54,7 +55,7 @@ TEST(AriaSVFPortTest, PegEncodingRewritesLoadsAndStoresThroughSyntheticDeref) {
   EXPECT_EQ(pts.front(), obj);
 }
 
-TEST(AriaSVFPortTest, GrammarBuildersMaterializeObservedAttributes) {
+TEST(ClassicalSVFPortTest, GrammarBuildersMaterializeObservedAttributes) {
   AliasConstraintGraph graph;
   const auto base = graph.addNode("base");
   const auto field = graph.addNode("field");
@@ -67,7 +68,7 @@ TEST(AriaSVFPortTest, GrammarBuildersMaterializeObservedAttributes) {
   EXPECT_NE(peg.binaryByFirst().find("gepbar_3"), peg.binaryByFirst().end());
 }
 
-TEST(AriaSVFPortTest, ValueFlowClientEncodesSvfgCallsAndReachability) {
+TEST(ClassicalSVFPortTest, ValueFlowClientEncodesSvfgCallsAndReachability) {
   const char *source = R"(
     define i32 @callee(i32 %x) {
     entry:

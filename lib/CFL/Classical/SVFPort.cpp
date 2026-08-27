@@ -1,4 +1,4 @@
-#include "CFL/Aria/SVFPort.h"
+#include "CFL/Classical/SVFPort.h"
 
 #include "IR/SVFG/SVFGBase.h"
 #include "IR/SVFG/SVFGEdge.h"
@@ -9,7 +9,7 @@
 #include <sstream>
 #include <stdexcept>
 
-namespace lotus::cfl::aria {
+namespace lotus::cfl::classical {
 namespace {
 
 std::string nodeName(std::size_t id) { return std::to_string(id); }
@@ -559,4 +559,4 @@ ValueFlowClient::reachableFrom(std::uint32_t source_node) const {
   return reachable;
 }
 
-} // namespace lotus::cfl::aria
+} // namespace lotus::cfl::classical

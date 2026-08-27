@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CFL/Aria/CFLSolver.h"
+#include "CFL/Classical/CFLSolver.h"
 #include "IR/SVFG/SVFG.h"
 
 #include <cstddef>
@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace lotus::cfl::aria {
+namespace lotus::cfl::classical {
 
 enum class AliasConstraintEdgeKind {
   Addr,
@@ -99,4 +99,4 @@ private:
   std::unordered_map<std::uint32_t, std::size_t> node_to_vertex_;
 };
 
-} // namespace lotus::cfl::aria
+} // namespace lotus::cfl::classical

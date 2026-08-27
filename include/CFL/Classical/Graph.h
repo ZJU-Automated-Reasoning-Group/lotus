@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-namespace lotus::cfl::aria {
+namespace lotus::cfl::classical {
 
 enum class GraphMode {
   Matrix,
@@ -63,4 +63,4 @@ private:
       label_pairs_;
 };
 
-} // namespace lotus::cfl::aria
+} // namespace lotus::cfl::classical

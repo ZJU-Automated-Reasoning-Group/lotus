@@ -7,7 +7,8 @@ This section covers CFL-reachability and context-free language based analyses.
    :maxdepth: 2
 
    cfl_components
-   aria
+   classical
    csindex
+   interleaved_dyck_approximation
    inter_dyck_graph_reduce
    mutual_refinement

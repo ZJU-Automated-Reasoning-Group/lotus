@@ -1,6 +1,6 @@
-add_lotus_targeted_test(AriaCFLTest AriaCFLTest.cpp
+add_lotus_targeted_test(ClassicalCFLTest ClassicalCFLTest.cpp
     LINK_LIBS
-        CanaryAriaCFL)
+        CanaryClassicalCFL)
 
 add_lotus_targeted_test(scs_index_test SCSIndexTest.cpp
     LINK_LIBS
@@ -10,8 +10,8 @@ add_lotus_targeted_test(interleaved_dyck_test InterleavedDyckTest.cpp
     LINK_LIBS
         CanaryInterleavedDyck)
 
-#add_lotus_targeted_test(AriaSVFPortTest AriaSVFPortTest.cpp
+#add_lotus_targeted_test(ClassicalSVFPortTest ClassicalSVFPortTest.cpp
 #    LINK_LIBS
-#        CanaryAriaCFL
+#        CanaryClassicalCFL
 #        SVFG
 #        CanaryICFG)

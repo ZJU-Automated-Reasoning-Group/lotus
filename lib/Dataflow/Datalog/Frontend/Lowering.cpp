@@ -365,10 +365,51 @@ struct DynamicExpr {
   ExprIR ir;
 };
 
+std::optional<ExprOpcode> expressionOpcode(llvm::StringRef name) {
+  if (name == "addition" || name == "add")
+    return ExprOpcode::Add;
+  if (name == "subtraction" || name == "subtract")
+    return ExprOpcode::Subtract;
+  if (name == "multiplication" || name == "multiply")
+    return ExprOpcode::Multiply;
+  if (name == "division" || name == "divide")
+    return ExprOpcode::Divide;
+  if (name == "remainder")
+    return ExprOpcode::Remainder;
+  if (name == "equality" || name == "equal")
+    return ExprOpcode::Equal;
+  if (name == "inequality" || name == "not-equal")
+    return ExprOpcode::NotEqual;
+  if (name == "less-than")
+    return ExprOpcode::Less;
+  if (name == "less-equal")
+    return ExprOpcode::LessEqual;
+  if (name == "greater-than")
+    return ExprOpcode::Greater;
+  if (name == "greater-equal")
+    return ExprOpcode::GreaterEqual;
+  if (name == "logical-and")
+    return ExprOpcode::LogicalAnd;
+  if (name == "logical-or")
+    return ExprOpcode::LogicalOr;
+  if (name == "unary-minus")
+    return ExprOpcode::Negate;
+  if (name == "unary-plus")
+    return ExprOpcode::Positive;
+  if (name == "logical-not")
+    return ExprOpcode::LogicalNot;
+  return std::nullopt;
+}
+
 template <typename T> DynamicExpr constantExpr(TypeSpec type, T value) {
   ExprIR expression;
   expression.type = type.typeIndex();
   expression.debug_name = "constant";
+  expression.properties = FunctionProperties::parallel();
+  expression.node = std::make_shared<ExprNode>();
+  expression.node->opcode = ExprOpcode::Constant;
+  expression.node->type = type.typeIndex();
+  expression.node->constant = value;
   expression.evaluate = [value = std::move(value)](const Binding &) {
     return std::any(value);
   };
@@ -379,6 +420,11 @@ DynamicExpr constantAnyExpr(TypeSpec type, std::any value) {
   ExprIR expression;
   expression.type = type.typeIndex();
   expression.debug_name = "constant";
+  expression.properties = FunctionProperties::parallel();
+  expression.node = std::make_shared<ExprNode>();
+  expression.node->opcode = ExprOpcode::Constant;
+  expression.node->type = type.typeIndex();
+  expression.node->constant = value;
   expression.evaluate = [value = std::move(value)](const Binding &) {
     return value;
   };
@@ -390,6 +436,11 @@ DynamicExpr variableExpr(const VariableSpec &variable) {
   expression.type = variable.type.typeIndex();
   expression.referenced_vars = {variable.id};
   expression.debug_name = "variable";
+  expression.properties = FunctionProperties::parallel();
+  expression.node = std::make_shared<ExprNode>();
+  expression.node->opcode = ExprOpcode::Variable;
+  expression.node->type = variable.type.typeIndex();
+  expression.node->variable = variable.id;
   expression.evaluate = [id = variable.id](const Binding &binding) {
     if (id >= binding.size() || !binding[id])
       throw std::logic_error("evaluating an unbound Datalog variable");
@@ -406,6 +457,16 @@ DynamicExpr binaryExpr(TypeSpec result_type, DynamicExpr lhs, DynamicExpr rhs,
   expression.referenced_vars =
       detail::mergeReferences(lhs.ir.referenced_vars, rhs.ir.referenced_vars);
   expression.debug_name = std::move(name);
+  expression.properties = FunctionProperties::parallel();
+  if (const auto opcode = expressionOpcode(expression.debug_name)) {
+    expression.node = std::make_shared<ExprNode>();
+    expression.node->opcode = *opcode;
+    expression.node->type = result_type.typeIndex();
+    expression.node->lhs = lhs.ir.node;
+    expression.node->rhs = rhs.ir.node;
+    if (!expression.node->lhs || !expression.node->rhs)
+      expression.node.reset();
+  }
   expression.evaluate = [left = std::move(lhs.ir), right = std::move(rhs.ir),
                          function =
                              std::move(function)](const Binding &binding) {
@@ -422,6 +483,15 @@ DynamicExpr unaryExpr(TypeSpec result_type, DynamicExpr operand,
   expression.type = result_type.typeIndex();
   expression.referenced_vars = operand.ir.referenced_vars;
   expression.debug_name = std::move(name);
+  expression.properties = FunctionProperties::parallel();
+  if (const auto opcode = expressionOpcode(expression.debug_name)) {
+    expression.node = std::make_shared<ExprNode>();
+    expression.node->opcode = *opcode;
+    expression.node->type = result_type.typeIndex();
+    expression.node->lhs = operand.ir.node;
+    if (!expression.node->lhs)
+      expression.node.reset();
+  }
   expression.evaluate = [input = std::move(operand.ir),
                          function =
                              std::move(function)](const Binding &binding) {
@@ -451,7 +521,9 @@ public:
   explicit LoweredProgram(const internal::FrontendIR &root) { parse(root); }
 
   Object execute(const RunOptions &options) {
-    CompiledProgram compiled = program_.compile();
+    CompileOptions compile_options;
+    compile_options.goals = outputs_;
+    CompiledProgram compiled = program_.compile(compile_options);
     RunStatus status = RunStatus::Completed;
     ExecutionOptions execution = options.execution;
     if (options.explain_analyze)
@@ -464,13 +536,12 @@ public:
     Object result;
     result["schema_version"] = JSON_SCHEMA_VERSION;
     result["status"] = options.validate_only            ? "valid"
-                       : options.explain                 ? "explained"
+                       : options.explain                ? "explained"
                        : status == RunStatus::Completed ? "ok"
                                                         : "cancelled";
     if (options.explain) {
-      result["plan"] = compiled.explain(options.explain_analyze
-                                             ? ExplainMode::Analyze
-                                             : ExplainMode::Plan);
+      result["plan"] = compiled.explain(
+          options.explain_analyze ? ExplainMode::Analyze : ExplainMode::Plan);
       if (options.explain_analyze)
         result["stats"] = encodeStats(compiled.stats());
     } else if (!options.validate_only) {
@@ -509,8 +580,9 @@ private:
                         location.column, message);
   }
 
-  static std::uint64_t parseUnsignedDecimal(
-      llvm::StringRef text, const internal::SourceLocation &location) {
+  static std::uint64_t
+  parseUnsignedDecimal(llvm::StringRef text,
+                       const internal::SourceLocation &location) {
     if (text.empty())
       fail(location, "expected an unsigned decimal integer");
     std::uint64_t value = 0;
@@ -525,9 +597,9 @@ private:
     return value;
   }
 
-  static std::any parseFrontendConstant(
-      const internal::Scalar &scalar, TypeSpec type,
-      const internal::SourceLocation &location) {
+  static std::any
+  parseFrontendConstant(const internal::Scalar &scalar, TypeSpec type,
+                        const internal::SourceLocation &location) {
     const internal::Scalar::Value &value = scalar.value;
     switch (type.kind) {
     case ValueKind::I64:
@@ -639,17 +711,30 @@ private:
          static_cast<std::int64_t>(stats.uniqueness_memory_bytes)},
         {"base_memory_bytes",
          static_cast<std::int64_t>(stats.base_memory_bytes)},
-        {"head_derivations",
-         static_cast<std::int64_t>(stats.head_derivations)},
+        {"head_derivations", static_cast<std::int64_t>(stats.head_derivations)},
         {"local_unique_candidates",
          static_cast<std::int64_t>(stats.local_unique_candidates)},
         {"global_unique_candidates",
          static_cast<std::int64_t>(stats.global_unique_candidates)},
-        {"incremental_sccs",
-         static_cast<std::int64_t>(stats.incremental_sccs)},
+        {"incremental_sccs", static_cast<std::int64_t>(stats.incremental_sccs)},
         {"rebuilt_sccs", static_cast<std::int64_t>(stats.rebuilt_sccs)},
-        {"base_delta_facts",
-         static_cast<std::int64_t>(stats.base_delta_facts)}};
+        {"base_delta_facts", static_cast<std::int64_t>(stats.base_delta_facts)},
+        {"adaptive_replans", static_cast<std::int64_t>(stats.adaptive_replans)},
+        {"pruned_rules", static_cast<std::int64_t>(stats.pruned_rules)},
+        {"serial_host_rule_evaluations",
+         static_cast<std::int64_t>(stats.serial_host_rule_evaluations)},
+        {"compiled_kernel_evaluations",
+         static_cast<std::int64_t>(stats.compiled_kernel_evaluations)},
+        {"interpreter_rule_evaluations",
+         static_cast<std::int64_t>(stats.interpreter_rule_evaluations)},
+        {"jit_compiled_expressions",
+         static_cast<std::int64_t>(stats.jit_compiled_expressions)},
+        {"jit_expression_evaluations",
+         static_cast<std::int64_t>(stats.jit_expression_evaluations)},
+        {"incremental_aggregate_groups",
+         static_cast<std::int64_t>(stats.incremental_aggregate_groups)},
+        {"ordered_range_lookups",
+         static_cast<std::int64_t>(stats.ordered_range_lookups)}};
   }
 
   void parse(const internal::FrontendIR &root) {
@@ -666,8 +751,8 @@ private:
     } else {
       std::set<RelationId> seen;
       for (const internal::Output &output : root.outputs) {
-        const RelationSpec &relation = findRelation(output.relation,
-                                                    output.location);
+        const RelationSpec &relation =
+            findRelation(output.relation, output.location);
         if (seen.insert(relation.id).second)
           outputs_.push_back(relation.id);
       }
@@ -699,15 +784,16 @@ private:
     RelationId id = program_.addRelation(
         relation.name, std::move(columns),
         relation.lattice ? RelationKind::Lattice : RelationKind::Set,
-        relation.lattice
-            ? latticeJoin(types.back())
-            : std::function<bool(std::any &, const std::any &)>{});
+        relation.lattice ? latticeJoin(types.back())
+                         : std::function<bool(std::any &, const std::any &)>{},
+        relation.lattice ? FunctionProperties::parallel()
+                         : FunctionProperties{});
     relation_ids_[relation.name] = id;
     relations_.push_back({id, relation.name, std::move(types)});
   }
 
-  const RelationSpec &findRelation(
-      StringRef name, const internal::SourceLocation &location) const {
+  const RelationSpec &
+  findRelation(StringRef name, const internal::SourceLocation &location) const {
     auto found = relation_ids_.find(name.str());
     if (found == relation_ids_.end())
       fail(location, "unknown relation '" + name.str() + "'");
@@ -720,8 +806,7 @@ private:
       fail(atom.location, "arity mismatch for relation '" + relation.name +
                               "': expected " +
                               std::to_string(relation.columns.size()) +
-                              ", got " +
-                              std::to_string(atom.arguments.size()));
+                              ", got " + std::to_string(atom.arguments.size()));
     }
   }
 
@@ -734,8 +819,7 @@ private:
     auto found = scope.variables.find(normalized);
     if (found != scope.variables.end()) {
       if (found->second.type != type)
-        fail(location, "variable '" + normalized +
-                           "' has inconsistent types");
+        fail(location, "variable '" + normalized + "' has inconsistent types");
       return found->second;
     }
     const std::string internal_name =
@@ -760,13 +844,13 @@ private:
     checkArity(fact.atom, relation);
     std::vector<std::any> row;
     row.reserve(fact.atom.arguments.size());
-    for (std::size_t column = 0; column < fact.atom.arguments.size(); ++column) {
+    for (std::size_t column = 0; column < fact.atom.arguments.size();
+         ++column) {
       const internal::Expression &expression = fact.atom.arguments[column];
       if (expression.kind != internal::Expression::Kind::Constant)
         fail(expression.location, "facts can contain only constants");
-      row.push_back(parseFrontendConstant(expression.constant,
-                                          relation.columns[column],
-                                          expression.location));
+      row.push_back(parseFrontendConstant(
+          expression.constant, relation.columns[column], expression.location));
     }
     program_.addFact(relation.id, std::move(row));
   }
@@ -793,8 +877,7 @@ private:
             if constexpr (std::is_same_v<T, internal::PositiveItem> ||
                           std::is_same_v<T, internal::NegativeItem>) {
               registerAtomVariables(body_item.atom, scope);
-            } else if constexpr (std::is_same_v<T,
-                                                internal::AggregateItem>) {
+            } else if constexpr (std::is_same_v<T, internal::AggregateItem>) {
               registerAtomVariables(body_item.source, scope);
             }
           },
@@ -822,9 +905,8 @@ private:
       TermIR term;
       term.kind = TermIR::Kind::Constant;
       term.type = expected.typeIndex();
-      term.constant =
-          parseFrontendConstant(expression.constant, expected,
-                                expression.location);
+      term.constant = parseFrontendConstant(expression.constant, expected,
+                                            expression.location);
       term.debug_name = "constant";
       return term;
     }
@@ -855,9 +937,9 @@ private:
     return result;
   }
 
-  DynamicExpr parseExpression(
-      const internal::Expression &expression, RuleScope &scope,
-      std::optional<TypeSpec> expected = std::nullopt) {
+  DynamicExpr parseExpression(const internal::Expression &expression,
+                              RuleScope &scope,
+                              std::optional<TypeSpec> expected = std::nullopt) {
     DynamicExpr result;
     try {
       switch (expression.kind) {
@@ -879,18 +961,17 @@ private:
       case internal::Expression::Kind::Unary:
         if (expression.operands.size() != 1)
           fail(expression.location, "unary expression requires one operand");
-        result = makeUnary(
-            expression.name,
-            parseExpression(expression.operands.front(), scope));
+        result = makeUnary(expression.name,
+                           parseExpression(expression.operands.front(), scope));
         break;
       case internal::Expression::Kind::Binary: {
         if (expression.operands.size() != 2)
           fail(expression.location, "binary expression requires two operands");
         DynamicExpr lhs = parseExpression(expression.operands[0], scope);
-        DynamicExpr rhs = lhs.type.isLattice()
-                              ? parseExpression(expression.operands[1], scope)
-                              : parseExpression(expression.operands[1], scope,
-                                                lhs.type);
+        DynamicExpr rhs =
+            lhs.type.isLattice()
+                ? parseExpression(expression.operands[1], scope)
+                : parseExpression(expression.operands[1], scope, lhs.type);
         result = makeBinary(expression.name, std::move(lhs), std::move(rhs));
         break;
       }
@@ -901,9 +982,9 @@ private:
       fail(expression.location, error.what());
     }
     if (expected && result.type != *expected) {
-      fail(expression.location,
-           "expression type " + result.type.name() +
-               " does not match expected " + expected->name());
+      fail(expression.location, "expression type " + result.type.name() +
+                                    " does not match expected " +
+                                    expected->name());
     }
     return result;
   }
@@ -950,8 +1031,7 @@ private:
             using T = std::decay_t<decltype(body_item)>;
             if constexpr (std::is_same_v<T, internal::PositiveItem>) {
               body.push_back(parseAtom(body_item.atom, scope, false));
-            } else if constexpr (std::is_same_v<T,
-                                                internal::NegativeItem>) {
+            } else if constexpr (std::is_same_v<T, internal::NegativeItem>) {
               body.push_back(
                   NegAtomIR{parseAtom(body_item.atom, scope, false)});
             } else if constexpr (std::is_same_v<T, internal::FilterItem>) {
@@ -1374,8 +1454,8 @@ Value encodeScalar(const internal::Scalar &scalar) {
   if (const auto *integer = std::get_if<std::int64_t>(&scalar.value))
     return *integer;
   if (const auto *integer = std::get_if<std::uint64_t>(&scalar.value)) {
-    if (*integer <= static_cast<std::uint64_t>(
-                        std::numeric_limits<std::int64_t>::max()))
+    if (*integer <=
+        static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max()))
       return static_cast<std::int64_t>(*integer);
     return std::to_string(*integer);
   }
@@ -1394,8 +1474,7 @@ Value encodeScalar(const internal::Scalar &scalar) {
 
 Value encodeExpression(const internal::Expression &expression) {
   if (expression.kind == internal::Expression::Kind::Variable) {
-    return expression.name == "_" ? Value("_")
-                                  : Value("$" + expression.name);
+    return expression.name == "_" ? Value("_") : Value("$" + expression.name);
   }
   if (expression.kind == internal::Expression::Kind::Constant)
     return Object{{"const", encodeScalar(expression.constant)}};
@@ -1450,19 +1529,16 @@ Object encodeProgram(const internal::FrontendIR &program) {
             using T = std::decay_t<decltype(body_item)>;
             if constexpr (std::is_same_v<T, internal::PositiveItem>) {
               return Object{{"atom", encodeAtom(body_item.atom)}};
-            } else if constexpr (std::is_same_v<T,
-                                                internal::NegativeItem>) {
+            } else if constexpr (std::is_same_v<T, internal::NegativeItem>) {
               return Object{{"not", encodeAtom(body_item.atom)}};
             } else if constexpr (std::is_same_v<T, internal::FilterItem>) {
-              return Object{
-                  {"where", encodeExpression(body_item.expression)}};
+              return Object{{"where", encodeExpression(body_item.expression)}};
             } else {
               Object aggregate{{"op", body_item.operation},
                                {"output", "$" + body_item.output},
                                {"source", encodeAtom(body_item.source)}};
               if (body_item.projection)
-                aggregate["value"] =
-                    encodeExpression(*body_item.projection);
+                aggregate["value"] = encodeExpression(*body_item.projection);
               return Object{{"aggregate", std::move(aggregate)}};
             }
           },
@@ -1500,8 +1576,7 @@ void executeJson(StringRef input, const RunOptions &options,
 }
 
 void internal::execute(const internal::FrontendIR &root,
-                       const RunOptions &options,
-                       llvm::raw_ostream &output) {
+                       const RunOptions &options, llvm::raw_ostream &output) {
   LoweredProgram program(root);
   Object result = program.execute(options);
   if (options.pretty)

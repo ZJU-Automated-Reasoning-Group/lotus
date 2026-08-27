@@ -6,10 +6,13 @@
 #include <algorithm>
 #include <any>
 #include <cmath>
+#include <cstdint>
 #include <deque>
 #include <functional>
+#include <limits>
 #include <stdexcept>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -22,6 +25,12 @@ public:
 
   void append(std::any value) override {
     values_.push_back(std::any_cast<T>(std::move(value)));
+  }
+
+  void appendMany(std::vector<std::any> values) override {
+    values_.reserve(values_.size() + values.size());
+    for (std::any &value : values)
+      values_.push_back(std::any_cast<T>(std::move(value)));
   }
 
   void update(std::size_t row, std::any value) override {
@@ -65,6 +74,10 @@ public:
   void append(std::any value) override {
     values_.push_back(std::any_cast<bool>(std::move(value)));
   }
+  void appendMany(std::vector<std::any> values) override {
+    for (std::any &value : values)
+      values_.push_back(std::any_cast<bool>(std::move(value)));
+  }
   void update(std::size_t row, std::any value) override {
     values_.at(row) = std::any_cast<bool>(std::move(value));
   }
@@ -93,6 +106,69 @@ private:
   std::deque<bool> values_;
 };
 
+template <> class TypedColumnStorage<std::string> final : public ColumnStorage {
+public:
+  std::size_t size() const override { return values_.size(); }
+  void reserve(std::size_t count) override { values_.reserve(count); }
+  void append(std::any value) override {
+    appendValue(std::any_cast<std::string>(std::move(value)));
+  }
+  void appendMany(std::vector<std::any> values) override {
+    values_.reserve(values_.size() + values.size());
+    for (std::any &value : values)
+      appendValue(std::any_cast<std::string>(std::move(value)));
+  }
+  void update(std::size_t row, std::any value) override {
+    values_.at(row) = intern(std::any_cast<std::string>(std::move(value)));
+  }
+  void truncate(std::size_t count) override {
+    values_.erase(values_.begin() + static_cast<std::ptrdiff_t>(count),
+                  values_.end());
+  }
+  ValueRef value(std::size_t row) const override {
+    return ValueRef::direct(dictionary_.at(values_.at(row)));
+  }
+  std::any materialize(std::size_t row) const override {
+    return std::any(dictionary_.at(values_.at(row)));
+  }
+  std::unique_ptr<ColumnStorage>
+  select(const std::vector<std::size_t> &rows) const override {
+    auto result = std::make_unique<TypedColumnStorage<std::string>>();
+    result->values_.reserve(rows.size());
+    for (std::size_t row : rows)
+      result->appendValue(dictionary_.at(values_.at(row)));
+    return result;
+  }
+  std::size_t approximateMemoryBytes() const override {
+    std::size_t bytes = values_.capacity() * sizeof(std::uint32_t) +
+                        dictionary_.capacity() * sizeof(std::string);
+    for (const std::string &value : dictionary_)
+      bytes += value.capacity();
+    return bytes;
+  }
+
+private:
+  std::uint32_t intern(std::string value) {
+    auto found = interned_.find(value);
+    if (found != interned_.end())
+      return found->second;
+    if (dictionary_.size() >=
+        static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()))
+      throw std::length_error("Datalog string dictionary exhausted u32 IDs");
+    const std::uint32_t id = static_cast<std::uint32_t>(dictionary_.size());
+    dictionary_.push_back(std::move(value));
+    interned_.emplace(dictionary_.back(), id);
+    return id;
+  }
+  void appendValue(std::string value) {
+    values_.push_back(intern(std::move(value)));
+  }
+
+  std::vector<std::uint32_t> values_;
+  std::vector<std::string> dictionary_;
+  std::unordered_map<std::string, std::uint32_t> interned_;
+};
+
 template <typename T> struct IsExpression : std::false_type {};
 template <typename T> struct IsExpression<Expr<T>> : std::true_type {};
 template <typename T> struct IsExpression<Var<T>> : std::true_type {};
@@ -109,6 +185,14 @@ struct IsEqualityComparable : std::false_type {};
 template <typename T>
 struct IsEqualityComparable<T, std::void_t<decltype(std::declval<const T &>() ==
                                                     std::declval<const T &>())>>
+    : std::true_type {};
+
+template <typename T, typename = void>
+struct IsLessComparable : std::false_type {};
+
+template <typename T>
+struct IsLessComparable<T, std::void_t<decltype(std::declval<const T &>() <
+                                                std::declval<const T &>())>>
     : std::true_type {};
 
 template <typename T, typename = void> struct HasJoinMut : std::false_type {};
@@ -153,9 +237,15 @@ template <typename T> ColumnType makeColumnType() {
   result.equal_value = [](ValueRef lhs, ValueRef rhs) {
     return lhs.get<T>() == rhs.get<T>();
   };
+  if constexpr (IsLessComparable<T>::value) {
+    result.less_value = [](ValueRef lhs, ValueRef rhs) {
+      return lhs.get<T>() < rhs.get<T>();
+    };
+  }
   result.make_storage = [] {
     return std::make_unique<TypedColumnStorage<T>>();
   };
+  result.properties = FunctionProperties::parallel();
   if constexpr (std::is_floating_point_v<T>) {
     result.validate_key = [](const std::any &value) {
       if (std::isnan(std::any_cast<const T &>(value))) {

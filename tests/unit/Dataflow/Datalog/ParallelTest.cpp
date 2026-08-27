@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <sstream>
+#include <thread>
 
 using namespace lotus::datalog;
 
@@ -34,7 +35,8 @@ TEST(DatalogTest, ParallelBspMatchesSerialTransitiveClosure) {
 TEST(DatalogTest, ParallelLatticeMergeCoalescesAcrossWorkers) {
   context ctx;
   auto edge = ctx.relation<int, int, int>("edge");
-  auto distance = ctx.lattice<int, int, min_lattice<int>>("distance");
+  auto distance = ctx.lattice<int, int, min_lattice<int>>(
+      "distance", FunctionProperties::parallel());
   auto source = ctx.var<int>("source");
   auto middle = ctx.var<int>("middle");
   auto target = ctx.var<int>("target");
@@ -196,6 +198,67 @@ TEST(DatalogTest, DeduplicatesSetCandidatesWithinParallelTasks) {
   EXPECT_LT(compiled.stats().local_unique_candidates,
             compiled.stats().head_derivations);
   EXPECT_EQ(compiled.stats().global_unique_candidates, 1U);
+}
+
+TEST(DatalogTest, OpaqueLiftIsSerializedUnlessDeclaredParallelSafe) {
+  context ctx;
+  auto input = ctx.relation<int>("input");
+  auto conservative = ctx.relation<int>("conservative");
+  auto trusted = ctx.relation<int>("trusted");
+  auto x = ctx.var<int>("x");
+  for (int value = 0; value < 512; ++value)
+    input.insert(value);
+  program conservative_program(ctx);
+  conservative_program.rule(
+      conservative(lift([](int value) { return value + 1; }, x)), input(x));
+  auto conservative_compiled = conservative_program.compile();
+  ExecutionOptions options;
+  options.worker_count = 4;
+  options.parallel_grain_size = 16;
+  conservative_compiled.run(options);
+
+  EXPECT_EQ(conservative.rows().size(), 512U);
+  EXPECT_GT(conservative_compiled.stats().serial_host_rule_evaluations, 0U);
+
+  program trusted_program(ctx);
+  trusted_program.rule(trusted(lift(
+                           FunctionProperties::parallel(),
+                           [](int value) { return value + 1; }, x)),
+                       input(x));
+  auto trusted_compiled = trusted_program.compile();
+  trusted_compiled.run(options);
+
+  EXPECT_EQ(trusted.rows().size(), 512U);
+  EXPECT_EQ(trusted_compiled.stats().serial_host_rule_evaluations, 0U);
+  EXPECT_GT(trusted_compiled.stats().parallel_rule_tasks, 1U);
+}
+
+TEST(DatalogTest, AllowsConcurrentReadOnlyRunsAtStableFixpoint) {
+  context ctx;
+  auto input = ctx.relation<int>("input");
+  auto output = ctx.relation<int>("output");
+  auto x = ctx.var<int>("x");
+  for (int value = 0; value < 100; ++value)
+    input.insert(value);
+  program p(ctx);
+  p.rule(output(x), input(x));
+  auto compiled = p.compile();
+  compiled.run();
+
+  std::atomic<std::size_t> completed{0};
+  std::vector<std::thread> readers;
+  for (std::size_t index = 0; index < 8; ++index) {
+    readers.emplace_back([&] {
+      if (compiled.runReadOnly() == RunStatus::Completed)
+        ++completed;
+    });
+  }
+  for (std::thread &reader : readers)
+    reader.join();
+
+  EXPECT_EQ(completed.load(), 8U);
+  input.insert(101);
+  EXPECT_THROW(compiled.runReadOnly(), std::logic_error);
 }
 
 } // namespace

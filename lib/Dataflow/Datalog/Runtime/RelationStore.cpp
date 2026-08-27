@@ -25,6 +25,11 @@ public:
   std::size_t size() const override { return values_.size(); }
   void reserve(std::size_t count) override { values_.reserve(count); }
   void append(std::any value) override { values_.push_back(std::move(value)); }
+  void appendMany(std::vector<std::any> values) override {
+    values_.reserve(values_.size() + values.size());
+    for (std::any &value : values)
+      values_.push_back(std::move(value));
+  }
   void update(std::size_t row, std::any value) override {
     values_.at(row) = std::move(value);
   }
@@ -109,25 +114,26 @@ bool KeyEqual::operator()(const Row &lhs, const Row &rhs) const {
 }
 
 RuntimeIndex::RuntimeIndex(ColumnMask mask,
-                           const std::vector<ColumnType> &all_columns) {
+                           const std::vector<ColumnType> &all_columns)
+    : mask_(mask) {
   for (std::size_t i = 0; i < all_columns.size(); ++i) {
     if (mask & (ColumnMask{1} << i)) {
       columns_.push_back(i);
       column_types_.push_back(all_columns[i]);
     }
   }
+  prefix_buckets_.resize(columns_.size(), std::vector<Buckets>(SHARD_COUNT));
 }
 
-std::size_t RuntimeIndex::hash(RowView row) const {
+std::size_t RuntimeIndex::hash(RowView row, std::size_t prefix_size) const {
   std::size_t seed = 0;
-  for (std::size_t index = 0; index < columns_.size(); ++index)
-    combineHash(seed,
-                hashValue(column_types_[index], row[columns_[index]]));
+  for (std::size_t index = 0; index < prefix_size; ++index)
+    combineHash(seed, hashValue(column_types_[index], row[columns_[index]]));
   return seed;
 }
 
 std::size_t RuntimeIndex::hash(const KeyView &key) const {
-  if (key.size != columns_.size())
+  if (key.size == 0 || key.size > columns_.size())
     throw std::logic_error("Datalog lookup key does not match index mask");
   std::size_t seed = 0;
   for (std::size_t index = 0; index < key.size; ++index)
@@ -137,12 +143,19 @@ std::size_t RuntimeIndex::hash(const KeyView &key) const {
 
 void RuntimeIndex::insert(const RelationStorage &storage,
                           std::size_t row_index) {
-  buckets_[hash(storage.row(row_index))].push_back(row_index);
+  for (std::size_t prefix = 0; prefix < columns_.size(); ++prefix) {
+    const std::size_t key_hash = hash(storage.row(row_index), prefix + 1);
+    prefix_buckets_[prefix][key_hash % SHARD_COUNT][key_hash].push_back(
+        row_index);
+  }
 }
 
-void RuntimeIndex::erase(std::size_t key_hash, std::size_t row_index) {
-  auto bucket = buckets_.find(key_hash);
-  if (bucket == buckets_.end())
+void RuntimeIndex::erase(std::size_t prefix_index, std::size_t key_hash,
+                         std::size_t row_index) {
+  Buckets &buckets =
+      prefix_buckets_.at(prefix_index).at(key_hash % SHARD_COUNT);
+  auto bucket = buckets.find(key_hash);
+  if (bucket == buckets.end())
     throw std::logic_error("Datalog index lost an indexed row");
   auto position =
       std::find(bucket->second.begin(), bucket->second.end(), row_index);
@@ -150,13 +163,17 @@ void RuntimeIndex::erase(std::size_t key_hash, std::size_t row_index) {
     throw std::logic_error("Datalog index lost an indexed row");
   bucket->second.erase(position);
   if (bucket->second.empty())
-    buckets_.erase(bucket);
+    buckets.erase(bucket);
 }
 
 void RuntimeIndex::rebuild(const RelationStorage &storage,
                            std::size_t version) {
-  buckets_.clear();
-  buckets_.reserve(storage.rowCount());
+  for (auto &prefix : prefix_buckets_) {
+    for (Buckets &buckets : prefix) {
+      buckets.clear();
+      buckets.reserve(storage.rowCount() / SHARD_COUNT + 1);
+    }
+  }
   for (std::size_t row_index = 0; row_index < storage.rowCount(); ++row_index)
     insert(storage, row_index);
   built_version_ = version;
@@ -170,15 +187,49 @@ void RuntimeIndex::append(const RelationStorage &storage, std::size_t row_index,
   built_version_ = version;
 }
 
+std::size_t RuntimeIndex::appendBatch(const RelationStorage &storage,
+                                      const std::vector<std::size_t> &row_ids,
+                                      std::size_t version,
+                                      Scheduler &scheduler) {
+  if (!isCurrent(version - 1) || row_ids.empty())
+    return 0;
+  struct Entry {
+    std::size_t hash = 0;
+    std::size_t row_id = 0;
+  };
+  const std::size_t task_count = columns_.size() * SHARD_COUNT;
+  std::vector<std::vector<Entry>> groups(task_count);
+  for (std::size_t row_id : row_ids) {
+    RowView stored_row = storage.row(row_id);
+    for (std::size_t prefix = 0; prefix < columns_.size(); ++prefix) {
+      const std::size_t key_hash = hash(stored_row, prefix + 1);
+      groups[prefix * SHARD_COUNT + key_hash % SHARD_COUNT].push_back(
+          {key_hash, row_id});
+    }
+  }
+  scheduler.parallelFor(task_count, [&](std::size_t task) {
+    const std::size_t prefix = task / SHARD_COUNT;
+    const std::size_t shard = task % SHARD_COUNT;
+    Buckets &buckets = prefix_buckets_[prefix][shard];
+    for (const Entry &entry : groups[task])
+      buckets[entry.hash].push_back(entry.row_id);
+  });
+  built_version_ = version;
+  return scheduler.workerCount() > 1 ? task_count : 0;
+}
+
 void RuntimeIndex::update(const RelationStorage &storage, std::size_t row_index,
                           const Row &previous_row, std::size_t version) {
   if (!isCurrent(version - 1))
     return;
-  const std::size_t old_hash = hash(RowView(previous_row));
-  const std::size_t new_hash = hash(storage.row(row_index));
-  if (old_hash != new_hash) {
-    erase(old_hash, row_index);
-    buckets_[new_hash].push_back(row_index);
+  for (std::size_t prefix = 0; prefix < columns_.size(); ++prefix) {
+    const std::size_t old_hash = hash(RowView(previous_row), prefix + 1);
+    const std::size_t new_hash = hash(storage.row(row_index), prefix + 1);
+    if (old_hash != new_hash) {
+      erase(prefix, old_hash, row_index);
+      prefix_buckets_[prefix][new_hash % SHARD_COUNT][new_hash].push_back(
+          row_index);
+    }
   }
   built_version_ = version;
 }
@@ -187,13 +238,28 @@ bool RuntimeIndex::isCurrent(std::size_t version) const {
   return built_version_ == version;
 }
 
+bool RuntimeIndex::canServe(ColumnMask mask) const {
+  ColumnMask prefix_mask = 0;
+  for (std::size_t column : columns_) {
+    prefix_mask |= ColumnMask{1} << column;
+    if (prefix_mask == mask)
+      return true;
+  }
+  return false;
+}
+
 const std::vector<std::size_t> *RuntimeIndex::lookup(const KeyView &key) const {
-  auto it = buckets_.find(hash(key));
-  return it == buckets_.end() ? nullptr : &it->second;
+  if (key.size == 0 || key.size > prefix_buckets_.size())
+    return nullptr;
+  const std::size_t key_hash = hash(key);
+  const Buckets &buckets =
+      prefix_buckets_[key.size - 1][key_hash % SHARD_COUNT];
+  auto it = buckets.find(key_hash);
+  return it == buckets.end() ? nullptr : &it->second;
 }
 
 bool RuntimeIndex::matches(RowView row, const KeyView &key) const {
-  if (key.size != columns_.size())
+  if (key.size == 0 || key.size > columns_.size())
     return false;
   for (std::size_t index = 0; index < key.size; ++index) {
     if (!equalValues(column_types_[index], row[columns_[index]],
@@ -203,22 +269,38 @@ bool RuntimeIndex::matches(RowView row, const KeyView &key) const {
   return true;
 }
 
-std::size_t RuntimeIndex::bucketCount() const { return buckets_.size(); }
+std::size_t RuntimeIndex::bucketCount() const {
+  std::size_t count = 0;
+  for (const auto &prefix : prefix_buckets_)
+    for (const Buckets &buckets : prefix)
+      count += buckets.size();
+  return count;
+}
 
 std::size_t RuntimeIndex::entryCount() const {
   std::size_t count = 0;
-  for (const auto &[key, rows] : buckets_) {
-    (void)key;
-    count += rows.size();
+  for (const auto &prefix : prefix_buckets_) {
+    for (const Buckets &buckets : prefix) {
+      for (const auto &[key, rows] : buckets) {
+        (void)key;
+        count += rows.size();
+      }
+    }
   }
   return count;
 }
 
 std::size_t RuntimeIndex::approximateMemoryBytes() const {
-  std::size_t bytes = buckets_.bucket_count() * sizeof(void *);
-  for (const auto &[key, rows] : buckets_) {
-    (void)key;
-    bytes += sizeof(key) + sizeof(rows) + rows.capacity() * sizeof(std::size_t);
+  std::size_t bytes = 0;
+  for (const auto &prefix : prefix_buckets_) {
+    for (const Buckets &buckets : prefix) {
+      bytes += buckets.bucket_count() * sizeof(void *);
+      for (const auto &[key, rows] : buckets) {
+        (void)key;
+        bytes +=
+            sizeof(key) + sizeof(rows) + rows.capacity() * sizeof(std::size_t);
+      }
+    }
   }
   return bytes;
 }
@@ -227,8 +309,9 @@ RelationStorage::RelationStorage(RelationIR definition)
     : definition_(std::move(definition)) {
   columns_.reserve(definition_.columns.size());
   for (const ColumnType &column : definition_.columns) {
-    columns_.push_back(column.make_storage ? column.make_storage()
-                                           : std::make_unique<AnyColumnStorage>());
+    columns_.push_back(column.make_storage
+                           ? column.make_storage()
+                           : std::make_unique<AnyColumnStorage>());
   }
   if (definition_.kind == RelationKind::Lattice) {
     std::vector<ColumnType> key_columns(definition_.columns.begin(),
@@ -272,10 +355,12 @@ std::vector<Row> RelationStorage::materializeRows() const {
   return result;
 }
 
-std::optional<std::size_t>
-RelationStorage::findSetRow(const Row &row) const {
-  const auto bucket = set_directory_.find(candidateHash(row));
-  if (bucket == set_directory_.end())
+std::optional<std::size_t> RelationStorage::findSetRow(const Row &row) const {
+  const std::size_t fingerprint = candidateHash(row);
+  const SetDirectory &directory =
+      set_directories_[fingerprint % SET_SHARD_COUNT];
+  const auto bucket = directory.find(fingerprint);
+  if (bucket == directory.end())
     return std::nullopt;
   for (std::size_t row_id : bucket->second) {
     if (rowsEqual(this->row(row_id), RowView(row)))
@@ -285,12 +370,16 @@ RelationStorage::findSetRow(const Row &row) const {
 }
 
 void RelationStorage::addSetRow(std::size_t row_id) {
-  set_directory_[candidateHash(row(row_id))].push_back(row_id);
+  const std::size_t fingerprint = candidateHash(row(row_id));
+  set_directories_[fingerprint % SET_SHARD_COUNT][fingerprint].push_back(
+      row_id);
 }
 
 void RelationStorage::rebuildSetDirectory() {
-  set_directory_.clear();
-  set_directory_.reserve(row_count_);
+  for (SetDirectory &directory : set_directories_) {
+    directory.clear();
+    directory.reserve(row_count_ / SET_SHARD_COUNT + 1);
+  }
   for (std::size_t row_id = 0; row_id < row_count_; ++row_id)
     addSetRow(row_id);
 }
@@ -317,6 +406,53 @@ void RelationStorage::appendRow(Row row) {
     (void)mask;
     index->append(*this, row_index, version_);
   }
+}
+
+std::size_t RelationStorage::appendRowsBatch(
+    std::vector<Row> &rows, const std::vector<std::size_t> &selected,
+    std::vector<std::size_t> &row_ids, Scheduler &scheduler) {
+  if (selected.empty())
+    return 0;
+  const std::size_t first_row = row_count_;
+  std::vector<std::vector<std::any>> column_values(columns_.size());
+  for (auto &values : column_values)
+    values.reserve(selected.size());
+  for (std::size_t candidate : selected) {
+    for (std::size_t column = 0; column < columns_.size(); ++column)
+      column_values[column].push_back(std::move(rows[candidate][column]));
+  }
+
+  SerialScheduler serial_scheduler;
+  Scheduler &commit_scheduler = parallelSafe() ? scheduler : serial_scheduler;
+  try {
+    commit_scheduler.parallelFor(columns_.size(), [&](std::size_t column) {
+      columns_[column]->appendMany(std::move(column_values[column]));
+    });
+  } catch (...) {
+    for (auto &column : columns_)
+      column->truncate(first_row);
+    throw;
+  }
+
+  row_count_ += selected.size();
+  base_flags_.insert(base_flags_.end(), selected.size(), 0);
+  base_add_versions_.insert(base_add_versions_.end(), selected.size(), 0);
+  row_ids.reserve(row_ids.size() + selected.size());
+  for (std::size_t offset = 0; offset < selected.size(); ++offset)
+    row_ids.push_back(first_row + offset);
+
+  ++version_;
+  std::size_t parallel_tasks =
+      commit_scheduler.workerCount() > 1 && columns_.size() > 1
+          ? columns_.size()
+          : 0;
+  std::lock_guard<std::mutex> lock(index_mutex_);
+  for (auto &[mask, index] : indices_) {
+    (void)mask;
+    parallel_tasks +=
+        index->appendBatch(*this, row_ids, version_, commit_scheduler);
+  }
+  return parallel_tasks;
 }
 
 void RelationStorage::updateRow(std::size_t row_index, Row row) {
@@ -386,6 +522,103 @@ bool RelationStorage::insertBase(Row row) {
   if (definition_.lattice_join(proposed.back(), base_row.back()))
     updateRow(total_found->second, std::move(proposed));
   return true;
+}
+
+bool RelationStorage::eraseBase(const Row &row) {
+  validateRow(row);
+  if (definition_.kind == RelationKind::Set) {
+    const std::optional<std::size_t> existing = findSetRow(row);
+    if (!existing || !base_flags_[*existing])
+      return false;
+    base_flags_[*existing] = 0;
+    ++base_version_;
+    base_deletion_version_ = base_version_;
+    has_derived_state_ = false;
+    rebuildFromBase();
+    return true;
+  }
+
+  const Row key = latticeKey(row);
+  auto found = base_lattice_keys_->find(key);
+  if (found == base_lattice_keys_->end())
+    return false;
+  const std::size_t base_index = found->second;
+  if (!definition_.columns.back().equal(base_rows_[base_index].back(),
+                                        row.back()))
+    return false;
+  base_rows_.erase(base_rows_.begin() +
+                   static_cast<std::ptrdiff_t>(base_index));
+  base_lattice_keys_->clear();
+  for (std::size_t index = 0; index < base_rows_.size(); ++index)
+    base_lattice_keys_->emplace(latticeKey(base_rows_[index]), index);
+  ++base_version_;
+  base_deletion_version_ = base_version_;
+  has_derived_state_ = false;
+  rebuildFromBase();
+  return true;
+}
+
+std::size_t RelationStorage::removeDerivedMatching(
+    ColumnMask mask, const std::vector<std::vector<std::any>> &keys) {
+  if (definition_.kind != RelationKind::Set || keys.empty())
+    return 0;
+  std::vector<std::size_t> retained;
+  std::vector<unsigned char> retained_base_flags;
+  std::vector<std::size_t> retained_base_versions;
+  retained.reserve(row_count_);
+  retained_base_flags.reserve(row_count_);
+  retained_base_versions.reserve(row_count_);
+  std::size_t removed = 0;
+  for (std::size_t row_id = 0; row_id < row_count_; ++row_id) {
+    bool matches = false;
+    if (!base_flags_[row_id]) {
+      for (const auto &key : keys) {
+        std::size_t key_column = 0;
+        bool key_matches = true;
+        for (std::size_t column = 0; column < columns_.size(); ++column) {
+          if ((mask & (ColumnMask{1} << column)) == 0)
+            continue;
+          if (!equalValues(definition_.columns[column], value(row_id, column),
+                           ValueRef::fromAny(key[key_column++]))) {
+            key_matches = false;
+            break;
+          }
+        }
+        if (key_matches) {
+          matches = true;
+          break;
+        }
+      }
+    }
+    if (matches) {
+      ++removed;
+      continue;
+    }
+    retained.push_back(row_id);
+    retained_base_flags.push_back(base_flags_[row_id]);
+    retained_base_versions.push_back(base_add_versions_[row_id]);
+  }
+  if (removed == 0)
+    return 0;
+  std::vector<std::unique_ptr<ColumnStorage>> selected;
+  selected.reserve(columns_.size());
+  for (const auto &column : columns_)
+    selected.push_back(column->select(retained));
+  columns_ = std::move(selected);
+  row_count_ = retained.size();
+  base_flags_ = std::move(retained_base_flags);
+  base_add_versions_ = std::move(retained_base_versions);
+  rebuildSetDirectory();
+  has_derived_state_ =
+      std::any_of(base_flags_.begin(), base_flags_.end(),
+                  [](unsigned char is_base) { return is_base == 0; });
+  ++version_;
+  std::lock_guard<std::mutex> lock(index_mutex_);
+  for (auto &[index_mask, index] : indices_) {
+    (void)index_mask;
+    index->rebuild(*this, version_);
+  }
+  return removed;
 }
 
 bool RelationStorage::contains(const Row &row) const {
@@ -485,16 +718,53 @@ bool RelationStorage::rowsEqual(RowView lhs, RowView rhs) const {
 }
 
 RelationStorage::BatchMergeResult RelationStorage::mergeDerivedCoalesced(
-    std::vector<Row> candidates, Scheduler &scheduler, std::size_t grain_size) {
+    std::vector<Row> candidates, Scheduler &scheduler, std::size_t grain_size,
+    bool debug_contracts) {
   BatchMergeResult result;
   if (candidates.empty())
     return result;
   for (const Row &candidate : candidates)
     validateRow(candidate);
 
+  if (debug_contracts && definition_.kind == RelationKind::Lattice) {
+    const ColumnType &value_type = definition_.columns.back();
+    const std::size_t sample_count =
+        std::min<std::size_t>(3, candidates.size());
+    for (std::size_t index = 0; index < sample_count; ++index) {
+      std::any joined = candidates[index].back();
+      const bool changed =
+          definition_.lattice_join(joined, candidates[index].back());
+      if (changed || !value_type.equal(joined, candidates[index].back()))
+        throw std::logic_error("Datalog lattice join is not idempotent");
+    }
+    for (std::size_t left = 0; left < sample_count; ++left) {
+      for (std::size_t right = left + 1; right < sample_count; ++right) {
+        std::any forward = candidates[left].back();
+        std::any reverse = candidates[right].back();
+        definition_.lattice_join(forward, candidates[right].back());
+        definition_.lattice_join(reverse, candidates[left].back());
+        if (!value_type.equal(forward, reverse))
+          throw std::logic_error("Datalog lattice join is not commutative");
+      }
+    }
+    if (sample_count == 3) {
+      std::any left = candidates[0].back();
+      definition_.lattice_join(left, candidates[1].back());
+      definition_.lattice_join(left, candidates[2].back());
+      std::any right_tail = candidates[1].back();
+      definition_.lattice_join(right_tail, candidates[2].back());
+      std::any right = candidates[0].back();
+      definition_.lattice_join(right, right_tail);
+      if (!value_type.equal(left, right))
+        throw std::logic_error("Datalog lattice join is not associative");
+    }
+  }
+
   const std::size_t grain = std::max<std::size_t>(1, grain_size);
-  const std::size_t task_count = std::min(
-      scheduler.workerCount(), (candidates.size() + grain - 1) / grain);
+  const std::size_t task_count =
+      parallelSafe() ? std::min(scheduler.workerCount(),
+                                (candidates.size() + grain - 1) / grain)
+                     : 1;
   std::vector<unsigned char> changed(candidates.size(), 0);
   std::vector<std::optional<std::size_t>> lattice_rows(candidates.size());
   std::vector<std::optional<Row>> proposals(candidates.size());
@@ -531,21 +801,46 @@ RelationStorage::BatchMergeResult RelationStorage::mergeDerivedCoalesced(
     inspect(0);
   }
 
+  if (definition_.kind == RelationKind::Set) {
+    std::vector<std::size_t> selected;
+    selected.reserve(candidates.size());
+    for (std::size_t index = 0; index < candidates.size(); ++index) {
+      if (changed[index])
+        selected.push_back(index);
+    }
+    result.parallel_tasks += appendRowsBatch(candidates, selected,
+                                             result.changed_row_ids, scheduler);
+    if (result.changed_row_ids.empty())
+      return result;
+
+    std::array<std::vector<std::size_t>, SET_SHARD_COUNT> shards;
+    for (std::size_t row_id : result.changed_row_ids) {
+      const std::size_t fingerprint = candidateHash(row(row_id));
+      shards[fingerprint % SET_SHARD_COUNT].push_back(row_id);
+    }
+    auto publish_shard = [&](std::size_t shard) {
+      SetDirectory &directory = set_directories_[shard];
+      for (std::size_t row_id : shards[shard]) {
+        const std::size_t fingerprint = candidateHash(row(row_id));
+        directory[fingerprint].push_back(row_id);
+      }
+    };
+    if (parallelSafe())
+      scheduler.parallelFor(SET_SHARD_COUNT, publish_shard);
+    else
+      for (std::size_t shard = 0; shard < SET_SHARD_COUNT; ++shard)
+        publish_shard(shard);
+    if (parallelSafe() && scheduler.workerCount() > 1)
+      result.parallel_tasks += SET_SHARD_COUNT;
+    has_derived_state_ = true;
+    return result;
+  }
+
   result.changed_row_ids.reserve(candidates.size());
   result.changed_lattice_rows.reserve(candidates.size());
   for (std::size_t index = 0; index < candidates.size(); ++index) {
     if (!changed[index])
       continue;
-    if (definition_.kind == RelationKind::Set) {
-      if (!findSetRow(candidates[index])) {
-        const std::size_t row_id = row_count_;
-        appendRow(std::move(candidates[index]));
-        addSetRow(row_id);
-        has_derived_state_ = true;
-        result.changed_row_ids.push_back(row_id);
-      }
-      continue;
-    }
     if (lattice_rows[index]) {
       updateRow(*lattice_rows[index], std::move(*proposals[index]));
       has_derived_state_ = true;
@@ -621,8 +916,8 @@ void RelationStorage::discardDerived() {
 
 std::size_t RelationStorage::baseVersion() const { return base_version_; }
 
-std::vector<std::size_t> RelationStorage::baseSetDeltaSince(
-    std::size_t completed_base_version) const {
+std::vector<std::size_t>
+RelationStorage::baseSetDeltaSince(std::size_t completed_base_version) const {
   std::vector<std::size_t> result;
   if (definition_.kind != RelationKind::Set)
     return result;
@@ -633,22 +928,38 @@ std::vector<std::size_t> RelationStorage::baseSetDeltaSince(
   return result;
 }
 
-std::size_t RelationStorage::estimatedLookupCardinality(ColumnMask mask) const {
-  if (mask == 0)
-    return std::max<std::size_t>(1, row_count_);
+bool RelationStorage::hasBaseDeletionSince(
+    std::size_t completed_base_version) const {
+  return base_deletion_version_ > completed_base_version;
+}
 
+std::size_t RelationStorage::estimatedLookupCardinality(ColumnMask mask) const {
+  return maskStatistics(mask).averageFrequency();
+}
+
+RelationStorage::MaskStatistics
+RelationStorage::maskStatistics(ColumnMask mask) const {
   std::lock_guard<std::mutex> lock(statistics_mutex_);
-  auto cached = lookup_estimates_.find(mask);
-  if (cached != lookup_estimates_.end() && cached->second.first == version_)
+  auto cached = statistics_cache_.find(mask);
+  if (cached != statistics_cache_.end() && cached->second.first == version_)
     return cached->second.second;
+
+  MaskStatistics statistics;
+  statistics.row_count = row_count_;
+  if (mask == 0) {
+    statistics.distinct_count = row_count_ == 0 ? 0 : 1;
+    statistics.maximum_frequency = row_count_;
+    statistics_cache_[mask] = {version_, statistics};
+    return statistics;
+  }
 
   std::vector<ColumnType> key_columns;
   for (std::size_t column = 0; column < definition_.columns.size(); ++column) {
     if (mask & (ColumnMask{1} << column))
       key_columns.push_back(definition_.columns[column]);
   }
-  std::unordered_set<Row, KeyHash, KeyEqual> distinct(0, KeyHash{key_columns},
-                                                      KeyEqual{key_columns});
+  std::unordered_map<Row, std::size_t, KeyHash, KeyEqual> frequencies(
+      0, KeyHash{key_columns}, KeyEqual{key_columns});
   for (std::size_t row_id = 0; row_id < row_count_; ++row_id) {
     Row key;
     key.reserve(key_columns.size());
@@ -657,33 +968,98 @@ std::size_t RelationStorage::estimatedLookupCardinality(ColumnMask mask) const {
       if (mask & (ColumnMask{1} << column))
         key.push_back(columns_[column]->materialize(row_id));
     }
-    distinct.insert(std::move(key));
+    ++frequencies[std::move(key)];
   }
-  const std::size_t estimate =
-      distinct.empty()
-          ? 1
-          : std::max<std::size_t>(1, (row_count_ + distinct.size() - 1) /
-                                         distinct.size());
-  lookup_estimates_[mask] = {version_, estimate};
-  return estimate;
+  statistics.distinct_count = frequencies.size();
+  std::vector<KeyFrequency> ordered;
+  ordered.reserve(frequencies.size());
+  for (const auto &[key, frequency] : frequencies) {
+    statistics.maximum_frequency =
+        std::max(statistics.maximum_frequency, frequency);
+    ordered.push_back({key, frequency});
+  }
+  std::sort(ordered.begin(), ordered.end(),
+            [](const KeyFrequency &lhs, const KeyFrequency &rhs) {
+              return lhs.frequency > rhs.frequency;
+            });
+  constexpr std::size_t HEAVY_HITTER_LIMIT = 8;
+  if (ordered.size() > HEAVY_HITTER_LIMIT)
+    ordered.resize(HEAVY_HITTER_LIMIT);
+  statistics.heavy_hitters = std::move(ordered);
+  statistics_cache_[mask] = {version_, statistics};
+  return statistics;
 }
 
 void RelationStorage::ensureIndex(ColumnMask mask) {
   if (mask == 0)
     return;
   std::lock_guard<std::mutex> lock(index_mutex_);
+  for (auto &[arrangement_mask, arrangement] : indices_) {
+    (void)arrangement_mask;
+    if (!arrangement->canServe(mask))
+      continue;
+    if (!arrangement->isCurrent(version_))
+      arrangement->rebuild(*this, version_);
+    return;
+  }
+
+  RuntimeIndex proposed(mask, definition_.columns);
+  for (auto it = indices_.begin(); it != indices_.end();) {
+    if (proposed.canServe(it->first))
+      it = indices_.erase(it);
+    else
+      ++it;
+  }
   RuntimeIndex &index = getIndex(mask);
   if (!index.isCurrent(version_))
     index.rebuild(*this, version_);
 }
 
-std::size_t RelationStorage::indexCount() const { return indices_.size(); }
+void RelationStorage::rebuildOrderedIndex(std::size_t column) {
+  OrderedIndex &index = ordered_indices_[column];
+  index.rows.resize(row_count_);
+  for (std::size_t row_id = 0; row_id < row_count_; ++row_id)
+    index.rows[row_id] = row_id;
+  const ColumnType &type = definition_.columns.at(column);
+  if (!type.less_value)
+    throw std::logic_error("Datalog ordered index requires an ordered column");
+  std::sort(index.rows.begin(), index.rows.end(),
+            [&](std::size_t lhs, std::size_t rhs) {
+              ValueRef left = value(lhs, column);
+              ValueRef right = value(rhs, column);
+              if (type.less_value(left, right))
+                return true;
+              if (type.less_value(right, left))
+                return false;
+              return lhs < rhs;
+            });
+  index.built_version = version_;
+}
+
+void RelationStorage::ensureOrderedIndex(std::size_t column) {
+  if (column >= definition_.columns.size() ||
+      !definition_.columns[column].less_value)
+    return;
+  std::lock_guard<std::mutex> lock(index_mutex_);
+  auto found = ordered_indices_.find(column);
+  if (found == ordered_indices_.end() ||
+      found->second.built_version != version_)
+    rebuildOrderedIndex(column);
+}
+
+std::size_t RelationStorage::indexCount() const {
+  return indices_.size() + ordered_indices_.size();
+}
 
 std::size_t RelationStorage::indexEntries() const {
   std::size_t count = 0;
   for (const auto &[mask, index] : indices_) {
     (void)mask;
     count += index->entryCount();
+  }
+  for (const auto &[column, index] : ordered_indices_) {
+    (void)column;
+    count += index.rows.size();
   }
   return count;
 }
@@ -693,6 +1069,10 @@ std::size_t RelationStorage::indexMemoryBytes() const {
   for (const auto &[mask, index] : indices_) {
     (void)mask;
     bytes += index->approximateMemoryBytes();
+  }
+  for (const auto &[column, index] : ordered_indices_) {
+    (void)column;
+    bytes += index.rows.capacity() * sizeof(std::size_t);
   }
   return bytes;
 }
@@ -707,11 +1087,13 @@ std::size_t RelationStorage::tupleMemoryBytes() const {
 std::size_t RelationStorage::uniquenessMemoryBytes() const {
   std::size_t bytes = 0;
   if (definition_.kind == RelationKind::Set) {
-    bytes += set_directory_.bucket_count() * sizeof(void *);
-    for (const auto &[fingerprint, rows] : set_directory_) {
-      (void)fingerprint;
-      bytes += sizeof(fingerprint) + sizeof(rows) +
-               rows.capacity() * sizeof(std::size_t);
+    for (const SetDirectory &directory : set_directories_) {
+      bytes += directory.bucket_count() * sizeof(void *);
+      for (const auto &[fingerprint, rows] : directory) {
+        (void)fingerprint;
+        bytes += sizeof(fingerprint) + sizeof(rows) +
+                 rows.capacity() * sizeof(std::size_t);
+      }
     }
     return bytes;
   }
@@ -738,6 +1120,15 @@ std::size_t RelationStorage::baseMemoryBytes() const {
     bytes += sizeof(key) + key.capacity() * sizeof(std::any) + sizeof(row_id);
   }
   return bytes;
+}
+
+bool RelationStorage::parallelSafe() const {
+  for (const ColumnType &column : definition_.columns) {
+    if (!column.properties.canRunInParallel())
+      return false;
+  }
+  return definition_.kind != RelationKind::Lattice ||
+         definition_.lattice_properties.canRunInParallel();
 }
 
 void RelationStorage::forEachMatching(
@@ -798,6 +1189,64 @@ void RelationStorage::forEachMatchingSlice(
   }
 }
 
+void RelationStorage::forEachRange(
+    const RangePlan &range, ExecutionStats &stats,
+    const std::function<void(RowView)> &callback) {
+  ++stats.ordered_range_lookups;
+  OrderedIndex *index = nullptr;
+  auto prepared = ordered_indices_.find(range.column);
+  if (prepared != ordered_indices_.end() &&
+      prepared->second.built_version == version_) {
+    index = &prepared->second;
+  } else {
+    std::lock_guard<std::mutex> lock(index_mutex_);
+    auto found = ordered_indices_.find(range.column);
+    if (found == ordered_indices_.end() ||
+        found->second.built_version != version_) {
+      rebuildOrderedIndex(range.column);
+      found = ordered_indices_.find(range.column);
+    }
+    index = &found->second;
+  }
+  const ColumnType &type = definition_.columns[range.column];
+  const ValueRef bound = ValueRef::fromAny(range.bound);
+  auto lower = std::lower_bound(index->rows.begin(), index->rows.end(), bound,
+                                [&](std::size_t row_id, ValueRef value_bound) {
+                                  return type.less_value(
+                                      value(row_id, range.column), value_bound);
+                                });
+  auto upper = std::upper_bound(index->rows.begin(), index->rows.end(), bound,
+                                [&](ValueRef value_bound, std::size_t row_id) {
+                                  return type.less_value(
+                                      value_bound, value(row_id, range.column));
+                                });
+  ExprOpcode comparison = range.comparison;
+  if (!range.variable_on_left) {
+    if (comparison == ExprOpcode::Less)
+      comparison = ExprOpcode::Greater;
+    else if (comparison == ExprOpcode::LessEqual)
+      comparison = ExprOpcode::GreaterEqual;
+    else if (comparison == ExprOpcode::Greater)
+      comparison = ExprOpcode::Less;
+    else if (comparison == ExprOpcode::GreaterEqual)
+      comparison = ExprOpcode::LessEqual;
+  }
+  auto begin = index->rows.begin();
+  auto end = index->rows.end();
+  if (comparison == ExprOpcode::Less)
+    end = lower;
+  else if (comparison == ExprOpcode::LessEqual)
+    end = upper;
+  else if (comparison == ExprOpcode::Greater)
+    begin = upper;
+  else if (comparison == ExprOpcode::GreaterEqual)
+    begin = lower;
+  for (auto position = begin; position != end; ++position) {
+    ++stats.tuples_scanned;
+    callback(row(*position));
+  }
+}
+
 void RelationStorage::validateRow(const Row &row) const {
   if (row.size() != definition_.columns.size())
     throw std::invalid_argument("fact arity does not match relation '" +
@@ -828,12 +1277,24 @@ RuntimeIndex &RelationStorage::getIndex(ColumnMask mask) {
 }
 
 RuntimeIndex &RelationStorage::preparedIndex(ColumnMask mask) {
-  auto it = indices_.find(mask);
-  if (it == indices_.end() || !it->second->isCurrent(version_)) {
-    throw std::logic_error(
-        "Datalog execution attempted to read an unprepared runtime index");
+  for (auto &[arrangement_mask, arrangement] : indices_) {
+    (void)arrangement_mask;
+    if (arrangement->canServe(mask) && arrangement->isCurrent(version_))
+      return *arrangement;
   }
-  return *it->second;
+  throw std::logic_error(
+      "Datalog execution attempted to read an unprepared runtime index");
+}
+
+bool RelationStorage::hasPreparedIndex(ColumnMask mask) const {
+  if (mask == 0)
+    return true;
+  for (const auto &[arrangement_mask, arrangement] : indices_) {
+    (void)arrangement_mask;
+    if (arrangement->canServe(mask) && arrangement->isCurrent(version_))
+      return true;
+  }
+  return false;
 }
 
 Row RelationStorage::latticeKey(const Row &row) const {

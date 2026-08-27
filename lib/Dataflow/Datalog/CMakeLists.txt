@@ -3,6 +3,7 @@ add_library(LotusDatalog STATIC
   Core/Rule.cpp
   Core/Analyzer.cpp
   Core/Planner.cpp
+  Runtime/KernelCompiler.cpp
   Runtime/Executor.cpp
   Runtime/RelationStore.cpp
   Runtime/Scheduler.cpp
@@ -12,6 +13,14 @@ target_include_directories(LotusDatalog PUBLIC
   ${PROJECT_SOURCE_DIR}/include)
 target_include_directories(LotusDatalog PRIVATE
   ${PROJECT_SOURCE_DIR}/lib)
+
+llvm_map_components_to_libnames(DATALOG_KERNEL_LLVM_LIBS
+  Core
+  OrcJIT
+  ExecutionEngine
+  native)
+
+target_link_libraries(LotusDatalog PRIVATE ${DATALOG_KERNEL_LLVM_LIBS})
 
 set_target_properties(LotusDatalog PROPERTIES
   CXX_STANDARD 17

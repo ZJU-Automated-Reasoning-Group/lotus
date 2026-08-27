@@ -6,12 +6,32 @@
 #include "Dataflow/Datalog/Runtime/Diagnostics.h"
 #include "Dataflow/Datalog/Runtime/Scheduler.h"
 
+#include <any>
+#include <cstddef>
 #include <initializer_list>
 #include <memory>
 #include <string>
 #include <vector>
 
 namespace lotus::datalog {
+
+struct QueryBinding {
+  std::size_t column = 0;
+  std::any value;
+};
+
+struct QueryGoal {
+  RelationId relation = 0;
+  std::vector<QueryBinding> bindings;
+};
+
+struct CompileOptions {
+  std::vector<RelationId> goals;
+  std::vector<QueryGoal> query_goals;
+  std::size_t index_memory_budget_bytes = static_cast<std::size_t>(-1);
+  std::size_t max_arrangements_per_relation = static_cast<std::size_t>(-1);
+  std::size_t adaptive_replan_ratio = 4;
+};
 
 class Program {
 public:
@@ -29,6 +49,7 @@ public:
   void rule(std::initializer_list<Atom> heads, const AggregateClause &body);
 
   CompiledProgram compile() const;
+  CompiledProgram compile(const CompileOptions &options) const;
 
 private:
   void addRule(const Atom &head, Context *body_context,
@@ -53,6 +74,7 @@ public:
 
   RunStatus run();
   RunStatus run(const ExecutionOptions &options);
+  RunStatus runReadOnly();
   const ExecutionStats &stats() const;
   const ExecutionProfile &profile() const;
   std::string explain(ExplainMode mode = ExplainMode::Plan) const;

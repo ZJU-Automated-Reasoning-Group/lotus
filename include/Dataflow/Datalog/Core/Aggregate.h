@@ -83,8 +83,10 @@ template <typename Input, typename Output> class AggregatorSpec {
 public:
   AggregatorSpec(
       Expr<Input> projection, std::string name,
-      std::function<std::vector<Output>(const std::vector<Input> &)> evaluator)
-      : projection_(std::move(projection)), name_(std::move(name)) {
+      std::function<std::vector<Output>(const std::vector<Input> &)> evaluator,
+      FunctionProperties properties = {})
+      : projection_(std::move(projection)), name_(std::move(name)),
+        properties_(properties) {
     evaluator_ = [evaluator =
                       std::move(evaluator)](const AggregateForEach &for_each) {
       std::vector<Input> typed_values;
@@ -103,8 +105,10 @@ public:
   AggregatorSpec(
       Expr<Input> projection, std::string name,
       std::function<std::vector<Output>(const AggregateRange<Input> &)>
-          evaluator)
-      : projection_(std::move(projection)), name_(std::move(name)) {
+          evaluator,
+      FunctionProperties properties = {})
+      : projection_(std::move(projection)), name_(std::move(name)),
+        properties_(properties) {
     evaluator_ = [evaluator =
                       std::move(evaluator)](const AggregateForEach &for_each) {
       AggregateRange<Input> range(for_each);
@@ -141,6 +145,8 @@ public:
     };
     reducer.properties = properties;
     reducer_ = std::move(reducer);
+    properties_ = properties.canRunInParallel() ? FunctionProperties::parallel()
+                                                : FunctionProperties{};
     evaluator_ = [reducer = *reducer_](const AggregateForEach &for_each) {
       std::any state = reducer.make_state();
       for_each([&](const std::any &value) { reducer.add(state, value); });
@@ -150,35 +156,48 @@ public:
 
   Context *context() const { return projection_.context(); }
 
+  AggregatorSpec monotone() const {
+    AggregatorSpec result = *this;
+    result.monotone_ = true;
+    return result;
+  }
+
 private:
   Expr<Input> projection_;
   std::string name_;
   std::function<std::vector<std::any>(const AggregateForEach &)> evaluator_;
   std::optional<ReducerIR> reducer_;
+  FunctionProperties properties_;
+  bool monotone_ = false;
 
   template <typename In, typename Out>
   friend AggregateClause
   aggregate(const Var<Out> &, const AggregatorSpec<In, Out> &, const Atom &);
+  template <typename In, typename Out>
+  friend AggregateClause
+  aggregate(const Var<Out> &, const AggregatorSpec<In, Out> &, const Body &);
 };
 
 template <typename Output, typename Input, typename Function>
-AggregatorSpec<Input, Output> make_aggregator(const Expr<Input> &projection,
-                                              std::string name,
-                                              Function evaluator) {
+AggregatorSpec<Input, Output>
+make_aggregator(const Expr<Input> &projection, std::string name,
+                Function evaluator, FunctionProperties properties = {}) {
   return AggregatorSpec<Input, Output>(
       projection, std::move(name),
       std::function<std::vector<Output>(const std::vector<Input> &)>(
-          std::move(evaluator)));
+          std::move(evaluator)),
+      properties);
 }
 
 template <typename Output, typename Input, typename Function>
 AggregatorSpec<Input, Output>
 make_streaming_aggregator(const Expr<Input> &projection, std::string name,
-                          Function evaluator) {
+                          Function evaluator,
+                          FunctionProperties properties = {}) {
   using Evaluator =
       std::function<std::vector<Output>(const AggregateRange<Input> &)>;
-  return AggregatorSpec<Input, Output>(projection, std::move(name),
-                                       Evaluator(std::move(evaluator)));
+  return AggregatorSpec<Input, Output>(
+      projection, std::move(name), Evaluator(std::move(evaluator)), properties);
 }
 
 template <typename Output, typename Input, typename MakeState, typename Add,
@@ -293,6 +312,10 @@ private:
   friend AggregateClause aggregate(const Var<Output> &,
                                    const AggregatorSpec<Input, Output> &,
                                    const Atom &);
+  template <typename Input, typename Output>
+  friend AggregateClause aggregate(const Var<Output> &,
+                                   const AggregatorSpec<Input, Output> &,
+                                   const Body &);
   friend class Body;
   friend class Program;
 };
@@ -308,10 +331,13 @@ AggregateClause aggregate(const Var<Output> &output,
   ir.output_var = output.id();
   ir.output_type = typeid(Output);
   ir.source = source.ir();
+  ir.source_body.push_back(source.ir());
   ir.projection = aggregator.projection_.lower();
   ir.name = aggregator.name_;
   ir.evaluate = aggregator.evaluator_;
   ir.reducer = aggregator.reducer_;
+  ir.properties = aggregator.properties_;
+  ir.monotone = aggregator.monotone_;
   return AggregateClause(context, std::move(ir));
 }
 

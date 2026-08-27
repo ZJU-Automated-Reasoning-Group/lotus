@@ -56,6 +56,39 @@ Body operator&&(const Atom &lhs, const AggregateClause &rhs);
 Body operator&&(Body lhs, const AggregateClause &rhs);
 Body operator&&(const AggregateClause &lhs, const Atom &rhs);
 
+template <typename Input, typename Output>
+AggregateClause aggregate(const Var<Output> &output,
+                          const AggregatorSpec<Input, Output> &aggregator,
+                          const Body &source) {
+  Context *context =
+      detail::mergeContexts(output.context(), aggregator.context());
+  context = detail::mergeContexts(context, source.context());
+  AggregateIR ir;
+  ir.output_var = output.id();
+  ir.output_type = typeid(Output);
+  ir.projection = aggregator.projection_.lower();
+  ir.name = aggregator.name_;
+  ir.evaluate = aggregator.evaluator_;
+  ir.reducer = aggregator.reducer_;
+  ir.properties = aggregator.properties_;
+  ir.monotone = aggregator.monotone_;
+  for (const BodyItemIR &item : source.items()) {
+    if (const auto *atom = std::get_if<AtomIR>(&item))
+      ir.source_body.push_back(*atom);
+    else if (const auto *filter = std::get_if<FilterIR>(&item))
+      ir.source_body.push_back(*filter);
+    else if (const auto *negation = std::get_if<NegAtomIR>(&item))
+      ir.source_body.push_back(*negation);
+    else
+      throw std::invalid_argument(
+          "nested Datalog aggregates are not supported");
+  }
+  if (ir.source_body.size() == 1 &&
+      std::holds_alternative<AtomIR>(ir.source_body.front()))
+    ir.source = std::get<AtomIR>(ir.source_body.front());
+  return AggregateClause(context, std::move(ir));
+}
+
 using body = Body;
 using rule = RuleIR;
 

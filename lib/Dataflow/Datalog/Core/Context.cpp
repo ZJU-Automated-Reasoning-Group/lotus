@@ -24,8 +24,10 @@ Context::~Context() = default;
 
 RelationId Context::addRelation(
     std::string name, std::vector<ColumnType> columns, RelationKind kind,
-    std::function<bool(std::any &, const std::any &)> lattice_join) {
-  std::unique_lock<std::mutex> lock(impl_->execution_mutex, std::try_to_lock);
+    std::function<bool(std::any &, const std::any &)> lattice_join,
+    FunctionProperties lattice_properties) {
+  std::unique_lock<std::shared_mutex> lock(impl_->execution_mutex,
+                                           std::try_to_lock);
   if (!lock.owns_lock() || impl_->running)
     throw std::logic_error("Datalog relation definitions may not change while "
                            "a program is running");
@@ -39,8 +41,8 @@ RelationId Context::addRelation(
         "Datalog relation arity exceeds index mask width");
 
   RelationId id = impl_->relations.size();
-  RelationIR definition{id, std::move(name), std::move(columns), kind,
-                        std::move(lattice_join)};
+  RelationIR definition{id,   std::move(name),         std::move(columns),
+                        kind, std::move(lattice_join), lattice_properties};
   impl_->relations.push_back(
       std::make_unique<RelationStorage>(std::move(definition)));
   ++impl_->schema_generation;
@@ -49,7 +51,8 @@ RelationId Context::addRelation(
 
 VarId Context::addVariable(std::string name, std::type_index type,
                            bool anonymous) {
-  std::unique_lock<std::mutex> lock(impl_->execution_mutex, std::try_to_lock);
+  std::unique_lock<std::shared_mutex> lock(impl_->execution_mutex,
+                                           std::try_to_lock);
   if (!lock.owns_lock() || impl_->running)
     throw std::logic_error("Datalog variable definitions may not change while "
                            "a program is running");
@@ -81,11 +84,21 @@ TermIR Context::freshWildcard(std::type_index type) {
 }
 
 void Context::insert(RelationId relation, std::vector<std::any> row) {
-  std::unique_lock<std::mutex> lock(impl_->execution_mutex, std::try_to_lock);
+  std::unique_lock<std::shared_mutex> lock(impl_->execution_mutex,
+                                           std::try_to_lock);
   if (!lock.owns_lock() || impl_->running)
     throw std::logic_error(
         "Datalog relations may not be mutated while a program is running");
   impl_->relations.at(relation)->insertBase(std::move(row));
+}
+
+bool Context::erase(RelationId relation, const std::vector<std::any> &row) {
+  std::unique_lock<std::shared_mutex> lock(impl_->execution_mutex,
+                                           std::try_to_lock);
+  if (!lock.owns_lock() || impl_->running)
+    throw std::logic_error(
+        "Datalog relations may not be mutated while a program is running");
+  return impl_->relations.at(relation)->eraseBase(row);
 }
 
 bool Context::contains(RelationId relation,

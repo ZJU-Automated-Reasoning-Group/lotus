@@ -74,7 +74,8 @@ template <typename Function> std::uint64_t timeNs(Function &&function) {
   function();
   const auto end = std::chrono::steady_clock::now();
   return static_cast<std::uint64_t>(
-      std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count());
+      std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin)
+          .count());
 }
 
 std::size_t peakRssBytes() {
@@ -124,8 +125,7 @@ Result runDuplicateProofs(const Options &options) {
   program p(ctx);
   p.rule(output(bucket), source(item, bucket));
   auto compiled = p.compile();
-  result.elapsed_ns =
-      timeNs([&] { compiled.run(executionOptions(options)); });
+  result.elapsed_ns = timeNs([&] { compiled.run(executionOptions(options)); });
   result.peak_rss_bytes = peakRssBytes();
   result.result_rows = output.rows().size();
   for (const auto &[value] : output.rows())
@@ -153,12 +153,10 @@ Result runClosure(const Options &options, bool incremental) {
   p.rule(path(x, y), edge(x, y));
   p.rule(path(x, z), path(x, y) && edge(y, z));
   auto compiled = p.compile();
-  result.elapsed_ns =
-      timeNs([&] { compiled.run(executionOptions(options)); });
+  result.elapsed_ns = timeNs([&] { compiled.run(executionOptions(options)); });
   if (incremental && split > 0 && split < options.size) {
     edge.insert(split - 1, split);
-    result.rerun_ns =
-        timeNs([&] { compiled.run(executionOptions(options)); });
+    result.rerun_ns = timeNs([&] { compiled.run(executionOptions(options)); });
   }
   result.peak_rss_bytes = peakRssBytes();
   result.result_rows = path.rows().size();
@@ -172,10 +170,8 @@ Result runSkewJoin(const Options &options) {
   Result result;
   context ctx;
   auto seed = ctx.relation<std::uint64_t>("seed");
-  auto points_to =
-      ctx.relation<std::uint64_t, std::uint64_t>("points_to");
-  auto property =
-      ctx.relation<std::uint64_t, std::uint64_t>("property");
+  auto points_to = ctx.relation<std::uint64_t, std::uint64_t>("points_to");
+  auto property = ctx.relation<std::uint64_t, std::uint64_t>("property");
   auto output = ctx.relation<std::uint64_t>("output");
   auto variable = ctx.var<std::uint64_t>("variable");
   auto object = ctx.var<std::uint64_t>("object");
@@ -188,12 +184,10 @@ Result runSkewJoin(const Options &options) {
     property.insert(index, index * 7U);
   }
   program p(ctx);
-  p.rule(output(value),
-         seed(variable) && property(object, value) &&
-             points_to(variable, object));
+  p.rule(output(value), seed(variable) && property(object, value) &&
+                            points_to(variable, object));
   auto compiled = p.compile();
-  result.elapsed_ns =
-      timeNs([&] { compiled.run(executionOptions(options)); });
+  result.elapsed_ns = timeNs([&] { compiled.run(executionOptions(options)); });
   result.peak_rss_bytes = peakRssBytes();
   result.result_rows = output.rows().size();
   for (const auto &[entry] : output.rows())
@@ -226,25 +220,32 @@ void printResult(const Options &options, const Result &result) {
             << "  \"peak_rss_bytes\": " << result.peak_rss_bytes << ",\n"
             << "  \"result_rows\": " << result.result_rows << ",\n"
             << "  \"checksum\": " << result.checksum << ",\n"
-            << "  \"tuples_scanned\": " << result.stats.tuples_scanned
-            << ",\n"
-            << "  \"inserted_facts\": " << result.stats.inserted_facts
-            << ",\n"
+            << "  \"tuples_scanned\": " << result.stats.tuples_scanned << ",\n"
+            << "  \"inserted_facts\": " << result.stats.inserted_facts << ",\n"
             << "  \"peak_delta\": " << result.stats.peak_delta << ",\n"
-            << "  \"index_memory_bytes\": "
-            << result.stats.index_memory_bytes << ",\n"
-            << "  \"tuple_memory_bytes\": "
-            << result.stats.tuple_memory_bytes << ",\n"
+            << "  \"index_memory_bytes\": " << result.stats.index_memory_bytes
+            << ",\n"
+            << "  \"tuple_memory_bytes\": " << result.stats.tuple_memory_bytes
+            << ",\n"
             << "  \"uniqueness_memory_bytes\": "
             << result.stats.uniqueness_memory_bytes << ",\n"
-            << "  \"base_memory_bytes\": "
-            << result.stats.base_memory_bytes << ",\n"
-            << "  \"head_derivations\": "
-            << result.stats.head_derivations << ",\n"
+            << "  \"base_memory_bytes\": " << result.stats.base_memory_bytes
+            << ",\n"
+            << "  \"head_derivations\": " << result.stats.head_derivations
+            << ",\n"
             << "  \"local_unique_candidates\": "
             << result.stats.local_unique_candidates << ",\n"
             << "  \"global_unique_candidates\": "
-            << result.stats.global_unique_candidates << "\n"
+            << result.stats.global_unique_candidates << ",\n"
+            << "  \"incremental_sccs\": " << result.stats.incremental_sccs
+            << ",\n"
+            << "  \"rebuilt_sccs\": " << result.stats.rebuilt_sccs << ",\n"
+            << "  \"base_delta_facts\": " << result.stats.base_delta_facts
+            << ",\n"
+            << "  \"jit_compiled_expressions\": "
+            << result.stats.jit_compiled_expressions << ",\n"
+            << "  \"jit_expression_evaluations\": "
+            << result.stats.jit_expression_evaluations << "\n"
             << "}\n";
 }
 

@@ -55,11 +55,11 @@ lattice relation.
 Relations may have zero columns. Such a nullary predicate contains either no tuple
 or the single empty tuple and is useful for Boolean query results.
 
-Facts inserted through `Relation::insert` are base facts. Solver output is stored
-separately as derived state. A later `run()` after new base facts clears derived state
-from the first affected SCC onward and recomputes that suffix. This makes additive
-reruns correct for positive rules, negation, aggregates, and lattices; fact deletion
-is intentionally not part of the API.
+Facts inserted through `Relation::insert` are base facts. Positive SCCs retain their
+previous fixed point and propagate only new base and upstream deltas on later runs.
+Crossing a negation or non-monotone aggregate dependency invalidates only that
+non-monotone suffix. `Relation::erase` removes base facts and conservatively
+recomputes dependent SCCs, including facts with alternate proofs.
 
 `CompiledProgram` retains the underlying context state and is therefore safe to run
 after the `Context` wrapper is destroyed. Fluent `Relation`, `Var`, and expression
@@ -116,22 +116,26 @@ was produced for it.
 
 At an atom, columns containing constants or variables grounded by earlier body
 items form a runtime bitmask lookup key. The planner's statistics catalog is
-separate from physical indexes: it observes distinct-key counts without installing
-an index, then the finalized `RulePlan` installs only its selected masks. Runtime
-indexes are hash buckets of row IDs and are maintained incrementally on row inserts
-and lattice updates. Lookups borrow binding cells through a zero-allocation key view
+separate from physical indexes. The finalized plan installs reusable ordered-prefix
+hash arrangements under configurable count and memory budgets. Arrangements are
+maintained incrementally and read without locks during immutable epochs. Lookups borrow binding cells through a zero-allocation key view
 and stream rows directly to the consumer; an atom with no bound columns performs a
-full scan.
+full scan. Structural `<`, `<=`, `>`, and `>=` filters over ordered native columns
+install sorted range access paths instead of scanning the whole relation.
 
-Join costs use observed distinct-key counts, rather than a fixed heuristic based
-only on the number of bound columns. During execution,
+Join costs use cardinality, distinct counts, maximum frequency, and heavy hitters.
+Bodies of at most eight atoms use subset dynamic programming; larger bodies use
+deterministic beam search. Plans can be rebuilt at a run boundary after large
+estimate/cardinality changes. During execution,
 variable bindings reference immutable relation cells and own only computed values,
 avoiding a `std::any` copy at every join step.
 
 ### Aggregation
 
-Aggregation is stratified. An aggregate dependency requires the head stratum to be
-strictly greater than the input stratum. `make_streaming_aggregator` exposes a
+Aggregation is stratified by default. An aggregate source can be one atom or a
+join/filter/anti-join `Body`, avoiding an intermediate relation. Aggregators marked
+`monotone()` may participate in recursion when their head is a lattice and their
+source contains no negation. `make_streaming_aggregator` exposes a
 callback range without materializing all projected inputs. The compatibility
 `make_aggregator` API collects a vector. Reducible aggregators expose local state,
 merge, and finish operations for parallel execution.
@@ -184,12 +188,14 @@ use worker-local states followed by a deterministic merge; generic and undeclare
 reducers remain serial. Epoch candidates are hash-partitioned for parallel set
 deduplication or per-key lattice joining.
 
-Expression lifts, hash/equality functions, and lattice joins must be pure with
-respect to the relation database. The type system cannot prove that host C++
-callables satisfy those laws, so they are part of the embedding contract.
+Opaque lifts, reducers, and lattice joins are conservative and serial by default.
+`FunctionProperties::parallel()` and `ReducerProperties::parallel()` explicitly
+attest purity, determinism, algebraic laws, and thread safety.
+`ExecutionOptions::debug_contracts` replays callbacks and samples lattice laws.
 
-One compiled context permits one active `run()` at a time. Concurrent calls are
-serialized. Compilation, relation/variable definition, and `Relation::insert()`
+One compiled context permits one mutating `run()` at a time. Concurrent mutating
+calls are serialized, while `runReadOnly()` calls may share a stable fixed point.
+Compilation, relation/variable definition, and relation mutation
 during a run fail with `std::logic_error`; load or update base facts between runs.
 Read-only relation access should likewise be coordinated by the embedding
 application.
@@ -202,22 +208,21 @@ closure is discarded while base facts and unaffected stable SCCs remain visible.
 Exceptions are rethrown after cleanup. The same compiled program may then be run
 again safely.
 
-A compiled program is tied to the Context schema present at `compile()` time.
-Adding a relation or variable after compilation requires recompilation before the
-program may be run again. Injected schedulers must report at least one worker.
+A compiled plan retains the immutable descriptors it references. Unrelated relation
+or variable additions do not invalidate it. Injected schedulers must report at
+least one worker.
 
-Rule planning observes relation statistics at `compile()` time. For best join
-orders, load representative base facts before compiling; a later rerun preserves
-the compiled physical order even if cardinalities have changed substantially.
+Native integral and Boolean expression trees are compiled with LLVM ORC JIT.
+Checked portable expressions and opaque lifts retain their semantic callbacks.
+Simple projection rules use a compiled physical kernel; unsupported rules retain
+the interpreter fallback.
 
 ## Explicit non-goals
 
 - Rust macro or Rust DSL compatibility
 - `ascent_source!` and Rust host-expression parsing
-- procedural macros or generated C++ kernels
-- BYODS implementations (an extension boundary may be added later)
+- procedural macros
 - WASM support
-- incremental deletion
 - distributed execution
 
 ## Support matrix
@@ -228,12 +233,15 @@ the compiled physical order even if cardinalities have changed substantially.
 | Conditions and head expressions | implemented | grounded pure expressions |
 | Positive recursion and SCCs | implemented | least fixed point |
 | Semi-naive execution | implemented | `Total` / `Delta` / `New` epochs |
-| Runtime bitmask indexes | implemented | selected at compile time; incrementally maintained |
-| Aggregation | implemented | stratified generic/reducible aggregators |
+| Runtime arrangements | implemented | reusable prefixes, budgets, immutable epoch reads |
+| Aggregation | implemented | subplans, stratified and declared-monotone recursion |
 | Lattice relations | implemented | joined values plus standard lattice library |
 | Negation | implemented | stratified anti-join |
-| Join planning | implemented | greedy observed-distinct cost estimate |
-| Parallel execution | implemented | BSP rules, reducers, coalesce, and merge |
+| Join planning | implemented | skew statistics, DP/beam search, adaptive replanning |
+| Incremental updates | implemented | delta additions; conservative deletion rebuild |
+| Goal specialization | implemented | backward pruning and bound magic specialization |
+| Typed/JIT kernels | implemented | typed columns, projection kernels, LLVM expressions |
+| Parallel execution | implemented | BSP rules, reducers, sharded dedup/index/commit |
 | Cooperative cancellation | implemented | dirty derived state is discarded on cancellation |
 | Runtime tracing | implemented | SCC, rule, and delta traces |
 
@@ -241,9 +249,10 @@ the compiled physical order even if cardinalities have changed substantially.
 
 `lotus-datalog` consumes JSON Semantic IR version 1 rather than Rust syntax. Every
 program and every result carries `"schema_version": 1`. It emits canonical, sorted
-JSON rows plus execution statistics, so later differential and performance testing
-can be implemented as ordinary Python scripts without a dedicated C++ benchmark or
-`tests/differential` target. CLI failures use a machine-readable error envelope;
+JSON rows plus execution statistics. `lotus-datalog explain` and
+`lotus-datalog explain --analyze` expose estimated and actual plans, while
+`lotus-datalog-benchmark` provides deterministic storage, skew, proof-explosion,
+closure, and incremental workloads. CLI failures use a machine-readable error envelope;
 portable arithmetic failures have category `evaluation` and a stable error code.
 `lotus-datalog validate` performs parsing, type checking, grounding, dependency
 analysis, stratification, SCC construction, and planning without executing the

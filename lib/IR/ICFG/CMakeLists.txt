@@ -4,3 +4,7 @@ add_library(CanaryICFG STATIC
   ICFGBuilder.cpp
   ICFG.cpp
 )
+
+target_link_libraries(CanaryICFG PUBLIC
+  LLVMAnalysis
+  LLVMCore)

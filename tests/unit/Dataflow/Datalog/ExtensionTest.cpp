@@ -26,11 +26,28 @@ struct ThrowingMinimum {
   }
 };
 
+struct NonIdempotentLattice {
+  int value = 0;
+  bool joinMut(const NonIdempotentLattice &other) {
+    value += other.value;
+    return other.value != 0;
+  }
+  friend bool operator==(const NonIdempotentLattice &lhs,
+                         const NonIdempotentLattice &rhs) {
+    return lhs.value == rhs.value;
+  }
+};
+
 bool ThrowingMinimum::throw_on_join = false;
 
 namespace std {
 template <> struct hash<ThrowingMinimum> {
   std::size_t operator()(const ThrowingMinimum &value) const {
+    return std::hash<int>{}(value.value);
+  }
+};
+template <> struct hash<NonIdempotentLattice> {
+  std::size_t operator()(const NonIdempotentLattice &value) const {
     return std::hash<int>{}(value.value);
   }
 };
@@ -277,6 +294,73 @@ TEST(DatalogTest, PlannerUsesObservedIndexDistinctCounts) {
   EXPECT_GT(compiled.stats().planned_reorders, 0U);
 }
 
+TEST(DatalogTest, ReusesMultiColumnArrangementForPrefixLookup) {
+  context ctx;
+  auto single_key = ctx.relation<int>("single_key");
+  auto pair_key = ctx.relation<int, int>("pair_key");
+  auto triple = ctx.relation<int, int, int>("triple");
+  auto first_output = ctx.relation<int>("first_output");
+  auto second_output = ctx.relation<int>("second_output");
+  auto x = ctx.var<int>("x");
+  auto y = ctx.var<int>("y");
+  auto z = ctx.var<int>("z");
+  single_key.insert(1);
+  pair_key.insert(1, 3);
+  triple.insert(1, 10, 2);
+  triple.insert(1, 11, 3);
+  triple.insert(2, 12, 3);
+
+  program p(ctx);
+  p.rule(first_output(y), single_key(x) && triple(x, y, _));
+  p.rule(second_output(y), pair_key(x, z) && triple(x, y, z));
+  auto compiled = p.compile();
+  compiled.run();
+
+  EXPECT_EQ(first_output.rows().size(), 2U);
+  EXPECT_TRUE(second_output.contains(11));
+  EXPECT_EQ(compiled.stats().index_count, 1U);
+}
+
+TEST(DatalogTest, IndexBudgetFallsBackToCorrectFullScan) {
+  context ctx;
+  auto input = ctx.relation<int, int>("input");
+  auto output = ctx.relation<int>("output");
+  auto value = ctx.var<int>("value");
+  for (int key = 0; key < 100; ++key)
+    input.insert(key, key + 1);
+  program p(ctx);
+  p.rule(output(value), input(77, value));
+
+  CompileOptions options;
+  options.index_memory_budget_bytes = 0;
+  options.max_arrangements_per_relation = 0;
+  auto compiled = p.compile(options);
+  compiled.run();
+
+  EXPECT_TRUE(output.contains(78));
+  EXPECT_EQ(compiled.stats().index_count, 0U);
+  EXPECT_EQ(compiled.stats().index_lookups, 0U);
+  EXPECT_EQ(compiled.stats().tuples_scanned, 100U);
+}
+
+TEST(DatalogTest, UsesOrderedAccessPathForRangeFilter) {
+  context ctx;
+  auto input = ctx.relation<int>("input");
+  auto output = ctx.relation<int>("output");
+  auto x = ctx.var<int>("x");
+  for (int value = 0; value < 1000; ++value)
+    input.insert(value);
+  program p(ctx);
+  p.rule(output(x), input(x) && where(990 <= x));
+  auto compiled = p.compile();
+  compiled.run();
+
+  EXPECT_EQ(output.rows().size(), 10U);
+  EXPECT_TRUE(output.contains(999));
+  EXPECT_EQ(compiled.stats().ordered_range_lookups, 1U);
+  EXPECT_EQ(compiled.stats().tuples_scanned, 10U);
+}
+
 TEST(DatalogTest, SupportsStreamingParameterizedAggregator) {
   context ctx;
   auto input = ctx.relation<int>("input");
@@ -420,6 +504,23 @@ TEST(DatalogTest, ThrowingLatticeJoinDoesNotCommitPartialState) {
   ThrowingMinimum::throw_on_join = false;
   compiled.run();
   EXPECT_TRUE(output.contains(1, ThrowingMinimum{5}));
+}
+
+TEST(DatalogTest, DebugContractsRejectNonIdempotentLattice) {
+  context ctx;
+  auto input = ctx.relation<int, NonIdempotentLattice>("input");
+  auto output = ctx.lattice<int, NonIdempotentLattice>("output");
+  auto key = ctx.var<int>("key");
+  auto value = ctx.var<NonIdempotentLattice>("value");
+  input.insert(1, NonIdempotentLattice{1});
+  program p(ctx);
+  p.rule(output(key, value), input(key, value));
+  auto compiled = p.compile();
+  ExecutionOptions options;
+  options.debug_contracts = true;
+
+  EXPECT_THROW(compiled.run(options), std::logic_error);
+  EXPECT_TRUE(output.rows().empty());
 }
 
 TEST(DatalogTest, RunStateIsResetAfterExpressionFailure) {

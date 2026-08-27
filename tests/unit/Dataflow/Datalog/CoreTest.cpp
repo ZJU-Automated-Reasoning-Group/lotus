@@ -343,6 +343,8 @@ TEST(DatalogTest, SupportsNestedArithmeticHeadExpressions) {
   compiled.run();
 
   EXPECT_TRUE(output.contains(7));
+  EXPECT_GT(compiled.stats().jit_compiled_expressions, 0U);
+  EXPECT_GT(compiled.stats().jit_expression_evaluations, 0U);
 }
 
 TEST(DatalogTest, SupportsScalarOnLeftSideOfExpression) {
@@ -401,7 +403,92 @@ TEST(DatalogTest, IncorporatesNewExtensionalFactsOnLaterRun) {
   EXPECT_TRUE(path.contains(1, 3));
 }
 
-TEST(DatalogTest, RejectsRunningAfterContextSchemaChanges) {
+TEST(DatalogTest, PropagatesOnlyNewFactsThroughPositiveRecursiveSccs) {
+  context ctx;
+  auto edge = ctx.relation<int, int>("edge");
+  auto path = ctx.relation<int, int>("path");
+  auto x = ctx.var<int>("x");
+  auto y = ctx.var<int>("y");
+  auto z = ctx.var<int>("z");
+  edge.insert(1, 2);
+  edge.insert(2, 3);
+  program p(ctx);
+  p.rule(path(x, y), edge(x, y));
+  p.rule(path(x, z), path(x, y) && edge(y, z));
+  auto compiled = p.compile();
+  compiled.run();
+  ASSERT_EQ(path.rows().size(), 3U);
+
+  edge.insert(3, 4);
+  compiled.run();
+
+  EXPECT_EQ(path.rows().size(), 6U);
+  EXPECT_TRUE(path.contains(1, 4));
+  EXPECT_EQ(compiled.stats().base_delta_facts, 1U);
+  EXPECT_GT(compiled.stats().incremental_sccs, 0U);
+  EXPECT_EQ(compiled.stats().rebuilt_sccs, 0U);
+  EXPECT_EQ(compiled.stats().inserted_facts, 3U);
+}
+
+TEST(DatalogTest, IncrementalJoinHandlesChangesInMultipleInputs) {
+  context ctx;
+  auto left = ctx.relation<int, int>("left");
+  auto right = ctx.relation<int, int>("right");
+  auto result = ctx.relation<int, int>("result");
+  auto x = ctx.var<int>("x");
+  auto y = ctx.var<int>("y");
+  auto z = ctx.var<int>("z");
+  left.insert(1, 10);
+  right.insert(10, 100);
+  program p(ctx);
+  p.rule(result(x, z), left(x, y) && right(y, z));
+  auto compiled = p.compile();
+  compiled.run();
+  ASSERT_TRUE(result.contains(1, 100));
+
+  left.insert(2, 20);
+  right.insert(20, 200);
+  left.insert(3, 10);
+  right.insert(10, 101);
+  compiled.run();
+
+  EXPECT_TRUE(result.contains(2, 200));
+  EXPECT_TRUE(result.contains(3, 100));
+  EXPECT_TRUE(result.contains(1, 101));
+  EXPECT_TRUE(result.contains(3, 101));
+  EXPECT_EQ(result.rows().size(), 5U);
+  EXPECT_EQ(compiled.stats().rebuilt_sccs, 0U);
+}
+
+TEST(DatalogTest, BaseDeletionRecomputesDependentClosure) {
+  context ctx;
+  auto edge = ctx.relation<int, int>("edge");
+  auto path = ctx.relation<int, int>("path");
+  auto x = ctx.var<int>("x");
+  auto y = ctx.var<int>("y");
+  auto z = ctx.var<int>("z");
+  edge.insert(1, 2);
+  edge.insert(2, 3);
+  program p(ctx);
+  p.rule(path(x, y), edge(x, y));
+  p.rule(path(x, z), path(x, y) && edge(y, z));
+  auto compiled = p.compile();
+  compiled.run();
+  ASSERT_TRUE(path.contains(1, 3));
+
+  EXPECT_TRUE(edge.erase(2, 3));
+  EXPECT_FALSE(edge.erase(2, 3));
+  compiled.run();
+
+  EXPECT_TRUE(path.contains(1, 2));
+  EXPECT_FALSE(path.contains(2, 3));
+  EXPECT_FALSE(path.contains(1, 3));
+  EXPECT_EQ(path.rows().size(), 1U);
+  EXPECT_GT(compiled.stats().rebuilt_sccs, 0U);
+  EXPECT_EQ(compiled.stats().incremental_sccs, 0U);
+}
+
+TEST(DatalogTest, CompiledPlanIgnoresUnrelatedSchemaGrowth) {
   context ctx;
   auto input = ctx.relation<int>("input");
   auto output = ctx.relation<int>("output");
@@ -415,8 +502,11 @@ TEST(DatalogTest, RejectsRunningAfterContextSchemaChanges) {
 
   auto unrelated = ctx.relation<int>("unrelated");
   unrelated.insert(2);
-  EXPECT_THROW(compiled.run(), std::logic_error);
+  auto unrelated_variable = ctx.var<int>("unrelated_variable");
+  (void)unrelated_variable;
+  EXPECT_NO_THROW(compiled.run());
   EXPECT_TRUE(output.contains(1));
+  EXPECT_EQ(compiled.stats().relation_count, 2U);
 }
 
 TEST(DatalogTest, ReRunOnlyEvaluatesDependentSccBranches) {
@@ -640,9 +730,9 @@ TEST(DatalogTest, AnalyzeExplainReportsWhenProfileWasNotCollected) {
   compiled.run();
 
   EXPECT_FALSE(compiled.profile().collected);
-  EXPECT_NE(compiled.explain(ExplainMode::Analyze)
-                .find("profile: not collected"),
-            std::string::npos);
+  EXPECT_NE(
+      compiled.explain(ExplainMode::Analyze).find("profile: not collected"),
+      std::string::npos);
 }
 
 TEST(DatalogTest, TypedColumnsUseLessPayloadStorageThanDynamicCells) {
@@ -682,6 +772,77 @@ TEST(DatalogTest, PromotingDerivedFactToBaseSurvivesRecomputation) {
   EXPECT_TRUE(output.contains(1));
   EXPECT_TRUE(output.contains(2));
   EXPECT_EQ(output.rows().size(), 2U);
+}
+
+TEST(DatalogTest, GoalCompilationPrunesUnrelatedRuleBranches) {
+  context ctx;
+  auto left_input = ctx.relation<int>("left_input");
+  auto left_middle = ctx.relation<int>("left_middle");
+  auto left_output = ctx.relation<int>("left_output");
+  auto right_input = ctx.relation<int>("right_input");
+  auto right_output = ctx.relation<int>("right_output");
+  auto x = ctx.var<int>("x");
+  left_input.insert(1);
+  right_input.insert(2);
+  program p(ctx);
+  p.rule(left_middle(x), left_input(x));
+  p.rule(left_output(x), left_middle(x));
+  p.rule(right_output(x), right_input(x));
+
+  CompileOptions options;
+  options.goals = {left_output.id()};
+  auto compiled = p.compile(options);
+  compiled.run();
+
+  EXPECT_TRUE(left_output.contains(1));
+  EXPECT_TRUE(right_output.rows().empty());
+  EXPECT_EQ(compiled.stats().pruned_rules, 1U);
+}
+
+TEST(DatalogTest, ReplansAtRunBoundaryAfterLargeCardinalityChange) {
+  context ctx;
+  auto input = ctx.relation<int>("input");
+  auto output = ctx.relation<int>("output");
+  auto x = ctx.var<int>("x");
+  input.insert(0);
+  program p(ctx);
+  p.rule(output(x), input(x));
+  CompileOptions compile_options;
+  compile_options.adaptive_replan_ratio = 2;
+  auto compiled = p.compile(compile_options);
+  compiled.run();
+
+  for (int value = 1; value < 16; ++value)
+    input.insert(value);
+  compiled.run();
+
+  EXPECT_EQ(output.rows().size(), 16U);
+  EXPECT_EQ(compiled.stats().adaptive_replans, 1U);
+  EXPECT_GT(compiled.stats().incremental_sccs, 0U);
+}
+
+TEST(DatalogTest, BoundQueryGoalSpecializesRecursiveDerivations) {
+  context ctx;
+  auto edge = ctx.relation<int, int>("edge");
+  auto path = ctx.relation<int, int>("path");
+  auto x = ctx.var<int>("x");
+  auto y = ctx.var<int>("y");
+  auto z = ctx.var<int>("z");
+  edge.insert(0, 1);
+  edge.insert(1, 2);
+  edge.insert(100, 101);
+  edge.insert(101, 102);
+  program p(ctx);
+  p.rule(path(x, y), edge(x, y));
+  p.rule(path(x, z), path(x, y) && edge(y, z));
+
+  CompileOptions options;
+  options.query_goals = {QueryGoal{path.id(), {QueryBinding{0, std::any(0)}}}};
+  auto compiled = p.compile(options);
+  compiled.run();
+
+  EXPECT_EQ(asSet(path), (std::set<std::tuple<int, int>>{{0, 1}, {0, 2}}));
+  EXPECT_FALSE(path.contains(100, 102));
 }
 
 } // namespace

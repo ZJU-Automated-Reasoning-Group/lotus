@@ -132,8 +132,8 @@ TEST(DatalogJsonFrontendTest, EmitsPlanAndAnalyzeDiagnostics) {
 
   frontend::RunOptions explain_options;
   explain_options.explain = true;
-  const llvm::json::Value explained = parseOutput(executeInput(
-      program, frontend::InputFormat::Json, explain_options));
+  const llvm::json::Value explained = parseOutput(
+      executeInput(program, frontend::InputFormat::Json, explain_options));
   const llvm::json::Object *explain_root = explained.getAsObject();
   ASSERT_NE(explain_root, nullptr);
   EXPECT_EQ(explain_root->getString("status").getValueOr(""), "explained");
@@ -141,8 +141,8 @@ TEST(DatalogJsonFrontendTest, EmitsPlanAndAnalyzeDiagnostics) {
             llvm::StringRef::npos);
 
   explain_options.explain_analyze = true;
-  const llvm::json::Value analyzed = parseOutput(executeInput(
-      program, frontend::InputFormat::Json, explain_options));
+  const llvm::json::Value analyzed = parseOutput(
+      executeInput(program, frontend::InputFormat::Json, explain_options));
   const llvm::json::Object *analyze_root = analyzed.getAsObject();
   ASSERT_NE(analyze_root, nullptr);
   EXPECT_NE(analyze_root->getString("plan").getValueOr("").find("actual["),
@@ -435,20 +435,17 @@ TEST(DatalogLotusFrontendTest, ResolvesIncludesWithoutLibraryFilesystemAccess) {
     .include "rules/path.dl"
   )dl";
   frontend::RunOptions options;
-  options.source_resolver =
-      [](llvm::StringRef, llvm::StringRef requested)
+  options.source_resolver = [](llvm::StringRef, llvm::StringRef requested)
       -> std::optional<frontend::OwnedSourceUnit> {
     if (requested == "schema.dl")
       return frontend::OwnedSourceUnit{
           "project/schema.dl",
           ".decl edge(x: u64, y: u64)\n.decl path(x: u64, y: u64)"};
     if (requested == "facts/graph.dl")
-      return frontend::OwnedSourceUnit{"project/facts/graph.dl",
-                                       "edge(1, 2)."};
+      return frontend::OwnedSourceUnit{"project/facts/graph.dl", "edge(1, 2)."};
     if (requested == "rules/path.dl")
       return frontend::OwnedSourceUnit{
-          "project/rules/path.dl",
-          "path(X, Y) :- edge(X, Y).\n.output path"};
+          "project/rules/path.dl", "path(X, Y) :- edge(X, Y).\n.output path"};
     return std::nullopt;
   };
   std::string output;

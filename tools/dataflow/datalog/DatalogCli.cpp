@@ -64,8 +64,8 @@ int main(int argc, char **argv) {
   options.validate_only = command == "validate";
   options.explain = command == "explain";
   options.execution.trace_stream = &std::cerr;
-  options.source_resolver =
-      [](llvm::StringRef including_source, llvm::StringRef requested_path)
+  options.source_resolver = [](llvm::StringRef including_source,
+                               llvm::StringRef requested_path)
       -> std::optional<lotus::datalog::frontend::OwnedSourceUnit> {
     llvm::SmallString<256> resolved(requested_path);
     if (!llvm::sys::path::is_absolute(resolved)) {

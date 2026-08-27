@@ -3,8 +3,8 @@
 #include "Dataflow/Datalog/Core/Expr.h"
 #include "Dataflow/Datalog/Core/Lattice.h"
 #include "Dataflow/Datalog/Core/Relation.h"
-#include "Dataflow/Datalog/Semantic/SemanticIR.h"
 #include "Dataflow/Datalog/Core/TypeSupport.h"
+#include "Dataflow/Datalog/Semantic/SemanticIR.h"
 
 #include <any>
 #include <functional>
@@ -32,12 +32,14 @@ public:
     static_assert(sizeof...(Ts) <= sizeof(ColumnMask) * 8,
                   "Datalog relation arity exceeds the runtime index mask");
     std::vector<ColumnType> columns{detail::makeColumnType<Ts>()...};
-    RelationId id =
-        addRelation(std::move(name), std::move(columns), RelationKind::Set, {});
+    RelationId id = addRelation(std::move(name), std::move(columns),
+                                RelationKind::Set, {}, {});
     return Relation<Ts...>(this, id, relationName(id));
   }
 
-  template <typename... Ts> Relation<Ts...> lattice(std::string name) {
+  template <typename... Ts>
+  Relation<Ts...> lattice(std::string name,
+                          FunctionProperties properties = {}) {
     static_assert(sizeof...(Ts) >= 1,
                   "lattice relations require a lattice value column");
     static_assert((std::is_copy_constructible_v<Ts> && ...),
@@ -52,8 +54,9 @@ public:
       return std::any_cast<Lattice &>(current).joinMut(
           std::any_cast<const Lattice &>(candidate));
     };
-    RelationId id = addRelation(std::move(name), std::move(columns),
-                                RelationKind::Lattice, std::move(join));
+    RelationId id =
+        addRelation(std::move(name), std::move(columns), RelationKind::Lattice,
+                    std::move(join), properties);
     return Relation<Ts...>(this, id, relationName(id));
   }
 
@@ -69,12 +72,14 @@ private:
   RelationId
   addRelation(std::string name, std::vector<ColumnType> columns,
               RelationKind kind,
-              std::function<bool(std::any &, const std::any &)> lattice_join);
+              std::function<bool(std::any &, const std::any &)> lattice_join,
+              FunctionProperties lattice_properties);
   VarId addVariable(std::string name, std::type_index type, bool anonymous);
   const std::string &relationName(RelationId id) const;
   const std::string &variableName(VarId id) const;
   TermIR freshWildcard(std::type_index type);
   void insert(RelationId relation, std::vector<std::any> row);
+  bool erase(RelationId relation, const std::vector<std::any> &row);
   bool contains(RelationId relation, const std::vector<std::any> &row) const;
   std::vector<std::vector<std::any>> rows(RelationId relation) const;
 
@@ -105,6 +110,11 @@ void Relation<Ts...>::insertRow(std::vector<std::any> row) const {
 template <typename... Ts>
 bool Relation<Ts...>::containsRow(const std::vector<std::any> &row) const {
   return context_->contains(id_, row);
+}
+
+template <typename... Ts>
+bool Relation<Ts...>::eraseRow(const std::vector<std::any> &row) const {
+  return context_->erase(id_, row);
 }
 
 template <typename... Ts>

@@ -24,13 +24,15 @@ public:
   RelationId addRelation(
       std::string name, std::vector<ColumnType> columns,
       RelationKind kind = RelationKind::Set,
-      std::function<bool(std::any &, const std::any &)> lattice_join = {});
+      std::function<bool(std::any &, const std::any &)> lattice_join = {},
+      FunctionProperties lattice_properties = {});
   VarId addVariable(std::string name, std::type_index type,
                     bool anonymous = false);
   void addFact(RelationId relation, std::vector<std::any> row);
   void addRule(RuleIR rule);
 
   CompiledProgram compile() const;
+  CompiledProgram compile(const CompileOptions &options) const;
   std::vector<std::vector<std::any>> rows(RelationId relation) const;
 
 private:

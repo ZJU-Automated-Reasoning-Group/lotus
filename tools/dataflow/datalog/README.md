@@ -7,6 +7,7 @@ the same versioned Semantic IR and write deterministic JSON results.
 
 ```text
 lotus-datalog run <source...|-> [options]
+lotus-datalog explain <source...|-> [--analyze] [options]
 lotus-datalog validate <source...|-> [options]
 lotus-datalog schema
 ```
@@ -16,6 +17,8 @@ compile-time analysis without running the fixed point. Input format is detected
 from the first significant character, or selected with
 `--format auto|json|datalog|z3`. `run` also accepts `--workers N`,
 `--grain-size N`, `--pretty`, `--trace-scc`, `--trace-rule`, and `--trace-delta`.
+`explain` emits the selected SCC, join, lookup, and estimate plan without running;
+`--analyze` runs it with per-operation actual cardinalities.
 
 ## Native Datalog syntax
 

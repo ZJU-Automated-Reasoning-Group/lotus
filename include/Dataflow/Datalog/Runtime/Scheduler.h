@@ -41,6 +41,15 @@ struct ExecutionStats {
   std::size_t incremental_sccs = 0;
   std::size_t rebuilt_sccs = 0;
   std::size_t base_delta_facts = 0;
+  std::size_t adaptive_replans = 0;
+  std::size_t pruned_rules = 0;
+  std::size_t serial_host_rule_evaluations = 0;
+  std::size_t compiled_kernel_evaluations = 0;
+  std::size_t interpreter_rule_evaluations = 0;
+  std::size_t jit_compiled_expressions = 0;
+  std::size_t jit_expression_evaluations = 0;
+  std::size_t incremental_aggregate_groups = 0;
+  std::size_t ordered_range_lookups = 0;
 };
 
 class Scheduler {
@@ -89,6 +98,7 @@ struct ExecutionOptions {
   bool trace_rule = false;
   bool trace_delta = false;
   bool collect_profile = false;
+  bool debug_contracts = false;
   std::ostream *trace_stream = nullptr;
 };
 

@@ -44,6 +44,8 @@ TEST(DatalogTest, ReRunRetractsNegatedResultsAfterNewBaseFacts) {
   compiled.run();
   EXPECT_FALSE(result.contains(1));
   EXPECT_TRUE(result.rows().empty());
+  EXPECT_GT(compiled.stats().incremental_sccs, 0U);
+  EXPECT_GT(compiled.stats().rebuilt_sccs, 0U);
 }
 
 TEST(DatalogTest, PlannerMovesGroundingAtomBeforeNegation) {
@@ -132,7 +134,9 @@ TEST(DatalogTest, ReRunReplacesAggregateResultsAfterNewBaseFacts) {
   auto key = ctx.var<int>("key");
   auto count_value = ctx.var<std::size_t>("count_value");
   group.insert(1);
+  group.insert(2);
   value.insert(1, 10);
+  value.insert(2, 30);
 
   program p(ctx);
   p.rule(result(key, count_value),
@@ -140,12 +144,83 @@ TEST(DatalogTest, ReRunReplacesAggregateResultsAfterNewBaseFacts) {
   auto compiled = p.compile();
   compiled.run();
   ASSERT_TRUE(result.contains(1, 1));
+  ASSERT_TRUE(result.contains(2, 1));
 
   value.insert(1, 20);
   compiled.run();
   EXPECT_FALSE(result.contains(1, 1));
   EXPECT_TRUE(result.contains(1, 2));
-  EXPECT_EQ(result.rows().size(), 1U);
+  EXPECT_TRUE(result.contains(2, 1));
+  EXPECT_EQ(result.rows().size(), 2U);
+  EXPECT_GT(compiled.stats().incremental_sccs, 0U);
+  EXPECT_EQ(compiled.stats().rebuilt_sccs, 0U);
+  EXPECT_EQ(compiled.stats().incremental_aggregate_groups, 1U);
+}
+
+TEST(DatalogTest, AggregatesDirectlyOverJoinSubplan) {
+  context ctx;
+  auto person = ctx.relation<int>("person");
+  auto grade = ctx.relation<int, int, int>("grade");
+  auto curve = ctx.relation<int, int>("curve");
+  auto total = ctx.relation<int, int>("total");
+  auto student = ctx.var<int>("student");
+  auto course = ctx.var<int>("course");
+  auto score = ctx.var<int>("score");
+  auto bonus = ctx.var<int>("bonus");
+  auto result = ctx.var<int>("result");
+  person.insert(1);
+  grade.insert(1, 10, 80);
+  grade.insert(1, 11, 90);
+  curve.insert(10, 5);
+  curve.insert(11, 2);
+
+  program p(ctx);
+  p.rule(total(student, result),
+         person(student) &&
+             aggregate(result, sum(score + bonus),
+                       grade(student, course, score) && curve(course, bonus)));
+  auto compiled = p.compile();
+  compiled.run();
+
+  EXPECT_TRUE(total.contains(1, 177));
+  EXPECT_EQ(total.rows().size(), 1U);
+}
+
+TEST(DatalogTest, SupportsDeclaredMonotoneRecursiveAggregateIntoLattice) {
+  context ctx;
+  auto level =
+      ctx.lattice<max_lattice<int>>("level", FunctionProperties::parallel());
+  auto current = ctx.var<max_lattice<int>>("current");
+  auto result = ctx.var<int>("result");
+  auto current_value = lift(
+      FunctionProperties::parallel(),
+      [](max_lattice<int> value) { return value.value(); }, current);
+  level.insert(max_lattice<int>(0));
+
+  program p(ctx);
+  p.rule(level(lift(
+             FunctionProperties::parallel(),
+             [](int value) { return max_lattice<int>(value); }, result)),
+         aggregate(result, maximum(current_value + 1).monotone(),
+                   level(current) && where(current_value < 3)));
+  auto compiled = p.compile();
+  compiled.run();
+
+  EXPECT_TRUE(level.contains(max_lattice<int>(3)));
+  EXPECT_EQ(level.rows().size(), 1U);
+  EXPECT_GT(compiled.stats().fixpoint_iterations, 1U);
+}
+
+TEST(DatalogTest, RejectsMonotoneAggregateWithSetHead) {
+  context ctx;
+  auto input = ctx.relation<int>("input");
+  auto output = ctx.relation<int>("output");
+  auto x = ctx.var<int>("x");
+  auto result = ctx.var<int>("result");
+  program p(ctx);
+  p.rule(output(result), aggregate(result, maximum(x).monotone(), input(x)));
+
+  EXPECT_THROW(p.compile(), CompileError);
 }
 
 TEST(DatalogTest, SupportsGenericBlockingAggregator) {
@@ -198,6 +273,16 @@ TEST(DatalogTest, LatticeRelationJoinsValuesByKey) {
 
   ASSERT_EQ(distance.rows().size(), 1U);
   EXPECT_TRUE(distance.contains(1, 2, min_lattice<int>(70)));
+}
+
+TEST(DatalogTest, ErasesBaseLatticeKey) {
+  context ctx;
+  auto distance = ctx.lattice<int, min_lattice<int>>("distance");
+  distance.insert(1, min_lattice<int>(10));
+
+  EXPECT_TRUE(distance.erase(1, min_lattice<int>(10)));
+  EXPECT_TRUE(distance.rows().empty());
+  EXPECT_FALSE(distance.erase(1, min_lattice<int>(10)));
 }
 
 TEST(DatalogTest, LatticeSemiNaiveCoalescesCandidatesPerKey) {

@@ -70,6 +70,7 @@ public:
   virtual std::size_t size() const = 0;
   virtual void reserve(std::size_t count) = 0;
   virtual void append(std::any value) = 0;
+  virtual void appendMany(std::vector<std::any> values) = 0;
   virtual void update(std::size_t row, std::any value) = 0;
   virtual void truncate(std::size_t count) = 0;
   virtual ValueRef value(std::size_t row) const = 0;
@@ -179,6 +180,18 @@ enum class RelationKind {
   Lattice,
 };
 
+struct FunctionProperties {
+  bool pure = false;
+  bool deterministic = false;
+  bool parallel_safe = false;
+
+  static constexpr FunctionProperties parallel() { return {true, true, true}; }
+
+  constexpr bool canRunInParallel() const {
+    return pure && deterministic && parallel_safe;
+  }
+};
+
 struct ColumnType {
   std::type_index type = typeid(void);
   std::string name;
@@ -186,9 +199,41 @@ struct ColumnType {
   std::function<bool(const std::any &, const std::any &)> equal;
   std::function<std::size_t(ValueRef)> hash_value;
   std::function<bool(ValueRef, ValueRef)> equal_value;
+  std::function<bool(ValueRef, ValueRef)> less_value;
   std::function<std::unique_ptr<ColumnStorage>()> make_storage;
   std::function<void(const std::any &)> validate;
   std::function<void(const std::any &)> validate_key;
+  FunctionProperties properties;
+};
+
+enum class ExprOpcode {
+  Constant,
+  Variable,
+  Add,
+  Subtract,
+  Multiply,
+  Divide,
+  Remainder,
+  Equal,
+  NotEqual,
+  Less,
+  LessEqual,
+  Greater,
+  GreaterEqual,
+  LogicalAnd,
+  LogicalOr,
+  Negate,
+  Positive,
+  LogicalNot,
+};
+
+struct ExprNode {
+  ExprOpcode opcode = ExprOpcode::Constant;
+  std::type_index type = typeid(void);
+  std::any constant;
+  VarId variable = 0;
+  std::shared_ptr<ExprNode> lhs;
+  std::shared_ptr<ExprNode> rhs;
 };
 
 struct ExprIR {
@@ -196,6 +241,10 @@ struct ExprIR {
   std::vector<VarId> referenced_vars;
   std::function<std::any(const Binding &)> evaluate;
   std::string debug_name;
+  FunctionProperties properties;
+  std::shared_ptr<ExprNode> node;
+  bool jit_safe = false;
+  bool compiled_kernel = false;
 };
 
 struct TermIR {
@@ -227,6 +276,8 @@ struct FilterIR {
 struct NegAtomIR {
   AtomIR atom;
 };
+
+using AggregateSourceItemIR = std::variant<AtomIR, FilterIR, NegAtomIR>;
 
 // User reducers are serial by default.  Parallel evaluation is enabled only
 // when callers explicitly attest that partitioned add/merge is valid and that
@@ -261,10 +312,13 @@ struct AggregateIR {
   VarId output_var = 0;
   std::type_index output_type = typeid(void);
   AtomIR source;
+  std::vector<AggregateSourceItemIR> source_body;
   ExprIR projection;
   std::string name;
   std::function<std::vector<std::any>(const AggregateForEach &)> evaluate;
   std::optional<ReducerIR> reducer;
+  FunctionProperties properties;
+  bool monotone = false;
 };
 
 using BodyItemIR = std::variant<AtomIR, FilterIR, NegAtomIR, AggregateIR>;
@@ -280,6 +334,7 @@ struct RelationIR {
   std::vector<ColumnType> columns;
   RelationKind kind = RelationKind::Set;
   std::function<bool(std::any &, const std::any &)> lattice_join;
+  FunctionProperties lattice_properties;
 };
 
 } // namespace lotus::datalog

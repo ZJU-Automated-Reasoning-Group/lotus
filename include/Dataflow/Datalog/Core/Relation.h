@@ -32,6 +32,13 @@ public:
     insertRow(std::move(row));
   }
 
+  bool erase(const Ts &...values) const {
+    std::vector<std::any> row;
+    row.reserve(sizeof...(Ts));
+    (row.emplace_back(values), ...);
+    return eraseRow(row);
+  }
+
   bool contains(const Ts &...values) const {
     std::vector<std::any> row;
     row.reserve(sizeof...(Ts));
@@ -136,6 +143,7 @@ private:
   void ensureContext(Context *other) const;
   void insertRow(std::vector<std::any> row) const;
   bool containsRow(const std::vector<std::any> &row) const;
+  bool eraseRow(const std::vector<std::any> &row) const;
   std::vector<std::vector<std::any>> getRows() const;
 
   Context *context_ = nullptr;

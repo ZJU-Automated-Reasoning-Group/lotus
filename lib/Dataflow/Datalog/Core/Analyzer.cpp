@@ -18,8 +18,27 @@ collectDependencies(const std::vector<RuleIR> &rules) {
         dependencies.push_back({negation->atom.relation, rule.head.relation,
                                 DependencyKind::Negative});
       } else if (const auto *aggregate = std::get_if<AggregateIR>(&item)) {
-        dependencies.push_back({aggregate->source.relation, rule.head.relation,
-                                DependencyKind::Aggregate});
+        if (aggregate->source_body.empty()) {
+          dependencies.push_back(
+              {aggregate->source.relation, rule.head.relation,
+               aggregate->monotone ? DependencyKind::Positive
+                                   : DependencyKind::Aggregate});
+        } else {
+          for (const AggregateSourceItemIR &source_item :
+               aggregate->source_body) {
+            if (const auto *atom = std::get_if<AtomIR>(&source_item)) {
+              dependencies.push_back({atom->relation, rule.head.relation,
+                                      aggregate->monotone
+                                          ? DependencyKind::Positive
+                                          : DependencyKind::Aggregate});
+            } else if (const auto *negation =
+                           std::get_if<NegAtomIR>(&source_item)) {
+              dependencies.push_back({negation->atom.relation,
+                                      rule.head.relation,
+                                      DependencyKind::Aggregate});
+            }
+          }
+        }
       }
     }
   }

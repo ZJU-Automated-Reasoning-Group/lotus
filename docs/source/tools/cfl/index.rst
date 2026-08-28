@@ -13,7 +13,30 @@ enables analysis of complex program properties using grammar-based constraints.
 
 **Location**: ``tools/cfl/``
 
-**Tools**: CSR (indexed CFL reachability)
+**Tools**: ``lotus-cfl-mcfl`` (MCFL reachability), CSR (indexed CFL
+reachability)
+
+MCFL: Multiple Context-Free Language Reachability
+-------------------------------------------------
+
+Runs the POPL 2025 MCFL hierarchy for underapproximating interleaved-Dyck
+reachability on artifact-compatible DOT graphs.
+
+**Binary**: ``lotus-cfl-mcfl``
+
+**Location**: ``tools/cfl/mcfl/lotus-cfl-mcfl.cpp``
+
+.. code-block:: bash
+
+   cmake -S . -B build -DLOTUS_ENABLE_CFL=ON
+   cmake --build build --target lotus-cfl-mcfl
+   ./build/bin/lotus-cfl-mcfl --dimension 2 input.dot
+
+Useful options include ``--simple`` for the weaker ``G_d^circ`` grammar,
+``--no-condense`` to disable cycle elimination, ``--stats`` for saturation
+counters, ``--artifact-compatible`` for exact condensed cross-product
+expansion, ``--print-pairs`` for the final relation, and ``-o FILE`` for file
+output. See :doc:`../../cfl/mcfl` for the library API and algorithm details.
 
 CSR: Context-Sensitive Reachability
 -----------------------------------

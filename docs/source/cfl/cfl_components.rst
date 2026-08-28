@@ -33,6 +33,22 @@ families of Dyck constraints.
 * Stronger parity grammar and pairwise on-demand refinement
 * Taint and value-flow benchmark modes
 
+Multiple Context-Free Language Reachability
+-------------------------------------------
+
+All-pairs reachability for non-deleting, non-permuting MCFGs, plus the POPL
+2025 MCFL underapproximation hierarchy for interleaved Dyck languages.
+
+**Location**: ``include/CFL/MCFL/``, ``lib/CFL/MCFL/``
+
+**Features**:
+
+* All five normal-form MCFL rule types with structural validation
+* Indexed worklist saturation and tuple reachability pruning
+* Concrete path witnesses from retained derivation DAGs
+* ``G_d^circ`` and ``G_d^+`` grammar generation for arbitrary dimensions
+* Artifact-compatible staged condensation, DOT input, and command-line tool
+
 CSIndex (Context-Sensitive Indexing)
 ------------------------------------
 
@@ -72,4 +88,5 @@ See also:
 - :doc:`csindex`
 - :doc:`interleaved_dyck_approximation`
 - :doc:`inter_dyck_graph_reduce`
+- :doc:`mcfl`
 - :doc:`mutual_refinement`

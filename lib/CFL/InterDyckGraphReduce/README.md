@@ -27,3 +27,22 @@ cp example/example.dot current.dot
 ```
 
 The resulting graph is in ``current.dot``.
+
+## Relationship to other Lotus CFL components
+
+This module is one of several related implementations for interleaved-Dyck
+reachability in Lotus:
+
+- [`MCFL`](../MCFL/README.md) provides a general multiple-context-free grammar
+  solver and dimension-indexed, witness-producing underapproximations.
+- [`MutualRefinement`](../MutualRefinement/README.md) refines multiple
+  context-free projections of the same graph problem.
+- [`InterleavedDyck`](../InterleavedDyck/README.md) builds a staged analysis on
+  top of projected CFL solving and `MutualRefinement`.
+
+`InterDyckGraphReduce` is currently standalone and uses the specialized public
+types under `include/CFL/InterDyckGraphReduce/`. It is conceptually suitable as
+a preprocessing stage for the other analyses, but no graph adapter or
+preservation contract currently connects them. Keeping the implementations
+separate avoids implying that a reduction proven for one reachability model is
+automatically valid for every MCFL grammar or refinement stage.

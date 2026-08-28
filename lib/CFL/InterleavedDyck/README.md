@@ -24,3 +24,22 @@ tree. This port is therefore an independent C++ reimplementation based on the
 published algorithm and observable artifact behavior, rather than a verbatim
 copy of its Go/Python sources. Its DOT benchmark inputs are stored under
 `benchmarks/interleaved-dyck-approximation/` with provenance noted there.
+
+## Relationship to other Lotus CFL components
+
+This module is currently the concrete bridge among Lotus's related
+interleaved-Dyck implementations:
+
+- it directly links against [`MutualRefinement`](../MutualRefinement/README.md)
+  for CNF saturation, refinement, and derivation tracing;
+- [`InterDyckGraphReduce`](../InterDyckGraphReduce/README.md) offers a separate
+  specialized graph-simplification approach but is not currently called by
+  this pipeline; and
+- [`MCFL`](../MCFL/README.md) offers the complementary `G_d^circ`/`G_d^+`
+  underapproximation hierarchy and a general MCFG solver, using independent
+  graph, grammar, and witness representations.
+
+The conceptual overlap does not imply API compatibility. A future unified
+pipeline would need explicit graph/label conversion and preservation contracts
+for every preprocessing or refinement boundary. See the
+[CFL overview](../README.md) for the side-by-side comparison.

@@ -396,7 +396,7 @@ public:
   }
 
   // Replace shared static empty containers with a per-instance fallback.
-  // Solvers can configure it to `allTop()` so raw result queries remain
+  // Solvers can configure it to `bottom()` so raw result queries remain
   // lattice-aware for must-analyses and other non-empty top elements.
   const ContainerT &IN(const ContextKey &Key) const {
     auto It = Ins.find(Key);
@@ -443,7 +443,7 @@ private:
   std::map<ContextKey, ContainerT> Outs;
   /// Per-instance fallback returned for missing keys.
   /// Defaults to a value-initialized container and can be overridden by the
-  /// solver with the lattice's `allTop()` element.
+  /// solver with the lattice's `bottom()` element.
   ContainerT MissingFactFallback{};
 };
 

@@ -28,15 +28,15 @@ namespace elimination {
 // The resulting equation graph is solved with PathSummaryEquationSolver, which
 // closes recursive SCCs with Star expressions and evaluates SCCs in dependency
 // order.
-template <typename AnalysisDomainTy, unsigned K>
+template <typename AnalysisTypesT, unsigned K>
 class ForwardInterSummarySolver final {
 public:
-  using ProblemTy = InterEliminationProblem<AnalysisDomainTy>;
-  using fact_t = typename AnalysisDomainTy::fact_t;
-  using n_t = typename AnalysisDomainTy::n_t;
-  using f_t = typename AnalysisDomainTy::f_t;
-  using transfer_t = typename AnalysisDomainTy::transfer_t;
-  using i_t = typename AnalysisDomainTy::i_t;
+  using ProblemTy = InterEliminationProblem<AnalysisTypesT>;
+  using fact_t = typename AnalysisTypesT::fact_t;
+  using n_t = typename AnalysisTypesT::n_t;
+  using f_t = typename AnalysisTypesT::f_t;
+  using transfer_t = typename AnalysisTypesT::transfer_t;
+  using i_t = typename AnalysisTypesT::i_t;
   using result_t = InterDataFlowResultT<K, fact_t, transfer_t, n_t>;
   using Context = mono::CallStringCTX<n_t, K>;
 
@@ -52,7 +52,7 @@ public:
     }
   };
 
-  using atom_t = InterSummaryTransferAtom<AnalysisDomainTy>;
+  using atom_t = InterSummaryTransferAtom<AnalysisTypesT>;
   using summary_graph_t = PathSummaryEquationGraph<ContextKey, atom_t>;
   using expr_ref_t = typename summary_graph_t::expr_ref_t;
 
@@ -78,7 +78,7 @@ public:
 
     Graph = summary_graph_t{};
     Discovered.clear();
-    InitialFact = Problem.allTop();
+    InitialFact = Problem.bottom();
     HaveInitialFact = false;
 
     discoverEquationGraph();
@@ -89,7 +89,7 @@ public:
     DiagnosticsValue.equation_graph = Summary.diagnostics();
 
     Result = result_t{};
-    Result.setMissingFactFallback(Problem.allTop());
+    Result.setMissingFactFallback(Problem.bottom());
     evaluateSummaries(Summary);
     Result.setSolveStatus(SolveStatus::Ok);
     HaveResult = true;
@@ -127,7 +127,7 @@ private:
       HaveInitialFact = true;
       return;
     }
-    InitialFact = Problem.merge(InitialFact, Fact);
+    InitialFact = Problem.join(InitialFact, Fact);
   }
 
   void enqueue(ContextKey Key, std::deque<ContextKey> &Worklist) {
@@ -170,7 +170,7 @@ private:
         }
         auto Starts = ICF->getStartPointsOf(Entry);
         if (!Starts.empty() && Starts.front() != n_t{}) {
-          addSeed({Starts.front(), EmptyCtx}, Problem.allTop(), Worklist);
+          addSeed({Starts.front(), EmptyCtx}, Problem.bottom(), Worklist);
         }
       }
     }
@@ -262,11 +262,11 @@ private:
   void evaluateSummaries(
       const PathSummaryEquationResult<ContextKey, atom_t> &Summary) {
     if (!HaveInitialFact) {
-      InitialFact = Problem.allTop();
+      InitialFact = Problem.bottom();
     }
 
     for (const auto &Entry : Summary.summaries()) {
-      InterSummaryTransferEvaluator<AnalysisDomainTy, K> Evaluator(
+      InterSummaryTransferEvaluator<AnalysisTypesT, K> Evaluator(
           Problem, *ICF, Result, Entry.first.Ctx);
       auto In = Evaluator.evaluateExpr(Entry.second, InitialFact);
       Result.IN(Entry.first.Inst, Entry.first.Ctx) = In;

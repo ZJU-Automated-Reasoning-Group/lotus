@@ -11,17 +11,17 @@ namespace detail {
 // This variant eagerly pushes path-expression prefixes down to all leaves in an
 // interval. It is straightforward to understand, but it updates every leaf in a
 // subtree whenever an internal ADT node is processed.
-template <typename AnalysisDomainTy, typename ReducibleViewT>
+template <typename AnalysisTypesT, typename ReducibleViewT>
 bool computeADTSimplePathExpr(
-    IntraEliminationSolverContext<AnalysisDomainTy> &Ctx,
+    IntraEliminationSolverContext<AnalysisTypesT> &Ctx,
     const ReducibleViewT &R,
-    typename IntraEliminationSolverContext<AnalysisDomainTy>::ADTNode *W,
+    typename IntraEliminationSolverContext<AnalysisTypesT>::ADTNode *W,
     const std::unordered_map<
-        typename IntraEliminationSolverContext<AnalysisDomainTy>::n_t,
-        typename IntraEliminationSolverContext<AnalysisDomainTy>::ADTNode *>
+        typename IntraEliminationSolverContext<AnalysisTypesT>::n_t,
+        typename IntraEliminationSolverContext<AnalysisTypesT>::ADTNode *>
         &LeafOf,
     const std::vector<
-        typename IntraEliminationSolverContext<AnalysisDomainTy>::ADTNode *>
+        typename IntraEliminationSolverContext<AnalysisTypesT>::ADTNode *>
         &LeafByPos) {
   if (!W) {
     return false;
@@ -97,10 +97,10 @@ bool computeADTSimplePathExpr(
   return true;
 }
 
-template <typename AnalysisDomainTy, typename ReducibleViewT>
-bool solveADTSimpleWith(IntraEliminationSolverContext<AnalysisDomainTy> &Ctx,
+template <typename AnalysisTypesT, typename ReducibleViewT>
+bool solveADTSimpleWith(IntraEliminationSolverContext<AnalysisTypesT> &Ctx,
                         const ReducibleViewT &R) {
-  using Context = IntraEliminationSolverContext<AnalysisDomainTy>;
+  using Context = IntraEliminationSolverContext<AnalysisTypesT>;
   using n_t = typename Context::n_t;
   using ADTNode = typename Context::ADTNode;
 
@@ -133,9 +133,9 @@ bool solveADTSimpleWith(IntraEliminationSolverContext<AnalysisDomainTy> &Ctx,
   return true;
 }
 
-template <typename AnalysisDomainTy>
-bool solveADTSimple(IntraEliminationSolverContext<AnalysisDomainTy> &Ctx) {
-  using Context = IntraEliminationSolverContext<AnalysisDomainTy>;
+template <typename AnalysisTypesT>
+bool solveADTSimple(IntraEliminationSolverContext<AnalysisTypesT> &Ctx) {
+  using Context = IntraEliminationSolverContext<AnalysisTypesT>;
   // Prefer metadata supplied by the client; otherwise derive a reducible view
   // from the plain CFG and reject the engine if reducibility checks fail.
   if (const auto *R =

@@ -54,6 +54,7 @@ struct VeryBusyAnalysisTypes {
   using n_t = llvm::Instruction *;
   using fact_t = VeryBusyExpressionsFact;
   using transfer_t = llvm::Instruction *;
+  using abstract_domain_t = VeryBusyExpressionsDomain;
 };
 
 class ReverseVeryBusyProblem : public IntraEliminationProblem<VeryBusyAnalysisTypes> {
@@ -64,6 +65,7 @@ public:
                                   llvm::MemorySSA *MSSA)
       : F(F), Entry(Entry), AA(AA), DT(DT), TLI(TLI), MSSA(MSSA) {
     buildUniverse(F);
+    this->getAbstractDomain().setUniverse(AllExprs);
   }
 
   std::vector<n_t> nodes() const override {
@@ -102,16 +104,6 @@ public:
 
     return Out;
   }
-
-  fact_t meet(const fact_t &Lhs, const fact_t &Rhs) const override {
-    return VeryBusyExpressionsDomain::meet(Lhs, Rhs);
-  }
-
-  bool equal_to(const fact_t &Lhs, const fact_t &Rhs) const override {
-    return VeryBusyExpressionsDomain::equal(Lhs, Rhs);
-  }
-
-  fact_t meetIdentity() const override { return AllExprs; }
 
   fact_t initialFact() const override { return fact_t{}; }
 

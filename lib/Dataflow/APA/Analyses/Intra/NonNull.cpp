@@ -22,6 +22,7 @@ struct NonNullAnalysisTypes {
   using n_t = llvm::Instruction *;
   using fact_t = NonNullFact;
   using transfer_t = NonNullEdgeTransfer;
+  using abstract_domain_t = NonNullDomain;
 };
 
 class NonNullProblem : public IntraReducibleEliminationProblem<NonNullAnalysisTypes> {
@@ -31,6 +32,7 @@ public:
       : F(F), AC(AC), DT(DT),
         DL(F != nullptr ? &F->getParent()->getDataLayout() : nullptr) {
     buildUniverse();
+    this->getAbstractDomain().setUniverse(Universe);
   }
 
   std::vector<n_t> nodes() const override {
@@ -68,16 +70,6 @@ public:
 
     return Out;
   }
-
-  fact_t meet(const fact_t &Lhs, const fact_t &Rhs) const override {
-    return NonNullDomain::meet(Lhs, Rhs);
-  }
-
-  bool equal_to(const fact_t &Lhs, const fact_t &Rhs) const override {
-    return NonNullDomain::equal(Lhs, Rhs);
-  }
-
-  fact_t meetIdentity() const override { return Universe; }
 
   fact_t initialFact() const override {
     fact_t Out;

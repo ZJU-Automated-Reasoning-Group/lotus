@@ -6,8 +6,8 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "Dataflow/ControlFlow/InterCFG.h"
-#include "Dataflow/Mono/Solver/CallStringSolver.h"
 #include "Dataflow/Mono/LLVM/Problem.h"
+#include "Dataflow/Mono/Solver/CallStringSolver.h"
 #include "Utils/LLVM/CallUtils.h"
 #include "Utils/LLVM/FunctionUtils.h"
 
@@ -66,7 +66,7 @@ public:
                              ResultTy *DF) { computeOUT(Inst, Ctx, OUT, DF); };
     auto Equal = [this](const mono_container_t &Lhs,
                         const mono_container_t &Rhs) {
-      return Problem.equal_to(Lhs, Rhs);
+      return Problem.equal(Lhs, Rhs);
     };
 
     std::vector<ContextKey> RootKeys;
@@ -139,7 +139,7 @@ public:
     }
 
     if (Result) {
-      Result->setMissingFactFallback(Problem.allTop());
+      Result->setMissingFactFallback(Problem.bottom());
     }
   }
 
@@ -148,11 +148,11 @@ public:
   /// Returns the IN facts at \p Stmt merged across all call-string contexts.
   /// This is a convenience query; use the raw IN/OUT maps below when checking
   /// context-sensitive behaviour because they preserve the per-context split.
-  /// Uses the problem's merge to combine per-context facts. Returns
-  /// `Problem.allTop()` if no results or \p Stmt has no entries.
+  /// Uses the problem's join to combine per-context facts. Returns
+  /// `Problem.bottom()` if no results or \p Stmt has no entries.
   mono_container_t getResultsAt(llvm::Instruction *Stmt) const {
     if (!Result) {
-      return Problem.allTop();
+      return Problem.bottom();
     }
     mono_container_t merged;
     bool first = true;
@@ -164,11 +164,11 @@ public:
         merged = Cell.second;
         first = false;
       } else {
-        merged = Problem.merge(merged, Cell.second);
+        merged = Problem.join(merged, Cell.second);
       }
     }
     if (first) {
-      return Problem.allTop();
+      return Problem.bottom();
     }
     return merged;
   }
@@ -228,11 +228,11 @@ private:
   }
 
   void initializeIN(llvm::Instruction *, mono_container_t &IN) {
-    IN = Problem.allTop();
+    IN = Problem.bottom();
   }
 
   void initializeOUT(llvm::Instruction *, mono_container_t &OUT) {
-    OUT = Problem.allTop();
+    OUT = Problem.bottom();
   }
 
   void computeGEN(llvm::Instruction * /*Inst*/, ResultTy * /*DF*/) {}
@@ -259,7 +259,7 @@ private:
         }
         Incoming =
             Matches ? Problem.callFlow(Inst, PredInst->getFunction(), PredOut)
-                    : Problem.allTop();
+                    : Problem.bottom();
       } else if (llvm::isa<llvm::CallBase>(Inst) &&
                  isContinuationOfCall(PredInst, Inst)) {
         const auto Callees = getCalleesForCall(Inst);
@@ -271,7 +271,7 @@ private:
           Incoming = Problem.returnFlow(CallSite, Inst->getFunction(), Inst,
                                         PredInst, PredOut);
         } else if (K == 0) {
-          Incoming = Problem.allTop();
+          Incoming = Problem.bottom();
           if (ICF != nullptr) {
             bool FirstCaller = true;
             mono_container_t Merged;
@@ -282,7 +282,7 @@ private:
                 Merged = RetFacts;
                 FirstCaller = false;
               } else {
-                Merged = Problem.merge(Merged, RetFacts);
+                Merged = Problem.join(Merged, RetFacts);
               }
             }
             if (!FirstCaller) {
@@ -293,7 +293,7 @@ private:
           // For K>0, [] is the ordinary root call string. Only K=0 collapses
           // caller histories into the empty context, so there is no return-flow
           // edge here unless the current context names the matching call site.
-          Incoming = Problem.allTop();
+          Incoming = Problem.bottom();
         }
       } else {
         Incoming = PredOut;
@@ -314,7 +314,7 @@ private:
         // Pass PredOut (= OUT[call site]) as the "In" to callFlow.
         Incoming = Problem.callFlow(PredInst, Inst->getFunction(), PredOut);
       } else {
-        Incoming = Problem.allTop();
+        Incoming = Problem.bottom();
       }
     } else if (llvm::isa<llvm::ReturnInst>(PredInst)) {
       // Return edge: PredInst is a return instruction, Inst is the return site.
@@ -326,7 +326,7 @@ private:
       } else if (K == 0) {
         // In K=0 mode the empty call string intentionally collapses all caller
         // contexts, so return-flow merges across every caller.
-        Incoming = Problem.allTop();
+        Incoming = Problem.bottom();
         if (ICF != nullptr) {
           bool FirstCaller = true;
           mono_container_t Merged;
@@ -337,7 +337,7 @@ private:
               Merged = RetFacts;
               FirstCaller = false;
             } else {
-              Merged = Problem.merge(Merged, RetFacts);
+              Merged = Problem.join(Merged, RetFacts);
             }
           }
           if (!FirstCaller) {
@@ -348,7 +348,7 @@ private:
         // For K>0, [] is the ordinary root call string. Return-flow only
         // happens when the predecessor context still names the matching call
         // site exactly; only K=0 treats [] as a collapsed caller summary.
-        Incoming = Problem.allTop();
+        Incoming = Problem.bottom();
       }
     } else if (llvm::isa<llvm::CallBase>(PredInst) &&
                isContinuationOfCall(Inst, PredInst)) {
@@ -359,7 +359,7 @@ private:
       Incoming = PredOut;
     }
 
-    IN = Problem.merge(IN, Incoming);
+    IN = Problem.join(IN, Incoming);
   }
 
   void computeOUT(llvm::Instruction *Inst, const Context &Ctx,

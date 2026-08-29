@@ -19,13 +19,11 @@ using namespace llvm;
 namespace mono {
 namespace {
 
-class UninitVariablesProblem : public IntraMonoProblem<UninitializedVariablesDomain> {
+class UninitVariablesProblem : public IntraMonoProblem<UninitializedVariablesAnalysisTypes> {
 public:
   explicit UninitVariablesProblem(Function *F, lotus::AliasAnalysisWrapper *AA)
-      : IntraMonoProblem<UninitializedVariablesDomain>({F}, AA),
+      : IntraMonoProblem<UninitializedVariablesAnalysisTypes>({F}, AA),
         DL(&F->getParent()->getDataLayout()), AA(AA) {}
-
-  mono_container_t allTop() override { return {}; }
 
   mono_container_t normalFlow(Instruction *Inst,
                               const mono_container_t &In) override {
@@ -100,30 +98,13 @@ public:
     return Out;
   }
 
-  // Uninitialized-variables is a FORWARD MAY-analysis: a variable is
-  // considered uninitialized if it MIGHT be uninitialized on ANY path
-  // reaching this point.  The join operator is therefore UNION, not
-  // intersection.  Using intersection (must-analysis) would only flag
-  // variables that are uninitialized on ALL paths, missing real bugs.
-  mono_container_t merge(const mono_container_t &Lhs,
-                         const mono_container_t &Rhs) override {
-    mono_container_t Out = Lhs;
-    Out.unionWith(Rhs);
-    return Out;
-  }
-
-  bool equal_to(const mono_container_t &Lhs,
-                const mono_container_t &Rhs) override {
-    return Lhs == Rhs;
-  }
-
   std::unordered_map<Instruction *, mono_container_t> initialSeeds() override {
     std::unordered_map<Instruction *, mono_container_t> Seeds;
     auto *F = getEntryPoints().empty() ? nullptr : getEntryPoints().front();
     if (F == nullptr || F->empty()) {
       return Seeds;
     }
-    Seeds[&F->getEntryBlock().front()] = allTop();
+    Seeds[&F->getEntryBlock().front()] = bottom();
     return Seeds;
   }
 
@@ -298,7 +279,7 @@ std::unique_ptr<DataFlowResult> runIntraMonoUninitVariables(
                       lotus::AAConfig::ContextSensitivity::None, 0, true,
                       lotus::AAConfig::Solver::Default));
   UninitVariablesProblem Problem(F, AA.get());
-  IntraMonoSolver<UninitializedVariablesDomain> Solver(Problem);
+  IntraMonoSolver<UninitializedVariablesAnalysisTypes> Solver(Problem);
   Solver.setDebugConfig(DebugCfg);
   Solver.solve();
 

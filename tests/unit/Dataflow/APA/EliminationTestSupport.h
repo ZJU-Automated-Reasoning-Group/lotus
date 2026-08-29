@@ -61,6 +61,7 @@ struct TestDomain {
   using n_t = int;
   using fact_t = std::set<int>;
   using transfer_t = int; // "gen label"
+  using abstract_domain_t = elimination::LegacyProblemDomain<fact_t>;
 };
 
 class ReachabilityProblem final
@@ -97,17 +98,17 @@ public:
     return Out;
   }
 
-  fact_t meet(const fact_t &Lhs, const fact_t &Rhs) const override {
+  fact_t join(const fact_t &Lhs, const fact_t &Rhs) const override {
     fact_t Out = Lhs;
     Out.insert(Rhs.begin(), Rhs.end());
     return Out;
   }
 
-  bool equal_to(const fact_t &Lhs, const fact_t &Rhs) const override {
+  bool equal(const fact_t &Lhs, const fact_t &Rhs) const override {
     return Lhs == Rhs;
   }
 
-  fact_t meetIdentity() const override { return {}; }
+  fact_t bottom() const override { return {}; }
 
   fact_t initialFact() const override { return {}; }
 
@@ -183,17 +184,17 @@ public:
     return Out;
   }
 
-  fact_t meet(const fact_t &Lhs, const fact_t &Rhs) const override {
+  fact_t join(const fact_t &Lhs, const fact_t &Rhs) const override {
     fact_t Out = Lhs;
     Out.insert(Rhs.begin(), Rhs.end());
     return Out;
   }
 
-  bool equal_to(const fact_t &Lhs, const fact_t &Rhs) const override {
+  bool equal(const fact_t &Lhs, const fact_t &Rhs) const override {
     return Lhs == Rhs;
   }
 
-  fact_t meetIdentity() const override { return {}; }
+  fact_t bottom() const override { return {}; }
 
   fact_t initialFact() const override { return {}; }
 
@@ -208,6 +209,7 @@ struct NonConvergentDomain {
   using n_t = int;
   using fact_t = int;
   using transfer_t = int;
+  using abstract_domain_t = elimination::LegacyProblemDomain<fact_t>;
 };
 
 class NonConvergentProblem final
@@ -220,11 +222,11 @@ public:
   fact_t applyTransfer(const transfer_t &, const fact_t &In) const override {
     return 1 - In;
   }
-  fact_t meet(const fact_t &, const fact_t &Rhs) const override { return Rhs; }
-  bool equal_to(const fact_t &Lhs, const fact_t &Rhs) const override {
+  fact_t join(const fact_t &, const fact_t &Rhs) const override { return Rhs; }
+  bool equal(const fact_t &Lhs, const fact_t &Rhs) const override {
     return Lhs == Rhs;
   }
-  fact_t meetIdentity() const override { return -1; }
+  fact_t bottom() const override { return -1; }
   fact_t initialFact() const override { return 0; }
   std::size_t maxStarIterations() const override { return 100; }
 };

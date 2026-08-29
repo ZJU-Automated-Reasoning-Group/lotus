@@ -12,12 +12,12 @@ using namespace llvm;
 namespace mono {
 namespace {
 
-using TestDomain = LLVMMonoAnalysisTypes<SetContainer<Value *>>;
+using TestAnalysisTypes = LLVMMonoAnalysisTypes<SetContainer<Value *>>;
 
-class InterSolverTestProblem : public InterMonoProblem<TestDomain> {
+class InterSolverTestProblem : public InterMonoProblem<TestAnalysisTypes> {
 public:
   explicit InterSolverTestProblem(Function *Entry)
-      : InterMonoProblem<TestDomain>(std::vector<Function *>{Entry}) {}
+      : InterMonoProblem<TestAnalysisTypes>(std::vector<Function *>{Entry}) {}
 
   mono_container_t normalFlow(Instruction *Inst,
                               const mono_container_t &In) override {
@@ -33,14 +33,14 @@ public:
     return Out;
   }
 
-  mono_container_t merge(const mono_container_t &Lhs,
+  mono_container_t join(const mono_container_t &Lhs,
                          const mono_container_t &Rhs) override {
     mono_container_t Out = Lhs;
     Out.unionWith(Rhs);
     return Out;
   }
 
-  bool equal_to(const mono_container_t &Lhs,
+  bool equal(const mono_container_t &Lhs,
                 const mono_container_t &Rhs) override {
     return Lhs == Rhs;
   }
@@ -128,7 +128,7 @@ InterMonoSolverTestAnalysisResult runInterMonoSolverTest(Function *Entry) {
   }
 
   InterSolverTestProblem Problem(Entry);
-  InterMonoSolver<TestDomain, kDefaultInterMonoSolverTestCallStringLength>
+  InterMonoSolver<TestAnalysisTypes, kDefaultInterMonoSolverTestCallStringLength>
       Solver(Problem);
   Solver.solve();
 

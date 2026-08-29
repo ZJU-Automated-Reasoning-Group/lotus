@@ -9,6 +9,9 @@ class Value;
 
 namespace mono {
 
-struct TaintDomain : LLVMMonoAnalysisTypes<SetContainer<llvm::Value *>> {};
+struct TaintDomain : UnionDomain<SetContainer<llvm::Value *>> {};
+
+using TaintAnalysisTypes =
+    LLVMMonoAnalysisTypes<TaintDomain::value_type, TaintDomain>;
 
 } // namespace mono

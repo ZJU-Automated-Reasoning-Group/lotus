@@ -9,6 +9,7 @@
 
 #include "Dataflow/ControlFlow/InterCFG.h"
 #include "Dataflow/ControlFlow/IntraCFG.h"
+#include "Dataflow/Mono/Core/AbstractDomain.h"
 
 #include <set>
 
@@ -31,9 +32,9 @@ namespace mono {
  * **Usage:**
  * ```cpp
  * // Simple set-based analysis
- * using MyDomain = LLVMMonoAnalysisTypes<Value*>;
+ * using MyAnalysisTypes = LLVMMonoAnalysisTypes<Value*>;
  *
- * class MyProblem : public IntraMonoProblem<MyDomain> {
+ * class MyProblem : public IntraMonoProblem<MyAnalysisTypes> {
  *   std::set<Value*> normalFlow(Instruction *Inst, const std::set<Value*> &In)
  * override {
  *     // Analysis implementation using std::set
@@ -44,16 +45,18 @@ namespace mono {
  * **Advanced usage with custom containers:**
  * ```cpp
  * // Bit-vector optimized for large universes
- * using MyDomain = LLVMMonoAnalysisTypes<BitVectorSet<Instruction*>>;
+ * using MyAnalysisTypes = LLVMMonoAnalysisTypes<BitVectorSet<Instruction*>>;
  *
  * // Custom lattice type
- * using MyDomain = LLVMMonoAnalysisTypes<std::map<Value*, ConstantValue>>;
+ * using MyAnalysisTypes = LLVMMonoAnalysisTypes<std::map<Value*, ConstantValue>>;
  * ```
  *
  * @tparam ContainerType The container type for dataflow facts
  *         (e.g., std::set<Value*>, BitVectorSet<Instruction*>, custom map)
  */
-template <typename ContainerType> struct LLVMMonoAnalysisTypes {
+template <typename ContainerType,
+          typename AbstractDomainT = LegacyProblemDomain<ContainerType>>
+struct LLVMMonoAnalysisTypes {
   // ========================================
   // Standard LLVM IR types
   // ========================================
@@ -111,6 +114,7 @@ template <typename ContainerType> struct LLVMMonoAnalysisTypes {
    * - std::map<K, V> - for abstract domains with key-value mappings
    */
   using mono_container_t = ContainerType;
+  using abstract_domain_t = AbstractDomainT;
 };
 
 // ============================================================================

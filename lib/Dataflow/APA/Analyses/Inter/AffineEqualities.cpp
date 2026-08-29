@@ -1044,6 +1044,7 @@ struct AffineInterAnalysisTypes {
   };
   using f_t = llvm::Function *;
   using i_t = dataflow::controlflow::InterCFG;
+  using abstract_domain_t = AffineRelationDomain;
 };
 
 constexpr unsigned kDefaultInterAffineEqualitiesCallStringLength = 2;
@@ -1085,16 +1086,6 @@ public:
   fact_t normalFlow(n_t Inst, const fact_t &In) override {
     return applyTransfer(edgeTransfer(Inst, n_t{}), In);
   }
-
-  fact_t merge(const fact_t &Lhs, const fact_t &Rhs) const override {
-    return D::combine(Lhs, Rhs);
-  }
-
-  bool equal_to(const fact_t &Lhs, const fact_t &Rhs) const override {
-    return D::equal(Lhs, Rhs);
-  }
-
-  fact_t allTop() const override { return D::zero(); }
 
   fact_t callFlow(n_t CallSite, f_t Callee, const fact_t &In) override {
     auto *Call = llvm::dyn_cast_or_null<llvm::CallBase>(CallSite);

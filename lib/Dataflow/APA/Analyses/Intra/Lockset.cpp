@@ -52,10 +52,10 @@ const llvm::Value *lockOperand(const llvm::CallBase *Call) {
   return lockKey(Call->getArgOperand(0));
 }
 
-class ElimLocksetProblem : public LLVMIntraEliminationProblem<LocksetFact> {
+class ElimLocksetProblem : public LLVMIntraEliminationProblem<LocksetFact, LocksetDomain> {
 public:
   explicit ElimLocksetProblem(llvm::Function *F)
-      : LLVMIntraEliminationProblem<LocksetFact>(F) {}
+      : LLVMIntraEliminationProblem<LocksetFact, LocksetDomain>(F) {}
 
   LocksetFact applyTransfer(const transfer_t &T,
                             const LocksetFact &In) const override {
@@ -79,18 +79,6 @@ public:
     return Out;
   }
 
-  LocksetFact meet(const LocksetFact &Lhs,
-                   const LocksetFact &Rhs) const override {
-    return LocksetDomain::meet(Lhs, Rhs);
-  }
-
-  bool equal_to(const LocksetFact &Lhs, const LocksetFact &Rhs) const override {
-    return LocksetDomain::equal(Lhs, Rhs);
-  }
-
-  LocksetFact meetIdentity() const override {
-    return LocksetDomain::meetIdentity();
-  }
   LocksetFact initialFact() const override { return LocksetFact{}; }
 };
 
@@ -102,7 +90,7 @@ LocksetResult runIntraElimLockset(llvm::Function *F, EliminationOptions Opts) {
   }
 
   ElimLocksetProblem Problem(F);
-  IntraEliminationSolver<LLVMAnalysisTypes<LocksetFact>> Solver(Problem,
+  IntraEliminationSolver<LLVMAnalysisTypes<LocksetFact, LocksetDomain>> Solver(Problem,
                                                                     Opts);
   auto Status = Solver.solve();
   auto Out = Solver.getResults();

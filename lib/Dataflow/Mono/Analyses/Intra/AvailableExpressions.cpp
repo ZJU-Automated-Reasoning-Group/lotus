@@ -73,17 +73,18 @@ getKilledExpressions(Instruction *Inst, const std::set<AvailableExpression> &All
 // Available Expressions Problem (Forward, must-analysis)
 // ============================================================================
 
-class AvailableExprProblem : public IntraMonoProblem<AvailableExpressionsDomain> {
+class AvailableExprProblem : public IntraMonoProblem<AvailableExpressionsAnalysisTypes> {
 public:
   explicit AvailableExprProblem(Function *F)
-      : IntraMonoProblem<AvailableExpressionsDomain>({F}) {
-    // Collect all expressions in the function for use as allTop().
+      : IntraMonoProblem<AvailableExpressionsAnalysisTypes>({F}) {
+    // Collect all expressions in the function for use as bottom().
     for (auto &BB : *F) {
       for (auto &Inst : BB) {
         auto Exprs = getComputedExpressions(&Inst);
         AllExpressions.insert(Exprs.begin(), Exprs.end());
       }
     }
+    getAbstractDomain().setUniverse(AllExpressions);
   }
 
   // Available Expressions is a FORWARD analysis: facts flow from entry to exit.
@@ -110,28 +111,6 @@ public:
 
     return Out;
   }
-
-  // Merge = intersection: an expression is available only if available on
-  // ALL paths reaching this point (must-analysis).
-  std::set<AvailableExpression> merge(const std::set<AvailableExpression> &Lhs,
-                             const std::set<AvailableExpression> &Rhs) override {
-    std::set<AvailableExpression> Out;
-    std::set_intersection(Lhs.begin(), Lhs.end(), Rhs.begin(), Rhs.end(),
-                          std::inserter(Out, Out.begin()));
-    return Out;
-  }
-
-  bool equal_to(const std::set<AvailableExpression> &Lhs,
-                const std::set<AvailableExpression> &Rhs) override {
-    return Lhs == Rhs;
-  }
-
-  // allTop() = universal set (all expressions).
-  // For a must-analysis with intersection as merge, the top of the lattice
-  // is the set of ALL expressions (every expression is "assumed available"
-  // until proven otherwise).  This is the correct initial value for nodes
-  // that have not yet been reached.
-  std::set<AvailableExpression> allTop() override { return AllExpressions; }
 
   std::unordered_map<Instruction *, std::set<AvailableExpression>>
   initialSeeds() override {
@@ -178,7 +157,7 @@ std::unique_ptr<DataFlowResult> runAvailableExpressionsAnalysis(Function *F) {
   }
 
   AvailableExprProblem Problem(F);
-  IntraMonoSolver<AvailableExpressionsDomain> Solver(Problem);
+  IntraMonoSolver<AvailableExpressionsAnalysisTypes> Solver(Problem);
   Solver.solve();
 
   // build a correct result by mapping each AvailableExpression back to the

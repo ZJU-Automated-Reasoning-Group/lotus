@@ -25,10 +25,10 @@ namespace detail {
 // selected engine. This keeps the per-engine headers focused on their
 // algorithmic differences while centralizing common graph, ADT, and expression
 // utilities in one place.
-template <typename AnalysisDomainTy> class IntraEliminationSolverContext {
+template <typename AnalysisTypesT> class IntraEliminationSolverContext {
 public:
-  using ProblemTy = IntraEliminationProblem<AnalysisDomainTy>;
-  using ReducibleProblemTy = IntraReducibleEliminationProblem<AnalysisDomainTy>;
+  using ProblemTy = IntraEliminationProblem<AnalysisTypesT>;
+  using ReducibleProblemTy = IntraReducibleEliminationProblem<AnalysisTypesT>;
   using n_t = typename ProblemTy::n_t;
   using fact_t = typename ProblemTy::fact_t;
   using transfer_t = typename ProblemTy::transfer_t;
@@ -713,11 +713,11 @@ public:
     assert(E && "expression must not be null");
     if (StarNonConvergent &&
         Opts.NonConvergentStarPolicy == OnNonConvergentStar::Fail) {
-      return Problem.meetIdentity();
+      return Problem.bottom();
     }
     switch (E->K) {
     case expr_factory_t::Kind::Zero:
-      return Problem.meetIdentity();
+      return Problem.bottom();
     case expr_factory_t::Kind::One:
       return In;
     case expr_factory_t::Kind::Atom:
@@ -725,7 +725,7 @@ public:
     case expr_factory_t::Kind::Union: {
       auto L = eval(E->L, In);
       auto R = eval(E->R, In);
-      return Problem.meet(L, R);
+      return Problem.join(L, R);
     }
     case expr_factory_t::Kind::Concat: {
       auto Mid = eval(E->L, In);
@@ -741,8 +741,8 @@ public:
                              : Problem.maxStarIterations();
       for (std::size_t i = 0; i < Limit; ++i) {
         ++Diagnostics.star_iterations_total;
-        auto Next = Problem.meet(In, eval(E->L, Cur));
-        if (Problem.equal_to(Next, Cur)) {
+        auto Next = Problem.join(In, eval(E->L, Cur));
+        if (Problem.equal(Next, Cur)) {
           return Cur;
         }
         Cur = std::move(Next);
@@ -752,18 +752,18 @@ public:
       case OnNonConvergentStar::ReturnLast:
         return Cur;
       case OnNonConvergentStar::ReturnIdentity:
-        return Problem.meetIdentity();
+        return Problem.bottom();
       case OnNonConvergentStar::Fail:
       default:
         StarNonConvergent = true;
-        return Problem.meetIdentity();
+        return Problem.bottom();
       }
     }
     }
     if (Opts.NonConvergentStarPolicy == OnNonConvergentStar::Fail) {
       StarNonConvergent = true;
     }
-    return Problem.meetIdentity();
+    return Problem.bottom();
   }
 
   std::size_t idx(const n_t &N) const {

@@ -22,6 +22,7 @@ struct InterConstantPropagationAnalysisTypes {
   using transfer_t = llvm::Instruction *;
   using f_t = llvm::Function *;
   using i_t = dataflow::controlflow::InterCFG;
+  using abstract_domain_t = ConstantPropagationDomain;
 };
 
 ConstantPropagationValue makeUnknown() { return ConstantPropagationValue(); }
@@ -232,18 +233,6 @@ public:
     }
 
     return Out;
-  }
-
-  fact_t merge(const fact_t &Lhs, const fact_t &Rhs) const override {
-    return ConstantPropagationDomain::meet(Lhs, Rhs);
-  }
-
-  bool equal_to(const fact_t &Lhs, const fact_t &Rhs) const override {
-    return ConstantPropagationDomain::equal(Lhs, Rhs);
-  }
-
-  fact_t allTop() const override {
-    return ConstantPropagationDomain::meetIdentity();
   }
 
   fact_t callFlow(n_t CallSite, f_t Callee, const fact_t &In) override {

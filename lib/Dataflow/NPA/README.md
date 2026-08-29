@@ -38,6 +38,13 @@ That means `LinearStrategy` is only relevant to the **Newton** path. It does
 not choose between Kleene and Newton; it only chooses the inner backend used by
 Newton for its current linearized system.
 
+NPA intentionally keeps its semiring terminology rather than adopting the
+Mono/APA lattice API. A base NPA domain provides `zero`, `one`, `combine`,
+`extend`, `extend_lin`, `ndetCombine`, `condCombine`, and `equal`.
+`Core/Domain.h` performs compile-time capability detection, while
+`Solver/DomainValidation.h` checks basic identity, annihilation, idempotence,
+and consistency laws when contract checking is enabled.
+
 
 
 ## TOPLAS 2016 / LCFL support

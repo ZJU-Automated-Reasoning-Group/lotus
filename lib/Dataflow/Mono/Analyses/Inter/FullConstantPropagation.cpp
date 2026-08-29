@@ -30,41 +30,6 @@ FullConstantValue joinValues(const FullConstantValue &Lhs,
   return FullConstantValue::top();
 }
 
-FullConstantPropagationState
-joinStates(const FullConstantPropagationState &Lhs,
-           const FullConstantPropagationState &Rhs) {
-  if (Lhs.Unreachable) {
-    return Rhs;
-  }
-  if (Rhs.Unreachable) {
-    return Lhs;
-  }
-
-  FullConstantPropagationState Out;
-  Out.Unreachable = false;
-
-  Out.Values = Lhs.Values;
-
-  // For reachable states, an absent key means Top (unknown), not Bottom.
-  // Bottom remains reserved for unreachable/error values only.
-  for (const auto &Entry : Rhs.Values) {
-    auto It = Out.Values.find(Entry.first);
-    if (It == Out.Values.end()) {
-      Out.Values[Entry.first] =
-          joinValues(FullConstantValue::top(), Entry.second);
-    } else {
-      It->second = joinValues(It->second, Entry.second);
-    }
-  }
-  for (const auto &Entry : Lhs.Values) {
-    if (Rhs.Values.find(Entry.first) == Rhs.Values.end()) {
-      Out.Values[Entry.first] =
-          joinValues(Entry.second, FullConstantValue::top());
-    }
-  }
-  return Out;
-}
-
 FullConstantValue resolveValue(const FullConstantPropagationState &In,
                                const Value *V) {
   if (In.Unreachable) {
@@ -81,36 +46,6 @@ FullConstantValue resolveValue(const FullConstantPropagationState &In,
   }
 
   return FullConstantValue::top();
-}
-
-FullConstantValue lookupOrTop(const FullConstantPropagationState &State,
-                              const Value *V) {
-  auto It = State.Values.find(V);
-  if (It != State.Values.end()) {
-    return It->second;
-  }
-  return FullConstantValue::top();
-}
-
-bool equalStatesSemantically(const FullConstantPropagationState &Lhs,
-                             const FullConstantPropagationState &Rhs) {
-  if (Lhs.Unreachable != Rhs.Unreachable) {
-    return false;
-  }
-  if (Lhs.Unreachable) {
-    return true;
-  }
-  for (const auto &Entry : Lhs.Values) {
-    if (!(Entry.second == lookupOrTop(Rhs, Entry.first))) {
-      return false;
-    }
-  }
-  for (const auto &Entry : Rhs.Values) {
-    if (!(lookupOrTop(Lhs, Entry.first) == Entry.second)) {
-      return false;
-    }
-  }
-  return true;
 }
 
 std::vector<Function *>
@@ -183,14 +118,12 @@ FullConstantValue evalBinaryOp(unsigned Opcode, const FullConstantValue &Lhs,
   }
 }
 
-class InterMonoFullConstantPropagation : public InterMonoProblem<FullConstantPropagationDomain> {
+class InterMonoFullConstantPropagation : public InterMonoProblem<FullConstantPropagationAnalysisTypes> {
 public:
   explicit InterMonoFullConstantPropagation(Function *Entry,
                                             lotus::AliasAnalysisWrapper *AA)
-      : InterMonoProblem<FullConstantPropagationDomain>(std::vector<Function *>{Entry}, AA),
+      : InterMonoProblem<FullConstantPropagationAnalysisTypes>(std::vector<Function *>{Entry}, AA),
         AA(AA) {}
-
-  mono_container_t allTop() override { return mono_container_t{}; }
 
   mono_container_t normalFlow(Instruction *Inst,
                               const mono_container_t &In) override {
@@ -235,16 +168,6 @@ public:
     }
 
     return Out;
-  }
-
-  mono_container_t merge(const mono_container_t &Lhs,
-                         const mono_container_t &Rhs) override {
-    return joinStates(Lhs, Rhs);
-  }
-
-  bool equal_to(const mono_container_t &Lhs,
-                const mono_container_t &Rhs) override {
-    return equalStatesSemantically(Lhs, Rhs);
   }
 
   mono_container_t callFlow(Instruction *CallSite, Function *Callee,
@@ -374,7 +297,7 @@ public:
     if (!Callees.empty()) {
       return Callees;
     }
-    return InterMonoProblem<FullConstantPropagationDomain>::resolve_indirect_callees(CallSite);
+    return InterMonoProblem<FullConstantPropagationAnalysisTypes>::resolve_indirect_callees(CallSite);
   }
 
 private:
@@ -491,7 +414,7 @@ runInterMonoFullConstantPropagation(Function *Entry) {
                       lotus::AAConfig::ContextSensitivity::None, 0, true,
                       lotus::AAConfig::Solver::Default));
   InterMonoFullConstantPropagation Problem(Entry, AA.get());
-  InterMonoSolver<FullConstantPropagationDomain, kDefaultFullConstantPropagationCallStringLength>
+  InterMonoSolver<FullConstantPropagationAnalysisTypes, kDefaultFullConstantPropagationCallStringLength>
       Solver(Problem);
   Solver.solve();
 

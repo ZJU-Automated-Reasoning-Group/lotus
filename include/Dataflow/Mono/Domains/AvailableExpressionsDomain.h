@@ -34,6 +34,12 @@ struct AvailableExpression {
 };
 
 struct AvailableExpressionsDomain
-    : LLVMMonoAnalysisTypes<std::set<AvailableExpression>> {};
+    : IntersectionDomain<std::set<AvailableExpression>> {
+  using IntersectionDomain::IntersectionDomain;
+};
+
+using AvailableExpressionsAnalysisTypes =
+    LLVMMonoAnalysisTypes<AvailableExpressionsDomain::value_type,
+                          AvailableExpressionsDomain>;
 
 } // namespace mono

@@ -27,7 +27,7 @@ public:
 
   explicit IntraMonoSolver(ProblemTy &Problem)
       : Problem(Problem), CFG(selectCFG()) {
-    MissingResultFallback = this->Problem.allTop();
+    MissingResultFallback = this->Problem.bottom();
   }
 
   void setDebugConfig(const DebugConfig &Config) { DebugCfg = Config; }
@@ -77,13 +77,13 @@ public:
     // Standard monotone node-based worklist algorithm (fixes #1 and #2).
     //
     // We maintain:
-    //   AnalysisIn[n]  = IN[n]  = merge(OUT[p] for all preds p of n)
+    //   AnalysisIn[n]  = IN[n]  = join(OUT[p] for all preds p of n)
     //   AnalysisOut[n] = OUT[n] = normalFlow(n, IN[n])
     //
     // The worklist contains nodes (not edges).  When we dequeue node n:
     //   1. Recompute IN[n] by merging OUT[p] for every predecessor p.
     //      Predecessors with no OUT yet are skipped (treated as identity for
-    //      the merge, i.e., they contribute nothing until they are computed).
+    //      the join, i.e., they contribute nothing until they are computed).
     //   2. Recompute OUT[n] = normalFlow(n, IN[n]).
     //   3. If OUT[n] changed, enqueue all successors of n.
     //
@@ -136,15 +136,15 @@ public:
 
       MONO_TRACE_WORKLIST(llvm::outs(), DebugCfg, "Processing node: " << Node);
 
-      // Step 1: recompute IN[Node] = merge(OUT[p] for all preds p).
+      // Step 1: recompute IN[Node] = join(OUT[p] for all preds p).
       // Predecessors not yet in AnalysisOut are skipped; they will trigger
       // re-evaluation of Node when they are processed later.
       auto Preds = CFG->getPredsOf(Node, Problem.direction());
-      mono_container_t NewIn = Problem.allTop();
+      mono_container_t NewIn = Problem.bottom();
       bool HasContrib = false;
 
       // Preserve explicit seed facts as boundary conditions on every
-      // recomputation: IN[n] = seed[n] merge merge(OUT[p] for preds p of n).
+      // recomputation: IN[n] = seed[n] join join(OUT[p] for preds p of n).
       // This matches the interprocedural engine's SeedIns semantics and makes
       // mid-function/source seeds persistent rather than one-shot
       // initializations.
@@ -164,25 +164,25 @@ public:
           NewIn = OutIt->second;
           HasContrib = true;
         } else {
-          NewIn = Problem.merge(NewIn, OutIt->second);
+          NewIn = Problem.join(NewIn, OutIt->second);
         }
       }
 
       if (!HasContrib) {
         // No seed and no predecessor has a computed OUT yet. Use the existing
-        // AnalysisIn value (which may be allTop()) rather than overwriting it.
+        // AnalysisIn value (which may be bottom()) rather than overwriting it.
         auto InIt = AnalysisIn.find(Node);
         if (InIt != AnalysisIn.end()) {
           NewIn = InIt->second;
         }
-        // else: NewIn stays as allTop() (the default initial value)
+        // else: NewIn stays as bottom() (the default initial value)
       }
 
       // Step 2: check whether IN[Node] changed.
       Stats.stabilization_checks++;
       auto InIt = AnalysisIn.find(Node);
       bool InChanged =
-          (InIt == AnalysisIn.end()) || !Problem.equal_to(NewIn, InIt->second);
+          (InIt == AnalysisIn.end()) || !Problem.equal(NewIn, InIt->second);
 
       if (InChanged) {
         AnalysisIn[Node] = NewIn;
@@ -205,7 +205,7 @@ public:
 
       auto OutIt = AnalysisOut.find(Node);
       bool OutChanged = (OutIt == AnalysisOut.end()) ||
-                        !Problem.equal_to(NewOut, OutIt->second);
+                        !Problem.equal(NewOut, OutIt->second);
 
       if (OutChanged) {
         MONO_TRACE_FACTS(llvm::outs(), DebugCfg, "Facts changed at " << Node);
@@ -317,7 +317,7 @@ private:
     AnalysisOut.clear();
     SeedFacts.clear();
     NodeIterCount.clear();
-    MissingResultFallback = Problem.allTop();
+    MissingResultFallback = Problem.bottom();
     Stats = SolverStatistics{};
   }
 
@@ -333,7 +333,7 @@ private:
       auto Edges = CFG->getAllControlFlowEdges(Function, Problem.direction());
       Worklist.insert(Worklist.begin(), Edges.begin(), Edges.end());
       for (auto *Inst : CFG->getAllInstructionsOf(Function)) {
-        AnalysisIn.insert({Inst, Problem.allTop()});
+        AnalysisIn.insert({Inst, Problem.bottom()});
         InitialNodes.push_back(Inst);
       }
     }
@@ -350,7 +350,7 @@ private:
         auto Edges = CFG->getAllControlFlowEdges(F, Problem.direction());
         Worklist.insert(Worklist.begin(), Edges.begin(), Edges.end());
         for (auto *Inst : CFG->getAllInstructionsOf(F)) {
-          AnalysisIn.insert({Inst, Problem.allTop()});
+          AnalysisIn.insert({Inst, Problem.bottom()});
           InitialNodes.push_back(Inst);
         }
       }

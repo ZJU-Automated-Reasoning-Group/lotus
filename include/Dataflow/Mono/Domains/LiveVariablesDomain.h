@@ -9,7 +9,9 @@ class Value;
 
 namespace mono {
 
-struct LiveVariablesDomain
-    : LLVMMonoAnalysisTypes<SetContainer<llvm::Value *>> {};
+struct LiveVariablesDomain : UnionDomain<SetContainer<llvm::Value *>> {};
+
+using LiveVariablesAnalysisTypes =
+    LLVMMonoAnalysisTypes<LiveVariablesDomain::value_type, LiveVariablesDomain>;
 
 } // namespace mono

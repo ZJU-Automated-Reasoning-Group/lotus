@@ -8,18 +8,20 @@
 #include "Dataflow/APA/Core/InterProblem.h"
 
 #include <algorithm>
+#include <utility>
 #include <vector>
 
 namespace elimination {
 
-template <typename AnalysisDomainTy>
+template <typename AnalysisTypesT>
 class LLVMInterEliminationProblem
-    : public InterEliminationProblem<AnalysisDomainTy> {
+    : public InterEliminationProblem<AnalysisTypesT> {
 public:
-  using Base = InterEliminationProblem<AnalysisDomainTy>;
+  using Base = InterEliminationProblem<AnalysisTypesT>;
   using n_t = typename Base::n_t;
   using f_t = typename Base::f_t;
   using i_t = typename Base::i_t;
+  using abstract_domain_t = typename Base::abstract_domain_t;
 
   enum class UnresolvedCallPolicy {
     Ignore,
@@ -27,8 +29,10 @@ public:
   };
 
   explicit LLVMInterEliminationProblem(std::vector<f_t> EntryPoints = {},
-                                       const i_t *ICF = nullptr)
-      : Base(std::move(EntryPoints), ICF) {}
+                                       const i_t *ICF = nullptr,
+                                       abstract_domain_t Domain =
+                                           abstract_domain_t{})
+      : Base(std::move(EntryPoints), ICF, std::move(Domain)) {}
 
   std::vector<f_t> getCalleesOfCallAt(n_t CallSite) const override {
     std::vector<f_t> Callees;

@@ -36,14 +36,14 @@ TEST_F(MonoTest, CallBrContinuation) {
       return Out;
     }
 
-    mono_container_t merge(const mono_container_t &Lhs,
+    mono_container_t join(const mono_container_t &Lhs,
                            const mono_container_t &Rhs) override {
       mono_container_t Out = Lhs;
       Out.insert(Rhs.begin(), Rhs.end());
       return Out;
     }
 
-    bool equal_to(const mono_container_t &Lhs,
+    bool equal(const mono_container_t &Lhs,
                   const mono_container_t &Rhs) override {
       return Lhs == Rhs;
     }
@@ -122,14 +122,14 @@ TEST_F(MonoTest, IntraMonoSolverReentrantSolveStable) {
       return Out;
     }
 
-    mono_container_t merge(const mono_container_t &Lhs,
+    mono_container_t join(const mono_container_t &Lhs,
                            const mono_container_t &Rhs) override {
       mono_container_t Out = Lhs;
       Out.insert(Rhs.begin(), Rhs.end());
       return Out;
     }
 
-    bool equal_to(const mono_container_t &Lhs,
+    bool equal(const mono_container_t &Lhs,
                   const mono_container_t &Rhs) override {
       return Lhs == Rhs;
     }
@@ -183,14 +183,14 @@ TEST_F(MonoTest, IntraMonoSolverSingleNodeProcessed) {
       return Out;
     }
 
-    mono_container_t merge(const mono_container_t &Lhs,
+    mono_container_t join(const mono_container_t &Lhs,
                            const mono_container_t &Rhs) override {
       mono_container_t Out = Lhs;
       Out.insert(Rhs.begin(), Rhs.end());
       return Out;
     }
 
-    bool equal_to(const mono_container_t &Lhs,
+    bool equal(const mono_container_t &Lhs,
                   const mono_container_t &Rhs) override {
       return Lhs == Rhs;
     }
@@ -242,14 +242,14 @@ TEST_F(MonoTest, IntraMonoSolverWideningCounterResetsAcrossRuns) {
       return Out;
     }
 
-    mono_container_t merge(const mono_container_t &Lhs,
+    mono_container_t join(const mono_container_t &Lhs,
                            const mono_container_t &Rhs) override {
       mono_container_t Out = Lhs;
       Out.insert(Rhs.begin(), Rhs.end());
       return Out;
     }
 
-    bool equal_to(const mono_container_t &Lhs,
+    bool equal(const mono_container_t &Lhs,
                   const mono_container_t &Rhs) override {
       return Lhs == Rhs;
     }
@@ -323,14 +323,14 @@ TEST_F(MonoTest, InterMonoSolverEmptyContextSeedStaysLocalForPositiveK) {
       return In;
     }
 
-    mono_container_t merge(const mono_container_t &Lhs,
+    mono_container_t join(const mono_container_t &Lhs,
                            const mono_container_t &Rhs) override {
       mono_container_t Out = Lhs;
       Out.insert(Rhs.begin(), Rhs.end());
       return Out;
     }
 
-    bool equal_to(const mono_container_t &Lhs,
+    bool equal(const mono_container_t &Lhs,
                   const mono_container_t &Rhs) override {
       return Lhs == Rhs;
     }
@@ -497,14 +497,14 @@ TEST_F(MonoTest, InterMonoSolverSupportsBackwardDirection) {
       return In;
     }
 
-    mono_container_t merge(const mono_container_t &Lhs,
+    mono_container_t join(const mono_container_t &Lhs,
                            const mono_container_t &Rhs) override {
       mono_container_t Out = Lhs;
       Out.insert(Rhs.begin(), Rhs.end());
       return Out;
     }
 
-    bool equal_to(const mono_container_t &Lhs,
+    bool equal(const mono_container_t &Lhs,
                   const mono_container_t &Rhs) override {
       return Lhs == Rhs;
     }
@@ -613,14 +613,14 @@ TEST_F(MonoTest, InterMonoSolverK1DistinguishesDifferentCallers) {
       return In;
     }
 
-    mono_container_t merge(const mono_container_t &Lhs,
+    mono_container_t join(const mono_container_t &Lhs,
                            const mono_container_t &Rhs) override {
       mono_container_t Out = Lhs;
       Out.insert(Rhs.begin(), Rhs.end());
       return Out;
     }
 
-    bool equal_to(const mono_container_t &Lhs,
+    bool equal(const mono_container_t &Lhs,
                   const mono_container_t &Rhs) override {
       return Lhs == Rhs;
     }
@@ -749,14 +749,14 @@ TEST_F(MonoTest, InterMonoSolverK2TruncatesDeepCallStrings) {
       return In;
     }
 
-    mono_container_t merge(const mono_container_t &Lhs,
+    mono_container_t join(const mono_container_t &Lhs,
                            const mono_container_t &Rhs) override {
       mono_container_t Out = Lhs;
       Out.insert(Rhs.begin(), Rhs.end());
       return Out;
     }
 
-    bool equal_to(const mono_container_t &Lhs,
+    bool equal(const mono_container_t &Lhs,
                   const mono_container_t &Rhs) override {
       return Lhs == Rhs;
     }

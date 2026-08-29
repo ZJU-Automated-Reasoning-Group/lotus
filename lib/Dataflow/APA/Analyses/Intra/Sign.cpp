@@ -187,10 +187,10 @@ void clobberMemoryByCall(const llvm::CallBase *Call, SignMap &Out) {
   }
 }
 
-class ElimSignAnalysisProblem : public LLVMIntraEliminationProblem<SignMap> {
+class ElimSignAnalysisProblem : public LLVMIntraEliminationProblem<SignMap, SignDomain> {
 public:
   explicit ElimSignAnalysisProblem(llvm::Function *F)
-      : LLVMIntraEliminationProblem<SignMap>(F) {}
+      : LLVMIntraEliminationProblem<SignMap, SignDomain>(F) {}
 
   SignMap applyTransfer(const transfer_t &T, const SignMap &In) const override {
     auto *Inst = T;
@@ -278,15 +278,6 @@ public:
     return Out;
   }
 
-  SignMap meet(const SignMap &Lhs, const SignMap &Rhs) const override {
-    return SignDomain::meet(Lhs, Rhs);
-  }
-
-  bool equal_to(const SignMap &Lhs, const SignMap &Rhs) const override {
-    return SignDomain::equal(Lhs, Rhs);
-  }
-
-  SignMap meetIdentity() const override { return SignDomain::meetIdentity(); }
   SignMap initialFact() const override { return SignMap{}; }
 };
 
@@ -299,7 +290,7 @@ SignAnalysisResult runIntraElimSignAnalysis(llvm::Function *F,
   }
 
   ElimSignAnalysisProblem Problem(F);
-  IntraEliminationSolver<LLVMAnalysisTypes<SignMap>> Solver(Problem, Opts);
+  IntraEliminationSolver<LLVMAnalysisTypes<SignMap, SignDomain>> Solver(Problem, Opts);
   auto Status = Solver.solve();
   auto Out = Solver.getResults();
   Out.setSolveMetadata(Status, Solver.getDiagnostics());

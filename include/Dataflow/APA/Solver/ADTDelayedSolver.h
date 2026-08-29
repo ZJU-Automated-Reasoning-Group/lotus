@@ -11,14 +11,14 @@ namespace detail {
 // Instead of eagerly rewriting every leaf expression, this variant stores
 // parent-to-child prefixes in a union-find-like structure and reconstructs the
 // final expression lazily for each leaf at the end.
-template <typename AnalysisDomainTy, typename ReducibleViewT>
+template <typename AnalysisTypesT, typename ReducibleViewT>
 bool computeADTDelayedPathExpr(
-    IntraEliminationSolverContext<AnalysisDomainTy> &Ctx,
+    IntraEliminationSolverContext<AnalysisTypesT> &Ctx,
     const ReducibleViewT &R,
-    typename IntraEliminationSolverContext<AnalysisDomainTy>::ADTNode *W,
+    typename IntraEliminationSolverContext<AnalysisTypesT>::ADTNode *W,
     const std::unordered_map<
-        typename IntraEliminationSolverContext<AnalysisDomainTy>::n_t,
-        typename IntraEliminationSolverContext<AnalysisDomainTy>::ADTNode *>
+        typename IntraEliminationSolverContext<AnalysisTypesT>::n_t,
+        typename IntraEliminationSolverContext<AnalysisTypesT>::ADTNode *>
         &LeafOf) {
   if (!W) {
     return false;
@@ -104,10 +104,10 @@ bool computeADTDelayedPathExpr(
   return true;
 }
 
-template <typename AnalysisDomainTy, typename ReducibleViewT>
-bool solveADTDelayedWith(IntraEliminationSolverContext<AnalysisDomainTy> &Ctx,
+template <typename AnalysisTypesT, typename ReducibleViewT>
+bool solveADTDelayedWith(IntraEliminationSolverContext<AnalysisTypesT> &Ctx,
                          const ReducibleViewT &R) {
-  using Context = IntraEliminationSolverContext<AnalysisDomainTy>;
+  using Context = IntraEliminationSolverContext<AnalysisTypesT>;
   using n_t = typename Context::n_t;
   using ADTNode = typename Context::ADTNode;
 
@@ -144,9 +144,9 @@ bool solveADTDelayedWith(IntraEliminationSolverContext<AnalysisDomainTy> &Ctx,
   return true;
 }
 
-template <typename AnalysisDomainTy>
-bool solveADTDelayed(IntraEliminationSolverContext<AnalysisDomainTy> &Ctx) {
-  using Context = IntraEliminationSolverContext<AnalysisDomainTy>;
+template <typename AnalysisTypesT>
+bool solveADTDelayed(IntraEliminationSolverContext<AnalysisTypesT> &Ctx) {
+  using Context = IntraEliminationSolverContext<AnalysisTypesT>;
   // Prefer metadata supplied by the client; otherwise derive a reducible view
   // from the plain CFG and reject the engine if reducibility checks fail.
   if (const auto *R =

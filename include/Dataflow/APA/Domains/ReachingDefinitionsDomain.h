@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Dataflow/APA/Core/AbstractDomain.h"
+
 #include <set>
 
 namespace llvm {
@@ -8,20 +10,7 @@ class Value;
 
 namespace elimination {
 
-struct ReachingDefinitionsDomain {
-  using value_type = std::set<const llvm::Value *>;
-
-  static value_type meet(const value_type &Lhs, const value_type &Rhs) {
-    value_type Out = Lhs;
-    Out.insert(Rhs.begin(), Rhs.end());
-    return Out;
-  }
-
-  static bool equal(const value_type &Lhs, const value_type &Rhs) {
-    return Lhs == Rhs;
-  }
-
-  static value_type meetIdentity() { return {}; }
+struct ReachingDefinitionsDomain : UnionDomain<std::set<const llvm::Value *>> {
 };
 
 using ReachingDefinitionsFact = ReachingDefinitionsDomain::value_type;

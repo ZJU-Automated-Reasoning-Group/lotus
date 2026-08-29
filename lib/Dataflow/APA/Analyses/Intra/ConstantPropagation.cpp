@@ -220,13 +220,13 @@ ConstantPropagationValue evalPhi(const llvm::PHINode *Phi,
 }
 
 class ElimConstantPropagationProblem
-    : public LLVMIntraEliminationProblem<ConstantPropagationMap> {
+    : public LLVMIntraEliminationProblem<ConstantPropagationMap, ConstantPropagationDomain> {
 public:
   explicit ElimConstantPropagationProblem(
       llvm::Function *F, llvm::AAResults *AA = nullptr,
       llvm::AssumptionCache *AC = nullptr, llvm::DominatorTree *DT = nullptr,
       llvm::TargetLibraryInfo *TLI = nullptr)
-      : LLVMIntraEliminationProblem<ConstantPropagationMap>(F),
+      : LLVMIntraEliminationProblem<ConstantPropagationMap, ConstantPropagationDomain>(F),
         DL(F != nullptr ? &F->getParent()->getDataLayout() : nullptr), AA(AA),
         AC(AC), DT(DT), TLI(TLI) {}
 
@@ -421,21 +421,6 @@ public:
   // two lattice values. Keys absent from one side are treated as Unknown
   // (bottom), so mergeIn(Unknown) leaves the other side unchanged — but we
   // must also handle keys present only in Lhs symmetrically.
-  ConstantPropagationMap
-  meet(const ConstantPropagationMap &Lhs,
-       const ConstantPropagationMap &Rhs) const override {
-    return ConstantPropagationDomain::meet(Lhs, Rhs);
-  }
-
-  bool equal_to(const ConstantPropagationMap &Lhs,
-                const ConstantPropagationMap &Rhs) const override {
-    return ConstantPropagationDomain::equal(Lhs, Rhs);
-  }
-
-  ConstantPropagationMap meetIdentity() const override {
-    return ConstantPropagationDomain::meetIdentity();
-  }
-
   ConstantPropagationMap initialFact() const override {
     return ConstantPropagationMap{};
   }
@@ -471,7 +456,7 @@ ConstantPropagationResult runIntraElimConstantPropagation(
   }
 
   ElimConstantPropagationProblem Problem(F, AA, AC, DT, TLI);
-  IntraEliminationSolver<LLVMAnalysisTypes<ConstantPropagationMap>> Solver(
+  IntraEliminationSolver<LLVMAnalysisTypes<ConstantPropagationMap, ConstantPropagationDomain>> Solver(
       Problem, Opts);
   auto Status = Solver.solve();
   auto Out = Solver.getResults();

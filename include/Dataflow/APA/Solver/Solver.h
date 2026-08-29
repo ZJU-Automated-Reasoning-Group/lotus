@@ -14,9 +14,9 @@ namespace elimination {
 // dispatches to one of the three engine implementations based on
 // EliminationOptions. The heavy algorithmic logic lives in the engine headers
 // so that each solver family can be read and maintained independently.
-template <typename AnalysisDomainTy> class IntraEliminationSolver final {
+template <typename AnalysisTypesT> class IntraEliminationSolver final {
 public:
-  using Context = detail::IntraEliminationSolverContext<AnalysisDomainTy>;
+  using Context = detail::IntraEliminationSolverContext<AnalysisTypesT>;
   using ProblemTy = typename Context::ProblemTy;
   using ReducibleProblemTy = typename Context::ReducibleProblemTy;
   using n_t = typename Context::n_t;

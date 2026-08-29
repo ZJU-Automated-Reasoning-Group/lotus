@@ -17,7 +17,9 @@ using ConstantPropagationMap =
 struct ConstantPropagationDomain {
   using value_type = ConstantPropagationMap;
 
-  static value_type meet(const value_type &Lhs, const value_type &Rhs) {
+  value_type bottom() const { return {}; }
+
+  value_type join(const value_type &Lhs, const value_type &Rhs) const {
     value_type Out = Lhs;
     for (const auto &Entry : Rhs) {
       auto It = Out.find(Entry.first);
@@ -32,7 +34,7 @@ struct ConstantPropagationDomain {
     return Out;
   }
 
-  static bool equal(const value_type &Lhs, const value_type &Rhs) {
+  bool equal(const value_type &Lhs, const value_type &Rhs) const {
     for (const auto &Entry : Lhs) {
       auto It = Rhs.find(Entry.first);
       if (It == Rhs.end()) {
@@ -50,8 +52,6 @@ struct ConstantPropagationDomain {
     }
     return true;
   }
-
-  static value_type meetIdentity() { return {}; }
 
 private:
   static bool valueEqual(const ConstantPropagationValue &Lhs,

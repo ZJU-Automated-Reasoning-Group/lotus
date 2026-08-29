@@ -8,12 +8,12 @@ namespace elimination {
 namespace {
 
 class ElimReachingDefinitionsProblem
-    : public LLVMIntraEliminationProblem<ReachingDefinitionsFact> {
+    : public LLVMIntraEliminationProblem<ReachingDefinitionsFact, ReachingDefinitionsDomain> {
 public:
   explicit ElimReachingDefinitionsProblem(llvm::Function *F,
                                           llvm::AAResults *AA = nullptr,
                                           llvm::MemorySSA *MSSA = nullptr)
-      : LLVMIntraEliminationProblem<ReachingDefinitionsFact>(F), AA(AA),
+      : LLVMIntraEliminationProblem<ReachingDefinitionsFact, ReachingDefinitionsDomain>(F), AA(AA),
         MSSA(MSSA) {}
 
   ReachingDefinitionsFact
@@ -54,21 +54,6 @@ public:
     }
 
     return Out;
-  }
-
-  ReachingDefinitionsFact
-  meet(const ReachingDefinitionsFact &Lhs,
-       const ReachingDefinitionsFact &Rhs) const override {
-    return ReachingDefinitionsDomain::meet(Lhs, Rhs);
-  }
-
-  bool equal_to(const ReachingDefinitionsFact &Lhs,
-                const ReachingDefinitionsFact &Rhs) const override {
-    return ReachingDefinitionsDomain::equal(Lhs, Rhs);
-  }
-
-  ReachingDefinitionsFact meetIdentity() const override {
-    return ReachingDefinitionsDomain::meetIdentity();
   }
 
   ReachingDefinitionsFact initialFact() const override {
@@ -192,7 +177,7 @@ runIntraElimReachingDefinitions(llvm::Function *F, llvm::AAResults *AA,
   }
 
   ElimReachingDefinitionsProblem Problem(F, AA, MSSA);
-  IntraEliminationSolver<LLVMAnalysisTypes<ReachingDefinitionsFact>> Solver(
+  IntraEliminationSolver<LLVMAnalysisTypes<ReachingDefinitionsFact, ReachingDefinitionsDomain>> Solver(
       Problem, Opts);
   auto Status = Solver.solve();
   auto Out = Solver.getResults();

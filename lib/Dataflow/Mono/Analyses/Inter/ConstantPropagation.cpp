@@ -54,44 +54,6 @@ ConstantPropagationValue resolveValue(const ConstantPropagationMap &In,
   return makeTop();
 }
 
-ConstantPropagationValue lookupOrTop(const ConstantPropagationMap &Map,
-                                     const Value *V) {
-  auto It = Map.find(V);
-  if (It != Map.end()) {
-    return It->second;
-  }
-  return makeTop();
-}
-
-bool equalMapSemantically(const ConstantPropagationMap &Lhs,
-                          const ConstantPropagationMap &Rhs) {
-  for (const auto &Entry : Lhs) {
-    if (Entry.first == nullptr) {
-      continue;
-    }
-    if (!equalValue(Entry.second, lookupOrTop(Rhs, Entry.first))) {
-      return false;
-    }
-  }
-  for (const auto &Entry : Rhs) {
-    if (Entry.first == nullptr) {
-      continue;
-    }
-    if (!equalValue(lookupOrTop(Lhs, Entry.first), Entry.second)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-ConstantPropagationMap makeMergeIdentity() {
-  return {{nullptr, makeBottom()}};
-}
-
-bool isMergeIdentity(const ConstantPropagationMap &Map) {
-  return Map.size() == 1 && Map.count(nullptr) == 1u;
-}
-
 std::vector<Function *>
 resolveIndirectCalleesWithAA(Instruction *CallSite,
                              lotus::AliasAnalysisWrapper *AA) {
@@ -165,18 +127,18 @@ ConstantPropagationValue evalBinaryOp(unsigned Opcode,
 }
 
 class InterMonoConstantPropagation
-    : public InterMonoProblem<ConstantPropagationDomain> {
+    : public InterMonoProblem<ConstantPropagationAnalysisTypes> {
 public:
   explicit InterMonoConstantPropagation(Function *Entry,
                                         lotus::AliasAnalysisWrapper *AA)
-      : InterMonoProblem<ConstantPropagationDomain>(
+      : InterMonoProblem<ConstantPropagationAnalysisTypes>(
             std::vector<Function *>{Entry}, AA),
         AA(AA) {}
 
-  ConstantPropagationMap allTop() override { return makeMergeIdentity(); }
-
   ConstantPropagationMap normalFlow(Instruction *Inst,
                                     const ConstantPropagationMap &In) override {
+    if (getAbstractDomain().isBottom(In))
+      return In;
     ConstantPropagationMap Out = In;
 
     if (const auto *Alloca = dyn_cast<AllocaInst>(Inst)) {
@@ -220,65 +182,10 @@ public:
     return Out;
   }
 
-  // merge() is the join operator at control-flow merge points.
-  //
-  // For reachable states, an absent key means Top (unknown), not Bottom.
-  // join(Bottom, x) = x  (unreachable path contributes nothing)
-  // join(x, Bottom) = x
-  // join(x, x)             = x
-  // join(Const(a), Const(b)) = Top  (different constants → unknown)
-  // join(Const, Top)       = Top
-  // join(Top, Top)         = Top
-  ConstantPropagationMap merge(const ConstantPropagationMap &Lhs,
-                               const ConstantPropagationMap &Rhs) override {
-    if (isMergeIdentity(Lhs)) {
-      return isMergeIdentity(Rhs) ? ConstantPropagationMap{} : Rhs;
-    }
-    if (isMergeIdentity(Rhs)) {
-      return Lhs;
-    }
-
-    ConstantPropagationMap Out;
-
-    auto joinValues =
-        [](const ConstantPropagationValue &A,
-           const ConstantPropagationValue &B) -> ConstantPropagationValue {
-      if (equalValue(A, B))
-        return A;
-      if (isBottom(A))
-        return B;
-      if (isBottom(B))
-        return A;
-      return makeTop();
-    };
-
-    for (const auto &Entry : Lhs) {
-      if (Entry.first == nullptr) {
-        continue;
-      }
-      Out[Entry.first] =
-          joinValues(Entry.second, lookupOrTop(Rhs, Entry.first));
-    }
-
-    for (const auto &Entry : Rhs) {
-      if (Entry.first == nullptr) {
-        continue;
-      }
-      if (Lhs.find(Entry.first) == Lhs.end()) {
-        Out[Entry.first] = joinValues(makeTop(), Entry.second);
-      }
-    }
-
-    return Out;
-  }
-
-  bool equal_to(const ConstantPropagationMap &Lhs,
-                const ConstantPropagationMap &Rhs) override {
-    return equalMapSemantically(Lhs, Rhs);
-  }
-
   ConstantPropagationMap callFlow(Instruction *CallSite, Function *Callee,
                                   const ConstantPropagationMap &In) override {
+    if (getAbstractDomain().isBottom(In))
+      return In;
     ConstantPropagationMap Out;
     if (CallSite == nullptr || Callee == nullptr) {
       return Out;
@@ -314,6 +221,8 @@ public:
   ConstantPropagationMap returnFlow(Instruction *CallSite, Function *Callee,
                                     Instruction *ExitStmt, Instruction *RetSite,
                                     const ConstantPropagationMap &In) override {
+    if (getAbstractDomain().isBottom(In))
+      return In;
     (void)Callee;
     (void)RetSite;
 
@@ -346,6 +255,8 @@ public:
   callToRetFlow(Instruction *CallSite, Instruction *RetSite,
                 ArrayRef<Function *> Callees,
                 const ConstantPropagationMap &In) override {
+    if (getAbstractDomain().isBottom(In))
+      return In;
     (void)RetSite;
     ConstantPropagationMap Out = In;
 
@@ -401,7 +312,7 @@ public:
     if (!Callees.empty()) {
       return Callees;
     }
-    return InterMonoProblem<ConstantPropagationDomain>::resolve_indirect_callees(
+    return InterMonoProblem<ConstantPropagationAnalysisTypes>::resolve_indirect_callees(
         CallSite);
   }
 
@@ -531,7 +442,7 @@ runInterMonoConstantPropagation(Function *Entry) {
                       lotus::AAConfig::ContextSensitivity::None, 0, true,
                       lotus::AAConfig::Solver::Default));
   InterMonoConstantPropagation Problem(Entry, AA.get());
-  InterMonoSolver<ConstantPropagationDomain,
+  InterMonoSolver<ConstantPropagationAnalysisTypes,
                   kDefaultConstantPropagationCallStringLength>
       Solver(Problem);
   Solver.solve();

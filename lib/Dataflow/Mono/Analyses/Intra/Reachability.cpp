@@ -38,10 +38,10 @@ runReachableAnalysis(Function *f,
     return nullptr;
   }
 
-  class ReachableProblem : public IntraMonoProblem<ReachabilityDomain> {
+  class ReachableProblem : public IntraMonoProblem<ReachabilityAnalysisTypes> {
   public:
     ReachableProblem(Function *F, std::function<bool(Instruction *)> Filter)
-        : IntraMonoProblem<ReachabilityDomain>({F}), Filter(std::move(Filter)) {}
+        : IntraMonoProblem<ReachabilityAnalysisTypes>({F}), Filter(std::move(Filter)) {}
 
     ::dataflow::controlflow::FlowDirection direction() const override {
       return ::dataflow::controlflow::FlowDirection::Backward;
@@ -56,21 +56,9 @@ runReachableAnalysis(Function *f,
       return Out;
     }
 
-    mono_container_t merge(const mono_container_t &Lhs,
-                           const mono_container_t &Rhs) override {
-      mono_container_t Out = Lhs;
-      Out.unionWith(Rhs);
-      return Out;
-    }
-
-    bool equal_to(const mono_container_t &Lhs,
-                  const mono_container_t &Rhs) override {
-      return Lhs == Rhs;
-    }
-
     // For a backward analysis, seeds must be placed at exit points so that
     // the solver has starting facts to propagate backward.  Without seeds,
-    // allTop() = empty set is used for all nodes and normalFlow never fires
+    // bottom() = empty set is used for all nodes and normalFlow never fires
     // because no predecessor OUT is ever non-empty — the analysis produces
     // no results.
     //
@@ -97,7 +85,7 @@ runReachableAnalysis(Function *f,
   };
 
   ReachableProblem Problem(f, filter);
-  IntraMonoSolver<ReachabilityDomain> Solver(Problem);
+  IntraMonoSolver<ReachabilityAnalysisTypes> Solver(Problem);
   Solver.setDebugConfig(DebugCfg);
   Solver.solve();
 

@@ -15,7 +15,7 @@ class Value;
 
 namespace mono {
 
-struct InterMonoSolverTestDomain
+struct InterMonoSolverTestAnalysisTypes
     : LLVMMonoAnalysisTypes<SetContainer<llvm::Value *>> {};
 
 constexpr unsigned kDefaultInterMonoSolverTestCallStringLength = 2;

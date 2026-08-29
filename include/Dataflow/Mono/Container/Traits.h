@@ -37,13 +37,13 @@ namespace mono {
  *
  * ```cpp
  * // Use std::set (default, good for small universes)
- * using MyDomain = LLVMMonoAnalysisTypes<SetContainer<Value*>>;
+ * using MyAnalysisTypes = LLVMMonoAnalysisTypes<SetContainer<Value*>>;
  *
  * // Use BitVectorSet (good for large universes)
- * using MyDomain = LLVMMonoAnalysisTypes<BitVectorContainer<Value*>>;
+ * using MyAnalysisTypes = LLVMMonoAnalysisTypes<BitVectorContainer<Value*>>;
  *
  * // Use custom container
- * using MyDomain = LLVMMonoAnalysisTypes<MyCustomContainer<Value*>>;
+ * using MyAnalysisTypes = LLVMMonoAnalysisTypes<MyCustomContainer<Value*>>;
  * ```
  */
 
@@ -327,7 +327,7 @@ ContainerT createEmptyContainer(
  *
  * Use this when you don't have a preference:
  * ```cpp
- * using MyDomain = LLVMMonoAnalysisTypes<DefaultValueContainer>;
+ * using MyAnalysisTypes = LLVMMonoAnalysisTypes<DefaultValueContainer>;
  * ```
  */
 template <typename T> using DefaultContainer = SetContainer<T>;
@@ -337,7 +337,7 @@ template <typename T> using DefaultContainer = SetContainer<T>;
  *
  * Use this for performance-critical analyses with large universes:
  * ```cpp
- * using MyDomain = LLVMMonoAnalysisTypes<FastValueContainer>;
+ * using MyAnalysisTypes = LLVMMonoAnalysisTypes<FastValueContainer>;
  * ```
  */
 template <typename T> using FastContainer = BitVectorContainer<T>;

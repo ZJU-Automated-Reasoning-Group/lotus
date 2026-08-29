@@ -10,6 +10,10 @@ class Instruction;
 namespace mono {
 
 struct ReachingDefinitionsDomain
-    : LLVMMonoAnalysisTypes<SetContainer<llvm::Instruction *>> {};
+    : UnionDomain<SetContainer<llvm::Instruction *>> {};
+
+using ReachingDefinitionsAnalysisTypes =
+    LLVMMonoAnalysisTypes<ReachingDefinitionsDomain::value_type,
+                          ReachingDefinitionsDomain>;
 
 } // namespace mono

@@ -90,7 +90,7 @@ annotated decomposition trees. B. Scholz and J. Blieberger.
 
 ## What it computes
 
-The solver constructs **path expressions** (regular-expression-like ASTs) over edge transfer functions (`Atom`, `Union`, `Concat`, `Star`) and then evaluates those expressions over your lattice using your `meet` and `applyTransfer`.
+The solver constructs **path expressions** (regular-expression-like ASTs) over edge transfer functions (`Atom`, `Union`, `Concat`, `Star`) and then evaluates those expressions over your abstract domain using `bottom`, `join`, `equal`, and `applyTransfer`.
 
 This corresponds to a **meet-over-all-paths (MOP)** computation. For classic distributive frameworks, MOP equals the standard maximal fixed point (MFP) solution.
 
@@ -104,7 +104,7 @@ The APA solver is different:
 
 - APA path expressions carry **transfer functions**, not plain labels.
 - APA expressions are **evaluated over a dataflow lattice** via
-  `applyTransfer`, `meet`, and `maxStarIterations`.
+  `applyTransfer`, domain `join`, and `maxStarIterations`.
 - The utility path-expression library is for **regex/path summarization** and is
   not a drop-in implementation of the APA solver.
 
@@ -114,11 +114,17 @@ The APA solver is different:
 - `Solver/` contains both the generic intraprocedural elimination engines and
   the call-string interprocedural worklist solver.
 - `LLVM/` maps LLVM CFGs / ICFGs into the generic problem interfaces.
-- `Domains/` owns abstract fact types and their meet/equality operations.
+- `Domains/` owns abstract fact types and their `bottom`/`join`/`equal`
+  operations.
 - `Analyses/Intra/` and `Analyses/Inter/` provide LLVM transfer behavior,
   boundary conditions, and solver entry points. A domain may support either or
   both scopes. Shared inter-analysis fact propagation helpers also live under
   `Analyses/Inter/`.
+
+`Core/AbstractDomain.h` defines APA's engine-specific domain contract. May
+domains normally use union as `join`; must domains use reverse-inclusion order,
+so intersection is still the domain `join` and the finite universe is
+`bottom`. Transfer functions and boundary facts remain problem responsibilities.
 
 APA is therefore a generic elimination framework, not a complete
 "analysis generator." Each client analysis combines a reusable domain with
@@ -130,7 +136,7 @@ LLVM-specific modeling.
   call-string based, solves one procedure/context at a time, and does not claim
   parity with the repository's IFDS/IDE, WPDS, or NPA frameworks.
 - **Not a universal semiring-equation engine**: it uses path-expression elimination with
-  problem-defined `meet`/`applyTransfer`, rather than exposing the full range of algebraic
+  domain-defined `join` plus problem-defined `applyTransfer`, rather than exposing the full range of algebraic
   solver variants used across APA literature.
 - **ADT methods are conditional**: `ADTSimple` / `ADTDelayed` require reducible-graph
   assumptions; the solver falls back to `StateElimination` when assumptions do not hold.
@@ -229,7 +235,7 @@ of scope for this backend.
 
 Interprocedural APA clients are modeled by
 `elimination::InterEliminationProblem` and solved by
-`elimination::InterEliminationSolver<AnalysisDomainTy, K>`. The solver is
+`elimination::InterEliminationSolver<AnalysisTypesT, K>`. The solver is
 context-sensitive via bounded call strings, using
 `mono::CallStringCTX<Instruction *, K>` as the context representation.
 

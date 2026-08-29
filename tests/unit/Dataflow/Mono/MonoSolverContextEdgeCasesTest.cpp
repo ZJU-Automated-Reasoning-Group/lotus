@@ -47,14 +47,14 @@ TEST_F(MonoTest, InterMonoSolverK2ReturnFlowReachesTruncatedOuterContexts) {
       return In;
     }
 
-    mono_container_t merge(const mono_container_t &Lhs,
+    mono_container_t join(const mono_container_t &Lhs,
                            const mono_container_t &Rhs) override {
       mono_container_t Out = Lhs;
       Out.insert(Rhs.begin(), Rhs.end());
       return Out;
     }
 
-    bool equal_to(const mono_container_t &Lhs,
+    bool equal(const mono_container_t &Lhs,
                   const mono_container_t &Rhs) override {
       return Lhs == Rhs;
     }
@@ -164,14 +164,14 @@ TEST_F(MonoTest,
       return In;
     }
 
-    mono_container_t merge(const mono_container_t &Lhs,
+    mono_container_t join(const mono_container_t &Lhs,
                            const mono_container_t &Rhs) override {
       mono_container_t Out = Lhs;
       Out.insert(Rhs.begin(), Rhs.end());
       return Out;
     }
 
-    bool equal_to(const mono_container_t &Lhs,
+    bool equal(const mono_container_t &Lhs,
                   const mono_container_t &Rhs) override {
       return Lhs == Rhs;
     }
@@ -279,14 +279,14 @@ TEST_F(MonoTest, InterMonoSolverContextInsensitiveK0CollapsesCallers) {
       return In;
     }
 
-    mono_container_t merge(const mono_container_t &Lhs,
+    mono_container_t join(const mono_container_t &Lhs,
                            const mono_container_t &Rhs) override {
       mono_container_t Out = Lhs;
       Out.insert(Rhs.begin(), Rhs.end());
       return Out;
     }
 
-    bool equal_to(const mono_container_t &Lhs,
+    bool equal(const mono_container_t &Lhs,
                   const mono_container_t &Rhs) override {
       return Lhs == Rhs;
     }
@@ -381,14 +381,14 @@ TEST_F(MonoTest, InterMonoSolverMissingNodeQueryReturnsAllTopForMustAnalysis) {
     ProblemT(Function *Entry, Value *TopFact)
         : InterMonoProblem<Domain>({Entry}), TopFact(TopFact) {}
 
-    mono_container_t allTop() override { return {TopFact}; }
+    mono_container_t bottom() override { return {TopFact}; }
 
     mono_container_t normalFlow(Instruction *,
                                 const mono_container_t &In) override {
       return In;
     }
 
-    mono_container_t merge(const mono_container_t &Lhs,
+    mono_container_t join(const mono_container_t &Lhs,
                            const mono_container_t &Rhs) override {
       mono_container_t Out;
       for (auto *V : Lhs) {
@@ -399,7 +399,7 @@ TEST_F(MonoTest, InterMonoSolverMissingNodeQueryReturnsAllTopForMustAnalysis) {
       return Out;
     }
 
-    bool equal_to(const mono_container_t &Lhs,
+    bool equal(const mono_container_t &Lhs,
                   const mono_container_t &Rhs) override {
       return Lhs == Rhs;
     }
@@ -424,7 +424,7 @@ TEST_F(MonoTest, InterMonoSolverMissingNodeQueryReturnsAllTopForMustAnalysis) {
     std::unordered_map<Instruction *, mono_container_t>
     initialSeeds() override {
       std::unordered_map<Instruction *, mono_container_t> Seeds;
-      Seeds[&getEntryPoints().front()->getEntryBlock().front()] = allTop();
+      Seeds[&getEntryPoints().front()->getEntryBlock().front()] = bottom();
       return Seeds;
     }
 
@@ -473,14 +473,14 @@ TEST_F(MonoTest, IntraMonoSolverMissingNodeQueryReturnsAllTopForMustAnalysis) {
     ProblemT(Function *Entry, Value *TopFact)
         : IntraMonoProblem<Domain>({Entry}), TopFact(TopFact) {}
 
-    mono_container_t allTop() override { return {TopFact}; }
+    mono_container_t bottom() override { return {TopFact}; }
 
     mono_container_t normalFlow(Instruction *,
                                 const mono_container_t &In) override {
       return In;
     }
 
-    mono_container_t merge(const mono_container_t &Lhs,
+    mono_container_t join(const mono_container_t &Lhs,
                            const mono_container_t &Rhs) override {
       mono_container_t Out;
       for (auto *V : Lhs) {
@@ -491,7 +491,7 @@ TEST_F(MonoTest, IntraMonoSolverMissingNodeQueryReturnsAllTopForMustAnalysis) {
       return Out;
     }
 
-    bool equal_to(const mono_container_t &Lhs,
+    bool equal(const mono_container_t &Lhs,
                   const mono_container_t &Rhs) override {
       return Lhs == Rhs;
     }
@@ -499,7 +499,7 @@ TEST_F(MonoTest, IntraMonoSolverMissingNodeQueryReturnsAllTopForMustAnalysis) {
     std::unordered_map<Instruction *, mono_container_t>
     initialSeeds() override {
       std::unordered_map<Instruction *, mono_container_t> Seeds;
-      Seeds[&getEntryPoints().front()->getEntryBlock().front()] = allTop();
+      Seeds[&getEntryPoints().front()->getEntryBlock().front()] = bottom();
       return Seeds;
     }
 

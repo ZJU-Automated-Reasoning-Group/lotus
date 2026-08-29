@@ -11,6 +11,7 @@ struct InterReachabilityAnalysisTypes {
   using transfer_t = llvm::Instruction *;
   using f_t = llvm::Function *;
   using i_t = dataflow::controlflow::InterCFG;
+  using abstract_domain_t = ReachabilityDomain;
 };
 
 class InterElimReachableProblem
@@ -22,16 +23,6 @@ public:
             std::vector<llvm::Function *>{Entry}, ICF) {}
 
   fact_t normalFlow(n_t /*Inst*/, const fact_t &In) override { return In; }
-
-  fact_t merge(const fact_t &Lhs, const fact_t &Rhs) const override {
-    return ReachabilityDomain::meet(Lhs, Rhs);
-  }
-
-  bool equal_to(const fact_t &Lhs, const fact_t &Rhs) const override {
-    return ReachabilityDomain::equal(Lhs, Rhs);
-  }
-
-  fact_t allTop() const override { return ReachabilityDomain::meetIdentity(); }
 
   fact_t callFlow(n_t /*CallSite*/, f_t /*Callee*/, const fact_t &In) override {
     return In;

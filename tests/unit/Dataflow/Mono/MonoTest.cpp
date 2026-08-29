@@ -243,14 +243,14 @@ TEST_F(MonoTest, IntraMonoSolverPreservesExplicitMidFunctionSeed) {
       return Out;
     }
 
-    mono_container_t merge(const mono_container_t &Lhs,
+    mono_container_t join(const mono_container_t &Lhs,
                            const mono_container_t &Rhs) override {
       mono_container_t Out = Lhs;
       Out.insert(Rhs.begin(), Rhs.end());
       return Out;
     }
 
-    bool equal_to(const mono_container_t &Lhs,
+    bool equal(const mono_container_t &Lhs,
                   const mono_container_t &Rhs) override {
       return Lhs == Rhs;
     }
@@ -317,14 +317,14 @@ TEST_F(MonoTest, InterMonoSolverRecomputesIN) {
       return Out;
     }
 
-    mono_container_t merge(const mono_container_t &Lhs,
+    mono_container_t join(const mono_container_t &Lhs,
                            const mono_container_t &Rhs) override {
       mono_container_t Out = Lhs;
       Out.insert(Rhs.begin(), Rhs.end());
       return Out;
     }
 
-    bool equal_to(const mono_container_t &Lhs,
+    bool equal(const mono_container_t &Lhs,
                   const mono_container_t &Rhs) override {
       return Lhs == Rhs;
     }
@@ -759,14 +759,14 @@ TEST_F(MonoTest, InterMonoSolverUsesIndirectCallResolverHook) {
       return In;
     }
 
-    mono_container_t merge(const mono_container_t &Lhs,
+    mono_container_t join(const mono_container_t &Lhs,
                            const mono_container_t &Rhs) override {
       mono_container_t Out = Lhs;
       Out.insert(Rhs.begin(), Rhs.end());
       return Out;
     }
 
-    bool equal_to(const mono_container_t &Lhs,
+    bool equal(const mono_container_t &Lhs,
                   const mono_container_t &Rhs) override {
       return Lhs == Rhs;
     }

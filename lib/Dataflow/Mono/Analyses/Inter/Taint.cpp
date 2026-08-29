@@ -38,13 +38,13 @@ resolveIndirectCalleesWithAA(Instruction *CallSite,
   return Callees;
 }
 
-class InterMonoTaintProblem : public InterMonoProblem<TaintDomain> {
+class InterMonoTaintProblem : public InterMonoProblem<TaintAnalysisTypes> {
 public:
-  using mono_container_t = typename TaintDomain::mono_container_t;
+  using mono_container_t = typename TaintAnalysisTypes::mono_container_t;
 
   InterMonoTaintProblem(Function *Entry, const InterMonoTaintConfig &Config,
                         lotus::AliasAnalysisWrapper *AA)
-      : InterMonoProblem<TaintDomain>({Entry}, AA), Config(Config), AA(AA) {}
+      : InterMonoProblem<TaintAnalysisTypes>({Entry}, AA), Config(Config), AA(AA) {}
 
   mono_container_t normalFlow(Instruction *Inst,
                               const mono_container_t &In) override {
@@ -52,18 +52,6 @@ public:
       return applyCallSite(Call, resolveCallTargets(Call), In);
     }
     return applyInstructionFlow(Inst, In);
-  }
-
-  mono_container_t merge(const mono_container_t &Lhs,
-                         const mono_container_t &Rhs) override {
-    mono_container_t Out = Lhs;
-    Out.unionWith(Rhs);
-    return Out;
-  }
-
-  bool equal_to(const mono_container_t &Lhs,
-                const mono_container_t &Rhs) override {
-    return Lhs == Rhs;
   }
 
   mono_container_t callFlow(Instruction *CallSite, Function *Callee,
@@ -169,7 +157,7 @@ public:
     if (!Callees.empty()) {
       return Callees;
     }
-    return InterMonoProblem<TaintDomain>::resolve_indirect_callees(CallSite);
+    return InterMonoProblem<TaintAnalysisTypes>::resolve_indirect_callees(CallSite);
   }
 
   const InterMonoTaintReport &getReport() const { return Report; }
@@ -417,7 +405,7 @@ runInterMonoTaintAnalysis(Function *Entry, const InterMonoTaintConfig &Config) {
                       lotus::AAConfig::ContextSensitivity::None, 0, true,
                       lotus::AAConfig::Solver::Default));
   InterMonoTaintProblem Problem(Entry, Config, AA.get());
-  InterMonoSolver<TaintDomain, kDefaultTaintCallStringLength> Solver(Problem);
+  InterMonoSolver<TaintAnalysisTypes, kDefaultTaintCallStringLength> Solver(Problem);
   Solver.solve();
 
   if (auto *Raw = Solver.getResults()) {

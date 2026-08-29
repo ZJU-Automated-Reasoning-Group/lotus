@@ -19,10 +19,10 @@ namespace elimination {
 // hooks. This atom type reifies those hooks so a solver can build and evaluate
 // path expressions whose labels are interprocedural effects instead of only raw
 // CFG edge transfers.
-template <typename AnalysisDomainTy> struct InterSummaryTransferAtom final {
-  using n_t = typename AnalysisDomainTy::n_t;
-  using f_t = typename AnalysisDomainTy::f_t;
-  using transfer_t = typename AnalysisDomainTy::transfer_t;
+template <typename AnalysisTypesT> struct InterSummaryTransferAtom final {
+  using n_t = typename AnalysisTypesT::n_t;
+  using f_t = typename AnalysisTypesT::f_t;
+  using transfer_t = typename AnalysisTypesT::transfer_t;
 
   enum class Kind {
     RawNormal,
@@ -84,18 +84,18 @@ template <typename AnalysisDomainTy> struct InterSummaryTransferAtom final {
   std::vector<f_t> Callees;
 };
 
-template <typename AnalysisDomainTy, unsigned K>
+template <typename AnalysisTypesT, unsigned K>
 class InterSummaryTransferEvaluator final {
 public:
-  using ProblemTy = InterEliminationProblem<AnalysisDomainTy>;
-  using fact_t = typename AnalysisDomainTy::fact_t;
-  using n_t = typename AnalysisDomainTy::n_t;
-  using f_t = typename AnalysisDomainTy::f_t;
-  using transfer_t = typename AnalysisDomainTy::transfer_t;
-  using i_t = typename AnalysisDomainTy::i_t;
+  using ProblemTy = InterEliminationProblem<AnalysisTypesT>;
+  using fact_t = typename AnalysisTypesT::fact_t;
+  using n_t = typename AnalysisTypesT::n_t;
+  using f_t = typename AnalysisTypesT::f_t;
+  using transfer_t = typename AnalysisTypesT::transfer_t;
+  using i_t = typename AnalysisTypesT::i_t;
   using result_t = InterDataFlowResultT<K, fact_t, transfer_t, n_t>;
   using Context = mono::CallStringCTX<n_t, K>;
-  using atom_t = InterSummaryTransferAtom<AnalysisDomainTy>;
+  using atom_t = InterSummaryTransferAtom<AnalysisTypesT>;
   using expr_factory_t = PathExprFactory<atom_t>;
   using expr_ref_t = typename expr_factory_t::Ref;
 
@@ -117,7 +117,7 @@ public:
     case atom_t::Kind::CallToRet:
       return applyCallToRet(Atom.CallSite, Atom.RetSite, Atom.Callees, In);
     }
-    return Problem.allTop();
+    return Problem.bottom();
   }
 
   fact_t applyRawNormal(const transfer_t &T, const fact_t &In) const {
@@ -195,7 +195,7 @@ public:
           }
           auto Returned = applyReturnExitWithCallerFact(
               CallSite, Callee, Exit, CandidateRetSite, *ExitFacts, BeforeCall);
-          Out = Problem.merge(Out, Returned);
+          Out = Problem.join(Out, Returned);
         }
       }
     }
@@ -205,12 +205,12 @@ public:
   fact_t evaluateExpr(const expr_ref_t &Expr, const fact_t &In,
                       std::size_t MaxStarIterations = 100000) const {
     if (!Expr) {
-      return Problem.allTop();
+      return Problem.bottom();
     }
 
     switch (Expr->K) {
     case expr_factory_t::Kind::Zero:
-      return Problem.allTop();
+      return Problem.bottom();
     case expr_factory_t::Kind::One:
       return In;
     case expr_factory_t::Kind::Atom:
@@ -218,7 +218,7 @@ public:
     case expr_factory_t::Kind::Union: {
       auto L = evaluateExpr(Expr->L, In, MaxStarIterations);
       auto R = evaluateExpr(Expr->R, In, MaxStarIterations);
-      return Problem.merge(L, R);
+      return Problem.join(L, R);
     }
     case expr_factory_t::Kind::Concat: {
       auto Mid = evaluateExpr(Expr->L, In, MaxStarIterations);
@@ -228,8 +228,8 @@ public:
       auto Cur = In;
       for (std::size_t I = 0; I < MaxStarIterations; ++I) {
         auto Next =
-            Problem.merge(In, evaluateExpr(Expr->L, Cur, MaxStarIterations));
-        if (Problem.equal_to(Next, Cur)) {
+            Problem.join(In, evaluateExpr(Expr->L, Cur, MaxStarIterations));
+        if (Problem.equal(Next, Cur)) {
           return Cur;
         }
         Cur = std::move(Next);
@@ -237,7 +237,7 @@ public:
       return Cur;
     }
     }
-    return Problem.allTop();
+    return Problem.bottom();
   }
 
 private:

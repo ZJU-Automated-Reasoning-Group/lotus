@@ -2,6 +2,7 @@
 #define DATAFLOW_APA_CORE_INTERPROBLEM_H_
 
 #include "Dataflow/ControlFlow/FlowDirection.h"
+#include "Dataflow/APA/Core/AbstractDomain.h"
 
 #include <type_traits>
 #include <unordered_map>
@@ -10,23 +11,36 @@
 
 namespace elimination {
 
-template <typename AnalysisDomainTy> class InterEliminationProblem {
+template <typename AnalysisTypesT> class InterEliminationProblem {
 public:
-  using n_t = typename AnalysisDomainTy::n_t;
-  using fact_t = typename AnalysisDomainTy::fact_t;
-  using transfer_t = typename AnalysisDomainTy::transfer_t;
-  using f_t = typename AnalysisDomainTy::f_t;
-  using i_t = typename AnalysisDomainTy::i_t;
+  using n_t = typename AnalysisTypesT::n_t;
+  using fact_t = typename AnalysisTypesT::fact_t;
+  using transfer_t = typename AnalysisTypesT::transfer_t;
+  using f_t = typename AnalysisTypesT::f_t;
+  using i_t = typename AnalysisTypesT::i_t;
+  using abstract_domain_t = typename AnalysisTypesT::abstract_domain_t;
+
+  static_assert(IsAPAAbstractDomain<abstract_domain_t>::value,
+                "APA domain must define value_type, bottom, join, and equal");
+  static_assert(std::is_same<typename abstract_domain_t::value_type,
+                             fact_t>::value,
+                "APA analysis types and domain must use the same fact type");
 
   explicit InterEliminationProblem(std::vector<f_t> EntryPoints = {},
-                                   const i_t *ICF = nullptr)
-      : EntryPoints(std::move(EntryPoints)), ICF(ICF) {}
+                                   const i_t *ICF = nullptr,
+                                   abstract_domain_t Domain = abstract_domain_t{})
+      : EntryPoints(std::move(EntryPoints)), ICF(ICF),
+        AbstractDomainState(std::move(Domain)) {}
 
   virtual ~InterEliminationProblem() = default;
 
   virtual fact_t normalFlow(n_t Inst, const fact_t &In) = 0;
-  virtual fact_t merge(const fact_t &Lhs, const fact_t &Rhs) const = 0;
-  virtual bool equal_to(const fact_t &Lhs, const fact_t &Rhs) const = 0;
+  virtual fact_t join(const fact_t &Lhs, const fact_t &Rhs) const {
+    return AbstractDomainState.join(Lhs, Rhs);
+  }
+  virtual bool equal(const fact_t &Lhs, const fact_t &Rhs) const {
+    return AbstractDomainState.equal(Lhs, Rhs);
+  }
 
   virtual transfer_t edgeTransfer(n_t Src, n_t Dst) const {
     if constexpr (std::is_same_v<transfer_t, n_t>) {
@@ -63,7 +77,7 @@ public:
     return n_t{};
   }
 
-  virtual fact_t allTop() const { return fact_t{}; }
+  virtual fact_t bottom() const { return AbstractDomainState.bottom(); }
 
   virtual std::unordered_map<n_t, fact_t> initialSeeds() = 0;
 
@@ -89,10 +103,15 @@ public:
 
   const std::vector<f_t> &getEntryPoints() const { return EntryPoints; }
   const i_t *getICFG() const { return ICF; }
+  abstract_domain_t &getAbstractDomain() { return AbstractDomainState; }
+  const abstract_domain_t &getAbstractDomain() const {
+    return AbstractDomainState;
+  }
 
 private:
   std::vector<f_t> EntryPoints;
   const i_t *ICF = nullptr;
+  abstract_domain_t AbstractDomainState;
 };
 
 } // namespace elimination

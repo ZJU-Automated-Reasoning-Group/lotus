@@ -22,10 +22,10 @@ namespace {
 // BitVectorContainer
 // ============================================================================
 
-class ReachingDefsProblem : public IntraMonoProblem<ReachingDefinitionsDomain> {
+class ReachingDefsProblem : public IntraMonoProblem<ReachingDefinitionsAnalysisTypes> {
 public:
   explicit ReachingDefsProblem(Function *F)
-      : IntraMonoProblem<ReachingDefinitionsDomain>({F}) {}
+      : IntraMonoProblem<ReachingDefinitionsAnalysisTypes>({F}) {}
 
   ::dataflow::controlflow::FlowDirection direction() const override {
     return ::dataflow::controlflow::FlowDirection::Forward;
@@ -42,18 +42,6 @@ public:
 
     // KILL: In SSA form, definitions never kill each other
     return Out;
-  }
-
-  mono_container_t merge(const mono_container_t &Lhs,
-                         const mono_container_t &Rhs) override {
-    mono_container_t Out = Lhs;
-    Out.unionWith(Rhs);
-    return Out;
-  }
-
-  bool equal_to(const mono_container_t &Lhs,
-                const mono_container_t &Rhs) override {
-    return Lhs == Rhs;
   }
 
   std::unordered_map<Instruction *, mono_container_t> initialSeeds() override {
@@ -84,7 +72,7 @@ std::unique_ptr<DataFlowResult> runReachingDefinitionsAnalysis(Function *F) {
   // Analysis writer just creates problem and solver - framework handles
   // optimization
   ReachingDefsProblem Problem(F);
-  IntraMonoSolver<ReachingDefinitionsDomain> Solver(Problem);
+  IntraMonoSolver<ReachingDefinitionsAnalysisTypes> Solver(Problem);
   Solver.solve();
 
   auto Result = std::make_unique<DataFlowResult>();

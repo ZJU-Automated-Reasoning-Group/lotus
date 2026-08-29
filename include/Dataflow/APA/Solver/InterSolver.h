@@ -16,15 +16,15 @@
 
 namespace elimination {
 
-template <typename AnalysisDomainTy, unsigned K>
+template <typename AnalysisTypesT, unsigned K>
 class InterEliminationSolver final {
 public:
-  using ProblemTy = InterEliminationProblem<AnalysisDomainTy>;
-  using fact_t = typename AnalysisDomainTy::fact_t;
-  using n_t = typename AnalysisDomainTy::n_t;
-  using f_t = typename AnalysisDomainTy::f_t;
-  using transfer_t = typename AnalysisDomainTy::transfer_t;
-  using i_t = typename AnalysisDomainTy::i_t;
+  using ProblemTy = InterEliminationProblem<AnalysisTypesT>;
+  using fact_t = typename AnalysisTypesT::fact_t;
+  using n_t = typename AnalysisTypesT::n_t;
+  using f_t = typename AnalysisTypesT::f_t;
+  using transfer_t = typename AnalysisTypesT::transfer_t;
+  using i_t = typename AnalysisTypesT::i_t;
   using result_t = InterDataFlowResultT<K, fact_t, transfer_t, n_t>;
   using Context = mono::CallStringCTX<n_t, K>;
 
@@ -51,7 +51,7 @@ public:
     }
 
     Result = result_t{};
-    Result.setMissingFactFallback(Problem.allTop());
+    Result.setMissingFactFallback(Problem.bottom());
     HaveResult = true;
 
     std::deque<ContextKey> Worklist;
@@ -114,7 +114,7 @@ public:
 
 private:
   class ProcedureProblemAdapter final
-      : public IntraEliminationProblem<AnalysisDomainTy> {
+      : public IntraEliminationProblem<AnalysisTypesT> {
   public:
     ProcedureProblemAdapter(ProblemTy &Problem, f_t Function,
                             const Context &Ctx, const result_t &Result,
@@ -151,20 +151,20 @@ private:
     }
 
     fact_t applyTransfer(const transfer_t &T, const fact_t &In) const override {
-      InterSummaryTransferEvaluator<AnalysisDomainTy, K> Evaluator(Problem, ICF,
+      InterSummaryTransferEvaluator<AnalysisTypesT, K> Evaluator(Problem, ICF,
                                                                    Result, Ctx);
       return Evaluator.applyNormalEdge(T, In);
     }
 
-    fact_t meet(const fact_t &Lhs, const fact_t &Rhs) const override {
-      return Problem.merge(Lhs, Rhs);
+    fact_t join(const fact_t &Lhs, const fact_t &Rhs) const override {
+      return Problem.join(Lhs, Rhs);
     }
 
-    bool equal_to(const fact_t &Lhs, const fact_t &Rhs) const override {
-      return Problem.equal_to(Lhs, Rhs);
+    bool equal(const fact_t &Lhs, const fact_t &Rhs) const override {
+      return Problem.equal(Lhs, Rhs);
     }
 
-    fact_t meetIdentity() const override { return Problem.allTop(); }
+    fact_t bottom() const override { return Problem.bottom(); }
     fact_t initialFact() const override { return EntryFact; }
 
   private:
@@ -188,7 +188,7 @@ private:
     auto EntryFact = boundaryFactForContext(Function, Key.Ctx, ICF);
     ProcedureProblemAdapter Adapter(Problem, Function, Key.Ctx, Result, ICF,
                                     EntryFact);
-    IntraEliminationSolver<AnalysisDomainTy> Solver(Adapter);
+    IntraEliminationSolver<AnalysisTypesT> Solver(Adapter);
     auto Status = Solver.solve();
     if (Status == SolveStatus::InvalidProblem) {
       return false;
@@ -203,7 +203,7 @@ private:
         continue;
       }
       auto &InSlot = Result.IN(Inst, Key.Ctx);
-      if (!Problem.equal_to(InSlot, *In)) {
+      if (!Problem.equal(InSlot, *In)) {
         InSlot = *In;
         Changed = true;
       }
@@ -214,7 +214,7 @@ private:
               : Problem.edgeTransfer(Inst, n_t{});
       auto Out = Problem.applyTransfer(OutTransfer, *In);
       auto &OutSlot = Result.OUT(Inst, Key.Ctx);
-      if (!Problem.equal_to(OutSlot, Out)) {
+      if (!Problem.equal(OutSlot, Out)) {
         OutSlot = std::move(Out);
         Changed = true;
       }
@@ -233,19 +233,19 @@ private:
   fact_t boundaryFactForContext(f_t Function, const Context &Ctx,
                                 const i_t &ICF) {
     if (Function == f_t{}) {
-      return Problem.allTop();
+      return Problem.bottom();
     }
 
     auto Starts = ICF.getStartPointsOf(Function);
     auto Exits = ICF.getExitPointsOf(Function);
     if (Starts.empty() && Exits.empty()) {
-      return Problem.allTop();
+      return Problem.bottom();
     }
 
     auto EntryInst = Starts.empty() ? n_t{} : Starts.front();
     if (Problem.direction() ==
         ::dataflow::controlflow::FlowDirection::Backward) {
-      fact_t Boundary = Problem.allTop();
+      fact_t Boundary = Problem.bottom();
       bool First = true;
 
       if (Ctx.empty()) {
@@ -258,16 +258,16 @@ private:
             Boundary = It->second;
             First = false;
           } else {
-            Boundary = Problem.merge(Boundary, It->second);
+            Boundary = Problem.join(Boundary, It->second);
           }
         }
-        return First ? Problem.allTop() : Boundary;
+        return First ? Problem.bottom() : Boundary;
       }
 
       auto CallerCtx = Ctx;
       auto CallSite = CallerCtx.pop_back();
       if (CallSite == n_t{}) {
-        return Problem.allTop();
+        return Problem.bottom();
       }
       for (auto RetSite : ICF.getReturnSitesOfCallAt(CallSite)) {
         if (RetSite == n_t{}) {
@@ -287,28 +287,28 @@ private:
             Boundary = Flow;
             First = false;
           } else {
-            Boundary = Problem.merge(Boundary, Flow);
+            Boundary = Problem.join(Boundary, Flow);
           }
         }
       }
-      return First ? Problem.allTop() : Boundary;
+      return First ? Problem.bottom() : Boundary;
     }
 
     if (Ctx.empty()) {
       auto It = SeedFacts.find(EntryInst);
-      return It != SeedFacts.end() ? It->second : Problem.allTop();
+      return It != SeedFacts.end() ? It->second : Problem.bottom();
     }
 
     auto CallerCtx = Ctx;
     auto CallSite = CallerCtx.pop_back();
     if (CallSite == n_t{}) {
-      return Problem.allTop();
+      return Problem.bottom();
     }
     auto *CallerFacts = Result.tryOUT(CallSite, CallerCtx);
     if (CallerFacts == nullptr) {
-      return Problem.allTop();
+      return Problem.bottom();
     }
-    InterSummaryTransferEvaluator<AnalysisDomainTy, K> Evaluator(
+    InterSummaryTransferEvaluator<AnalysisTypesT, K> Evaluator(
         Problem, ICF, Result, CallerCtx);
     return Evaluator.applyCallEntry(CallSite, Function, *CallerFacts);
   }

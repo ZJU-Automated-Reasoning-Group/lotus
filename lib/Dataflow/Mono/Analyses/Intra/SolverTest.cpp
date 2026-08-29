@@ -12,12 +12,12 @@ using namespace llvm;
 namespace mono {
 namespace {
 
-using TestDomain = LLVMMonoAnalysisTypes<SetContainer<Value *>>;
+using TestAnalysisTypes = LLVMMonoAnalysisTypes<SetContainer<Value *>>;
 
-class IntraSolverTestProblem : public IntraMonoProblem<TestDomain> {
+class IntraSolverTestProblem : public IntraMonoProblem<TestAnalysisTypes> {
 public:
   explicit IntraSolverTestProblem(Function *F)
-      : IntraMonoProblem<TestDomain>(std::vector<Function *>{F}) {}
+      : IntraMonoProblem<TestAnalysisTypes>(std::vector<Function *>{F}) {}
 
   mono_container_t normalFlow(Instruction *Inst,
                               const mono_container_t &In) override {
@@ -36,14 +36,14 @@ public:
     return Out;
   }
 
-  mono_container_t merge(const mono_container_t &Lhs,
+  mono_container_t join(const mono_container_t &Lhs,
                          const mono_container_t &Rhs) override {
     mono_container_t Out = Lhs;
     Out.unionWith(Rhs);
     return Out;
   }
 
-  bool equal_to(const mono_container_t &Lhs,
+  bool equal(const mono_container_t &Lhs,
                 const mono_container_t &Rhs) override {
     return Lhs == Rhs;
   }
@@ -69,7 +69,7 @@ std::unique_ptr<DataFlowResult> runIntraMonoSolverTest(Function *F) {
   }
 
   IntraSolverTestProblem Problem(F);
-  IntraMonoSolver<TestDomain> Solver(Problem);
+  IntraMonoSolver<TestAnalysisTypes> Solver(Problem);
   Solver.solve();
 
   auto Result = std::make_unique<DataFlowResult>();

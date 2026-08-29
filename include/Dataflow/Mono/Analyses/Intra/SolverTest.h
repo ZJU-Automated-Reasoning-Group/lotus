@@ -16,7 +16,7 @@ class Value;
 
 namespace mono {
 
-struct IntraMonoSolverTestDomain
+struct IntraMonoSolverTestAnalysisTypes
     : LLVMMonoAnalysisTypes<std::set<llvm::Value *>> {};
 
 std::unique_ptr<DataFlowResult> runIntraMonoSolverTest(llvm::Function *F);

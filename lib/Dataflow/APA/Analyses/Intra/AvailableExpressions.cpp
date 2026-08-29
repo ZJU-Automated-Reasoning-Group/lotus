@@ -47,15 +47,16 @@ ExpressionKey makeKeyWithMSSA(const llvm::Instruction *Inst,
 }
 
 class ElimAvailableExpressionsProblem
-    : public LLVMIntraEliminationProblem<AvailableExpressionsFact> {
+    : public LLVMIntraEliminationProblem<AvailableExpressionsFact, AvailableExpressionsDomain> {
 public:
   explicit ElimAvailableExpressionsProblem(
       llvm::Function *F, llvm::AAResults *AA = nullptr,
       llvm::DominatorTree *DT = nullptr, llvm::TargetLibraryInfo *TLI = nullptr,
       llvm::MemorySSA *MSSA = nullptr)
-      : LLVMIntraEliminationProblem<AvailableExpressionsFact>(F), AA(AA),
+      : LLVMIntraEliminationProblem<AvailableExpressionsFact, AvailableExpressionsDomain>(F), AA(AA),
         DT(DT), TLI(TLI), MSSA(MSSA) {
     buildUniverse(F);
+    this->getAbstractDomain().setUniverse(AllExprs);
   }
 
   AvailableExpressionsFact
@@ -83,19 +84,6 @@ public:
 
     return Out;
   }
-
-  AvailableExpressionsFact
-  meet(const AvailableExpressionsFact &Lhs,
-       const AvailableExpressionsFact &Rhs) const override {
-    return AvailableExpressionsDomain::meet(Lhs, Rhs);
-  }
-
-  bool equal_to(const AvailableExpressionsFact &Lhs,
-                const AvailableExpressionsFact &Rhs) const override {
-    return AvailableExpressionsDomain::equal(Lhs, Rhs);
-  }
-
-  AvailableExpressionsFact meetIdentity() const override { return AllExprs; }
 
   AvailableExpressionsFact initialFact() const override {
     return AvailableExpressionsFact{};
@@ -273,7 +261,7 @@ AvailableExpressionsResult runIntraElimAvailableExpressions(
   }
 
   ElimAvailableExpressionsProblem Problem(F, AA, DT, TLI, MSSA);
-  IntraEliminationSolver<LLVMAnalysisTypes<AvailableExpressionsFact>>
+  IntraEliminationSolver<LLVMAnalysisTypes<AvailableExpressionsFact, AvailableExpressionsDomain>>
       Solver(Problem, Opts);
   auto Status = Solver.solve();
   auto Out = Solver.getResults();

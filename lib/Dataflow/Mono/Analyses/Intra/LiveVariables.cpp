@@ -14,10 +14,10 @@ namespace mono {
 
 namespace {
 
-class LiveVariablesProblem : public IntraMonoProblem<LiveVariablesDomain> {
+class LiveVariablesProblem : public IntraMonoProblem<LiveVariablesAnalysisTypes> {
 public:
   explicit LiveVariablesProblem(Function *F)
-      : IntraMonoProblem<LiveVariablesDomain>({F}) {}
+      : IntraMonoProblem<LiveVariablesAnalysisTypes>({F}) {}
 
   ::dataflow::controlflow::FlowDirection direction() const override {
     return ::dataflow::controlflow::FlowDirection::Backward;
@@ -38,18 +38,6 @@ public:
     }
 
     return Out;
-  }
-
-  mono_container_t merge(const mono_container_t &Lhs,
-                         const mono_container_t &Rhs) override {
-    mono_container_t Out = Lhs;
-    Out.unionWith(Rhs);
-    return Out;
-  }
-
-  bool equal_to(const mono_container_t &Lhs,
-                const mono_container_t &Rhs) override {
-    return Lhs == Rhs;
   }
 
   std::unordered_map<Instruction *, mono_container_t> initialSeeds() override {
@@ -77,7 +65,7 @@ std::unique_ptr<DataFlowResult> runLiveVariablesAnalysis(Function *f,
   }
 
   LiveVariablesProblem Problem(f);
-  IntraMonoSolver<LiveVariablesDomain> Solver(Problem);
+  IntraMonoSolver<LiveVariablesAnalysisTypes> Solver(Problem);
   Solver.setDebugConfig(DebugCfg);
   Solver.solve();
 

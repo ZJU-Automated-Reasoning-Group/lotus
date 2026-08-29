@@ -9,7 +9,9 @@ class Value;
 
 namespace mono {
 
-struct ReachabilityDomain
-    : LLVMMonoAnalysisTypes<SetContainer<llvm::Value *>> {};
+struct ReachabilityDomain : UnionDomain<SetContainer<llvm::Value *>> {};
+
+using ReachabilityAnalysisTypes =
+    LLVMMonoAnalysisTypes<ReachabilityDomain::value_type, ReachabilityDomain>;
 
 } // namespace mono

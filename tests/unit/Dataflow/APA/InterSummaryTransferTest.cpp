@@ -34,6 +34,7 @@ struct FakeDomain {
   using transfer_t = int;
   using f_t = int;
   using i_t = FakeICF;
+  using abstract_domain_t = elimination::LegacyProblemDomain<fact_t>;
 };
 
 class FakeProblem : public elimination::InterEliminationProblem<FakeDomain> {
@@ -43,15 +44,15 @@ public:
 
   fact_t normalFlow(n_t Inst, const fact_t &In) override { return In + Inst; }
 
-  fact_t merge(const fact_t &Lhs, const fact_t &Rhs) const override {
+  fact_t join(const fact_t &Lhs, const fact_t &Rhs) const override {
     return std::max(Lhs, Rhs);
   }
 
-  bool equal_to(const fact_t &Lhs, const fact_t &Rhs) const override {
+  bool equal(const fact_t &Lhs, const fact_t &Rhs) const override {
     return Lhs == Rhs;
   }
 
-  fact_t allTop() const override { return 0; }
+  fact_t bottom() const override { return 0; }
 
   n_t transferSuccessor(const transfer_t &T) const override {
     return T == 10 ? 11 : 0;

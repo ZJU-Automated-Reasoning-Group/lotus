@@ -12,34 +12,42 @@
 #include <deque>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace elimination {
 
 // Solver-facing types for LLVM IR: nodes and transfers are instructions, while
 // the fact type is supplied by a concrete abstract domain.
-template <typename FactT> struct LLVMAnalysisTypes {
+template <typename FactT,
+          typename AbstractDomainT = LegacyProblemDomain<FactT>>
+struct LLVMAnalysisTypes {
   using n_t = llvm::Instruction *;
   using fact_t = FactT;
   using transfer_t = llvm::Instruction *;
+  using abstract_domain_t = AbstractDomainT;
 };
 
 // LLVM-backed intraprocedural elimination problem for a single function.
 // - Nodes are LLVM instructions.
 // - Edge transfer defaults to the source instruction (forward IN facts).
 // - Dominator-based reducible information is provided for ADT algorithms.
-template <typename FactT>
+template <typename FactT,
+          typename AbstractDomainT = LegacyProblemDomain<FactT>>
 class LLVMIntraEliminationProblem
-    : public IntraReducibleEliminationProblem<LLVMAnalysisTypes<FactT>> {
+    : public IntraReducibleEliminationProblem<
+          LLVMAnalysisTypes<FactT, AbstractDomainT>> {
 public:
-  using AnalysisTypes = LLVMAnalysisTypes<FactT>;
+  using AnalysisTypes = LLVMAnalysisTypes<FactT, AbstractDomainT>;
   using Base = IntraReducibleEliminationProblem<AnalysisTypes>;
   using n_t = typename Base::n_t;
   using fact_t = typename Base::fact_t;
   using transfer_t = typename Base::transfer_t;
   using Edge = typename Base::Edge;
 
-  explicit LLVMIntraEliminationProblem(llvm::Function *F) : F(F) {}
+  explicit LLVMIntraEliminationProblem(
+      llvm::Function *F, AbstractDomainT Domain = AbstractDomainT{})
+      : Base(std::move(Domain)), F(F) {}
 
   std::vector<n_t> nodes() const override {
     ensurePrepared();

@@ -1,13 +1,15 @@
 #pragma once
 
+#include "Dataflow/APA/Core/AbstractDomain.h"
+
 namespace elimination {
 
 struct ReachabilityDomain {
   using value_type = bool;
 
-  static value_type meet(value_type Lhs, value_type Rhs) { return Lhs || Rhs; }
-  static bool equal(value_type Lhs, value_type Rhs) { return Lhs == Rhs; }
-  static value_type meetIdentity() { return false; }
+  value_type bottom() const { return false; }
+  value_type join(value_type Lhs, value_type Rhs) const { return Lhs || Rhs; }
+  bool equal(value_type Lhs, value_type Rhs) const { return Lhs == Rhs; }
 };
 
 using ReachableFact = ReachabilityDomain::value_type;

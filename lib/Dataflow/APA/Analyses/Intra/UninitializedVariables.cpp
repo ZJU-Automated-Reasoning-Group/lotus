@@ -16,15 +16,15 @@ namespace elimination {
 namespace {
 
 class ElimUninitVariablesProblem
-    : public LLVMIntraEliminationProblem<UninitVariablesFact> {
+    : public LLVMIntraEliminationProblem<UninitVariablesFact, UninitializedVariablesDomain> {
 public:
   explicit ElimUninitVariablesProblem(llvm::Function *F)
-      : LLVMIntraEliminationProblem<UninitVariablesFact>(F),
+      : LLVMIntraEliminationProblem<UninitVariablesFact, UninitializedVariablesDomain>(F),
         DL(F != nullptr ? &F->getParent()->getDataLayout() : nullptr) {}
 
   ElimUninitVariablesProblem(llvm::Function *F, llvm::AAResults *AA,
                              llvm::AssumptionCache *AC, llvm::DominatorTree *DT)
-      : LLVMIntraEliminationProblem<UninitVariablesFact>(F),
+      : LLVMIntraEliminationProblem<UninitVariablesFact, UninitializedVariablesDomain>(F),
         DL(F != nullptr ? &F->getParent()->getDataLayout() : nullptr), AA(AA),
         AC(AC), DT(DT) {}
 
@@ -129,20 +129,6 @@ public:
     }
 
     return Out;
-  }
-
-  UninitVariablesFact meet(const UninitVariablesFact &Lhs,
-                           const UninitVariablesFact &Rhs) const override {
-    return UninitializedVariablesDomain::meet(Lhs, Rhs);
-  }
-
-  bool equal_to(const UninitVariablesFact &Lhs,
-                const UninitVariablesFact &Rhs) const override {
-    return UninitializedVariablesDomain::equal(Lhs, Rhs);
-  }
-
-  UninitVariablesFact meetIdentity() const override {
-    return UninitializedVariablesDomain::meetIdentity();
   }
 
   UninitVariablesFact initialFact() const override {
@@ -277,7 +263,7 @@ UninitVariablesResult runIntraElimUninitVariables(llvm::Function *F,
   }
 
   ElimUninitVariablesProblem Problem(F, AA, AC, DT);
-  IntraEliminationSolver<LLVMAnalysisTypes<UninitVariablesFact>> Solver(
+  IntraEliminationSolver<LLVMAnalysisTypes<UninitVariablesFact, UninitializedVariablesDomain>> Solver(
       Problem, Opts);
   auto Status = Solver.solve();
   auto Out = Solver.getResults();

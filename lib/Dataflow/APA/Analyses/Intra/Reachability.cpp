@@ -3,28 +3,14 @@
 namespace elimination {
 namespace {
 
-class ElimReachableProblem : public LLVMIntraEliminationProblem<ReachableFact> {
+class ElimReachableProblem : public LLVMIntraEliminationProblem<ReachableFact, ReachabilityDomain> {
 public:
   explicit ElimReachableProblem(llvm::Function *F)
-      : LLVMIntraEliminationProblem<ReachableFact>(F) {}
+      : LLVMIntraEliminationProblem<ReachableFact, ReachabilityDomain>(F) {}
 
   ReachableFact applyTransfer(const transfer_t & /*T*/,
                               const ReachableFact &In) const override {
     return In;
-  }
-
-  ReachableFact meet(const ReachableFact &Lhs,
-                     const ReachableFact &Rhs) const override {
-    return ReachabilityDomain::meet(Lhs, Rhs);
-  }
-
-  bool equal_to(const ReachableFact &Lhs,
-                const ReachableFact &Rhs) const override {
-    return ReachabilityDomain::equal(Lhs, Rhs);
-  }
-
-  ReachableFact meetIdentity() const override {
-    return ReachabilityDomain::meetIdentity();
   }
 
   ReachableFact initialFact() const override { return true; }
@@ -39,7 +25,7 @@ ReachableResult runIntraElimReachable(llvm::Function *F,
   }
 
   ElimReachableProblem Problem(F);
-  IntraEliminationSolver<LLVMAnalysisTypes<ReachableFact>> Solver(Problem,
+  IntraEliminationSolver<LLVMAnalysisTypes<ReachableFact, ReachabilityDomain>> Solver(Problem,
                                                                       Opts);
   auto Status = Solver.solve();
   auto Out = Solver.getResults();

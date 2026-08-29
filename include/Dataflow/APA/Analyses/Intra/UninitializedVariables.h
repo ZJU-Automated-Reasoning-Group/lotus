@@ -9,8 +9,8 @@
 #include "llvm/IR/Value.h"
 
 #include "Dataflow/APA/APA.h"
-#include "Dataflow/APA/LLVM/ForwardProblem.h"
 #include "Dataflow/APA/Domains/UninitializedVariablesDomain.h"
+#include "Dataflow/APA/LLVM/ForwardProblem.h"
 
 namespace elimination {
 

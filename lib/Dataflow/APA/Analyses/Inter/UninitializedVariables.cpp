@@ -6,8 +6,8 @@
 #include "llvm/IR/IntrinsicInst.h"
 
 #include "Dataflow/APA/Analyses/Inter/FlowHelpers.h"
-#include "Dataflow/APA/LLVM/InterProblem.h"
 #include "Dataflow/APA/Analyses/Inter/UninitializedVariables.h"
+#include "Dataflow/APA/LLVM/InterProblem.h"
 #include "Dataflow/APA/Solver/ForwardInterSummarySolver.h"
 
 #include <algorithm>
@@ -23,6 +23,7 @@ struct InterUninitializedVariablesAnalysisTypes {
   using transfer_t = llvm::Instruction *;
   using f_t = llvm::Function *;
   using i_t = dataflow::controlflow::InterCFG;
+  using abstract_domain_t = UninitializedVariablesDomain;
 };
 
 class InterElimUninitVariablesProblem
@@ -134,18 +135,6 @@ public:
     }
 
     return Out;
-  }
-
-  fact_t merge(const fact_t &Lhs, const fact_t &Rhs) const override {
-    return UninitializedVariablesDomain::meet(Lhs, Rhs);
-  }
-
-  bool equal_to(const fact_t &Lhs, const fact_t &Rhs) const override {
-    return UninitializedVariablesDomain::equal(Lhs, Rhs);
-  }
-
-  fact_t allTop() const override {
-    return UninitializedVariablesDomain::meetIdentity();
   }
 
   fact_t callFlow(n_t CallSite, f_t Callee, const fact_t &In) override {

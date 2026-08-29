@@ -19,7 +19,7 @@ enum class OnNonConvergentStar {
   Fail,
   // Return the last iterand at the iteration bound.
   ReturnLast,
-  // Return meet identity at the iteration bound.
+  // Return domain bottom at the iteration bound.
   ReturnIdentity,
 };
 

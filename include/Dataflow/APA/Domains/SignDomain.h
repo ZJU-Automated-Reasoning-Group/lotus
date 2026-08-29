@@ -46,14 +46,16 @@ using SignMap = std::unordered_map<const llvm::Value *, SignValue>;
 struct SignDomain {
   using value_type = SignMap;
 
-  static value_type meet(const value_type &Lhs, const value_type &Rhs) {
+  value_type bottom() const { return {}; }
+
+  value_type join(const value_type &Lhs, const value_type &Rhs) const {
     value_type Out = Lhs;
     for (const auto &Entry : Rhs)
       Out[Entry.first].mergeIn(Entry.second);
     return Out;
   }
 
-  static bool equal(const value_type &Lhs, const value_type &Rhs) {
+  bool equal(const value_type &Lhs, const value_type &Rhs) const {
     for (const auto &Entry : Lhs) {
       auto It = Rhs.find(Entry.first);
       if (It == Rhs.end()) {
@@ -71,8 +73,6 @@ struct SignDomain {
     }
     return true;
   }
-
-  static value_type meetIdentity() { return {}; }
 };
 
 } // namespace elimination

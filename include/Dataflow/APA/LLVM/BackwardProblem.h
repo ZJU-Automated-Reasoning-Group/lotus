@@ -10,33 +10,38 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 
-#include "Dataflow/APA/LLVM/ForwardProblem.h"
 #include "Dataflow/APA/Core/Problem.h"
+#include "Dataflow/APA/LLVM/ForwardProblem.h"
 #include "Dataflow/ControlFlow/IntraCFG.h"
 
 #include <cstddef>
 #include <deque>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace elimination {
 
 // Base for backward-flow elimination problems with reducible (ADT) support.
 // Entry = exit instruction (e.g., ret). Succs = backward successors.
-template <typename FactT>
+template <typename FactT,
+          typename AbstractDomainT = LegacyProblemDomain<FactT>>
 class LLVMReverseIntraEliminationProblem
-    : public IntraReducibleEliminationProblem<LLVMAnalysisTypes<FactT>> {
+    : public IntraReducibleEliminationProblem<
+          LLVMAnalysisTypes<FactT, AbstractDomainT>> {
 public:
-  using AnalysisTypes = LLVMAnalysisTypes<FactT>;
+  using AnalysisTypes = LLVMAnalysisTypes<FactT, AbstractDomainT>;
   using Base = IntraReducibleEliminationProblem<AnalysisTypes>;
   using n_t = typename Base::n_t;
   using fact_t = typename Base::fact_t;
   using transfer_t = typename Base::transfer_t;
   using Edge = typename Base::Edge;
 
-  explicit LLVMReverseIntraEliminationProblem(llvm::Function *F, n_t Entry)
-      : F(F), Entry(Entry) {}
+  explicit LLVMReverseIntraEliminationProblem(
+      llvm::Function *F, n_t Entry,
+      AbstractDomainT Domain = AbstractDomainT{})
+      : Base(std::move(Domain)), F(F), Entry(Entry) {}
 
   std::vector<n_t> nodes() const override {
     ensurePrepared();

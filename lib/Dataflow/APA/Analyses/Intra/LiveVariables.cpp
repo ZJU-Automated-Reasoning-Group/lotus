@@ -12,14 +12,14 @@
 namespace elimination {
 namespace {
 
-using LiveVariablesAnalysisTypes = LLVMAnalysisTypes<LiveVariablesFact>;
+using LiveVariablesAnalysisTypes = LLVMAnalysisTypes<LiveVariablesFact, LiveVariablesDomain>;
 
 class ReverseLiveVariablesProblem
-    : public LLVMReverseIntraEliminationProblem<LiveVariablesFact> {
+    : public LLVMReverseIntraEliminationProblem<LiveVariablesFact, LiveVariablesDomain> {
 public:
   explicit ReverseLiveVariablesProblem(llvm::Function *F,
                                        llvm::Instruction *Exit)
-      : LLVMReverseIntraEliminationProblem<LiveVariablesFact>(F, Exit) {}
+      : LLVMReverseIntraEliminationProblem<LiveVariablesFact, LiveVariablesDomain>(F, Exit) {}
 
   fact_t applyTransfer(const transfer_t &T, const fact_t &In) const override {
     auto *Inst = T;
@@ -44,18 +44,6 @@ public:
     }
 
     return Out;
-  }
-
-  fact_t meet(const fact_t &Lhs, const fact_t &Rhs) const override {
-    return LiveVariablesDomain::meet(Lhs, Rhs);
-  }
-
-  bool equal_to(const fact_t &Lhs, const fact_t &Rhs) const override {
-    return LiveVariablesDomain::equal(Lhs, Rhs);
-  }
-
-  fact_t meetIdentity() const override {
-    return LiveVariablesDomain::meetIdentity();
   }
 
   fact_t initialFact() const override { return fact_t{}; }

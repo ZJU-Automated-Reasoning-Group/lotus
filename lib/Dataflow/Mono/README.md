@@ -33,8 +33,16 @@ compiled concrete analyses.
 
 ## Architecture
 
+- `Core/AbstractDomain.h` defines the engine-specific domain contract:
+  `value_type`, `bottom()`, `join()`, and `equal()`; `widen()` is available to
+  analyses that need convergence acceleration.
+- May-set domains use subset order (`bottom = empty`, `join = union`). Must-set
+  domains use reverse-inclusion order (`bottom = universe`, `join =
+  intersection`).
+- `LLVM/AnalysisTypes.h` contains only LLVM/CFG type bindings and associates an
+  abstract domain with the solver-facing fact type.
 - `IntraMonoProblem` models intraprocedural analyses with `normalFlow()`,
-  `merge()`, `equal_to()`, and `initialSeeds()`.
+  domain-independent transfer and boundary operations.
 - `InterMonoProblem` extends that interface with `callFlow()`,
   `returnFlow()`, and `callToRetFlow()`.
 - `CallStringContext` and `CallStringSolver` provide bounded call-string

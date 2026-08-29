@@ -140,7 +140,7 @@ between engines for differential validation.
 Key classes
 ^^^^^^^^^^^
 
-``ForwardInterSummarySolver<AnalysisDomainTy, K>``
+``ForwardInterSummarySolver<AnalysisTypesT, K>``
   Main solver template. Owns a ``PathSummaryEquationGraph``, discovers
   equation nodes by traversing the interprocedural CFG from seed facts,
   delegates to ``PathSummaryEquationSolver`` for solving, and evaluates
@@ -154,13 +154,13 @@ Key classes
   ``Concat``, and ``Union`` operators. Lives in
   ``include/Dataflow/APA/Solver/PathSummaryEquationSolver.h``.
 
-``InterSummaryTransferAtom<AnalysisDomainTy>``
+``InterSummaryTransferAtom<AnalysisTypesT>``
   First-class atom that tags an edge as one of the four transfer kinds
   (RawNormal, CallEntry, ReturnExit, CallToRet). Constructed via static
   factory methods (``rawNormal``, ``callEntry``, ``returnExit``,
   ``callToRet``).
 
-``InterSummaryTransferEvaluator<AnalysisDomainTy, K>``
+``InterSummaryTransferEvaluator<AnalysisTypesT, K>``
   Evaluates a path expression built from ``InterSummaryTransferAtom``
   labels against an input fact. Dispatches each atom kind to the
   corresponding problem hook (``applyTransfer``, ``callFlow``,

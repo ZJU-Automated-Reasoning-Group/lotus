@@ -36,7 +36,7 @@ struct HasNoConfigurationType {};
  *
  * This defines the interface that all intraprocedural analyses must implement.
  * The framework operates on a lattice of facts (mono_container_t) and
- * propagates them along the control flow graph using the normalFlow and merge
+ * propagates them along the control flow graph using normalFlow and domain join
  * functions.
  *
  * @tparam AnalysisTypesT The analysis domain specifying types (nodes, facts,
@@ -53,9 +53,18 @@ public:
   using db_t = typename AnalysisTypesT::db_t;
   using c_t = typename AnalysisTypesT::c_t;
   using pt_t = typename AnalysisTypesT::pt_t;
+  using abstract_domain_t = typename AnalysisTypesT::abstract_domain_t;
 
   using ProblemAnalysisTypes = AnalysisTypesT;
   using ConfigurationTy = HasNoConfigurationType;
+
+  static_assert(IsMonoAbstractDomain<abstract_domain_t>::value,
+                "Mono analysis domain must define value_type, bottom, join, "
+                "and equal");
+  static_assert(
+      std::is_same<typename abstract_domain_t::value_type,
+                   mono_container_t>::value,
+      "Mono analysis types and abstract domain must use the same fact type");
 
   // Unified constructor — always takes a vector of Function* directly.
   // The string-based constructor has been removed to eliminate the ambiguity
@@ -64,14 +73,17 @@ public:
   // Callers that previously used entry-point names should resolve them from
   // the Module before constructing the problem.
   explicit IntraMonoProblem(std::vector<llvm::Function *> EntryPoints = {},
-                            pt_t PT = nullptr)
-      : PT(PT), EntryPoints(std::move(EntryPoints)) {}
+                            pt_t PT = nullptr,
+                            abstract_domain_t AbstractDomainState = abstract_domain_t{})
+      : PT(PT), EntryPoints(std::move(EntryPoints)),
+        AbstractDomainState(std::move(AbstractDomainState)) {}
 
   // Constructor for analyses that also need the CFG and IRDB.
   IntraMonoProblem(const db_t *IRDB, const c_t *CF, pt_t PT,
-                   std::vector<llvm::Function *> EntryPoints = {})
+                   std::vector<llvm::Function *> EntryPoints = {},
+                   abstract_domain_t AbstractDomainState = abstract_domain_t{})
       : IRDB(IRDB), CF(CF), PT(std::move(PT)),
-        EntryPoints(std::move(EntryPoints)) {}
+        EntryPoints(std::move(EntryPoints)), AbstractDomainState(std::move(AbstractDomainState)) {}
 
   virtual ~IntraMonoProblem() = default;
 
@@ -92,7 +104,7 @@ public:
   virtual mono_container_t normalFlow(n_t Inst, const mono_container_t &In) = 0;
 
   /**
-   * @brief Merge facts from multiple predecessors
+   * @brief Join facts from multiple predecessors
    *
    * This defines the meet operator (∩) or join operator (∪) depending on
    * the lattice. For may-analyses: union. For must-analyses: intersection.
@@ -101,8 +113,10 @@ public:
    * @param Rhs Second set of facts
    * @return The merged result
    */
-  virtual mono_container_t merge(const mono_container_t &Lhs,
-                                 const mono_container_t &Rhs) = 0;
+  virtual mono_container_t join(const mono_container_t &Lhs,
+                                 const mono_container_t &Rhs) {
+    return AbstractDomainState.join(Lhs, Rhs);
+  }
 
   /**
    * @brief Check if two fact sets are equal
@@ -113,25 +127,23 @@ public:
    * @param Rhs Second set of facts
    * @return true if equal
    */
-  virtual bool equal_to(const mono_container_t &Lhs,
-                        const mono_container_t &Rhs) = 0;
+  virtual bool equal(const mono_container_t &Lhs,
+                        const mono_container_t &Rhs) {
+    return AbstractDomainState.equal(Lhs, Rhs);
+  }
 
   // ========================================
   // Lattice configuration
   // ========================================
 
   /**
-   * @brief Return the initial top element
+   * @brief Return the least element and identity for domain join.
    *
-   * For forward may-analyses: typically empty set (bottom of the lattice)
-   * For forward must-analyses: typically universe set (top of the lattice)
-   * For backward analyses: depends on the lattice
-   *
-   * Note: the name "allTop" is inherited from Phasar convention and refers
-   * to the identity element for the merge operator, which is the top of the
-   * lattice for must-analyses and the bottom for may-analyses.
+   * May-set domains use subset order, so bottom is the empty set and join is
+   * union. Must-set domains use reverse-inclusion order, so bottom is the
+   * universe and join is intersection.
    */
-  virtual mono_container_t allTop() { return mono_container_t{}; }
+  virtual mono_container_t bottom() { return AbstractDomainState.bottom(); }
 
   /**
    * @brief Specify initial seed facts at specific program points
@@ -181,8 +193,7 @@ public:
                                  const mono_container_t &NewVal) {
     // Default: no widening — just return the new value.
     // Analyses over finite-height lattices converge without widening.
-    (void)OldVal;
-    return NewVal;
+    return AbstractDomainState.widen(OldVal, NewVal);
   }
 
   // ========================================
@@ -210,6 +221,9 @@ public:
   pt_t getPointstoInfo() const { return PT; }
   pt_t getAliasAnalysis() const { return PT; }
 
+  abstract_domain_t &getAbstractDomain() { return AbstractDomainState; }
+  const abstract_domain_t &getAbstractDomain() const { return AbstractDomainState; }
+
   // setSoundness now actually stores the value and returns true.
   // Subclasses that want to adjust behavior based on soundness should check
   // this->S in their transfer functions.
@@ -226,6 +240,7 @@ protected:
   pt_t PT{};
   Soundness S = Soundness::Soundy;
   std::vector<llvm::Function *> EntryPoints;
+  abstract_domain_t AbstractDomainState;
 };
 
 // ============================================================================
@@ -255,15 +270,20 @@ public:
   using db_t = typename AnalysisTypesT::db_t;
   using i_t = typename AnalysisTypesT::i_t;
   using pt_t = typename AnalysisTypesT::pt_t;
+  using abstract_domain_t = typename AnalysisTypesT::abstract_domain_t;
 
   explicit InterMonoProblem(std::vector<llvm::Function *> EntryPoints = {},
-                            pt_t PT = nullptr)
-      : IntraMonoProblem<AnalysisTypesT>(std::move(EntryPoints), PT) {}
+                            pt_t PT = nullptr,
+                            abstract_domain_t AbstractDomainState = abstract_domain_t{})
+      : IntraMonoProblem<AnalysisTypesT>(std::move(EntryPoints), PT,
+                                         std::move(AbstractDomainState)) {}
 
   InterMonoProblem(const db_t *IRDB, const i_t *ICF, pt_t PT,
-                   std::vector<llvm::Function *> EntryPoints = {})
+                   std::vector<llvm::Function *> EntryPoints = {},
+                   abstract_domain_t AbstractDomainState = abstract_domain_t{})
       : IntraMonoProblem<AnalysisTypesT>(IRDB, ICF, std::move(PT),
-                                           std::move(EntryPoints)),
+                                         std::move(EntryPoints),
+                                         std::move(AbstractDomainState)),
         ICF(ICF) {}
 
   // ========================================

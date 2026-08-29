@@ -15,6 +15,7 @@ struct InterLiveVariablesAnalysisTypes {
   using transfer_t = llvm::Instruction *;
   using f_t = llvm::Function *;
   using i_t = dataflow::controlflow::InterCFG;
+  using abstract_domain_t = LiveVariablesDomain;
 };
 
 class InterElimLiveVariablesProblem
@@ -42,16 +43,6 @@ public:
     }
     return Out;
   }
-
-  fact_t merge(const fact_t &Lhs, const fact_t &Rhs) const override {
-    return LiveVariablesDomain::meet(Lhs, Rhs);
-  }
-
-  bool equal_to(const fact_t &Lhs, const fact_t &Rhs) const override {
-    return LiveVariablesDomain::equal(Lhs, Rhs);
-  }
-
-  fact_t allTop() const override { return LiveVariablesDomain::meetIdentity(); }
 
   ::dataflow::controlflow::FlowDirection direction() const override {
     return ::dataflow::controlflow::FlowDirection::Backward;

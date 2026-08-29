@@ -88,6 +88,7 @@ public:
   static unsigned indexOf(const llvm::Value *value);
 
   static value_type zero();
+  static value_type bottom() { return zero(); }
   static value_type top();
   static value_type one();
   static bool equal(const value_type &lhs, const value_type &rhs);
@@ -95,6 +96,9 @@ public:
   static bool contains(const value_type &lhs, const value_type &rhs);
   static value_type meet(const value_type &lhs, const value_type &rhs);
   static value_type combine(const value_type &lhs, const value_type &rhs);
+  static value_type join(const value_type &lhs, const value_type &rhs) {
+    return combine(lhs, rhs);
+  }
   static value_type ndetCombine(const value_type &lhs, const value_type &rhs);
   static value_type condCombine(bool /*phi*/, const value_type &t,
                                 const value_type &e);

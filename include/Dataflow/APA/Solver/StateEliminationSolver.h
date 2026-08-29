@@ -9,10 +9,10 @@ namespace detail {
 // Generic Floyd-Warshall-style elimination over the full CFG. This engine
 // makes no reducibility assumptions and therefore serves as the baseline
 // implementation as well as the fallback when ADT-specific preconditions fail.
-template <typename AnalysisDomainTy>
+template <typename AnalysisTypesT>
 std::vector<std::size_t> getStateEliminationOrder(
-    const IntraEliminationSolverContext<AnalysisDomainTy> &Ctx) {
-  using Context = IntraEliminationSolverContext<AnalysisDomainTy>;
+    const IntraEliminationSolverContext<AnalysisTypesT> &Ctx) {
+  using Context = IntraEliminationSolverContext<AnalysisTypesT>;
   const auto N = Ctx.Nodes.size();
   std::vector<std::size_t> Order(N);
   const auto *R =
@@ -37,9 +37,9 @@ DefaultOrder:
   return Order;
 }
 
-template <typename AnalysisDomainTy>
+template <typename AnalysisTypesT>
 void buildStateEliminationMatrix(
-    IntraEliminationSolverContext<AnalysisDomainTy> &Ctx) {
+    IntraEliminationSolverContext<AnalysisTypesT> &Ctx) {
   // Build the usual elimination matrix where M[i][j] summarizes all direct
   // edges from node i to node j. Diagonals start at one() so paths are allowed
   // to stay at a node before additional eliminations introduce loops.
@@ -54,7 +54,7 @@ void buildStateEliminationMatrix(
   Ctx.Matrix.assign(
       N,
       std::vector<
-          typename IntraEliminationSolverContext<AnalysisDomainTy>::expr_ref_t>(
+          typename IntraEliminationSolverContext<AnalysisTypesT>::expr_ref_t>(
           N, Ctx.Exprs.zero()));
   for (std::size_t i = 0; i < N; ++i) {
     Ctx.Matrix[i][i] = Ctx.Exprs.one();
@@ -75,10 +75,10 @@ void buildStateEliminationMatrix(
   }
 }
 
-template <typename AnalysisDomainTy>
+template <typename AnalysisTypesT>
 void eliminateStateIntermediates(
-    IntraEliminationSolverContext<AnalysisDomainTy> &Ctx) {
-  using Context = IntraEliminationSolverContext<AnalysisDomainTy>;
+    IntraEliminationSolverContext<AnalysisTypesT> &Ctx) {
+  using Context = IntraEliminationSolverContext<AnalysisTypesT>;
   const auto N = Ctx.Nodes.size();
   std::vector<typename Context::expr_ref_t> ColK(N);
   std::vector<typename Context::expr_ref_t> RowK(N);
@@ -113,10 +113,10 @@ void eliminateStateIntermediates(
   }
 }
 
-template <typename AnalysisDomainTy>
+template <typename AnalysisTypesT>
 bool materializeStateResults(
-    IntraEliminationSolverContext<AnalysisDomainTy> &Ctx) {
-  using Context = IntraEliminationSolverContext<AnalysisDomainTy>;
+    IntraEliminationSolverContext<AnalysisTypesT> &Ctx) {
+  using Context = IntraEliminationSolverContext<AnalysisTypesT>;
   Ctx.Results = typename Context::result_t{};
   if (Ctx.Nodes.empty()) {
     return true;
@@ -139,9 +139,9 @@ bool materializeStateResults(
   return true;
 }
 
-template <typename AnalysisDomainTy>
+template <typename AnalysisTypesT>
 bool solveStateElimination(
-    IntraEliminationSolverContext<AnalysisDomainTy> &Ctx) {
+    IntraEliminationSolverContext<AnalysisTypesT> &Ctx) {
   buildStateEliminationMatrix(Ctx);
   eliminateStateIntermediates(Ctx);
   return materializeStateResults(Ctx);

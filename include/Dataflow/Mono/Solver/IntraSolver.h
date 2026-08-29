@@ -5,7 +5,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "Dataflow/ControlFlow/IntraCFG.h"
-#include "Dataflow/Mono/Core/Problem.h"
+#include "Dataflow/Mono/LLVM/Problem.h"
 #include "Dataflow/Mono/Support/MonoDebug.h"
 
 #include <algorithm>
@@ -18,12 +18,12 @@
 
 namespace mono {
 
-template <typename AnalysisDomainTy> class IntraMonoSolver {
+template <typename AnalysisTypesT> class IntraMonoSolver {
 public:
-  using ProblemTy = IntraMonoProblem<AnalysisDomainTy>;
-  using n_t = typename AnalysisDomainTy::n_t;
-  using mono_container_t = typename AnalysisDomainTy::mono_container_t;
-  using CFGTy = typename AnalysisDomainTy::c_t;
+  using ProblemTy = IntraMonoProblem<AnalysisTypesT>;
+  using n_t = typename AnalysisTypesT::n_t;
+  using mono_container_t = typename AnalysisTypesT::mono_container_t;
+  using CFGTy = typename AnalysisTypesT::c_t;
 
   explicit IntraMonoSolver(ProblemTy &Problem)
       : Problem(Problem), CFG(selectCFG()) {
@@ -391,7 +391,7 @@ private:
 
 template <typename Problem>
 using IntraMonoSolver_P =
-    IntraMonoSolver<typename Problem::ProblemAnalysisDomain>;
+    IntraMonoSolver<typename Problem::ProblemAnalysisTypes>;
 
 } // namespace mono
 

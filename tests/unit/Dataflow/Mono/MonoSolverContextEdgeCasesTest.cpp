@@ -37,7 +37,7 @@ TEST_F(MonoTest, InterMonoSolverK2ReturnFlowReachesTruncatedOuterContexts) {
   ASSERT_NE(Level2, nullptr);
   ASSERT_NE(Leaf, nullptr);
 
-  struct Domain : LLVMMonoAnalysisDomain<std::set<Value *>> {};
+  struct Domain : LLVMMonoAnalysisTypes<std::set<Value *>> {};
   class ProblemT : public InterMonoProblem<Domain> {
   public:
     explicit ProblemT(Function *Entry) : InterMonoProblem<Domain>({Entry}) {}
@@ -149,7 +149,7 @@ TEST_F(MonoTest,
   ASSERT_NE(Main, nullptr);
   ASSERT_NE(Callee, nullptr);
 
-  struct Domain : LLVMMonoAnalysisDomain<std::set<Value *>> {};
+  struct Domain : LLVMMonoAnalysisTypes<std::set<Value *>> {};
   class ProblemT : public InterMonoProblem<Domain> {
   public:
     explicit ProblemT(Function *Entry, Instruction *SeedInst)
@@ -266,7 +266,7 @@ TEST_F(MonoTest, InterMonoSolverContextInsensitiveK0CollapsesCallers) {
   auto *Main = module->getFunction("main");
   ASSERT_NE(Main, nullptr);
 
-  struct Domain : LLVMMonoAnalysisDomain<std::set<Value *>> {};
+  struct Domain : LLVMMonoAnalysisTypes<std::set<Value *>> {};
   class ProblemT : public InterMonoProblem<Domain> {
   public:
     explicit ProblemT(Function *Entry) : InterMonoProblem<Domain>({Entry}) {}
@@ -375,7 +375,7 @@ TEST_F(MonoTest, InterMonoSolverMissingNodeQueryReturnsAllTopForMustAnalysis) {
   ASSERT_NE(Other, nullptr);
   ASSERT_NE(G, nullptr);
 
-  struct Domain : LLVMMonoAnalysisDomain<std::set<Value *>> {};
+  struct Domain : LLVMMonoAnalysisTypes<std::set<Value *>> {};
   class ProblemT : public InterMonoProblem<Domain> {
   public:
     ProblemT(Function *Entry, Value *TopFact)
@@ -467,7 +467,7 @@ TEST_F(MonoTest, IntraMonoSolverMissingNodeQueryReturnsAllTopForMustAnalysis) {
   ASSERT_NE(Other, nullptr);
   ASSERT_NE(G, nullptr);
 
-  struct Domain : LLVMMonoAnalysisDomain<std::set<Value *>> {};
+  struct Domain : LLVMMonoAnalysisTypes<std::set<Value *>> {};
   class ProblemT : public IntraMonoProblem<Domain> {
   public:
     ProblemT(Function *Entry, Value *TopFact)

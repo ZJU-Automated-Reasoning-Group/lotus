@@ -8,9 +8,21 @@ The **monotone dataflow engine** in ``lib/Dataflow/Mono`` implements a
 classic **bit-vector style** framework for intraprocedural and
 interprocedural analyses over LLVM IR.
 
-* **Location**: ``lib/Dataflow/Mono``
-* **Main classes**: ``DataFlowEngine``, ``DataFlowResult``
+* **Headers**: ``include/Dataflow/Mono``
+* **Compiled analyses**: ``lib/Dataflow/Mono``
+* **Main classes**: ``IntraMonoSolver``, ``InterMonoSolver``
 * **Direction**: forward or backward (configurable per analysis)
+
+Implementation Layout
+=====================
+
+* ``Core/`` contains generic call-string context representation.
+* ``Solver/`` contains the intra/inter solvers and call-string engine.
+* ``LLVM/`` contains LLVM problem interfaces and solver-facing analysis types.
+* ``Domains/`` contains named abstract fact domains.
+* ``Analyses/Intra/`` and ``Analyses/Inter/`` contain concrete clients.
+* ``Container/`` and ``Support/`` provide reusable fact containers, results,
+  diagnostics, and soundness metadata.
 
 Core Idea
 =========
@@ -23,9 +35,8 @@ For each instruction ``n`` an analysis defines:
 * ``IN[n]`` — facts before executing ``n``,
 * ``OUT[n]`` — facts after executing ``n``.
 
-The engine repeatedly applies client-provided callbacks
-(``computeGEN``, ``computeKILL``, ``computeIN``, ``computeOUT``)
-until all ``IN``/``OUT`` sets reach a monotone fixed point.
+The solver repeatedly applies client-provided ``normalFlow`` and ``merge``
+operations until all ``IN``/``OUT`` facts reach a monotone fixed point.
 
 Example Analyses
 ================
@@ -61,6 +72,5 @@ instructions are **reachable in the future**:
   * ``IN[n]`` = ``GEN[n] ∪ OUT[n]``.
 
 Both examples show how to express standard gen–kill problems while
-delegating the fixed-point iteration to ``DataFlowEngine``.
-
+delegating the fixed-point iteration to ``IntraMonoSolver``.
 

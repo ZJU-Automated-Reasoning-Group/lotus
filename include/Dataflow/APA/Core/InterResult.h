@@ -2,7 +2,7 @@
 #define DATAFLOW_APA_CORE_INTERRESULT_H_
 
 #include "Dataflow/APA/Core/Options.h"
-#include "Dataflow/Mono/Core/CallStringSolver.h"
+#include "Dataflow/Mono/Solver/CallStringSolver.h"
 
 #include <vector>
 

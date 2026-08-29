@@ -9,10 +9,10 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "Dataflow/Mono/Analyses/Intra/IntraConstantPropagation.h"
-#include "Dataflow/Mono/Analyses/Intra/IntraLiveVariables.h"
-#include "Dataflow/Mono/Analyses/Intra/IntraReachable.h"
-#include "Dataflow/Mono/Analyses/Intra/IntraUninitVariables.h"
+#include "Dataflow/Mono/Analyses/Intra/ConstantPropagation.h"
+#include "Dataflow/Mono/Analyses/Intra/LiveVariables.h"
+#include "Dataflow/Mono/Analyses/Intra/Reachability.h"
+#include "Dataflow/Mono/Analyses/Intra/UninitializedVariables.h"
 #include "ToolSupport.h"
 
 #include <algorithm>

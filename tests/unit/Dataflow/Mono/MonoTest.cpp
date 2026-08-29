@@ -227,7 +227,7 @@ TEST_F(MonoTest, IntraMonoSolverPreservesExplicitMidFunctionSeed) {
   auto *F = module->getFunction("test");
   ASSERT_NE(F, nullptr);
 
-  struct Domain : LLVMMonoAnalysisDomain<std::set<Value *>> {};
+  struct Domain : LLVMMonoAnalysisTypes<std::set<Value *>> {};
   class ProblemT : public IntraMonoProblem<Domain> {
   public:
     ProblemT(Function *Fn, Instruction *SeedInst, Value *SeedFact)
@@ -302,7 +302,7 @@ TEST_F(MonoTest, InterMonoSolverRecomputesIN) {
   Function *F = module->getFunction("test");
   ASSERT_NE(F, nullptr);
 
-  struct NodeDomain : LLVMMonoAnalysisDomain<std::set<Value *>> {};
+  struct NodeDomain : LLVMMonoAnalysisTypes<std::set<Value *>> {};
   class NodeProblem : public InterMonoProblem<NodeDomain> {
   public:
     explicit NodeProblem(Function *Entry)
@@ -740,7 +740,7 @@ TEST_F(MonoTest, InterMonoSolverUsesIndirectCallResolverHook) {
   ASSERT_NE(Main, nullptr);
   ASSERT_NE(Callee, nullptr);
 
-  struct Domain : LLVMMonoAnalysisDomain<std::set<Value *>> {};
+  struct Domain : LLVMMonoAnalysisTypes<std::set<Value *>> {};
   class ProblemT : public InterMonoProblem<Domain> {
   public:
     using n_t = typename InterMonoProblem<Domain>::n_t;

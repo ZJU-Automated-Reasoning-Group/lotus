@@ -3,30 +3,33 @@
 Monotone dataflow analysis frameworks for intraprocedural and interprocedural analysis.
 
 **What gets compiled:** Only the analysis implementations in this directory.
-Framework code under `include/Dataflow/Mono/{Core,Solver,Container,Support}`
-is header-only and compiled into consumers.
+Framework code under `include/Dataflow/Mono/` is template-based or header-only
+and compiled into consumers.
 
-**Layout (aligned with include/Dataflow/Mono/):**
+**Public layout:**
 
-- **Core/** — `Problem.h`, `Domain.h`, `CallStringContext.h`,
-  `CallStringSolver.h`
-- **Solver/** — `IntraSolver.h`, `InterSolver.h`
+- **Core/** — generic call-string context representation
+- **Solver/** — intra/inter solvers and the call-string engine
+- **LLVM/** — LLVM problem interfaces and solver-facing analysis types
+- **Domains/** — named abstract fact domains used by concrete analyses
 - **Container/** — `BitVectorSet.h`, `Traits.h`
 - **Support/** — `Result.h`, `MonoDebug.h`, `Soundness.h`
-- **Analyses/Intra/** — Implementation files `Intra*.cpp` (headers `Intra*.h`)
-- **Analyses/Inter/** — Implementation files `Inter*.cpp` (headers `Inter*.h`)
+- **Analyses/Intra/** — intraprocedural analysis clients
+- **Analyses/Inter/** — interprocedural analysis clients
+
+The public and implementation trees are intentionally not exact mirrors.
+`include/Dataflow/Mono/` contains template implementations that must remain
+visible to clients, while `lib/Dataflow/Mono/` contains only separately
+compiled concrete analyses.
 
 ## Quick include and migration guide
 
-- Modern headers:
-  - `#include "Dataflow/Mono/Core/Problem.h"`
-  - `#include "Dataflow/Mono/Solver/IntraSolver.h"`
-- Legacy includes that were split up:
-  - `Dataflow/Mono/DataFlow.h`
-  - `Dataflow/Mono/Solver/IntraMonoSolver.h`
-
-`Core/IntraMonoSolver.h` remains only as a compatibility shim re-exporting the
-authoritative implementation in `Solver/IntraSolver.h`.
+- LLVM problem API: `#include "Dataflow/Mono/LLVM/Problem.h"`
+- LLVM analysis types: `#include "Dataflow/Mono/LLVM/AnalysisTypes.h"`
+- Intraprocedural solver: `#include "Dataflow/Mono/Solver/IntraSolver.h"`
+- Interprocedural solver: `#include "Dataflow/Mono/Solver/InterSolver.h"`
+- Call-string engine: `#include "Dataflow/Mono/Solver/CallStringSolver.h"`
+- Concrete domains: `#include "Dataflow/Mono/Domains/*.h"`
 
 ## Architecture
 

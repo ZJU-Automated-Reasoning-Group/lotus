@@ -6,8 +6,8 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "Dataflow/ControlFlow/InterCFG.h"
-#include "Dataflow/Mono/Core/CallStringSolver.h"
-#include "Dataflow/Mono/Core/Problem.h"
+#include "Dataflow/Mono/Solver/CallStringSolver.h"
+#include "Dataflow/Mono/LLVM/Problem.h"
 #include "Utils/LLVM/CallUtils.h"
 #include "Utils/LLVM/FunctionUtils.h"
 
@@ -19,10 +19,10 @@
 
 namespace mono {
 
-template <typename AnalysisDomainTy, unsigned K> class InterMonoSolver {
+template <typename AnalysisTypesT, unsigned K> class InterMonoSolver {
 public:
-  using ProblemTy = InterMonoProblem<AnalysisDomainTy>;
-  using mono_container_t = typename AnalysisDomainTy::mono_container_t;
+  using ProblemTy = InterMonoProblem<AnalysisTypesT>;
+  using mono_container_t = typename AnalysisTypesT::mono_container_t;
   using ResultTy =
       dataflow::ContextSensitiveDataFlowResult<K, mono_container_t>;
   using Context = typename ResultTy::Context;
@@ -393,7 +393,7 @@ private:
 
 template <typename Problem, unsigned K>
 using InterMonoSolver_P =
-    InterMonoSolver<typename Problem::ProblemAnalysisDomain, K>;
+    InterMonoSolver<typename Problem::ProblemAnalysisTypes, K>;
 
 } // namespace mono
 

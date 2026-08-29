@@ -21,7 +21,7 @@ TEST_F(MonoTest, CallBrContinuation) {
   Function *F = module->getFunction("test");
   ASSERT_NE(F, nullptr);
 
-  struct TrivialDomain : LLVMMonoAnalysisDomain<std::set<Value *>> {};
+  struct TrivialDomain : LLVMMonoAnalysisTypes<std::set<Value *>> {};
   class TrivialProblem : public InterMonoProblem<TrivialDomain> {
   public:
     explicit TrivialProblem(Function *Entry)
@@ -108,7 +108,7 @@ TEST_F(MonoTest, IntraMonoSolverReentrantSolveStable) {
   auto *F = module->getFunction("test");
   ASSERT_NE(F, nullptr);
 
-  struct Domain : LLVMMonoAnalysisDomain<std::set<Value *>> {};
+  struct Domain : LLVMMonoAnalysisTypes<std::set<Value *>> {};
   class ProblemT : public IntraMonoProblem<Domain> {
   public:
     explicit ProblemT(Function *Fn) : IntraMonoProblem<Domain>({Fn}) {}
@@ -171,7 +171,7 @@ TEST_F(MonoTest, IntraMonoSolverSingleNodeProcessed) {
   auto *F = module->getFunction("test");
   ASSERT_NE(F, nullptr);
 
-  struct Domain : LLVMMonoAnalysisDomain<std::set<Value *>> {};
+  struct Domain : LLVMMonoAnalysisTypes<std::set<Value *>> {};
   class ProblemT : public IntraMonoProblem<Domain> {
   public:
     explicit ProblemT(Function *Fn) : IntraMonoProblem<Domain>({Fn}) {}
@@ -230,7 +230,7 @@ TEST_F(MonoTest, IntraMonoSolverWideningCounterResetsAcrossRuns) {
   auto *F = module->getFunction("test");
   ASSERT_NE(F, nullptr);
 
-  struct Domain : LLVMMonoAnalysisDomain<std::set<Value *>> {};
+  struct Domain : LLVMMonoAnalysisTypes<std::set<Value *>> {};
   class ProblemT : public IntraMonoProblem<Domain> {
   public:
     explicit ProblemT(Function *Fn) : IntraMonoProblem<Domain>({Fn}) {}
@@ -312,7 +312,7 @@ TEST_F(MonoTest, InterMonoSolverEmptyContextSeedStaysLocalForPositiveK) {
   ASSERT_NE(Main, nullptr);
   ASSERT_NE(Callee, nullptr);
 
-  struct Domain : LLVMMonoAnalysisDomain<std::set<Value *>> {};
+  struct Domain : LLVMMonoAnalysisTypes<std::set<Value *>> {};
   class ProblemT : public InterMonoProblem<Domain> {
   public:
     explicit ProblemT(Function *Entry, Function *CalleeFn)
@@ -483,7 +483,7 @@ TEST_F(MonoTest, InterMonoSolverSupportsBackwardDirection) {
   auto *F = module->getFunction("test");
   ASSERT_NE(F, nullptr);
 
-  struct Domain : LLVMMonoAnalysisDomain<std::set<Value *>> {};
+  struct Domain : LLVMMonoAnalysisTypes<std::set<Value *>> {};
   class ProblemT : public InterMonoProblem<Domain> {
   public:
     explicit ProblemT(Function *Entry) : InterMonoProblem<Domain>({Entry}) {}
@@ -603,7 +603,7 @@ TEST_F(MonoTest, InterMonoSolverK1DistinguishesDifferentCallers) {
   ASSERT_NE(Right, nullptr);
   ASSERT_NE(Leaf, nullptr);
 
-  struct Domain : LLVMMonoAnalysisDomain<std::set<Value *>> {};
+  struct Domain : LLVMMonoAnalysisTypes<std::set<Value *>> {};
   class ProblemT : public InterMonoProblem<Domain> {
   public:
     explicit ProblemT(Function *Entry) : InterMonoProblem<Domain>({Entry}) {}
@@ -739,7 +739,7 @@ TEST_F(MonoTest, InterMonoSolverK2TruncatesDeepCallStrings) {
   ASSERT_NE(Level2, nullptr);
   ASSERT_NE(Leaf, nullptr);
 
-  struct Domain : LLVMMonoAnalysisDomain<std::set<Value *>> {};
+  struct Domain : LLVMMonoAnalysisTypes<std::set<Value *>> {};
   class ProblemT : public InterMonoProblem<Domain> {
   public:
     explicit ProblemT(Function *Entry) : InterMonoProblem<Domain>({Entry}) {}

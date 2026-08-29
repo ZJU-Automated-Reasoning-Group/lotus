@@ -5,9 +5,9 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 
-#include "Dataflow/APA/LLVM/ForwardProblem.h"
 #include "Dataflow/APA/Analyses/Intra/NonNull.h"
 #include "Dataflow/APA/Core/Problem.h"
+#include "Dataflow/APA/LLVM/ForwardProblem.h"
 #include "Dataflow/APA/Solver/Solver.h"
 #include "Dataflow/ControlFlow/IntraCFG.h"
 

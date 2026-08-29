@@ -11,24 +11,6 @@ Overview
 The current front-ends focus on intraprocedural or IFDS-style benchmark runs and
 emit machine-readable summaries that are easy to diff in tests.
 
-lotus-datalog
--------------
-
-Native Datalog/lattice engine front-end. It reads a JSON Semantic IR program,
-validates or executes it, and emits canonical JSON relation rows and runtime
-statistics. Benchmark and differential orchestration intentionally remains
-outside the binary so it can be implemented in Python.
-
-**Binary**: ``lotus-datalog``
-
-**Source**: ``tools/dataflow/datalog/``
-
-.. code-block:: bash
-
-   ./build/bin/lotus-datalog schema > program.json
-   ./build/bin/lotus-datalog validate program.json
-   ./build/bin/lotus-datalog run program.json --workers 4 --pretty
-
 lotus-dfa
 ---------
 

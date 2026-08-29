@@ -4,7 +4,7 @@
  */
 #include "Dataflow/NPA/Analyses/Intra/ReachableBlocks.h"
 
-#include "Dataflow/NPA/Adapters/LLVM/BitVectorProblem.h"
+#include "Dataflow/NPA/LLVM/BitVectorProblem.h"
 
 namespace npa {
 

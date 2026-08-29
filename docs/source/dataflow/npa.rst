@@ -181,26 +181,26 @@ NPA supports both **distributive** and **non-distributive** program analyses:
   analysis use ``SummaryTransformerDomain`` as NPA's current abstract-summary path
   for this fragment.
 
-Core Implementation (include/Dataflow/NPA/Core)
-===============================================
+Implementation Layout
+=====================
 
 The core headers implement the algorithms from Esparza et al. (JACM) and Reps et al. (TOPLAS 2016):
 
-* **Base/Foundation.h**: Domain concept (ω-continuous semiring), ``LinearStrategy``
-  (Naive, Worklist, SCC, TensorProduct).
-* **Expressions.h**: ``Exp0`` (polynomial equation AST), ``Exp1`` (linearized AST);
+* **Core/Domain.h**: Domain concept (ω-continuous semiring).
+* **Solver/Options.h**: ``LinearStrategy`` configuration.
+* **Core/Expr/Expressions.h**: ``Exp0`` (polynomial equation AST), ``Exp1`` (linearized AST);
   ``Concat`` encodes the LCFL form :math:`a \cdot X \cdot b`; ``Star`` is the
   Newton/tensor Kleene-star fragment and ``Mu`` is a generic least-fixpoint node.
-* **Diff.h**: Builds the differential :math:`Df|_\nu` from a polynomial expression
+* **Solver/Newton/Differential.h**: Builds the differential :math:`Df|_\nu` from a polynomial expression
   (Esparza et al. JACM, Defn. 3.1, 3.5) and caches differential shape plans across
   Newton rounds.
-* **Eval.h**: ``I0`` evaluates Exp0 (full system); ``I1`` evaluates Exp1 (linear RHS).
-* **Fixpoint.h**: ``fix`` / ``fix_vec`` for Kleene-like iteration.
-* **LCFLDetector.h**: Detects Concat/Star (LCFL structure).
-* **LinearSolvers.h**: ``solve_linear_worklist_impl``, ``solve_linear_scc_impl``,
-  ``solve_linear_tensor_impl`` for the linearized system.
-* **TensorLinearSolve.h**: Tensor-product solver (Reps et al. Alg. 3.4).
-* **Solver.h**: ``KleeneIter`` (κ^(i+1) = f(κ^(i))), ``NewtonIter`` (ν^(i+1) = ν^(i) ⊔ Δ^(i)).
+* **Core/Expr/Eval.h**: Evaluates full and linearized equation ASTs.
+* **Solver/Fixpoint.h**: Generic fixpoint utilities.
+* **Solver/Newton/Linear/SccSolver.h**: Worklist and SCC linear solvers.
+* **Solver/Newton/Linear/Tensor/**: Tensor-product solver machinery.
+* **LLVM/**: LLVM bit-vector and interprocedural integration.
+* **Domains/**: Concrete semiring and transformer domains.
+* **Analyses/Intra/** and **Analyses/Inter/**: Concrete LLVM analysis clients.
 
 Usage Notes
 ===========
@@ -233,9 +233,8 @@ opt-in ``project_newton_safe`` contract. That contract is the domain author's
 assertion that projection is monotone and compatible with ``combine`` and the
 linearized summary equations used by the Newton pipeline.
 
-This engine is **not** currently wired into a dedicated command-line
-tool; instead, it serves as a building block for experimental analyses
-within Lotus.
+The ``lotus-dfa-npa`` command-line tool exposes the in-tree LLVM clients; the
+generic solver APIs can also be used directly by library clients.
 
 References
 ==========

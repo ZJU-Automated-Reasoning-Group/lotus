@@ -23,6 +23,7 @@ SMTSampler).
    egraphs_simp
    fpsolve
    libsmt
+   datalog
 
 Third-Party Libraries
 ---------------------

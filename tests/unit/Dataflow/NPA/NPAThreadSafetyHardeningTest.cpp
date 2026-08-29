@@ -1,6 +1,6 @@
 #include "Dataflow/NPA/Domains/BitSetDomain.h"
-#include "Dataflow/NPA/Domains/Transformers/GenKillDomain.h"
-#include "Dataflow/NPA/Domains/Transformers/TaintDomain.h"
+#include "Dataflow/NPA/Domains/GenKillDomain.h"
+#include "Dataflow/NPA/Domains/TaintDomain.h"
 
 #include <algorithm>
 #include <condition_variable>

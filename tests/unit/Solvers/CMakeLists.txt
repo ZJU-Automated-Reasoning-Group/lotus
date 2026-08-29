@@ -1,4 +1,5 @@
 add_subdirectory(EGraph)
+add_subdirectory(Datalog)
 
 set(LOTUS_SOLVER_SMT_TEST_SOURCES SymAbsTest.cpp SMTSamplerTest.cpp)
 set(LOTUS_SOLVER_SMT_TEST_LIBS SMTSampler SymAbs ${Z3_LIBRARIES})

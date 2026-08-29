@@ -92,11 +92,16 @@ include/Dataflow/NPA/
 │           ├── SccSolver.h
 │           ├── AdaptivePlan.h
 │           └── Tensor/        # Optional inner Newton backend
-├── Adapters/LLVM/Inter/       # Forward/backward LLVM engines
-├── Domains/
-│   └── Transformers/          # Domains representing transfer functions
-└── Analyses/                  # Concrete intra/inter analyses
+├── LLVM/                      # LLVM bit-vector and interprocedural engines
+├── Domains/                   # Semiring and transformer domains
+├── Analyses/Intra/            # Intraprocedural analysis clients
+└── Analyses/Inter/            # Interprocedural analysis clients
 ```
+
+The public and implementation trees are intentionally not exact mirrors.
+`include/Dataflow/NPA/` also contains template implementations that must remain
+visible to clients, while `lib/Dataflow/NPA/` contains only separately compiled
+non-template implementations.
 
 Notable entry points:
 
@@ -109,7 +114,9 @@ Notable entry points:
 - `Solver/Newton/Linear/SccSolver.h` implements the ordinary inner
   linearized-system machinery used by Newton/NPA.
 - `Solver/Newton/Linear/Tensor/` contains the optional TOPLAS tensor backend.
-- `Adapters/LLVM/Inter/` contains interprocedural LLVM infrastructure.
+- `LLVM/ForwardInterEngine.h` and `LLVM/BackwardInterEngine.h` contain the
+  interprocedural LLVM infrastructure.
+- `LLVM/BitVectorSolver.h` contains the intraprocedural bit-vector bridge.
 - `Analyses/Inter/` contains the public analysis wrappers used by
   the in-tree constant-propagation, interval, taint, nullability, and related
   clients.
@@ -121,9 +128,9 @@ Notable entry points:
 - Inter backward clients use `BackwardInterEngine<Domain, Analysis>`.
 - `TransformerSummary` is the current bounded abstract-summary path used
   by in-tree subdistributive clients such as interprocedural constant
-  propagation and interval analysis. Transformer carriers live under
-  `Domains/Transformers` because they satisfy the same domain interface as
-  ordinary solver domains.
+  propagation and interval analysis. Transformer carriers live directly under
+  `Domains/` because they satisfy the same domain interface as ordinary solver
+  domains.
 
 ## Current parallel algorithm
 

@@ -1,7 +1,7 @@
 #ifndef NPA_REACHABLE_BLOCKS_H
 #define NPA_REACHABLE_BLOCKS_H
 
-#include "Dataflow/NPA/Adapters/LLVM/BitVectorEngine.h"
+#include "Dataflow/NPA/LLVM/BitVectorSolver.h"
 
 #include <set>
 

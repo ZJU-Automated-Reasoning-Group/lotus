@@ -20,18 +20,27 @@ Main components
 - ``Core/`` defines generic problem, result, and option abstractions.
 - ``Solver/`` contains solver implementations such as state elimination,
   ADT-simple, and ADT-delayed solvers.
-- ``Analyses/LLVM/Intra/`` provides ready-made intraprocedural analyses:
+- ``Domains/`` defines the abstract fact types and their lattice operations.
+- ``LLVM/`` bridges LLVM CFGs, dominance information, and call resolution to
+  the generic APA problem interfaces.
+- ``Analyses/Intra/`` provides ready-made intraprocedural analyses:
 
   - available expressions
   - constant propagation
   - live variables
+  - lockset analysis
   - non-null
   - reachability
   - reaching definitions
+  - sign analysis
   - uninitialized variables
   - very busy expressions
 
-- ``Passes/EliminationPasses`` exposes LLVM-pass integration.
+- ``Analyses/Inter/`` contains the supported interprocedural variants. Domains
+  that currently support only one scope simply have no analysis entry point in
+  the other directory.
+
+- ``Passes/EliminationPasses.h`` exposes LLVM-pass integration.
 
 Interprocedural Forward Summary Solver
 --------------------------------------
@@ -185,10 +194,9 @@ Usage example
   assert(Diag.equation_node_count > 0);
   assert(Diag.scc_count > 0);
 
-The unit tests in ``tests/unit/Dataflow/APA/EliminationTest.cpp`` contain
-9 forward summary test cases that validate parity between the worklist
-and summary solvers across all five analysis types, including recursive
-call-graph patterns.
+The unit tests in ``tests/unit/Dataflow/APA/`` validate parity between the
+worklist and summary solvers across the supported analysis types, including
+recursive call-graph patterns.
 
 Library-only availability
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -1,29 +1,28 @@
-# APA-based (Algebraic Program Analysis) intraprocedural dataflow solver.
+# APA-based (Algebraic Program Analysis) dataflow solver.
 #
-# The solver itself is template-based and lives in include/Dataflow/APA/.
-# This target exists mainly for uniform build integration and compilation checks.
+# Header-only framework components live under include/Dataflow/APA/.
+# APADataFlow contains compiled domains, LLVM analyses, and pass wrappers.
 
 set(APA_SOURCES
-  Elimination.cpp
   Domains/AffineRelationDomain.cpp
   Passes/EliminationPasses.cpp
-  Analyses/Intra/IntraReachable.cpp
-  Analyses/Intra/IntraConstantPropagation.cpp
-  Analyses/Intra/IntraReachingDefinitions.cpp
-  Analyses/Intra/IntraAvailableExpressions.cpp
-  Analyses/Intra/IntraUninitVariables.cpp
-  Analyses/Intra/IntraLiveVariables.cpp
-  Analyses/Intra/IntraLockset.cpp
-  Analyses/Intra/IntraVeryBusyExpressions.cpp
-  Analyses/Intra/IntraNonNull.cpp
-  Analyses/Intra/IntraSignAnalysis.cpp
-  Analyses/Inter/InterReachable.cpp
-  Analyses/Inter/InterConstantPropagation.cpp
-  Analyses/Inter/InterLiveVariables.cpp
-  Analyses/Inter/InterLockset.cpp
-  Analyses/Inter/InterReachingDefinitions.cpp
-  Analyses/Inter/InterUninitVariables.cpp
-  Analyses/Inter/InterAffineEqualities.cpp
+  Analyses/Intra/Reachability.cpp
+  Analyses/Intra/ConstantPropagation.cpp
+  Analyses/Intra/ReachingDefinitions.cpp
+  Analyses/Intra/AvailableExpressions.cpp
+  Analyses/Intra/UninitializedVariables.cpp
+  Analyses/Intra/LiveVariables.cpp
+  Analyses/Intra/Lockset.cpp
+  Analyses/Intra/VeryBusyExpressions.cpp
+  Analyses/Intra/NonNull.cpp
+  Analyses/Intra/Sign.cpp
+  Analyses/Inter/Reachability.cpp
+  Analyses/Inter/ConstantPropagation.cpp
+  Analyses/Inter/LiveVariables.cpp
+  Analyses/Inter/Lockset.cpp
+  Analyses/Inter/ReachingDefinitions.cpp
+  Analyses/Inter/UninitializedVariables.cpp
+  Analyses/Inter/AffineEqualities.cpp
 )
 
 add_library(APADataFlow STATIC ${APA_SOURCES})

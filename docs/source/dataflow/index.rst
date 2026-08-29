@@ -13,4 +13,3 @@ This section covers data flow analysis engines and tools.
    vasco
    wpds
    npa
-   datalog

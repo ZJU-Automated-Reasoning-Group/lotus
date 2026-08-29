@@ -1,5 +1,5 @@
 #include "Alias/Infrastructure/AliasAnalysisWrapper/AliasAnalysisWrapper.h"
-#include "Dataflow/NPA/Analyses/Inter/InterTaint.h"
+#include "Dataflow/NPA/Analyses/Inter/Taint.h"
 #include "TestUtils/LLVMHelpers.h"
 
 #include <llvm/IR/Instructions.h>

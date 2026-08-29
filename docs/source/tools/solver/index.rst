@@ -1,9 +1,27 @@
 Solver Tools
 ============
 
-This page documents the small command-line front-ends under ``tools/solver/``.
-At present, only ``owl`` is wired into the build (requires ``-DLOTUS_ENABLE_OWL=ON``).
-``slot`` and ``staub`` remain source-present experimental tools.
+This page documents the command-line front-ends under ``tools/solver/``.
+``lotus-datalog`` is built by default, while ``owl`` requires
+``-DLOTUS_ENABLE_OWL=ON``. ``slot`` and ``staub`` remain source-present
+experimental tools.
+
+lotus-datalog – Datalog Solver Front-End
+----------------------------------------
+
+The native Datalog/lattice solver front-end accepts JSON Semantic IR, Lotus
+Datalog, and Z3 fixedpoint input. It validates or executes programs and emits
+canonical JSON relation rows and runtime statistics.
+
+**Binary**: ``lotus-datalog``
+
+**Source**: ``tools/solver/datalog/``
+
+.. code-block:: bash
+
+   ./build/bin/lotus-datalog schema > program.json
+   ./build/bin/lotus-datalog validate program.json
+   ./build/bin/lotus-datalog run program.json --workers 4 --pretty
 
 OWL – SMT/Model Checking Front-End
 ----------------------------------

@@ -4,7 +4,7 @@
  */
 #include "Dataflow/NPA/Analyses/Intra/ReachingDefinitions.h"
 
-#include "Dataflow/NPA/Adapters/LLVM/BitVectorProblem.h"
+#include "Dataflow/NPA/LLVM/BitVectorProblem.h"
 
 #include <unordered_map>
 

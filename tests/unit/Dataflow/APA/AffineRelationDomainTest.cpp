@@ -1,6 +1,6 @@
 #include "Dataflow/APA/Domains/AffineRelationDomain.h"
 
-#include "Dataflow/APA/Analyses/Inter/InterAffineEqualities.h"
+#include "Dataflow/APA/Analyses/Inter/AffineEqualities.h"
 #include "TestUtils/LLVMHelpers.h"
 
 #include <algorithm>

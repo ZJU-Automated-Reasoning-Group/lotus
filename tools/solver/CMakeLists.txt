@@ -1,3 +1,5 @@
+add_subdirectory(datalog)
+
 if(LOTUS_ENABLE_OWL)
   set(LLVM_LINK_COMPONENTS
       LLVMSupport)

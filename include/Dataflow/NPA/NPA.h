@@ -35,7 +35,7 @@
  *   - Solver/Newton/               : differentiation and Newton machinery
  *   - Solver/Newton/Linear/        : SCC structure and ordinary backends
  *   - Solver/Newton/Linear/Tensor/ : optional tensor backend
- *   - Adapters/LLVM/               : LLVM-specific analysis infrastructure
+ *   - LLVM/                        : LLVM-specific analysis infrastructure
  *********************************************************************/
 #ifndef NPA_HPP
 #define NPA_HPP

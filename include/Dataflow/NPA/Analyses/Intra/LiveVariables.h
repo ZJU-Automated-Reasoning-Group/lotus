@@ -1,7 +1,7 @@
 #ifndef NPA_LIVE_VARIABLES_H
 #define NPA_LIVE_VARIABLES_H
 
-#include "Dataflow/NPA/Adapters/LLVM/BitVectorEngine.h"
+#include "Dataflow/NPA/LLVM/BitVectorSolver.h"
 
 #include <llvm/IR/Function.h>
 

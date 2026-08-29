@@ -35,23 +35,30 @@ include/Dataflow/APA/
 ├── APA.h                          # Canonical umbrella for the framework
 ├── Core/                          # Generic problem, path-expression, options, results
 ├── Solver/                        # Solver facades and concrete elimination engines
-├── Adapters/LLVM/                 # LLVM CFG adapters
-├── Analyses/LLVM/Intra/           # Concrete intraprocedural LLVM analyses
-├── Analyses/LLVM/Inter/           # Concrete call-string interprocedural analyses
+├── LLVM/                          # LLVM problem and CFG integration
+├── Domains/                       # Abstract values and lattice operations
+├── Analyses/Intra/                # Intraprocedural LLVM transfer semantics
+├── Analyses/Inter/                # Interprocedural LLVM transfer semantics
 └── Passes/                        # Legacy-pass wrappers
 ```
 
 The current layout is the supported public header structure; there are no
 compatibility aliases for an older pre-reorg layout.
 
+The public and implementation trees are intentionally not exact mirrors.
+`include/Dataflow/APA/` also contains template implementations that must remain
+visible to clients, while `lib/Dataflow/APA/` contains only separately compiled
+non-template implementations.
+
 ### Quick include guide
 
 - Framework umbrella: `#include "Dataflow/APA/APA.h"`
 - Minimal intraprocedural surface: `Core/Problem.h`, `Core/Result.h`,
-  `Solver/Solver.h`, `Adapters/LLVM/ForwardProblem.h`
+  `Solver/Solver.h`, `LLVM/ForwardProblem.h`
 - Minimal interprocedural surface: `Core/InterProblem.h`, `Core/InterResult.h`,
   `Solver/InterSolver.h`
-- LLVM clients: `Analyses/LLVM/Intra/*.h` and `Analyses/LLVM/Inter/*.h`
+- Abstract domains: `Domains/*.h`
+- LLVM clients: `Analyses/Intra/*.h` and `Analyses/Inter/*.h`
 - Passes: `#include "Dataflow/APA/Passes/EliminationPasses.h"`
 - Internal engine headers: `Solver/SolverContext.h` and the concrete
   `*Solver.h` files are solver internals; downstream clients should normally
@@ -106,12 +113,15 @@ The APA solver is different:
 - `Core/` is generic and does not depend on LLVM.
 - `Solver/` contains both the generic intraprocedural elimination engines and
   the call-string interprocedural worklist solver.
-- `Adapters/LLVM/` maps LLVM CFGs / ICFGs into the generic problem interfaces.
-- `Analyses/LLVM/` supplies lattice semantics and transfer behavior for concrete
-  analyses.
+- `LLVM/` maps LLVM CFGs / ICFGs into the generic problem interfaces.
+- `Domains/` owns abstract fact types and their meet/equality operations.
+- `Analyses/Intra/` and `Analyses/Inter/` provide LLVM transfer behavior,
+  boundary conditions, and solver entry points. A domain may support either or
+  both scopes. Shared inter-analysis fact propagation helpers also live under
+  `Analyses/Inter/`.
 
 APA is therefore a generic elimination framework, not a complete
-"analysis generator." Each client analysis still provides its own lattice and
+"analysis generator." Each client analysis combines a reusable domain with
 LLVM-specific modeling.
 
 ## Current gaps / non-goals

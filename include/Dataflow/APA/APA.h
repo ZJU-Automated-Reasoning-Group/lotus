@@ -10,7 +10,7 @@
 #include "Dataflow/APA/Core/Result.h"
 
 // Solver engines and LLVM adapters.
-#include "Dataflow/APA/Adapters/LLVM/ForwardProblem.h"
+#include "Dataflow/APA/LLVM/ForwardProblem.h"
 #include "Dataflow/APA/Solver/ForwardInterSummarySolver.h"
 #include "Dataflow/APA/Solver/InterSolver.h"
 #include "Dataflow/APA/Solver/InterSummaryTransfer.h"

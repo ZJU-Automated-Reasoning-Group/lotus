@@ -1,5 +1,5 @@
 #include "Alias/Infrastructure/AliasAnalysisWrapper/AliasAnalysisWrapper.h"
-#include "Dataflow/NPA/Analyses/Inter/InterNullability.h"
+#include "Dataflow/NPA/Analyses/Inter/Nullability.h"
 #include "TestUtils/LLVMHelpers.h"
 
 #include <llvm/IR/LLVMContext.h>

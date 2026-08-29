@@ -3,16 +3,16 @@
 
 #include "llvm/Pass.h"
 
-#include "Dataflow/APA/Analyses/Intra/IntraAvailableExpressions.h"
-#include "Dataflow/APA/Analyses/Intra/IntraConstantPropagation.h"
-#include "Dataflow/APA/Analyses/Intra/IntraLiveVariables.h"
-#include "Dataflow/APA/Analyses/Intra/IntraLockset.h"
-#include "Dataflow/APA/Analyses/Intra/IntraNonNull.h"
-#include "Dataflow/APA/Analyses/Intra/IntraReachability.h"
-#include "Dataflow/APA/Analyses/Intra/IntraReachingDefinitions.h"
-#include "Dataflow/APA/Analyses/Intra/IntraSignAnalysis.h"
-#include "Dataflow/APA/Analyses/Intra/IntraUninitializedVariables.h"
-#include "Dataflow/APA/Analyses/Intra/IntraVeryBusyExpressions.h"
+#include "Dataflow/APA/Analyses/Intra/AvailableExpressions.h"
+#include "Dataflow/APA/Analyses/Intra/ConstantPropagation.h"
+#include "Dataflow/APA/Analyses/Intra/LiveVariables.h"
+#include "Dataflow/APA/Analyses/Intra/Lockset.h"
+#include "Dataflow/APA/Analyses/Intra/NonNull.h"
+#include "Dataflow/APA/Analyses/Intra/Reachability.h"
+#include "Dataflow/APA/Analyses/Intra/ReachingDefinitions.h"
+#include "Dataflow/APA/Analyses/Intra/Sign.h"
+#include "Dataflow/APA/Analyses/Intra/UninitializedVariables.h"
+#include "Dataflow/APA/Analyses/Intra/VeryBusyExpressions.h"
 #include "Dataflow/APA/Core/Options.h"
 
 namespace elimination {

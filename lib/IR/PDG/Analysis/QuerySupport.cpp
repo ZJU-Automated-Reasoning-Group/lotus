@@ -1,5 +1,4 @@
-#include "IR/PDG/QueryLanguage/Cypher.h"
-#include "IR/PDG/Support/PDGUtils.h"
+#include "IR/PDG/Analysis/Internal/QuerySupport.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -8,8 +7,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
-#include <chrono>
-#include <functional>
+#include <cctype>
 #include <queue>
 #include <set>
 #include <sstream>
@@ -17,21 +15,7 @@
 
 using namespace llvm;
 
-namespace pdg {
-
-namespace {
-
-using NodeSet = PDGQueryResult::NodeSet;
-using EdgeSet = PDGQueryResult::EdgeSet;
-
-struct TraversalOutcome {
-  NodeSet nodes;
-  EdgeSet edges;
-  std::unordered_map<Node *, std::set<Node *>> predecessors;
-  std::unordered_map<Node *, std::vector<std::pair<Node *, EdgeType>>>
-      predecessor_edges;
-  std::unordered_map<Node *, size_t> distances;
-};
+namespace pdg::query_detail {
 
 struct TraversalState {
   Node *node = nullptr;
@@ -43,16 +27,17 @@ struct StateHash {
   size_t operator()(const std::pair<Node *, std::vector<Node *>> &value) const {
     size_t seed = std::hash<Node *>()(value.first);
     for (Node *node : value.second) {
-      seed ^= std::hash<Node *>()(node) + 0x9e3779b9 + (seed << 6) +
-              (seed >> 2);
+      seed ^=
+          std::hash<Node *>()(node) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
     }
     return seed;
   }
 };
 
-static std::string toLower(std::string value) {
-  std::transform(value.begin(), value.end(), value.begin(),
-                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+std::string toLower(std::string value) {
+  std::transform(
+      value.begin(), value.end(), value.begin(),
+      [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
   return value;
 }
 
@@ -60,16 +45,10 @@ static bool isControlEdge(EdgeType type) {
   return type == EdgeType::CONTROLDEP_CALLINV ||
          type == EdgeType::CONTROLDEP_CALLRET ||
          type == EdgeType::CONTROLDEP_ENTRY ||
-         type == EdgeType::CONTROLDEP_BR ||
-         type == EdgeType::CONTROLDEP_IND_BR;
+         type == EdgeType::CONTROLDEP_BR || type == EdgeType::CONTROLDEP_IND_BR;
 }
 
-static bool isParameterEdge(EdgeType type) {
-  return type == EdgeType::PARAMETER_IN || type == EdgeType::PARAMETER_OUT ||
-         type == EdgeType::PARAMETER_FIELD;
-}
-
-static bool isEdgeAllowed(EdgeType type, const std::set<EdgeType> &allowed) {
+bool isEdgeAllowed(EdgeType type, const std::set<EdgeType> &allowed) {
   return allowed.empty() || allowed.count(type) != 0;
 }
 
@@ -143,8 +122,8 @@ static bool isValueFlowEdge(Edge *edge, Node *src_node, Node *dst_node) {
   return src_inst != nullptr || dst_inst != nullptr;
 }
 
-static bool applyCallStackTransition(bool forward, Node *current, Node *neighbor,
-                                     EdgeType edge_type,
+static bool applyCallStackTransition(bool forward, Node *current,
+                                     Node *neighbor, EdgeType edge_type,
                                      std::vector<Node *> &call_stack) {
   if (edge_type == EdgeType::CONTROLDEP_CALLINV) {
     if (forward) {
@@ -171,7 +150,7 @@ static bool applyCallStackTransition(bool forward, Node *current, Node *neighbor
   return true;
 }
 
-static std::string pointerKey(const void *value) {
+std::string pointerKey(const void *value) {
   std::ostringstream os;
   os << value;
   return os.str();
@@ -188,8 +167,8 @@ static std::string locationKey(const DebugLoc &debug_loc) {
   return key;
 }
 
-static bool sourceLocationMatches(const PDGSourceLocation &wanted,
-                                  const Instruction &inst) {
+bool sourceLocationMatches(const PDGSourceLocation &wanted,
+                           const Instruction &inst) {
   DebugLoc loc = inst.getDebugLoc();
   if (!loc)
     return false;
@@ -218,7 +197,7 @@ static NodeSet allGraphNodes(ProgramGraph &pdg) {
   return nodes;
 }
 
-static NodeSet scopeNodes(ProgramGraph &pdg, const PDGQueryScope &scope) {
+NodeSet scopeNodes(ProgramGraph &pdg, const PDGQueryScope &scope) {
   NodeSet nodes;
   if (scope.kind == PDGQueryScope::Kind::WholeGraph)
     return allGraphNodes(pdg);
@@ -230,7 +209,8 @@ static NodeSet scopeNodes(ProgramGraph &pdg, const PDGQueryScope &scope) {
     return scope.query_result->nodes;
 
   if (scope.kind == PDGQueryScope::Kind::Function && scope.function) {
-    for (ProgramGraph::NodeSet::iterator it = pdg.begin(); it != pdg.end(); ++it) {
+    for (ProgramGraph::NodeSet::iterator it = pdg.begin(); it != pdg.end();
+         ++it) {
       Node *node = *it;
       if (node == nullptr)
         continue;
@@ -243,8 +223,8 @@ static NodeSet scopeNodes(ProgramGraph &pdg, const PDGQueryScope &scope) {
   return nodes;
 }
 
-static EdgeSet collectInducedEdges(const NodeSet &nodes,
-                                   const std::set<EdgeType> &edge_types) {
+EdgeSet collectInducedEdges(const NodeSet &nodes,
+                            const std::set<EdgeType> &edge_types) {
   EdgeSet edges;
   for (Node *node : nodes) {
     if (node == nullptr)
@@ -278,8 +258,8 @@ static std::string scopeCacheKey(const PDGQueryScope &scope) {
   return os.str();
 }
 
-static std::string criteriaCacheKey(const PDGCriteria &criteria,
-                                    const llvm::Module *module) {
+std::string criteriaCacheKey(const PDGCriteria &criteria,
+                             const llvm::Module *module) {
   std::ostringstream os;
   os << pointerKey(module) << "|";
   for (Node *node : criteria.nodes)
@@ -304,20 +284,19 @@ static std::string criteriaCacheKey(const PDGCriteria &criteria,
   return os.str();
 }
 
-static std::string optionsCacheKey(const PDGQueryOptions &options) {
+std::string optionsCacheKey(const PDGQueryOptions &options) {
   std::ostringstream os;
   os << static_cast<int>(options.edge_preset) << "|"
      << static_cast<int>(options.context_mode) << "|"
      << static_cast<int>(options.cache_policy) << "|"
-     << static_cast<int>(options.slice_flavor) << "|"
-     << options.explain << "|" << scopeCacheKey(options.scope) << "|"
-     << options.limits.max_depth << "|" << options.limits.max_states << "|"
-     << options.limits.max_paths << "|" << options.limits.max_path_length
-     << "|" << options.limits.max_stack_depth;
+     << static_cast<int>(options.slice_flavor) << "|" << options.explain << "|"
+     << scopeCacheKey(options.scope) << "|" << options.limits.max_depth << "|"
+     << options.limits.max_states << "|" << options.limits.max_paths << "|"
+     << options.limits.max_path_length << "|" << options.limits.max_stack_depth;
   return os.str();
 }
 
-static std::string pathKey(const PDGWitnessPath &path) {
+std::string pathKey(const PDGWitnessPath &path) {
   std::ostringstream os;
   os << static_cast<int>(path.kind) << "|";
   for (Node *node : path.nodes)
@@ -325,7 +304,7 @@ static std::string pathKey(const PDGWitnessPath &path) {
   return os.str();
 }
 
-static std::string functionNameForNode(Node *node) {
+std::string functionNameForNode(Node *node) {
   if (node == nullptr)
     return "";
   if (node->getFunc() != nullptr)
@@ -334,7 +313,7 @@ static std::string functionNameForNode(Node *node) {
   return function ? function->getName().str() : "";
 }
 
-static std::string sourceKeyForNode(Node *node) {
+std::string sourceKeyForNode(Node *node) {
   if (node == nullptr)
     return "";
   const Instruction *inst = dyn_cast_or_null<Instruction>(node->getValue());
@@ -343,7 +322,7 @@ static std::string sourceKeyForNode(Node *node) {
   return locationKey(inst->getDebugLoc());
 }
 
-static std::string stringifyValue(const Value *value) {
+std::string stringifyValue(const Value *value) {
   if (value == nullptr)
     return "";
   std::string rendered;
@@ -385,7 +364,8 @@ static bool isCallToAny(const Instruction &inst,
   const CallBase *call = dyn_cast<CallBase>(&inst);
   if (call == nullptr || call->getCalledFunction() == nullptr)
     return false;
-  const std::string callee = toLower(call->getCalledFunction()->getName().str());
+  const std::string callee =
+      toLower(call->getCalledFunction()->getName().str());
   for (size_t i = 0; i < names.size(); ++i) {
     if (callee == toLower(names[i]))
       return true;
@@ -430,8 +410,8 @@ static bool isDefBehaviorInstruction(const Instruction &inst) {
          isa<StoreInst>(&inst) || isa<CallBase>(&inst);
 }
 
-static NodeSet resolvePropertyCriteria(ProgramGraph &pdg, const Module &module,
-                                       const PropertySpec &spec) {
+NodeSet resolvePropertyCriteria(ProgramGraph &pdg, const Module &module,
+                                const PropertySpec &spec) {
   NodeSet criteria;
 
   auto addInstructionNode = [&](const Instruction &inst) {
@@ -476,18 +456,17 @@ static NodeSet resolvePropertyCriteria(ProgramGraph &pdg, const Module &module,
     const bool has_mem_markers =
         (rule.kind == PropertyKind::MemSafety ||
          rule.kind == PropertyKind::MemCleanup) &&
-        moduleHasAnyCall(module, std::vector<std::string>{
-                                     "__INSTR_mark_pointer",
-                                     "__INSTR_mark_free",
-                                     "__INSTR_mark_allocation",
-                                     "__INSTR_mark_exit"});
+        moduleHasAnyCall(module,
+                         std::vector<std::string>{
+                             "__INSTR_mark_pointer", "__INSTR_mark_free",
+                             "__INSTR_mark_allocation", "__INSTR_mark_exit"});
 
     const bool has_overflow_markers =
         (rule.kind == PropertyKind::NoOverflow ||
          rule.kind == PropertyKind::DefBehavior) &&
-        moduleHasAnyCall(module, std::vector<std::string>{
-                                     "__VERIFIER_error",
-                                     "__symbiotic_check_overflow"});
+        moduleHasAnyCall(
+            module, std::vector<std::string>{"__VERIFIER_error",
+                                             "__symbiotic_check_overflow"});
 
     const bool has_null_markers =
         rule.kind == PropertyKind::NullDeref &&
@@ -503,11 +482,11 @@ static NodeSet resolvePropertyCriteria(ProgramGraph &pdg, const Module &module,
           case PropertyKind::MemSafety:
           case PropertyKind::MemCleanup:
             if (has_mem_markers) {
-              if (isCallToAny(inst, std::vector<std::string>{
-                                        "__INSTR_mark_pointer",
-                                        "__INSTR_mark_free",
-                                        "__INSTR_mark_allocation",
-                                        "__INSTR_mark_exit"}))
+              if (isCallToAny(
+                      inst, std::vector<std::string>{"__INSTR_mark_pointer",
+                                                     "__INSTR_mark_free",
+                                                     "__INSTR_mark_allocation",
+                                                     "__INSTR_mark_exit"}))
                 addInstructionNode(inst);
             } else if (isMemSafetyInstruction(inst)) {
               addInstructionNode(inst);
@@ -534,17 +513,17 @@ static NodeSet resolvePropertyCriteria(ProgramGraph &pdg, const Module &module,
             }
             break;
           case PropertyKind::Termination:
-            if (isCallToAny(inst, std::vector<std::string>{
-                                      "__INSTR_fail", "__assert_fail",
-                                      "__VERIFIER_silent_exit",
-                                      "__VERIFIER_exit",
-                                      "__INSTR_check_assume"}))
+            if (isCallToAny(inst,
+                            std::vector<std::string>{
+                                "__INSTR_fail", "__assert_fail",
+                                "__VERIFIER_silent_exit", "__VERIFIER_exit",
+                                "__INSTR_check_assume"}))
               addInstructionNode(inst);
             break;
           case PropertyKind::NullDeref:
             if (has_null_markers) {
-              if (isCallToAny(inst,
-                              std::vector<std::string>{"__INSTR_mark_pointer"})) {
+              if (isCallToAny(
+                      inst, std::vector<std::string>{"__INSTR_mark_pointer"})) {
                 if (const Instruction *next = inst.getNextNode())
                   addInstructionNode(*next);
                 else
@@ -569,11 +548,10 @@ static bool shouldRecordNode(const NodeSet &scope, Node *node) {
   return scope.empty() || scope.count(node) != 0;
 }
 
-static TraversalOutcome traverseGraph(ProgramGraph &pdg, const NodeSet &start_nodes,
-                                      const std::set<EdgeType> &edge_types,
-                                      const PDGQueryOptions &options,
-                                      bool forward,
-                                      PDGQueryDiagnostics &diagnostics) {
+TraversalOutcome traverseGraph(ProgramGraph &pdg, const NodeSet &start_nodes,
+                               const std::set<EdgeType> &edge_types,
+                               const PDGQueryOptions &options, bool forward,
+                               PDGQueryDiagnostics &diagnostics) {
   TraversalOutcome outcome;
   const NodeSet scoped_nodes = scopeNodes(pdg, options.scope);
   std::queue<TraversalState> worklist;
@@ -619,7 +597,8 @@ static TraversalOutcome traverseGraph(ProgramGraph &pdg, const NodeSet &start_no
       visited_nodes.insert(state.node);
     }
 
-    if (options.limits.max_depth > 0 && state.depth >= options.limits.max_depth) {
+    if (options.limits.max_depth > 0 &&
+        state.depth >= options.limits.max_depth) {
       diagnostics.depth_limit_hit = true;
       continue;
     }
@@ -695,8 +674,8 @@ static TraversalOutcome traverseGraph(ProgramGraph &pdg, const NodeSet &start_no
 
 static std::vector<Node *> materializePath(
     Node *node,
-    const std::unordered_map<Node *, std::vector<std::pair<Node *, EdgeType>>> &
-        predecessor_edges,
+    const std::unordered_map<Node *, std::vector<std::pair<Node *, EdgeType>>>
+        &predecessor_edges,
     const NodeSet &start_nodes, std::vector<EdgeType> *edge_types) {
   std::vector<Node *> path;
   std::vector<EdgeType> local_edge_types;
@@ -707,8 +686,9 @@ static std::vector<Node *> materializePath(
     path.push_back(current);
     if (start_nodes.count(current) != 0)
       break;
-    std::unordered_map<Node *, std::vector<std::pair<Node *, EdgeType>>>::const_iterator
-        it = predecessor_edges.find(current);
+    std::unordered_map<
+        Node *, std::vector<std::pair<Node *, EdgeType>>>::const_iterator it =
+        predecessor_edges.find(current);
     if (it == predecessor_edges.end() || it->second.empty())
       break;
     local_edge_types.push_back(it->second.front().second);
@@ -739,8 +719,8 @@ static void fillWitnessPaths(PDGQueryResult &result) {
     }
   }
 
-  for (NodeSet::const_iterator it = result.nodes.begin(); it != result.nodes.end();
-       ++it) {
+  for (NodeSet::const_iterator it = result.nodes.begin();
+       it != result.nodes.end(); ++it) {
     Node *node = *it;
     if (node == nullptr || result.criteria_nodes.count(node) != 0)
       continue;
@@ -756,10 +736,10 @@ static void fillWitnessPaths(PDGQueryResult &result) {
   }
 }
 
-static PDGQueryResult resultFromTraversal(const NodeSet &criteria_nodes,
-                                          const TraversalOutcome &outcome,
-                                          PDGQueryDiagnostics diagnostics,
-                                          bool explain) {
+PDGQueryResult resultFromTraversal(const NodeSet &criteria_nodes,
+                                   const TraversalOutcome &outcome,
+                                   PDGQueryDiagnostics diagnostics,
+                                   bool explain) {
   PDGQueryResult result;
   result.criteria_nodes = criteria_nodes;
   result.nodes = outcome.nodes;
@@ -772,11 +752,13 @@ static PDGQueryResult resultFromTraversal(const NodeSet &criteria_nodes,
   return result;
 }
 
-static void syncCacheEpoch(ProgramGraph &pdg, unsigned long long &cache_epoch,
-                           std::unordered_map<std::string, PDGQueryResult> &result_cache,
-                           std::unordered_map<std::string, NodeSet> *criteria_cache,
-                           std::unordered_map<std::string,
-                                              std::unordered_map<Node *, std::set<Node *>>> *closure_cache) {
+void syncCacheEpoch(
+    ProgramGraph &pdg, unsigned long long &cache_epoch,
+    std::unordered_map<std::string, PDGQueryResult> &result_cache,
+    std::unordered_map<std::string, NodeSet> *criteria_cache,
+    std::unordered_map<std::string,
+                       std::unordered_map<Node *, std::set<Node *>>>
+        *closure_cache) {
   if (cache_epoch == pdg.getEpoch())
     return;
   cache_epoch = pdg.getEpoch();
@@ -787,7 +769,7 @@ static void syncCacheEpoch(ProgramGraph &pdg, unsigned long long &cache_epoch,
     closure_cache->clear();
 }
 
-static EdgeType edgeBetween(Node *from, Node *to) {
+EdgeType edgeBetween(Node *from, Node *to) {
   if (from == nullptr || to == nullptr)
     return EdgeType::TYPE_OTHEREDGE;
   for (Node::EdgeSet::const_iterator it = from->getOutEdgeSet().begin();
@@ -799,266 +781,4 @@ static EdgeType edgeBetween(Node *from, Node *to) {
   return EdgeType::TYPE_OTHEREDGE;
 }
 
-static bool isGlobalNode(Node *node) {
-  if (node == nullptr)
-    return false;
-  const GraphNodeType type = node->getNodeType();
-  if (node->getValue() == nullptr) {
-    return type == GraphNodeType::VAR_STATICALLOCGLOBALSCOPE ||
-           type == GraphNodeType::VAR_STATICALLOCMODULESCOPE ||
-           type == GraphNodeType::VAR_STATICALLOCFUNCTIONSCOPE;
-  }
-  return type == GraphNodeType::VAR_STATICALLOCGLOBALSCOPE ||
-         type == GraphNodeType::VAR_STATICALLOCMODULESCOPE ||
-         type == GraphNodeType::VAR_STATICALLOCFUNCTIONSCOPE ||
-         isa<GlobalValue>(node->getValue());
-}
-
-static bool isInputNode(Node *node, const Function &function) {
-  if (node == nullptr)
-    return false;
-  if (node->getNodeType() == GraphNodeType::PARAM_FORMALIN ||
-      node->getNodeType() == GraphNodeType::PARAM_ACTUALIN)
-    return true;
-  const Value *value = node->getValue();
-  const Argument *argument = dyn_cast_or_null<Argument>(value);
-  return argument != nullptr && argument->getParent() == &function;
-}
-
-static bool isReturnNode(Node *node) {
-  return node != nullptr && node->getNodeType() == GraphNodeType::INST_RET;
-}
-
-static bool isCallNode(Node *node) {
-  return node != nullptr && node->getNodeType() == GraphNodeType::INST_FUNCALL;
-}
-
-static bool isControlPredicateNode(Node *node) {
-  return node != nullptr &&
-         (node->getNodeType() == GraphNodeType::INST_BR ||
-          node->getNodeType() == GraphNodeType::FUNC_ENTRY);
-}
-
-static const Function *functionForNode(Node *node) {
-  if (node == nullptr)
-    return nullptr;
-  if (node->getFunc() != nullptr)
-    return node->getFunc();
-  const Value *value = node->getValue();
-  if (const Argument *argument = dyn_cast_or_null<Argument>(value))
-    return argument->getParent();
-  return dyn_cast_or_null<Function>(value);
-}
-
-static NodeSet collectFunctionNodes(ProgramGraph &pdg, const Function &function,
-                                    bool include_connected_globals) {
-  NodeSet nodes;
-  for (ProgramGraph::NodeSet::iterator it = pdg.begin(); it != pdg.end(); ++it) {
-    Node *node = *it;
-    if (node == nullptr)
-      continue;
-    if (functionForNode(node) == &function)
-      nodes.insert(node);
-  }
-  if (pdg.hasNode(const_cast<Function &>(function)))
-    nodes.insert(pdg.getNode(const_cast<Function &>(function)));
-
-  if (!include_connected_globals)
-    return nodes;
-
-  for (ProgramGraph::NodeSet::iterator it = pdg.begin(); it != pdg.end(); ++it) {
-    Node *node = *it;
-    if (!isGlobalNode(node))
-      continue;
-    bool connected = false;
-    for (Node::EdgeSet::const_iterator edge_it = node->getOutEdgeSet().begin();
-         edge_it != node->getOutEdgeSet().end() && !connected; ++edge_it) {
-      Edge *edge = *edge_it;
-      connected = edge != nullptr && functionForNode(edge->getDstNode()) == &function;
-    }
-    for (Node::EdgeSet::const_iterator edge_it = node->getInEdgeSet().begin();
-         edge_it != node->getInEdgeSet().end() && !connected; ++edge_it) {
-      Edge *edge = *edge_it;
-      connected = edge != nullptr && functionForNode(edge->getSrcNode()) == &function;
-    }
-    if (connected)
-      nodes.insert(node);
-  }
-
-  return nodes;
-}
-
-static std::string functionSummaryCacheKey(const Function &function,
-                                           const SummaryPolicy &policy,
-                                           const PDGQueryOptions &options) {
-  std::ostringstream os;
-  os << function.getName().str() << "|"
-     << static_cast<int>(policy.kind) << "|"
-     << policy.max_witnesses_per_bucket << "|" << optionsCacheKey(options);
-  return os.str();
-}
-
-static bool tryResolveSingleFunction(const ProgramGraph &pdg,
-                                     const PDGCriteria &criteria,
-                                     const PDGQueryOptions &options,
-                                     const Module *module,
-                                     const Function *&function,
-                                     PDGQueryDiagnostics &diagnostics) {
-  function = nullptr;
-  if (options.scope.kind == PDGQueryScope::Kind::Function &&
-      options.scope.function != nullptr) {
-    function = options.scope.function;
-    return true;
-  }
-
-  if (criteria.function_names.size() == 1 && module != nullptr) {
-    function = module->getFunction(criteria.function_names.front());
-    if (function != nullptr)
-      return true;
-  }
-
-  PDGCriteriaResolver resolver(const_cast<ProgramGraph &>(pdg));
-  PDGQueryResult resolved = resolver.resolve(criteria, options, module);
-  std::set<const Function *> functions;
-  for (NodeSet::const_iterator it = resolved.nodes.begin(); it != resolved.nodes.end();
-       ++it) {
-    const Function *candidate = functionForNode(*it);
-    if (candidate != nullptr)
-      functions.insert(candidate);
-  }
-  if (functions.size() == 1) {
-    function = *functions.begin();
-    return true;
-  }
-  if (functions.empty())
-    diagnostics.unresolved_criteria.push_back(
-        "summary query did not resolve to any function");
-  else
-    diagnostics.unresolved_criteria.push_back(
-        "summary query resolved to multiple functions");
-  return false;
-}
-
-static size_t countInterproceduralCrossings(const std::vector<EdgeType> &edges) {
-  size_t count = 0;
-  for (size_t i = 0; i < edges.size(); ++i) {
-    const EdgeType type = edges[i];
-    if (type == EdgeType::CONTROLDEP_CALLINV ||
-        type == EdgeType::CONTROLDEP_CALLRET || isParameterEdge(type) ||
-        type == EdgeType::DATA_RET)
-      ++count;
-  }
-  return count;
-}
-
-static std::string calleeName(Node *node) {
-  if (!isCallNode(node))
-    return "";
-  const CallBase *call = dyn_cast_or_null<CallBase>(node->getValue());
-  if (call == nullptr || call->getCalledFunction() == nullptr)
-    return "";
-  return call->getCalledFunction()->getName().str();
-}
-
-static ResourceKind resourceKindForAcquireName(const std::string &api_name) {
-  const std::string lower = toLower(api_name);
-
-  if (lower == "malloc" || lower == "calloc" || lower == "realloc" ||
-      lower == "reallocf" || lower == "valloc" || lower == "aligned_alloc" ||
-      lower == "posix_memalign" || lower == "memalign" || lower == "pvalloc")
-    return ResourceKind::Heap;
-
-  if (lower == "mmap" || lower == "mmap64")
-    return ResourceKind::Heap;
-
-  if (lower == "fopen" || lower == "fopen64" || lower == "freopen" ||
-      lower == "freopen64" || lower == "tmpfile" || lower == "tmpfile64" ||
-      lower == "fdopen" || lower == "popen")
-    return ResourceKind::File;
-
-  if (lower == "open" || lower == "open64" || lower == "creat" ||
-      lower == "creat64" || lower == "socket" || lower == "socketpair" ||
-      lower == "accept" || lower == "accept4" || lower == "dup" ||
-      lower == "dup2" || lower == "dup3" || lower == "epoll_create" ||
-      lower == "eventfd" || lower == "signalfd" || lower == "timerfd_create" ||
-      lower == "inotify_init" || lower == "memfd_create" || lower == "shm_open")
-    return ResourceKind::FileDescriptor;
-
-  if (lower == "opendir" || lower == "fdopendir")
-    return ResourceKind::Directory;
-
-  if (lower == "pthread_mutex_lock" ||
-      lower == "pthread_mutex_trylock" ||
-      lower == "pthread_spin_lock" ||
-      lower == "pthread_spin_trylock" ||
-      lower == "pthread_rwlock_rdlock" ||
-      lower == "pthread_rwlock_tryrdlock" ||
-      lower == "pthread_rwlock_wrlock" ||
-      lower == "pthread_rwlock_trywrlock" ||
-      lower == "mtx_lock" || lower == "mtx_trylock")
-    return ResourceKind::Lock;
-
-  return ResourceKind::Unknown;
-}
-
-static ResourceKind resourceKindForReleaseName(const std::string &api_name) {
-  const std::string lower = toLower(api_name);
-
-  if (lower == "free" || lower == "cfree" ||
-      lower == "munmap" || lower == "munmap64")
-    return ResourceKind::Heap;
-
-  if (lower == "fclose" || lower == "pclose")
-    return ResourceKind::File;
-
-  if (lower == "close" || lower == "closefrom" || lower == "shutdown")
-    return ResourceKind::FileDescriptor;
-
-  if (lower == "closedir")
-    return ResourceKind::Directory;
-
-  if (lower == "pthread_mutex_unlock" ||
-      lower == "pthread_spin_unlock" ||
-      lower == "pthread_rwlock_unlock" ||
-      lower == "mtx_unlock")
-    return ResourceKind::Lock;
-
-  return ResourceKind::Unknown;
-}
-
-static ResourceKind resourceKindForNode(Node *node, bool release) {
-  const std::string name = calleeName(node);
-  return release ? resourceKindForReleaseName(name)
-                 : resourceKindForAcquireName(name);
-}
-
-static bool resourceKindMatches(ResourceKind lhs, ResourceKind filter) {
-  return filter == ResourceKind::Unknown || lhs == filter;
-}
-
-static bool summaryKindEnabled(SummaryKind selected, SummaryKind candidate) {
-  return selected == SummaryKind::All || selected == candidate;
-}
-
-static bool containsBucketEntry(const std::vector<SummaryBucketEntry> &entries,
-                                Node *source, Node *target) {
-  for (size_t i = 0; i < entries.size(); ++i) {
-    if (entries[i].source == source && entries[i].target == target)
-      return true;
-  }
-  return false;
-}
-
-static void appendBucketEntry(std::vector<SummaryBucketEntry> &entries,
-                              Node *source, Node *target,
-                              const std::vector<PDGWitnessPath> &witnesses) {
-  if (containsBucketEntry(entries, source, target))
-    return;
-  SummaryBucketEntry entry;
-  entry.source = source;
-  entry.target = target;
-  entry.witness_paths = witnesses;
-  entries.push_back(entry);
-}
-
-} // namespace
+} // namespace pdg::query_detail

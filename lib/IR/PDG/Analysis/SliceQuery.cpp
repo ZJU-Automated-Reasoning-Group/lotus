@@ -1,8 +1,11 @@
 #include "IR/PDG/Analysis/SliceQuery.h"
 
+#include "IR/PDG/Analysis/Internal/QuerySupport.h"
 #include "IR/PDG/Analysis/Query.h"
 
-#include "QueryInternal.inc"
+namespace pdg {
+using namespace llvm;
+using namespace query_detail;
 
 SliceQuery::SliceQuery(ProgramGraph &pdg) : pdg_(pdg) {}
 
@@ -27,12 +30,11 @@ PDGQueryResult SliceQuery::forward(const PDGCriteria &criteria,
   PDGCriteriaResolver resolver(pdg_);
   PDGQueryResult resolved = resolver.resolve(criteria, options, module);
   NodeSet criteria_nodes = resolved.nodes;
-  TraversalOutcome outcome =
-      traverseGraph(pdg_, criteria_nodes, edgeTypesForPreset(options.edge_preset),
-                    options, true, resolved.diagnostics);
-  PDGQueryResult result =
-      resultFromTraversal(criteria_nodes, outcome, resolved.diagnostics,
-                          options.explain);
+  TraversalOutcome outcome = traverseGraph(
+      pdg_, criteria_nodes, edgeTypesForPreset(options.edge_preset), options,
+      true, resolved.diagnostics);
+  PDGQueryResult result = resultFromTraversal(
+      criteria_nodes, outcome, resolved.diagnostics, options.explain);
 
   if (options.cache_policy == PDGCachePolicy::Enabled)
     result_cache_[cache_key] = result;
@@ -60,12 +62,11 @@ PDGQueryResult SliceQuery::backward(const PDGCriteria &criteria,
   PDGCriteriaResolver resolver(pdg_);
   PDGQueryResult resolved = resolver.resolve(criteria, options, module);
   NodeSet criteria_nodes = resolved.nodes;
-  TraversalOutcome outcome =
-      traverseGraph(pdg_, criteria_nodes, edgeTypesForPreset(options.edge_preset),
-                    options, false, resolved.diagnostics);
-  PDGQueryResult result =
-      resultFromTraversal(criteria_nodes, outcome, resolved.diagnostics,
-                          options.explain);
+  TraversalOutcome outcome = traverseGraph(
+      pdg_, criteria_nodes, edgeTypesForPreset(options.edge_preset), options,
+      false, resolved.diagnostics);
+  PDGQueryResult result = resultFromTraversal(
+      criteria_nodes, outcome, resolved.diagnostics, options.explain);
 
   if (options.cache_policy == PDGCachePolicy::Enabled)
     result_cache_[cache_key] = result;
@@ -90,8 +91,8 @@ PDGQueryResult SliceQuery::chop(const PDGCriteria &sources,
       result.nodes.insert(*it);
   }
 
-  result.edges =
-      collectInducedEdges(result.nodes, edgeTypesForPreset(options.edge_preset));
+  result.edges = collectInducedEdges(result.nodes,
+                                     edgeTypesForPreset(options.edge_preset));
   result.predecessors = source_slice.predecessors;
   result.distances = source_slice.distances;
   result.diagnostics = source_slice.diagnostics;
@@ -106,7 +107,5 @@ PDGQueryResult SliceQuery::chop(const PDGCriteria &sources,
   }
   return result;
 }
-
-
 
 } // namespace pdg

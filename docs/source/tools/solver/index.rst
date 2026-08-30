@@ -3,8 +3,8 @@ Solver Tools
 
 This page documents the command-line front-ends under ``tools/solver/``.
 ``lotus-datalog`` is built by default, while ``owl`` requires
-``-DLOTUS_ENABLE_OWL=ON``. ``slot`` and ``staub`` remain source-present
-experimental tools.
+``-DLOTUS_ENABLE_OWL=ON``. ``staub`` remains a source-present experimental
+tool; SMT↔LLVM translation is provided by TUNA under ``lib/Solvers/SMT/TUNA``.
 
 lotus-datalog – Datalog Solver Front-End
 ----------------------------------------
@@ -48,37 +48,6 @@ It feeds SAT or SMT problems to the configured solver stack.
 
 See :doc:`../../solvers/smt` for details about the solver stack.
 
-SLOT – SMT-LIB to LLVM Translator
----------------------------------
-
-``slot`` translates SMT-LIB2 formulas into LLVM IR and can optionally run a
-small optimization pipeline over the generated function.
-
-**Binary**: ``slot`` (source present, not built by default)
-
-**Source**: ``tools/solver/slot.cpp``
-
-The source remains useful as documentation of the workflow, but the binary is
-not wired into the default build today.
-
-Basic usage:
-
-.. code-block:: bash
-
-   ./build/bin/slot -s query.smt2 -o query.ll
-   ./build/bin/slot -s query.smt2 -o query.ll -pall
-
-Important options:
-
-- ``-s <file>`` – input SMT-LIB2 file
-- ``-o <file>`` – output file
-- ``-lu <file>`` / ``-lo <file>`` – dump LLVM before or after optimization
-- ``-m`` – rewrite constant shifts as multiplication
-- ``-pall`` – run the built-in optimization pipeline
-
-SLOT can also run individual LLVM passes such as ``-instcombine``, ``-sccp``,
-``-dce``, and ``-gvn``.
-
 STAUB – Bounded-Theory Conversion Front-End
 -------------------------------------------
 
@@ -89,8 +58,8 @@ translation or solving.
 
 **Source**: ``tools/solver/staub.cpp``
 
-Like ``slot``, this front-end is kept in the tree as an experimental source
-tool, not as a default-built binary.
+This front-end is kept in the tree as an experimental source tool, not as a
+default-built binary.
 
 Basic usage:
 

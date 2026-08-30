@@ -10,16 +10,15 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build -j
 ```
 
-At the moment, `tools/solver/CMakeLists.txt` builds `owl` only when `-DLOTUS_ENABLE_OWL=ON`. The
-`slot.cpp` and `staub.cpp` sources remain in the tree as experimental tools and
-are not wired into the default build yet.
+At the moment, `tools/solver/CMakeLists.txt` builds `owl` only when
+`-DLOTUS_ENABLE_OWL=ON`. The `staub.cpp` source remains in the tree as an
+experimental tool and is not wired into the default build yet.
 
 ## Tools
 
 | Tool | Status | Purpose |
 | --- | --- | --- |
 | `owl` | built only when `LOTUS_ENABLE_OWL=ON` | Solves CNF and SMT-LIB2 inputs via the LIBSMT-based frontend. |
-| `slot` | source present, not built by default | Translates SMT-LIB2 formulas to LLVM IR and optionally runs optimization passes. |
 | `staub` | source present, not built by default | Rewrites SMT formulas with abstract-interpretation-guided integer or floating-point widths. |
 
 ## `owl`
@@ -39,9 +38,6 @@ non-zero values for error or unsupported states.
 
 ## Experimental tools
 
-- `slot.cpp` exposes a lower-level workflow for converting SMT-LIB2 formulas to
-  LLVM IR, saving pre/post-optimization IR, and selectively enabling passes such
-  as `-instcombine`, `-sccp`, `-gvn`, or `-pall`.
 - `staub.cpp` provides a width-selection and rewriting workflow for integer and
   floating-point SMT formulas using options such as `-i`, `-r`, and `-l`.
 
@@ -51,5 +47,7 @@ of the default binary set.
 ## Related documentation
 
 - `lib/Solvers/README.md` covers the solver libraries.
-- `lib/Solvers/SMT/LIBSMT/README.md`, `lib/Solvers/SMT/SLOT/README.md`, and
+- `lib/Solvers/SMT/LIBSMT/README.md` and
   `lib/Solvers/SMT/STAUB/README.md` provide subsystem-level details.
+- `lib/Solvers/SMT/TUNA/TUNA-Opt/README.md` documents the retained SMT↔LLVM
+  translation and optimization toolkit.

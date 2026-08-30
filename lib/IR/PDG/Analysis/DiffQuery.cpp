@@ -1,8 +1,13 @@
 #include "IR/PDG/Analysis/DiffQuery.h"
 
+#include "IR/PDG/Analysis/Internal/QuerySupport.h"
 #include "IR/PDG/Analysis/Query.h"
 
-#include "QueryInternal.inc"
+#include <unordered_set>
+
+namespace pdg {
+using namespace llvm;
+using namespace query_detail;
 
 bool DiffQueryResult::isIdentical() const {
   for (size_t i = 0; i < node_diffs.size(); ++i) {
@@ -31,12 +36,12 @@ DiffQueryResult DiffQuery::diff(const PDGQueryResult &before,
   EdgeSet after_edges = collectInducedEdges(after.nodes, edge_types);
 
   std::unordered_set<Node *> matched_after_nodes;
-  for (NodeSet::const_iterator it = before.nodes.begin(); it != before.nodes.end();
-       ++it) {
+  for (NodeSet::const_iterator it = before.nodes.begin();
+       it != before.nodes.end(); ++it) {
     Node *node = *it;
     bool matched = false;
-    for (NodeSet::const_iterator jt = after.nodes.begin(); jt != after.nodes.end();
-         ++jt) {
+    for (NodeSet::const_iterator jt = after.nodes.begin();
+         jt != after.nodes.end(); ++jt) {
       if (matched_after_nodes.count(*jt) != 0)
         continue;
       if (nodesMatch(node, *jt, strategy_)) {
@@ -48,19 +53,19 @@ DiffQueryResult DiffQuery::diff(const PDGQueryResult &before,
     result.node_diffs.push_back(
         NodeDiffEntry{node, matched ? DiffKind::Preserved : DiffKind::Removed});
   }
-  for (NodeSet::const_iterator it = after.nodes.begin(); it != after.nodes.end();
-       ++it) {
+  for (NodeSet::const_iterator it = after.nodes.begin();
+       it != after.nodes.end(); ++it) {
     if (matched_after_nodes.count(*it) == 0)
       result.node_diffs.push_back(NodeDiffEntry{*it, DiffKind::Added});
   }
 
   std::unordered_set<Edge *> matched_after_edges;
-  for (EdgeSet::const_iterator it = before_edges.begin(); it != before_edges.end();
-       ++it) {
+  for (EdgeSet::const_iterator it = before_edges.begin();
+       it != before_edges.end(); ++it) {
     Edge *edge = *it;
     bool matched = false;
-    for (EdgeSet::const_iterator jt = after_edges.begin(); jt != after_edges.end();
-         ++jt) {
+    for (EdgeSet::const_iterator jt = after_edges.begin();
+         jt != after_edges.end(); ++jt) {
       Edge *candidate = *jt;
       if (matched_after_edges.count(candidate) != 0)
         continue;
@@ -75,8 +80,8 @@ DiffQueryResult DiffQuery::diff(const PDGQueryResult &before,
     result.edge_diffs.push_back(
         EdgeDiffEntry{edge, matched ? DiffKind::Preserved : DiffKind::Removed});
   }
-  for (EdgeSet::const_iterator it = after_edges.begin(); it != after_edges.end();
-       ++it) {
+  for (EdgeSet::const_iterator it = after_edges.begin();
+       it != after_edges.end(); ++it) {
     if (matched_after_edges.count(*it) == 0)
       result.edge_diffs.push_back(EdgeDiffEntry{*it, DiffKind::Added});
   }
@@ -100,16 +105,13 @@ DiffQueryResult DiffQuery::diff(const PDGQueryScope &before,
                                 const PDGQueryOptions &options) const {
   PDGQueryResult before_result;
   before_result.nodes = scopeNodes(pdg_, before);
-  before_result.edges =
-      collectInducedEdges(before_result.nodes,
-                          edgeTypesForPreset(options.edge_preset));
+  before_result.edges = collectInducedEdges(
+      before_result.nodes, edgeTypesForPreset(options.edge_preset));
   PDGQueryResult after_result;
   after_result.nodes = scopeNodes(pdg_, after);
-  after_result.edges =
-      collectInducedEdges(after_result.nodes,
-                          edgeTypesForPreset(options.edge_preset));
+  after_result.edges = collectInducedEdges(
+      after_result.nodes, edgeTypesForPreset(options.edge_preset));
   return diff(before_result, after_result, options);
 }
-
 
 } // namespace pdg

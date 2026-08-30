@@ -1,8 +1,16 @@
 #include "IR/PDG/Analysis/DependenceQuery.h"
 
+#include "IR/PDG/Analysis/Internal/QuerySupport.h"
 #include "IR/PDG/Analysis/Query.h"
 
-#include "QueryInternal.inc"
+#include <algorithm>
+#include <functional>
+#include <queue>
+#include <unordered_set>
+
+namespace pdg {
+using namespace llvm;
+using namespace query_detail;
 
 DependenceQuery::DependenceQuery(ProgramGraph &pdg) : pdg_(pdg) {}
 
@@ -76,7 +84,8 @@ PDGQueryResult DependenceQuery::shortestPath(const PDGCriteria &sources,
 
   PDGQueryResult result;
   result.criteria_nodes = source_nodes.nodes;
-  result.criteria_nodes.insert(target_nodes.nodes.begin(), target_nodes.nodes.end());
+  result.criteria_nodes.insert(target_nodes.nodes.begin(),
+                               target_nodes.nodes.end());
   result.diagnostics = source_nodes.diagnostics;
   result.diagnostics.unresolved_criteria.insert(
       result.diagnostics.unresolved_criteria.end(),
@@ -116,11 +125,9 @@ PDGQueryResult DependenceQuery::shortestPath(const PDGCriteria &sources,
   return result;
 }
 
-std::vector<PDGWitnessPath>
-DependenceQuery::allShortestPaths(const PDGCriteria &sources,
-                                  const PDGCriteria &targets,
-                                  const PDGQueryOptions &options,
-                                  const Module *module) const {
+std::vector<PDGWitnessPath> DependenceQuery::allShortestPaths(
+    const PDGCriteria &sources, const PDGCriteria &targets,
+    const PDGQueryOptions &options, const Module *module) const {
   PDGCriteriaResolver resolver(pdg_);
   PDGQueryResult source_nodes = resolver.resolve(sources, options, module);
   PDGQueryResult target_nodes = resolver.resolve(targets, options, module);
@@ -232,7 +239,5 @@ size_t DependenceQuery::distance(const PDGCriteria &sources,
     return static_cast<size_t>(-1);
   return result.witness_paths.front().nodes.size() - 1;
 }
-
-
 
 } // namespace pdg

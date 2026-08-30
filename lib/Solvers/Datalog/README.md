@@ -20,9 +20,9 @@ keeping filesystem and path policy outside the engine library.
 Public headers and implementation directories mirror each other for `Core`,
 `Frontend`, `Runtime`, and `Semantic`. Analyzer and planner implementation files
 live under `Core` because they implement `Program::compile()` and expose no
-separate public API. The two unavoidable cross-translation-unit private
-contracts are colocated with their consumers as `EngineInternal.h` and
-`Frontend/FrontendInternal.h`; there is no separate private-header directory.
+separate public API. The Datalog-wide cross-translation-unit implementation
+contract lives in `include/Solvers/Datalog/Internal/Engine.h`; the `Internal`
+component marks it as unsupported implementation API.
 
 ## Architecture boundary
 

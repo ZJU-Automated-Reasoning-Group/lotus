@@ -1,8 +1,14 @@
 #include "IR/PDG/Analysis/QueryCore.h"
 
+#include "IR/PDG/Analysis/Internal/QuerySupport.h"
 #include "IR/PDG/Analysis/Query.h"
+#include "IR/PDG/QueryLanguage/Cypher.h"
 
-#include "QueryInternal.inc"
+#include <sstream>
+
+namespace pdg {
+using namespace llvm;
+using namespace query_detail;
 
 std::set<EdgeType> edgeTypesForPreset(PDGEdgePreset preset) {
   switch (preset) {
@@ -29,10 +35,11 @@ std::set<EdgeType> edgeTypesForPreset(PDGEdgePreset preset) {
             EdgeType::ANNO_OTHER,
             EdgeType::TYPE_OTHEREDGE};
   case PDGEdgePreset::Data:
-    return {EdgeType::DATA_DEF_USE, EdgeType::DATA_RAW, EdgeType::DATA_READ,
-            EdgeType::DATA_ALIAS,   EdgeType::DATA_RET, EdgeType::PARAMETER_IN,
+    return {EdgeType::DATA_DEF_USE,  EdgeType::DATA_RAW,
+            EdgeType::DATA_READ,     EdgeType::DATA_ALIAS,
+            EdgeType::DATA_RET,      EdgeType::PARAMETER_IN,
             EdgeType::PARAMETER_OUT, EdgeType::PARAMETER_FIELD,
-            EdgeType::GLOBAL_DEP,   EdgeType::VAL_DEP};
+            EdgeType::GLOBAL_DEP,    EdgeType::VAL_DEP};
   case PDGEdgePreset::Control:
     return {EdgeType::CONTROLDEP_CALLINV, EdgeType::CONTROLDEP_CALLRET,
             EdgeType::CONTROLDEP_ENTRY, EdgeType::CONTROLDEP_BR,
@@ -41,14 +48,15 @@ std::set<EdgeType> edgeTypesForPreset(PDGEdgePreset preset) {
     return {EdgeType::PARAMETER_IN, EdgeType::PARAMETER_OUT,
             EdgeType::PARAMETER_FIELD};
   case PDGEdgePreset::Interprocedural:
-    return {EdgeType::IND_CALL, EdgeType::CONTROLDEP_CALLINV,
+    return {EdgeType::IND_CALL,           EdgeType::CONTROLDEP_CALLINV,
             EdgeType::CONTROLDEP_CALLRET, EdgeType::DATA_RET,
-            EdgeType::PARAMETER_IN, EdgeType::PARAMETER_OUT,
+            EdgeType::PARAMETER_IN,       EdgeType::PARAMETER_OUT,
             EdgeType::PARAMETER_FIELD};
   case PDGEdgePreset::ValueFlow:
-    return {EdgeType::DATA_DEF_USE, EdgeType::DATA_RAW, EdgeType::DATA_READ,
-            EdgeType::DATA_ALIAS, EdgeType::DATA_RET, EdgeType::VAL_DEP,
-            EdgeType::PARAMETER_IN, EdgeType::PARAMETER_OUT,
+    return {EdgeType::DATA_DEF_USE,    EdgeType::DATA_RAW,
+            EdgeType::DATA_READ,       EdgeType::DATA_ALIAS,
+            EdgeType::DATA_RET,        EdgeType::VAL_DEP,
+            EdgeType::PARAMETER_IN,    EdgeType::PARAMETER_OUT,
             EdgeType::PARAMETER_FIELD, EdgeType::GLOBAL_DEP};
   case PDGEdgePreset::TransformLegality:
     return {EdgeType::DATA_DEF_USE,
@@ -116,10 +124,9 @@ std::string resourceKindName(ResourceKind kind) {
   }
 }
 
-PDGQueryResult
-PDGCriteriaResolver::resolve(const PDGCriteria &criteria,
-                             const PDGQueryOptions &options,
-                             const Module *module) const {
+PDGQueryResult PDGCriteriaResolver::resolve(const PDGCriteria &criteria,
+                                            const PDGQueryOptions &options,
+                                            const Module *module) const {
   PDGQueryResult result;
 
   for (NodeSet::const_iterator it = criteria.nodes.begin();
@@ -135,8 +142,7 @@ PDGCriteriaResolver::resolve(const PDGCriteria &criteria,
     if (Node *node = pdg_.getNode(*value))
       result.nodes.insert(node);
     else
-      result.diagnostics.unresolved_criteria.push_back(
-          "value has no PDG node");
+      result.diagnostics.unresolved_criteria.push_back("value has no PDG node");
   }
 
   if (!criteria.function_names.empty()) {
@@ -185,13 +191,15 @@ PDGCriteriaResolver::resolve(const PDGCriteria &criteria,
   }
 
   if (!criteria.source_locations.empty()) {
-    for (ProgramGraph::NodeSet::iterator it = pdg_.begin(); it != pdg_.end(); ++it) {
+    for (ProgramGraph::NodeSet::iterator it = pdg_.begin(); it != pdg_.end();
+         ++it) {
       Node *node = *it;
       const Instruction *inst = dyn_cast_or_null<Instruction>(node->getValue());
       if (inst == nullptr)
         continue;
       for (size_t location_index = 0;
-           location_index < criteria.source_locations.size(); ++location_index) {
+           location_index < criteria.source_locations.size();
+           ++location_index) {
         if (sourceLocationMatches(criteria.source_locations[location_index],
                                   *inst)) {
           result.nodes.insert(node);
@@ -219,7 +227,8 @@ PDGCriteriaResolver::resolve(const PDGCriteria &criteria,
     CypherParser parser;
     std::unique_ptr<CypherQuery> query = parser.parse(selection.query);
     if (!query) {
-      result.diagnostics.unresolved_criteria.push_back(parser.getLastError().message);
+      result.diagnostics.unresolved_criteria.push_back(
+          parser.getLastError().message);
       continue;
     }
 
@@ -231,7 +240,8 @@ PDGCriteriaResolver::resolve(const PDGCriteria &criteria,
     }
 
     if (!selection.binding.empty()) {
-      const std::vector<Node *> *bound = executor.getBoundVariable(selection.binding);
+      const std::vector<Node *> *bound =
+          executor.getBoundVariable(selection.binding);
       if (bound == nullptr) {
         result.diagnostics.unresolved_criteria.push_back(
             "missing Cypher binding: " + selection.binding);
@@ -247,8 +257,8 @@ PDGCriteriaResolver::resolve(const PDGCriteria &criteria,
   const NodeSet scoped_nodes = scopeNodes(pdg_, options.scope);
   if (!scoped_nodes.empty()) {
     NodeSet filtered;
-    for (NodeSet::const_iterator it = result.nodes.begin(); it != result.nodes.end();
-         ++it) {
+    for (NodeSet::const_iterator it = result.nodes.begin();
+         it != result.nodes.end(); ++it) {
       if (scoped_nodes.count(*it) != 0)
         filtered.insert(*it);
     }
@@ -261,7 +271,5 @@ PDGCriteriaResolver::resolve(const PDGCriteria &criteria,
   result.criteria_nodes = result.nodes;
   return result;
 }
-
-
 
 } // namespace pdg

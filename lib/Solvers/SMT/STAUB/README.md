@@ -25,15 +25,15 @@ sat
 Running Z3 on transformed bounded constraint ...
 sat
  :total-time              1.22)
-Running SLOT on bounded constraint ...
+Running TUNA SMT2LLVM on bounded constraint ...
 samples/motivating.smt2,integer,855,8551462050,23,
 samples/motivating.smt2-temp.smt2,true,1,1,1,1,1,1,1,1,0.0298969,0.00441312,0.00536189,0,0,0,0,0,0,0,0
-Running Z3 on bounded constraint after SLOT application ...
+Running Z3 on bounded constraint after SMT2LLVM translation ...
 sat
  :total-time              0.14)
 
 ```
-The observed absolute running times may vary across different hardware, but as long as the output matches the form above (and, in particular, the second and third solver runs take substantially less time than the first), STAUB has run correctly, and you have also verified that SLOT runs correctly on your system.
+The observed absolute running times may vary across different hardware, but as long as the output matches the form above (and, in particular, the second and third solver runs take substantially less time than the first), STAUB has run correctly, and you have also verified that TUNA's SMT2LLVM tools run correctly on your system.
 
 + Inspect ``samples/motivating.smt2-bounded.smt2`` to see that the transformation has taken place:
 ```

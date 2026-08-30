@@ -1,12 +1,16 @@
 #include "IR/PDG/Analysis/DataFlowQuery.h"
 
+#include "IR/PDG/Analysis/Internal/QuerySupport.h"
 #include "IR/PDG/Analysis/Query.h"
 
-#include "QueryInternal.inc"
+namespace pdg {
+using namespace llvm;
+using namespace query_detail;
 
-PDGQueryResult DataFlowQuery::reachingDefinitions(const PDGCriteria &uses,
-                                                  const PDGQueryOptions &options,
-                                                  const Module *module) const {
+PDGQueryResult
+DataFlowQuery::reachingDefinitions(const PDGCriteria &uses,
+                                   const PDGQueryOptions &options,
+                                   const Module *module) const {
   PDGQueryOptions data_options = options;
   data_options.edge_preset = PDGEdgePreset::Data;
   SliceQuery slice(pdg_);
@@ -22,8 +26,8 @@ DataFlowQuery::defUseChain(Node &definition,
   PDGCriteria criteria;
   criteria.nodes.insert(&definition);
   PDGQueryResult result = reachingDefinitions(criteria, local_options, nullptr);
-  for (NodeSet::const_iterator it = result.nodes.begin(); it != result.nodes.end();
-       ++it) {
+  for (NodeSet::const_iterator it = result.nodes.begin();
+       it != result.nodes.end(); ++it) {
     Node *node = *it;
     if (node == &definition)
       continue;
@@ -56,8 +60,8 @@ DataFlowQuery::useDefChain(Node &use, const PDGQueryOptions &options) const {
          pred_it != it->second.end(); ++pred_it) {
       if (*pred_it == nullptr)
         continue;
-      chain.push_back(DefUseLink{*pred_it, it->first,
-                                 edgeBetween(*pred_it, it->first)});
+      chain.push_back(
+          DefUseLink{*pred_it, it->first, edgeBetween(*pred_it, it->first)});
     }
   }
   return chain;
@@ -92,21 +96,23 @@ PDGQueryResult DataFlowQuery::deadNodes(const PDGQueryOptions &options) const {
     if (live.nodes.count(*it) == 0)
       result.nodes.insert(*it);
   }
-  result.edges = collectInducedEdges(result.nodes, edgeTypesForPreset(PDGEdgePreset::Data));
+  result.edges = collectInducedEdges(result.nodes,
+                                     edgeTypesForPreset(PDGEdgePreset::Data));
   return result;
 }
 
 std::vector<ControllingCondition>
 DataFlowQuery::immediateControllers(Node &node) const {
   std::vector<ControllingCondition> controllers;
-  const std::set<EdgeType> edge_types = edgeTypesForPreset(PDGEdgePreset::Control);
+  const std::set<EdgeType> edge_types =
+      edgeTypesForPreset(PDGEdgePreset::Control);
   for (Node::EdgeSet::const_iterator it = node.getInEdgeSet().begin();
        it != node.getInEdgeSet().end(); ++it) {
     Edge *edge = *it;
     if (edge == nullptr || !isEdgeAllowed(edge->getEdgeType(), edge_types))
       continue;
-    controllers.push_back(ControllingCondition{edge->getSrcNode(),
-                                               edge->getEdgeType()});
+    controllers.push_back(
+        ControllingCondition{edge->getSrcNode(), edge->getEdgeType()});
   }
   return controllers;
 }
@@ -128,7 +134,5 @@ PDGQueryResult DataFlowQuery::controlRegion(const PDGCriteria &criteria,
   SliceQuery slice(pdg_);
   return slice.forward(criteria, control_options, module);
 }
-
-
 
 } // namespace pdg

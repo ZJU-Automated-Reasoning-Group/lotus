@@ -13,11 +13,10 @@ SMT solver wrappers and utilities:
 
 - **LIBSMT** – Z3 API wrapper with factory pattern
 - **QuantSimp** – Quantifier simplification using E-graphs
-- **SLOT** – LLVM IR to SMT formula translation
 - **SMTSampler** – SMT model sampling
 - **STAUB** – STAUB solver integration
 - **SymAbs** – SMT formula abstraction (bit-vector to linear integer)
-- **TUNA** – Accelerates SMT solving via SMT↔LLVM optimization, with GA-based LLVM pass selection
+- **TUNA** – SMT↔LLVM translation and optimization, with GA-based LLVM pass selection
 
 ## References
 

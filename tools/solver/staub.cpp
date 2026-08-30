@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
     std::cout << "-o <FILE>               Output .smt2 file\n";
     std::cout << "-t <FILE>               Statistics output file\n";
     std::cout
-        << "-l                      Set output format compatible with SLOT\n";
+        << "-l                      Emit TUNA SMT2LLVM-compatible output\n";
     std::cout << "-r <ebits,sbits|aix|aix4>    Real numbers: if integer "
                  "exponent and significant bits are specified, uses those. If "
                  "aix, uses abstract interpretation. If aix4, uses standard "

@@ -3,7 +3,6 @@
 #include "Solvers/Datalog/Core/TypeSupport.h"
 #include "Solvers/Datalog/Frontend/Frontend.h"
 #include "Solvers/Datalog/Semantic/SemanticProgram.h"
-#include "FrontendInternal.h"
 
 #include <algorithm>
 #include <any>

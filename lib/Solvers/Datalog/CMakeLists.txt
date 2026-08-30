@@ -11,8 +11,6 @@ add_library(LotusDatalog STATIC
 
 target_include_directories(LotusDatalog PUBLIC
   ${PROJECT_SOURCE_DIR}/include)
-target_include_directories(LotusDatalog PRIVATE
-  ${PROJECT_SOURCE_DIR}/lib)
 
 llvm_map_components_to_libnames(DATALOG_KERNEL_LLVM_LIBS
   Core
@@ -42,5 +40,3 @@ target_link_libraries(LotusDatalogFrontend PUBLIC
 
 target_include_directories(LotusDatalogFrontend PUBLIC
   ${PROJECT_SOURCE_DIR}/include)
-target_include_directories(LotusDatalogFrontend PRIVATE
-  ${PROJECT_SOURCE_DIR}/lib)

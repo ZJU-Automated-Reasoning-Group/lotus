@@ -19,6 +19,7 @@ add_library(CanaryPDG STATIC
   QueryLanguage/Parser/CypherParser.cpp
   Analysis/Query.cpp
   Analysis/QueryCore.cpp
+  Analysis/QuerySupport.cpp
   Analysis/SliceQuery.cpp
   Analysis/DependenceQuery.cpp
   Analysis/DataFlowQuery.cpp

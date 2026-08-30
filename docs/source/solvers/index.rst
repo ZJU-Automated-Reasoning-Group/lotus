@@ -6,7 +6,7 @@ SMT-based model checking components used throughout Lotus.
 
 The available backends include BDD (CUDD), SMT (Z3-based), weighted pushdown
 systems (WPDS), string constraint solving (Stingx), fixed-point equation
-solving (FPsolve), and experimental solver tooling (SLOT, STAUB, SymAbs,
+solving (FPsolve), and experimental solver tooling (TUNA, STAUB, SymAbs,
 SMTSampler).
 
 .. toctree::
@@ -17,7 +17,6 @@ SMTSampler).
    wpds
    smtsampler
    symabs
-   slot
    staub
    stingx
    egraphs_simp

@@ -1,5 +1,4 @@
 #include "Solvers/Datalog/Frontend/Frontend.h"
-#include "FrontendInternal.h"
 
 #include <cctype>
 #include <stdexcept>

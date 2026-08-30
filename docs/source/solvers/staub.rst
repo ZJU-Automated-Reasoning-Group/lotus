@@ -12,8 +12,8 @@ Overview
 **Origin**: https://github.com/mikekben/STAUB
 
 STAUB speeds up SMT solving of unbounded constraints by converting them to bounded
-theories. It works in conjunction with :doc:`slot` (SLOT) to translate bounded
-formulas to LLVM IR.
+theories. Its bounded formulas can be translated to LLVM IR by TUNA's
+``SMT2LLVM`` tools.
 
 Key Concept
 -----------
@@ -23,7 +23,7 @@ Unbounded integer/real arithmetic is often slow for SMT solvers. STAUB:
 1. **Analyzes** unbounded constraints in the original formula
 2. **Computes bounds** using optimization queries
 3. **Transforms** the formula to a bounded bit-vector representation
-4. **Translates** to LLVM IR via SLOT for efficient solving
+4. **Translates** to LLVM IR via TUNA's SMT2LLVM tools for efficient solving
 
 This approach can provide significant speedups for certain classes of problems.
 
@@ -140,7 +140,7 @@ Workflow
 1. **Parse**: Read unbounded SMT-LIB formula
 2. **Analyze**: Compute variable bounds using Z3 optimize
 3. **Bound**: Transform to bounded representation
-4. **Translate**: Use SLOT to generate LLVM IR
+4. **Translate**: Use TUNA's SMT2LLVM tools to generate LLVM IR
 5. **Solve**: Use LLVM-based or bounded SMT solving
 
 Related Work
@@ -152,5 +152,6 @@ STAUB is based on the paper:
 See Also
 --------
 
-- See :doc:`slot` - SMT-LIB to LLVM translation (used by STAUB)
+- See ``lib/Solvers/SMT/TUNA/TUNA-Opt/SMT2LLVM`` for SMT-LIB to LLVM
+  translation
 - See :doc:`symabs` - Symbolic abstraction (related techniques)

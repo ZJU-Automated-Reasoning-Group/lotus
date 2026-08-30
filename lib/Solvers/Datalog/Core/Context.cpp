@@ -1,6 +1,6 @@
 #include "Solvers/Datalog/Core/Context.h"
 
-#include "Solvers/Datalog/EngineInternal.h"
+#include "Solvers/Datalog/Internal/Engine.h"
 
 #include <any>
 #include <memory>

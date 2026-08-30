@@ -1,8 +1,15 @@
 #include "IR/PDG/Analysis/TransformQuery.h"
 
+#include "IR/PDG/Analysis/Internal/QuerySupport.h"
 #include "IR/PDG/Analysis/Query.h"
 
-#include "QueryInternal.inc"
+#include <functional>
+#include <queue>
+#include <unordered_set>
+
+namespace pdg {
+using namespace llvm;
+using namespace query_detail;
 
 static bool nodesAreInSameFunction(Node &lhs, Node &rhs,
                                    const LLVMQueryContext &llvm_context) {
@@ -57,8 +64,10 @@ TransformQuery::canMoveEarlier(Node &moving_node, Node &anchor_node,
     return result;
   }
 
-  const Instruction *moving_inst = dyn_cast_or_null<Instruction>(moving_node.getValue());
-  const Instruction *anchor_inst = dyn_cast_or_null<Instruction>(anchor_node.getValue());
+  const Instruction *moving_inst =
+      dyn_cast_or_null<Instruction>(moving_node.getValue());
+  const Instruction *anchor_inst =
+      dyn_cast_or_null<Instruction>(anchor_node.getValue());
   if (moving_inst != nullptr &&
       instructionBlocked(*moving_inst, llvm_context, result.reason))
     return result;
@@ -113,8 +122,10 @@ TransformQuery::canMoveLater(Node &moving_node, Node &anchor_node,
     return result;
   }
 
-  const Instruction *moving_inst = dyn_cast_or_null<Instruction>(moving_node.getValue());
-  const Instruction *anchor_inst = dyn_cast_or_null<Instruction>(anchor_node.getValue());
+  const Instruction *moving_inst =
+      dyn_cast_or_null<Instruction>(moving_node.getValue());
+  const Instruction *anchor_inst =
+      dyn_cast_or_null<Instruction>(anchor_node.getValue());
   if (moving_inst != nullptr &&
       instructionBlocked(*moving_inst, llvm_context, result.reason))
     return result;
@@ -166,10 +177,10 @@ TransformQuery::independent(Node &a, Node &b,
   a_criteria.nodes.insert(&a);
   b_criteria.nodes.insert(&b);
 
-  PDGQueryResult ab = query.shortestPath(a_criteria, b_criteria, local_options,
-                                         nullptr);
-  PDGQueryResult ba = query.shortestPath(b_criteria, a_criteria, local_options,
-                                         nullptr);
+  PDGQueryResult ab =
+      query.shortestPath(a_criteria, b_criteria, local_options, nullptr);
+  PDGQueryResult ba =
+      query.shortestPath(b_criteria, a_criteria, local_options, nullptr);
   if (!ab.witness_paths.empty()) {
     result.witness_path_ab = ab.witness_paths.front().nodes;
     result.witness_edge_types_ab = ab.witness_paths.front().edge_types;
@@ -219,10 +230,9 @@ PDGQueryResult TransformQuery::readySet(const PDGQueryScope &scope,
   return result;
 }
 
-std::vector<NodeSet>
-TransformQuery::stronglyConnectedComponents(const PDGQueryScope &scope,
-                                            const LLVMQueryContext &llvm_context,
-                                            const PDGQueryOptions &options) const {
+std::vector<NodeSet> TransformQuery::stronglyConnectedComponents(
+    const PDGQueryScope &scope, const LLVMQueryContext &llvm_context,
+    const PDGQueryOptions &options) const {
   (void)llvm_context;
   const NodeSet region = scopeNodes(pdg_, scope);
   const std::set<EdgeType> edge_types =
@@ -331,8 +341,7 @@ TransformQuery::topologicalLevels(const PDGQueryScope &scope,
       size_t component = ready.front();
       ready.pop();
       level.insert(components[component].begin(), components[component].end());
-      for (std::set<size_t>::const_iterator it =
-               adjacency[component].begin();
+      for (std::set<size_t>::const_iterator it = adjacency[component].begin();
            it != adjacency[component].end(); ++it) {
         if (--indegree[*it] == 0)
           ready.push(*it);
@@ -344,16 +353,15 @@ TransformQuery::topologicalLevels(const PDGQueryScope &scope,
   return levels;
 }
 
-size_t TransformQuery::criticalPathLength(const PDGQueryScope &scope,
-                                          const LLVMQueryContext &llvm_context,
-                                          const PDGQueryOptions &options) const {
+size_t
+TransformQuery::criticalPathLength(const PDGQueryScope &scope,
+                                   const LLVMQueryContext &llvm_context,
+                                   const PDGQueryOptions &options) const {
   std::vector<NodeSet> levels = topologicalLevels(scope, llvm_context, options);
   size_t count = 0;
   for (size_t i = 0; i < levels.size(); ++i)
     count += levels[i].empty() ? 0 : 1;
   return count == 0 ? 0 : count - 1;
 }
-
-
 
 } // namespace pdg

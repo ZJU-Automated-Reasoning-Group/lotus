@@ -1,5 +1,5 @@
 #include "Solvers/Datalog/Core/Program.h"
-#include "Solvers/Datalog/EngineInternal.h"
+#include "Solvers/Datalog/Internal/Engine.h"
 
 #include <algorithm>
 #include <any>

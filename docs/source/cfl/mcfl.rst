@@ -28,8 +28,8 @@ Choosing an MCFL API
      - Pair set and statistics per dimension
 Exactness of ``mcfl::Solver`` is relative to its input grammar. When the input
 grammar is ``G_d^circ`` or ``G_d^+``, the result remains an
-underapproximation of typed interleaved-Dyck reachability. Exact adaptive unary
-reachability lives in the independent :doc:`adaptive_interleaved_dyck` module.
+underapproximation of typed interleaved-Dyck reachability. Exact unary
+reachability lives in the independent :doc:`unary_interleaved_dyck` module.
 
 Generic MCFL Solver
 -------------------
@@ -157,9 +157,9 @@ elimination, ``--artifact-compatible`` selects the artifact's condensed
 cross-product expansion, ``--stats`` prints saturation counters, and
 ``--print-pairs`` emits the final endpoint relation.
 
-The exact unary algorithm has the separate
-``lotus-cfl-adaptive-interleaved-dyck`` executable documented in
-:doc:`adaptive_interleaved_dyck`.
+The exact unary algorithms share the separate
+``lotus-cfl-unary-interleaved-dyck`` executable documented in
+:doc:`unary_interleaved_dyck`.
 
 Validation and Complexity
 -------------------------

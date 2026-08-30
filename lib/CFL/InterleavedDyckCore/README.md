@@ -21,7 +21,7 @@ zero labels, which is convenient for exact unary tests.
 | Consumer | Use of the shared graph |
 |---|---|
 | `InterleavedDyckApproximation` | Direct typed lower/upper pipeline input |
-| `AdaptiveInterleavedDyck` | Unary projection followed by bidirected validation |
+| `UnaryInterleavedDyck` | Unary projection, bidirected validation, and shared exact-solver backends |
 | `MCFL::InterleavedDyckSolver` | Adapter to the generic string-labeled MCFL graph |
 
 The shared graph is the comparison boundary for
@@ -29,8 +29,9 @@ The shared graph is the comparison boundary for
 and grammar IRs remain private to their consumers.
 
 The core preserves input arcs exactly and never adds complement reverse arcs.
-Bidirecting is an algorithm policy: Adaptive can reject or explicitly
-symmetrize; Approximation and MCFL analyze the directed graph as supplied.
+Bidirecting is an algorithm policy: both UnaryInterleavedDyck algorithms can
+reject or explicitly symmetrize; Approximation and MCFL analyze the directed
+graph as supplied.
 
 ## Why grammars are not shared concrete classes
 

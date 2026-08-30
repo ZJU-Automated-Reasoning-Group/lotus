@@ -24,7 +24,7 @@ The two MCFL APIs have different notions of exactness:
 For the staged typed lower/upper approximation pipeline, use the separately
 named **Interleaved-Dyck Approximation** module currently stored under the
 directory `CFL/InterleavedDyckApproximation`. For exact bidirected unary
-reachability, use the independent `CFL/AdaptiveInterleavedDyck` module.
+reachability, use the independent `CFL/UnaryInterleavedDyck` module.
 
 ## Generic solver
 
@@ -105,8 +105,9 @@ but it has a distinct role:
 - Interleaved-Dyck Approximation is a staged lower/upper-bound pipeline.
   MCFL's `G_d^circ` and `G_d^+` results are complementary, witness-producing
   underapproximations and are not currently wired into that pipeline.
-- `AdaptiveInterleavedDyck` computes the exact answer for the bidirected unary
-  specialization and is independent of the MCFG solver.
+- `UnaryInterleavedDyck` computes the exact answer for the bidirected unary
+  specialization through Adaptive and FixedCounter algorithms, independently
+  of the MCFG solver.
 
 The typed hierarchy accepts the shared `interleaved_dyck::Graph` directly and
 adapts it to the generic string-labeled MCFL graph. This lets Approximation and
@@ -135,9 +136,9 @@ elimination, `--artifact-compatible` for the artifact's condensed
 cross-product expansion, `--stats` for saturation counters, and
 `--print-pairs` to emit the final relation.
 
-The exact unary algorithm has its own
-`lotus-cfl-adaptive-interleaved-dyck` executable; see the
-[AdaptiveInterleavedDyck README](../AdaptiveInterleavedDyck/README.md).
+The exact unary algorithms have their own
+`lotus-cfl-unary-interleaved-dyck` executable; see the
+[UnaryInterleavedDyck README](../UnaryInterleavedDyck/README.md).
 
 ## Fidelity checks
 

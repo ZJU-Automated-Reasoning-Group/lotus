@@ -1,7 +1,7 @@
-#include "CFL/AdaptiveInterleavedDyck/AdaptiveInterleavedDyck.h"
 #include "CFL/InterleavedDyckApproximation/InterleavedDyckApproximation.h"
 #include "CFL/InterleavedDyckCore/Graph.h"
 #include "CFL/MCFL/InterleavedDyck.h"
+#include "CFL/UnaryInterleavedDyck/UnaryInterleavedDyck.h"
 
 #include <stdexcept>
 #include <string>
@@ -30,12 +30,12 @@ TEST(InterleavedDyckComparisonTest, LoadsOneBenchmarkForAllApplicableSolvers) {
         << pair.source << " -> " << pair.target;
   }
 
-  // The published approximation corpus is directed. The exact adaptive
-  // algorithm must reject it rather than silently bidirecting the input and
-  // changing the analyzed problem.
-  EXPECT_THROW(
-      adaptive_interleaved_dyck::AdaptiveInterleavedDyckSolver{}.solve(graph),
-      std::invalid_argument);
+  // The published approximation corpus is directed. Both exact unary
+  // algorithms must reject it rather than silently changing the problem.
+  EXPECT_THROW(unary_interleaved_dyck::AdaptiveSolver{}.solve(graph),
+               std::invalid_argument);
+  EXPECT_THROW(unary_interleaved_dyck::FixedCounterSolver{}.solve(graph),
+               std::invalid_argument);
 }
 
 } // namespace

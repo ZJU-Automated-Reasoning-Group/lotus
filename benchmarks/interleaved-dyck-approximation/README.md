@@ -20,9 +20,9 @@ to:
 - `interleaved_dyck_approximation::Solver`; and
 - `mcfl::InterleavedDyckSolver`, through its typed graph adapter.
 
-The corpus is directed and therefore does not satisfy the input contract of
-the exact mode of
-`adaptive_interleaved_dyck::AdaptiveInterleavedDyckSolver`. The default policy
-rejects it. The explicit `AddMissingReverseEdges`/`--bidirect` policy computes
-a sound overapproximation for the original directed graph. Experiments must
-report that transformation because it changes the reachability problem.
+The corpus is directed and therefore does not satisfy the exact-mode input
+contract of `unary_interleaved_dyck::FixedCounterSolver` or
+`unary_interleaved_dyck::AdaptiveSolver`. Their default policy rejects it. The
+explicit `AddMissingReverseEdges`/`--bidirect` policy computes a sound
+overapproximation for the original directed graph. Experiments must report
+that transformation because it changes the reachability problem.

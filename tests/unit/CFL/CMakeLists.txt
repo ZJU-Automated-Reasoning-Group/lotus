@@ -11,17 +11,19 @@ add_lotus_targeted_test(interleaved_dyck_approximation_test
     LINK_LIBS
         CanaryInterleavedDyckApproximation)
 
-add_lotus_targeted_test(adaptive_interleaved_dyck_test
-    AdaptiveInterleavedDyckTest.cpp
+add_lotus_test_suite(unary_interleaved_dyck_test
+    SOURCES
+        UnaryInterleavedDyckAdaptiveTest.cpp
+        UnaryInterleavedDyckFixedCounterTest.cpp
     LINK_LIBS
-        CanaryAdaptiveInterleavedDyck)
+        CanaryUnaryInterleavedDyck)
 
 add_lotus_targeted_test(interleaved_dyck_comparison_test
     InterleavedDyckComparisonTest.cpp
     LINK_LIBS
-        CanaryAdaptiveInterleavedDyck
         CanaryInterleavedDyckApproximation
-        CanaryMCFL)
+        CanaryMCFL
+        CanaryUnaryInterleavedDyck)
 target_compile_definitions(interleaved_dyck_comparison_test PRIVATE
     INTERLEAVED_DYCK_BENCHMARK_DIR="${CMAKE_SOURCE_DIR}/benchmarks/interleaved-dyck-approximation/taint")
 

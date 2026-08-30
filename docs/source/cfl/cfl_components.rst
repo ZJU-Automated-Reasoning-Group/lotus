@@ -25,20 +25,21 @@ parser used by interleaved-Dyck benchmark datasets.
 **Location**: ``include/CFL/InterleavedDyckCore/``,
 ``lib/CFL/InterleavedDyckCore/``
 
-Approximation consumes this graph directly, Adaptive applies unary projection,
-and MCFL converts it through a typed-to-generic adapter.
+Approximation consumes this graph directly, UnaryInterleavedDyck applies unary
+projection, and MCFL converts it through a typed-to-generic adapter.
 
-Exact Adaptive Interleaved Dyck
--------------------------------
+Exact Unary Interleaved Dyck
+----------------------------
 
 Exact component reachability for bidirected unary
-``D1``-interleaved-``D1`` using adaptive counter flattening.
+``D1``-interleaved-``D1``. The module provides adaptive counter flattening and
+the POPL 2022 fixed-counter exact baseline.
 
-**Location**: ``include/CFL/AdaptiveInterleavedDyck/``,
-``lib/CFL/AdaptiveInterleavedDyck/``
+**Location**: ``include/CFL/UnaryInterleavedDyck/``,
+``lib/CFL/UnaryInterleavedDyck/``
 
-See :doc:`adaptive_interleaved_dyck` for its exactness boundary and benchmark
-eligibility rules.
+See :doc:`unary_interleaved_dyck` for both algorithms, their exactness boundary,
+and benchmark eligibility rules.
 
 Interleaved-Dyck Approximation
 ------------------------------
@@ -91,7 +92,10 @@ Guarantee Summary
    * - ``mcfl::InterleavedDyckSolver``
      - Certified typed pairs through ``G_d``
      - Underapproximation
-   * - ``adaptive_interleaved_dyck::AdaptiveInterleavedDyckSolver``
+   * - ``unary_interleaved_dyck::FixedCounterSolver``
+     - POPL 2022 exact fixed-counter baseline
+     - Exact component partition
+   * - ``unary_interleaved_dyck::AdaptiveSolver``
      - Bidirected unary projection
      - Exact component partition
    * - ``interleaved_dyck_approximation::Solver``
@@ -151,7 +155,7 @@ See also:
 
 - :doc:`classical`
 - :doc:`csindex`
-- :doc:`adaptive_interleaved_dyck`
+- :doc:`unary_interleaved_dyck`
 - :doc:`interleaved_dyck_approximation`
 - :doc:`inter_dyck_graph_reduce`
 - :doc:`mcfl`

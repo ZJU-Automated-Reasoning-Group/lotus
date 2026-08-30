@@ -67,8 +67,9 @@ struct InterleavedOptions {
 };
 
 /// Dimension-indexed, sound underapproximations of typed interleaved-Dyck
-/// reachability. This is distinct from AdaptiveInterleavedDyckSolver, which is
-/// exact only for bidirected unary D1-interleaved-D1 after projection.
+/// reachability. This is distinct from
+/// unary_interleaved_dyck::AdaptiveSolver, which is exact only for bidirected
+/// unary D1-interleaved-D1 after projection.
 class InterleavedDyckSolver {
 public:
   InterleavedAnalysisResult solve(const Graph &graph,

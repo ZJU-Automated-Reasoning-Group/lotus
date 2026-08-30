@@ -66,6 +66,9 @@ struct SolverOptions {
   std::function<bool(Grammar::Nonterminal, Vertex, Vertex)> gap_reachable;
 };
 
+/// Exact reachability for the supplied non-deleting, non-permuting MCFG.
+/// Exactness is relative to the grammar and does not imply that an
+/// approximating interleaved-Dyck grammar recognizes the full target language.
 class Solver {
 public:
   ReachabilityResult solve(const Graph &graph, const Grammar &grammar,

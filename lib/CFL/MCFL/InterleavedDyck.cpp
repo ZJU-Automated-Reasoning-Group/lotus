@@ -399,6 +399,17 @@ void addStats(SolverStats &target, const SolverStats &source) {
 
 } // namespace
 
+Graph adaptInterleavedDyckGraph(const interleaved_dyck::Graph &input) {
+  Graph result;
+  for (Vertex vertex : input.vertices()) {
+    result.addVertex(vertex);
+  }
+  for (const interleaved_dyck::Edge &edge : input.edges()) {
+    result.addEdge(edge.source, edge.target, edge.label.str());
+  }
+  return result;
+}
+
 InterleavedAlphabet discoverInterleavedAlphabet(const Graph &graph) {
   std::unordered_set<unsigned> open_parentheses;
   std::unordered_set<unsigned> close_parentheses;
@@ -628,6 +639,12 @@ InterleavedDyckSolver::solve(const Graph &input,
         {dimension, std::move(expanded), aggregate_stats});
   }
   return analysis;
+}
+
+InterleavedAnalysisResult
+InterleavedDyckSolver::solve(const interleaved_dyck::Graph &graph,
+                             const InterleavedOptions &options) const {
+  return solve(adaptInterleavedDyckGraph(graph), options);
 }
 
 } // namespace lotus::cfl::mcfl

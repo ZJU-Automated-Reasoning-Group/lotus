@@ -1,13 +1,18 @@
-#include "CFL/MutualRefinement/Graph.h"
-#include "CFL/MutualRefinement/Grammar.h"
+#include "CFL/MutualRefinement/CnfGraph.h"
+
+#include "CFL/MutualRefinement/CnfGrammar.h"
 #include "CFL/MutualRefinement/Hasher.h"
+
 #include <cstddef>
 #include <deque>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
-void Graph::reinit(int n, const std::unordered_set<Edge, EdgeHasher> &edges) {
+namespace lotus::cfl::mutual_refinement {
+
+void CnfGraph::reinit(int n,
+                      const std::unordered_set<Edge, EdgeHasher> &edges) {
   fastEdgeTest.clear();
   adjacencyVector.clear();
   adjacencyVector.resize(n);
@@ -18,7 +23,7 @@ void Graph::reinit(int n, const std::unordered_set<Edge, EdgeHasher> &edges) {
   }
 }
 
-void Graph::addEdge(const Edge &e) {
+void CnfGraph::addEdge(const Edge &e) {
   fastEdgeTest.insert(e);
   adjacencyVector[std::get<0>(e)].push_back(
       std::make_pair(std::get<1>(e), std::get<2>(e)));
@@ -26,10 +31,12 @@ void Graph::addEdge(const Edge &e) {
       std::make_pair(std::get<0>(e), std::get<1>(e)));
 }
 
-bool Graph::hasEdge(const Edge &e) const { return fastEdgeTest.count(e) == 1; }
+bool CnfGraph::hasEdge(const Edge &e) const {
+  return fastEdgeTest.count(e) == 1;
+}
 
 std::unordered_set<Edge, EdgeHasher>
-Graph::runCFLReachability(const Grammar &grammar) {
+CnfGraph::runCFLReachability(const CnfGrammar &grammar) {
   // To call runCFLReachabilityCore, those two maps are always needed,
   // but we can use the Boolean flag to enable or disable tracing
   std::unordered_map<Edge, std::unordered_set<int>, EdgeHasher> singleRecord;
@@ -40,8 +47,8 @@ Graph::runCFLReachability(const Grammar &grammar) {
   return runCFLReachabilityCore(grammar, false, singleRecord, binaryRecord);
 }
 
-std::unordered_set<Edge, EdgeHasher> Graph::runCFLReachability(
-    const Grammar &grammar,
+std::unordered_set<Edge, EdgeHasher> CnfGraph::runCFLReachability(
+    const CnfGrammar &grammar,
     std::unordered_map<Edge, std::unordered_set<int>, EdgeHasher> &singleRecord,
     std::unordered_map<
         Edge, std::unordered_set<std::tuple<int, int, int>, IntTripleHasher>,
@@ -49,8 +56,9 @@ std::unordered_set<Edge, EdgeHasher> Graph::runCFLReachability(
   return runCFLReachabilityCore(grammar, true, singleRecord, binaryRecord);
 }
 
-std::unordered_set<Edge, EdgeHasher> Graph::getEdgeClosure(
-    const Grammar &grammar, const std::unordered_set<Edge, EdgeHasher> &result,
+std::unordered_set<Edge, EdgeHasher> CnfGraph::getEdgeClosure(
+    const CnfGrammar &grammar,
+    const std::unordered_set<Edge, EdgeHasher> &result,
     const std::unordered_map<Edge, std::unordered_set<int>, EdgeHasher>
         &singleRecord,
     const std::unordered_map<
@@ -112,8 +120,8 @@ std::unordered_set<Edge, EdgeHasher> Graph::getEdgeClosure(
 }
 
 /* The CFL-reachability algorithm */
-std::unordered_set<Edge, EdgeHasher> Graph::runCFLReachabilityCore(
-    const Grammar &grammar, const bool record,
+std::unordered_set<Edge, EdgeHasher> CnfGraph::runCFLReachabilityCore(
+    const CnfGrammar &grammar, const bool record,
     std::unordered_map<Edge, std::unordered_set<int>, EdgeHasher> &singleRecord,
     std::unordered_map<
         Edge, std::unordered_set<std::tuple<int, int, int>, IntTripleHasher>,
@@ -203,3 +211,5 @@ std::unordered_set<Edge, EdgeHasher> Graph::runCFLReachabilityCore(
   }
   return result;
 }
+
+} // namespace lotus::cfl::mutual_refinement

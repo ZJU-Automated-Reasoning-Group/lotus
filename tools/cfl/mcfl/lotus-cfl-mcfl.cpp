@@ -1,4 +1,4 @@
-#include "CFL/MCFL/Graph.h"
+#include "CFL/InterleavedDyckCore/Graph.h"
 #include "CFL/MCFL/InterleavedDyck.h"
 
 #include <charconv>
@@ -14,6 +14,7 @@
 #include <system_error>
 
 namespace mcfl = lotus::cfl::mcfl;
+namespace interleaved_dyck = lotus::cfl::interleaved_dyck;
 
 namespace {
 
@@ -33,8 +34,8 @@ struct CommandLine {
 void usage(std::ostream &output) {
   output << "usage: lotus-cfl-mcfl [options] <graph.dot>\n"
             "\n"
-            "Compute the paper's MCFL underapproximation of interleaved-"
-            "Dyck reachability.\n"
+            "Compute the MCFL underapproximation of typed interleaved-Dyck "
+            "reachability.\n"
             "\n"
             "options:\n"
             "  -d, --dimension N  run staged G_1 ... G_N (default: 2)\n"
@@ -148,7 +149,19 @@ void printResult(std::ostream &output, const CommandLine &command_line,
 int main(int argc, char **argv) {
   try {
     const CommandLine command_line = parseCommandLine(argc, argv);
-    const mcfl::Graph graph = mcfl::Graph::parseDotFile(command_line.input);
+    const interleaved_dyck::Graph graph =
+        interleaved_dyck::Graph::parseDotFile(command_line.input);
+    std::ofstream output_file;
+    std::ostream *output = &std::cout;
+    if (!command_line.output.empty()) {
+      output_file.open(command_line.output);
+      if (!output_file) {
+        throw std::runtime_error("cannot open output file: " +
+                                 command_line.output);
+      }
+      output = &output_file;
+    }
+
     mcfl::InterleavedOptions options;
     options.max_dimension = command_line.dimension;
     options.variant = command_line.variant;
@@ -160,17 +173,7 @@ int main(int argc, char **argv) {
         mcfl::InterleavedDyckSolver{}.solve(graph, options);
     const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - start);
-
-    if (command_line.output.empty()) {
-      printResult(std::cout, command_line, result, elapsed.count());
-    } else {
-      std::ofstream output(command_line.output);
-      if (!output) {
-        throw std::runtime_error("cannot open output file: " +
-                                 command_line.output);
-      }
-      printResult(output, command_line, result, elapsed.count());
-    }
+    printResult(*output, command_line, result, elapsed.count());
     return 0;
   } catch (const std::exception &error) {
     std::cerr << "lotus-cfl-mcfl: " << error.what() << '\n';

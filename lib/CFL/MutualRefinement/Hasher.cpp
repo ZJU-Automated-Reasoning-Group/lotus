@@ -5,6 +5,8 @@
 #include <tuple>
 #include <utility>
 
+namespace lotus::cfl::mutual_refinement {
+
 // This parameter can be adjusted.
 // The idea is that when the elements in the pair or triple are small integers,
 // this implementation results in perfect hashing.
@@ -22,3 +24,5 @@ IntTripleHasher::operator()(const std::tuple<int, int, int> &t) const {
       (static_cast<long long>(std::get<1>(t)) << SHIFT) |
       (static_cast<long long>(std::get<2>(t))));
 }
+
+} // namespace lotus::cfl::mutual_refinement

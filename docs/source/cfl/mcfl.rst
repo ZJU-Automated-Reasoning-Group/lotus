@@ -1,11 +1,35 @@
 Multiple Context-Free Language Reachability
 ===========================================
 
-The ``CFL/MCFL`` component implements the algorithm and interleaved-Dyck
-grammar hierarchy from *Program Analysis via Multiple Context Free Language
-Reachability* (POPL 2025).
+The ``CFL/MCFL`` component contains two related but semantically distinct
+solvers: exact reachability for a client-supplied MCFG and dimension-indexed
+typed interleaved-Dyck underapproximations.
 
 **Location**: ``include/CFL/MCFL/``, ``lib/CFL/MCFL/``
+
+Choosing an MCFL API
+--------------------
+
+.. list-table:: Guarantees of the two public solver APIs
+   :header-rows: 1
+   :widths: 24 31 25 20
+
+   * - API
+     - Model
+     - Guarantee
+     - Output
+   * - ``mcfl::Solver``
+     - A client-supplied supported MCFG
+     - Exact for that grammar
+     - Pair relation, tuple facts, witnesses
+   * - ``mcfl::InterleavedDyckSolver``
+     - Typed ``G_d^circ`` or ``G_d^+`` grammar
+     - Sound underapproximation
+     - Pair set and statistics per dimension
+Exactness of ``mcfl::Solver`` is relative to its input grammar. When the input
+grammar is ``G_d^circ`` or ``G_d^+``, the result remains an
+underapproximation of typed interleaved-Dyck reachability. Exact adaptive unary
+reachability lives in the independent :doc:`adaptive_interleaved_dyck` module.
 
 Generic MCFL Solver
 -------------------
@@ -97,11 +121,25 @@ condensation, splits weak components, computes projected Dyck feasibility,
 runs MCFL saturation, and expands pairs to the original graph. Staged results
 omit reflexive pairs.
 
+Every reported pair is certified typed interleaved-Dyck reachable. A missing
+pair is unresolved rather than certified unreachable: it may require a larger
+dimension or a path outside the selected grammar family.
+
 The default expansion filters the Cartesian product of condensed vertices by
 plain reachability in the original graph. This avoids a reference-artifact
 quirk where contracting a one-way ``normal`` edge reports its reverse pair.
 Set ``CondensationExpansionPolicy::ArtifactCompatible`` for exact reproduction
 of that cross-product behavior.
+
+Shared typed graph adapter
+--------------------------
+
+``InterleavedDyckSolver`` accepts
+``lotus::cfl::interleaved_dyck::Graph`` directly. The adapter converts typed
+labels to the generic MCFL terminal strings, allowing MCFL and
+:doc:`interleaved_dyck_approximation` to consume one parsed benchmark graph.
+The generic ``mcfl::Graph`` remains available for arbitrary client grammars
+whose terminals are not interleaved-Dyck labels.
 
 Command-Line Tool
 -----------------
@@ -119,14 +157,18 @@ elimination, ``--artifact-compatible`` selects the artifact's condensed
 cross-product expansion, ``--stats`` prints saturation counters, and
 ``--print-pairs`` emits the final endpoint relation.
 
+The exact unary algorithm has the separate
+``lotus-cfl-adaptive-interleaved-dyck`` executable documented in
+:doc:`adaptive_interleaved_dyck`.
+
 Validation and Complexity
 -------------------------
 
 Unit tests cover all five rule types, empty output components, rank-three
 joins, epsilon semantics, two-dimensional copy languages, proof witnesses,
 grammar validation, DOT parsing, and the paper's length-4 and length-6
-language-coverage counts. Artifact benchmark regression checks reproduce the
-published pair counts.
+language-coverage counts. Artifact benchmark regression checks load the shared
+typed graph and reproduce the published MCFL pair counts.
 
 For fixed grammar dimension ``d`` and rank ``r``, the theoretical bounds are
 those proved in the paper: polynomial grammar factors times

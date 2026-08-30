@@ -1,6 +1,8 @@
-#include "CFL/MutualRefinement/Grammar.h"
-#include "CFL/MutualRefinement/Graph.h"
+#include "CFL/MutualRefinement/CnfGrammar.h"
+#include "CFL/MutualRefinement/CnfGraph.h"
+#include "CFL/MutualRefinement/Driver.h"
 #include "CFL/MutualRefinement/Hasher.h"
+
 #include <cassert>
 #include <cctype>
 #include <chrono>
@@ -13,6 +15,8 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+namespace lotus::cfl::mutual_refinement {
 
 std::unordered_set<std::pair<int, int>, IntPairHasher> intersectResults(
     const std::vector<std::unordered_set<Edge, EdgeHasher>> &results) {
@@ -60,7 +64,7 @@ std::unordered_map<U, T> reverseMap(const std::unordered_map<T, U> &mp) {
 
 /* Raw grammars and raw graphs are ones with original strings
  * as symbols and node names. After encoding those strings as integers,
- * we get Grammar and Graph objects to use in CFL-reachabilty. */
+ * we get CnfGrammar and CnfGraph objects to use in CFL-reachabilty. */
 
 std::vector<std::vector<std::vector<std::string>>>
 readRawGrammars(const std::string &file) {
@@ -109,7 +113,7 @@ readRawGraph(const std::string &file) {
   return rawEdges;
 }
 
-std::tuple<std::vector<Grammar>, int, std::unordered_set<Edge, EdgeHasher>>
+std::tuple<std::vector<CnfGrammar>, int, std::unordered_set<Edge, EdgeHasher>>
 encode(
     std::vector<std::vector<std::vector<std::string>>> rawGrammars,
     std::vector<std::tuple<std::string, std::string, std::string>> rawGraph) {
@@ -132,10 +136,10 @@ encode(
   }
   std::unordered_map<std::string, int> nodeMap = number(nodes);
   std::unordered_map<int, std::string> nodeMapR = reverseMap(nodeMap);
-  // Grammar construction
-  std::vector<Grammar> grammars;
+  // CnfGrammar construction
+  std::vector<CnfGrammar> grammars;
   for (auto &rawGrammar : rawGrammars) {
-    Grammar gm;
+    CnfGrammar gm;
     // Symbols
     for (auto &line : rawGrammar) {
       for (auto &sym : line) {
@@ -168,9 +172,9 @@ encode(
     gm.initFastIndices();
     grammars.push_back(std::move(gm));
   }
-  // Graph node count
+  // CnfGraph node count
   size_t numNode = nodeMap.size();
-  // Graph edges
+  // CnfGraph edges
   std::unordered_set<Edge, EdgeHasher> edges;
   for (auto &rawEdge : rawGraph) {
     edges.insert(std::make_tuple(nodeMap[std::get<0>(rawEdge)],
@@ -180,12 +184,11 @@ encode(
   return std::make_tuple(std::move(grammars), numNode, std::move(edges));
 }
 
-void run(int argc, char *argv[]) {
+int run(int argc, char *argv[]) {
   if (argc != 4) {
     std::cerr << "Usage: " << argv[0]
-              << " <grammar-file> <graph-file> <\"naive\"/\"refine\">"
-              << '\n';
-    return;
+              << " <grammar-file> <graph-file> <\"naive\"/\"refine\">" << '\n';
+    return 1;
   }
   // Get arguments
   std::string grammarFile = argv[1];
@@ -193,13 +196,17 @@ void run(int argc, char *argv[]) {
   std::string mode = argv[3];
   // Read and encode
   auto encoded = encode(readRawGrammars(grammarFile), readRawGraph(graphFile));
-  const std::vector<Grammar> &grammars = std::get<0>(encoded);
+  const std::vector<CnfGrammar> &grammars = std::get<0>(encoded);
   size_t numNode = std::get<1>(encoded);
   const std::unordered_set<Edge, EdgeHasher> &edges = std::get<2>(encoded);
   size_t numGrammar = grammars.size();
+  if (numGrammar == 0) {
+    std::cerr << "grammar file contains no grammar blocks\n";
+    return 1;
+  }
   // Handle modes
   if (mode == "naive") {
-    std::vector<Graph> graphs(numGrammar);
+    std::vector<CnfGraph> graphs(numGrammar);
     std::vector<std::unordered_set<Edge, EdgeHasher>> results(numGrammar);
     for (size_t i = 0; i < numGrammar; i++) {
       graphs[i].reinit(numNode, edges);
@@ -211,7 +218,7 @@ void run(int argc, char *argv[]) {
     std::unordered_set<Edge, EdgeHasher> edgeSet = edges;
     size_t originalEdgeSetSize = edgeSet.size();
     std::unordered_set<Edge, EdgeHasher>::size_type previousEdgeSetSize;
-    std::vector<Graph> graphs(numGrammar);
+    std::vector<CnfGraph> graphs(numGrammar);
     std::vector<std::unordered_set<Edge, EdgeHasher>> results(numGrammar);
     size_t refineIterationCounter = 0;
     // Mutual refinement loop
@@ -240,7 +247,11 @@ void run(int argc, char *argv[]) {
               << '\n';
     std::cout << "Number of Reachable Pairs (Excluding Self-loops): "
               << intersectResults(results).size() << '\n';
+  } else {
+    std::cerr << "mode must be 'naive' or 'refine'\n";
+    return 1;
   }
+  return 0;
 }
 
 std::string getPeakMemory() {
@@ -256,12 +267,15 @@ std::string getPeakMemory() {
       break;
     }
   }
-  return vmpeak;
+  return vmpeak.empty() ? "unavailable" : vmpeak;
 }
 
-int mutual_refinement_main(int argc, char *argv[]) {
+int runDriver(int argc, char *argv[]) {
   auto start = std::chrono::steady_clock::now();
-  run(argc, argv);
+  const int status = run(argc, argv);
+  if (status != 0) {
+    return status;
+  }
   auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double> elapsed_seconds = end - start;
   std::cout << "*** Resource Consumption ***" << '\n'
@@ -269,3 +283,5 @@ int mutual_refinement_main(int argc, char *argv[]) {
             << "Peak Space (kB): " << getPeakMemory() << '\n';
   return 0;
 }
+
+} // namespace lotus::cfl::mutual_refinement

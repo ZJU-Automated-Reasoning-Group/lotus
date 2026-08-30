@@ -3,8 +3,8 @@
 
 # Source files for MutualRefinement library
 set(MUTUALREFINEMENT_LIB_SOURCES
-    Grammar.cpp
-    Graph.cpp
+    CnfGrammar.cpp
+    CnfGraph.cpp
     Hasher.cpp
     MutualRefinementMain.cpp
 )

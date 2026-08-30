@@ -1,17 +1,18 @@
-#include "CFL/InterleavedDyck/InterleavedDyck.h"
+#include "CFL/InterleavedDyckApproximation/InterleavedDyckApproximation.h"
 
 #include <sstream>
 
 #include <gtest/gtest.h>
 
-namespace lotus::cfl::interleaved_dyck {
+namespace lotus::cfl::interleaved_dyck_approximation {
 namespace {
 
 bool contains(const PairSet &pairs, Vertex source, Vertex target) {
   return pairs.count({source, target}) != 0U;
 }
 
-TEST(InterleavedDyckGraphTest, ParsesArtifactDotLabelsAndDeduplicatesEdges) {
+TEST(InterleavedDyckApproximationGraphTest,
+     ParsesArtifactDotLabelsAndDeduplicatesEdges) {
   std::istringstream input("digraph G {\n"
                            "  10 -> 20 [label=\"op--7\"];\n"
                            "  10 -> 20 [label=\"op--7\"];\n"
@@ -24,7 +25,7 @@ TEST(InterleavedDyckGraphTest, ParsesArtifactDotLabelsAndDeduplicatesEdges) {
   EXPECT_EQ(graph.edges()[1].label, Label::neutral());
 }
 
-TEST(InterleavedDyckSolverTest,
+TEST(InterleavedDyckApproximationSolverTest,
      SeparatesUnionDyckUnderapproximationFromInterleavedReachability) {
   Graph graph;
   graph.addEdge(0, 1, Label::openParenthesis(0));
@@ -42,7 +43,8 @@ TEST(InterleavedDyckSolverTest,
                0, 4));
 }
 
-TEST(InterleavedDyckSolverTest, MutualRefinementRejectsDifferentWitnesses) {
+TEST(InterleavedDyckApproximationSolverTest,
+     MutualRefinementRejectsDifferentWitnesses) {
   Graph graph;
   // Parenthesis-valid witness carrying an unmatched bracket.
   graph.addEdge(0, 1, Label::openParenthesis(0));
@@ -58,7 +60,8 @@ TEST(InterleavedDyckSolverTest, MutualRefinementRejectsDifferentWitnesses) {
   EXPECT_FALSE(contains(solver.mutualRefinement(graph), 0, 3));
 }
 
-TEST(InterleavedDyckSolverTest, FullPipelineKeepsAConcreteBalancedPath) {
+TEST(InterleavedDyckApproximationSolverTest,
+     FullPipelineKeepsAConcreteBalancedPath) {
   Graph graph;
   graph.addEdge(0, 1, Label::openParenthesis(0));
   graph.addEdge(1, 2, Label::openBracket(0));
@@ -73,7 +76,8 @@ TEST(InterleavedDyckSolverTest, FullPipelineKeepsAConcreteBalancedPath) {
   EXPECT_TRUE(contains(result.on_demand, 0, 4));
 }
 
-TEST(InterleavedDyckSolverTest, ValueFlowPipelineAppliesSourceSinkCondition) {
+TEST(InterleavedDyckApproximationSolverTest,
+     ValueFlowPipelineAppliesSourceSinkCondition) {
   Graph graph;
   graph.addEdge(0, 1, Label::openBracket(0));
   graph.addEdge(1, 2, Label::neutral());
@@ -89,7 +93,7 @@ TEST(InterleavedDyckSolverTest, ValueFlowPipelineAppliesSourceSinkCondition) {
   EXPECT_TRUE(contains(result.on_demand, 0, 3));
 }
 
-TEST(InterleavedDyckSolverTest, ParityRefinementIsComponentLocal) {
+TEST(InterleavedDyckApproximationSolverTest, ParityRefinementIsComponentLocal) {
   Graph left;
   left.addEdge(998, 2273, Label::closeParenthesis(27));
   left.addEdge(998, 1713, Label::closeParenthesis(45));
@@ -131,4 +135,4 @@ TEST(InterleavedDyckSolverTest, ParityRefinementIsComponentLocal) {
 }
 
 } // namespace
-} // namespace lotus::cfl::interleaved_dyck
+} // namespace lotus::cfl::interleaved_dyck_approximation

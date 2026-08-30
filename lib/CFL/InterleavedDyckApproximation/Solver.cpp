@@ -1,6 +1,6 @@
-#include "CFL/InterleavedDyck/InterleavedDyck.h"
-#include "CFL/MutualRefinement/Grammar.h"
-#include "CFL/MutualRefinement/Graph.h"
+#include "CFL/InterleavedDyckApproximation/InterleavedDyckApproximation.h"
+#include "CFL/MutualRefinement/CnfGrammar.h"
+#include "CFL/MutualRefinement/CnfGraph.h"
 #include "CFL/MutualRefinement/Hasher.h"
 
 #include <algorithm>
@@ -14,8 +14,10 @@
 #include <utility>
 #include <vector>
 
-namespace lotus::cfl::interleaved_dyck {
+namespace lotus::cfl::interleaved_dyck_approximation {
 namespace {
+
+namespace mr = lotus::cfl::mutual_refinement;
 
 constexpr unsigned MAX_PARITY_GROUPS = 4;
 
@@ -269,12 +271,12 @@ PairSet filterBracketPaths(const Graph &graph, const PairSet &pairs) {
 }
 
 struct EncodedGrammar {
-  ::Grammar grammar;
+  mr::CnfGrammar grammar;
   std::unordered_map<Vertex, int> vertex_to_dense;
   std::vector<Vertex> dense_to_vertex;
   std::unordered_map<Label, int, LabelHash> label_to_terminal;
   std::unordered_map<int, Label> terminal_to_label;
-  std::unordered_set<::Edge, EdgeHasher> edges;
+  std::unordered_set<mr::Edge, mr::EdgeHasher> edges;
   int next_symbol = 0;
 
   explicit EncodedGrammar(const Graph &graph) {
@@ -482,15 +484,17 @@ runGrammar(EncodedGrammar encoded, bool trace,
     throw std::overflow_error("too many vertices for the CFL engine");
   }
 
-  ::Graph engine;
+  mr::CnfGraph engine;
   engine.reinit(static_cast<int>(encoded.dense_to_vertex.size()),
                 encoded.edges);
-  std::unordered_map<::Edge, std::unordered_set<int>, EdgeHasher> unary_record;
+  std::unordered_map<mr::Edge, std::unordered_set<int>, mr::EdgeHasher>
+      unary_record;
   std::unordered_map<
-      ::Edge, std::unordered_set<std::tuple<int, int, int>, IntTripleHasher>,
-      EdgeHasher>
+      mr::Edge,
+      std::unordered_set<std::tuple<int, int, int>, mr::IntTripleHasher>,
+      mr::EdgeHasher>
       binary_record;
-  std::unordered_set<::Edge, EdgeHasher> raw_result;
+  std::unordered_set<mr::Edge, mr::EdgeHasher> raw_result;
   if (trace) {
     raw_result =
         engine.runCFLReachability(encoded.grammar, unary_record, binary_record);
@@ -499,8 +503,8 @@ runGrammar(EncodedGrammar encoded, bool trace,
   }
 
   ReachabilityRun result;
-  std::unordered_set<::Edge, EdgeHasher> closure_roots;
-  for (const ::Edge &edge : raw_result) {
+  std::unordered_set<mr::Edge, mr::EdgeHasher> closure_roots;
+  for (const mr::Edge &edge : raw_result) {
     const Pair pair{encoded.dense_to_vertex.at(std::get<0>(edge)),
                     encoded.dense_to_vertex.at(std::get<2>(edge))};
     if (pair.source == pair.target) {
@@ -517,7 +521,7 @@ runGrammar(EncodedGrammar encoded, bool trace,
   }
   const auto closure = engine.getEdgeClosure(encoded.grammar, closure_roots,
                                              unary_record, binary_record);
-  for (const ::Edge &edge : closure) {
+  for (const mr::Edge &edge : closure) {
     const auto label = encoded.terminal_to_label.find(std::get<1>(edge));
     if (label == encoded.terminal_to_label.end()) {
       continue;
@@ -1005,4 +1009,4 @@ ApproximationResult Solver::analyze(const Graph &input, BenchmarkKind benchmark,
   return result;
 }
 
-} // namespace lotus::cfl::interleaved_dyck
+} // namespace lotus::cfl::interleaved_dyck_approximation

@@ -1,17 +1,58 @@
-#ifndef filterColorReach_h
-#define filterColorReach_h
+#include "Legacy/SummaryEdge.h"
+#include "Utils/ADT/UnionFind.h"
 
-#include "CFL/InterDyckGraphReduce/SummaryEdge.h"
 #include <iostream>
 #include <list>
 #include <string>
 #include <unordered_map>
-//#include <unordered_set>
+#include <unordered_set>
 
 using namespace std;
 string merge_orig_to_colormerge = "tmp_merge_orig_to_color_merge.txt";
 
-string colorreach_graph = "tmp_color_reach_dk_graph.dot";
+void findMatch(unsigned nodeID, SummaryGraph &sGraph, unsigned eid,
+               unordered_set<unsigned> &usedNodes, unsigned origFrom,
+               unsigned origTo) {
+  SummaryNode *node = sGraph.nodes[nodeID];
+  if (usedNodes.find(nodeID) != usedNodes.end()) {
+    return;
+  }
+  usedNodes.insert(nodeID);
+  for (vector<NodewithEID>::iterator it = node->inBlueEdgeNodes.begin();
+       it != node->inBlueEdgeNodes.end(); it++) {
+    unsigned cureid = it->edgeID;
+    unsigned nextnid = it->nodeID;
+    if (eid == cureid && nodeID != origTo && nextnid != origFrom) {
+      cout << "    match " << nodeID << " <-" << cureid << "- " << nextnid;
+    }
+  }
+  for (vector<NodewithEID>::iterator it = node->inRedEdgeNodes.begin();
+       it != node->inRedEdgeNodes.end(); it++) {
+    unsigned nextnid = it->nodeID;
+    findMatch(nextnid, sGraph, eid, usedNodes, origFrom, origTo);
+  }
+  for (vector<NodewithEID>::iterator it = node->outRedEdgeNodes.begin();
+       it != node->outRedEdgeNodes.end(); it++) {
+    unsigned nextnid = it->nodeID;
+    findMatch(nextnid, sGraph, eid, usedNodes, origFrom, origTo);
+  }
+
+  usedNodes.erase(nodeID);
+}
+
+void findMatch(unsigned nodeID, SummaryGraph &sGraph) {
+  SummaryNode *node = sGraph.nodes[nodeID];
+  unordered_set<unsigned> usedNodes;
+  // usedNodes.insert(nodeID);
+  for (vector<NodewithEID>::iterator it = node->outBlueEdgeNodes.begin();
+       it != node->outBlueEdgeNodes.end(); it++) {
+    unsigned eid = it->edgeID;
+    unsigned nextnid = it->nodeID;
+    cout << "Candidate: " << nodeID << " -" << eid << "-> " << nextnid;
+    findMatch(nextnid, sGraph, eid, usedNodes, nodeID, nextnid);
+    cout << '\n';
+  }
+}
 
 // only merge out edges
 // b edges merged into a
@@ -53,16 +94,11 @@ void mergeNodes(unsigned anodeID, unsigned bnodeID, SummaryGraph &sGraph) {
   bnode->outBlueEdgeNodes.clear();
 
   // cout << "Merge " << anodeID << " with " << bnodeID << '\n';
-  if (anodeID == 72 && bnodeID == 75) {
-    unsigned a = 1;
-    a++;
-  }
 }
 
 void printGraphBlue(SummaryGraph &sGraph) {
   unordered_map<unsigned, unsigned> node2orig = sGraph.node2orignodeid;
   unordered_map<unsigned, string> eid2orig = sGraph.eid2origeidstring;
-  ofstream out(colorreach_graph);
   for (unsigned i = 0; i < sGraph.nodes.size(); i++) {
     SummaryNode *node = sGraph.nodes[i];
     if (node->belongto != node->id)
@@ -71,8 +107,8 @@ void printGraphBlue(SummaryGraph &sGraph) {
          it != node->outBlueEdgeNodes.end(); it++) {
       unsigned tonodeID = root(it->nodeID, sGraph);
       unsigned eid = it->edgeID;
-      out << node2orig[i] << "->" << node2orig[tonodeID] << "[label=\"o"
-          << eid2orig[eid] << "\"]" << '\n';
+      cout << node2orig[i] << "->" << node2orig[tonodeID] << "[label=\"o"
+           << eid2orig[eid] << "\"]" << '\n';
     }
   }
 }
@@ -112,23 +148,21 @@ void createNodeMergeMap(SummaryGraph &sGraph) {
   }
 }
 
-unordered_map<unsigned, list<unsigned> *> *
-exportMergeNodes(SummaryGraph &sGraph) {
-  unordered_map<unsigned, list<unsigned> *> *mergemap =
-      new unordered_map<unsigned, list<unsigned> *>();
+void exportMergeNodes(SummaryGraph &sGraph) {
+  unordered_map<unsigned, list<unsigned> *> mergemap;
   for (unsigned i = 0; i < sGraph.nodes.size(); i++) {
     SummaryNode *node = sGraph.nodes[i];
     unsigned root = node->belongto;
-    if (mergemap->find(root) == mergemap->end()) {
-      (*mergemap)[root] = new list<unsigned>();
+    if (mergemap.find(root) == mergemap.end()) {
+      mergemap[root] = new list<unsigned>();
     }
-    (*mergemap)[root]->push_back(i);
+    mergemap[root]->push_back(i);
   }
 
   ofstream out(merge_orig_to_colormerge);
   for (unordered_map<unsigned, list<unsigned> *>::iterator it =
-           mergemap->begin();
-       it != mergemap->end(); it++) {
+           mergemap.begin();
+       it != mergemap.end(); it++) {
     list<unsigned> *lst = it->second;
     unsigned root = it->first;
     out << root << ": ";
@@ -138,17 +172,18 @@ exportMergeNodes(SummaryGraph &sGraph) {
     }
     out << '\n';
   }
-  return mergemap;
 }
 
-SummaryGraph *colorreach_main() {
-  string line;
-  ifstream in("dotfile/exp-2020");
-  getline(in, line);
-  SummaryGraph *sGraph = new SummaryGraph(line);
+int main(int argc, char **argv) {
+  if (argc != 2) {
+    cerr << "usage: lotus-cfl-inter-dyck-graphaux <graph.dot>\n";
+    return 1;
+  }
+  SummaryGraph sGraph(argv[1]);
   queue<pair<unsigned, unsigned>> worklist;
-  for (unsigned i = 0; i < sGraph->nodes.size(); i++) {
-    SummaryNode *node = sGraph->nodes[i];
+  for (unsigned i = 0; i < sGraph.nodes.size(); i++) {
+    // findMatch(i, sGraph);
+    SummaryNode *node = sGraph.nodes[i];
     for (vector<NodewithEID>::iterator it = node->outRedEdgeNodes.begin();
          it != node->outRedEdgeNodes.end(); it++) {
       unsigned tonodeID = it->nodeID;
@@ -156,16 +191,46 @@ SummaryGraph *colorreach_main() {
     }
   }
 
+  UnionFind m_sets(sGraph.nodes.size());
+
   while (!worklist.empty()) {
     unsigned first = worklist.front().first;
     unsigned second = worklist.front().second;
-    mergeNodes(first, second, *sGraph);
+    m_sets.join(first, second);
     worklist.pop();
   }
-  printGraphBlue(*sGraph);
-  createNodeMergeMap(*sGraph);
-  exportMergeNodes(*sGraph);
 
-  return sGraph;
+  unordered_map<unsigned, list<unsigned> *> nodeGroups;
+  for (unsigned i = 0; i < sGraph.nodes.size(); i++) {
+    unsigned root = m_sets.find(i);
+    if (nodeGroups.find(root) == nodeGroups.end()) {
+      nodeGroups[root] = new list<unsigned>();
+    }
+    nodeGroups[root]->push_back(i);
+  }
+
+  for (unordered_map<unsigned, list<unsigned> *>::iterator ngit =
+           nodeGroups.begin();
+       ngit != nodeGroups.end(); ngit++) {
+    unsigned cur, prev;
+    list<unsigned> *lst = ngit->second;
+    for (list<unsigned>::iterator lit = lst->begin(); lit != lst->end();
+         lit++) {
+      // cout << "list item: " << *lit;
+      cur = *lit;
+      if (lit == lst->begin()) {
+        prev = cur;
+        continue;
+      }
+      mergeNodes(prev, cur, sGraph);
+      // cout << "merge " << prev << " with " << cur << '\n';
+      //  last line
+      prev = cur;
+    }
+    cout << "\n\n";
+  }
+  printGraphBlue(sGraph);
+  createNodeMergeMap(sGraph);
+  exportMergeNodes(sGraph);
+  return 0;
 }
-#endif

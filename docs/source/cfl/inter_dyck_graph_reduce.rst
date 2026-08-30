@@ -1,29 +1,54 @@
-Interleaved Dyck Graph Reduction
+Interleaved-Dyck Graph Reduction
 ================================
 
-``include/CFL/InterDyckGraphReduce/`` and its matching ``lib`` subtree provide
-graph reduction algorithms for interleaved-Dyck reachability problems.
+``InterDyckGraphReduce`` packages the PLDI 2020 graph-simplification pipeline
+for interleaved-Dyck reachability. It transforms a DOT graph; it does not by
+itself answer the final reachability relation.
 
-**Location**: ``include/CFL/InterDyckGraphReduce/``,
-``lib/CFL/InterDyckGraphReduce/``
+**Location**: ``lib/CFL/InterDyckGraphReduce/``
 
-**Main components**:
+Pipeline
+--------
 
-- ``CFLGraph`` stores the labeled reachability instance.
-- ``CFLReach`` performs the reduction and query process.
-- ``SummaryGraph`` and ``MergedEdges`` compact intermediate state.
+The Python driver alternates two compiled phases:
 
-This code is aimed at research-style graph reductions rather than day-to-day
-LLVM pass use.
+``lotus-cfl-inter-dyck-graphaux``
+   Builds one-color summary components and emits the color-reach graph.
 
-Working with an instance
-------------------------
+``lotus-cfl-inter-dyck-dkmerge``
+   Merges nodes using the specialized degree/color data structure and records
+   edges that cannot be removed.
 
-Construct the labeled ``CFLGraph`` from the relation of interest, then use
-``CFLReach`` to perform the reduction and obtain reachability information.
-``SummaryGraph`` and ``MergedEdges`` are implementation-level compact
-representations that reduce repeated work during solving.  Clients should
-preserve the edge-label convention used to build the graph: a reduction cannot
-recover nesting semantics that were not encoded in the input labels.
+``lotus-cfl-inter-dyck-graph-reduce.py``
+   Orchestrates both colors until no further edge is removed. The input file is
+   updated in place, so experiments should operate on a copy.
+
+.. code-block:: console
+
+   cmake --build build --target lotus-cfl-inter-dyck-graph-reduce
+   cp input.dot reduced.dot
+   python3 build/bin/lotus-cfl-inter-dyck-graph-reduce.py reduced.dot \
+     --graphaux build/bin/lotus-cfl-inter-dyck-graphaux \
+     --dkmerge build/bin/lotus-cfl-inter-dyck-dkmerge
+
+Bidirected handling
+-------------------
+
+The shared typed graph and the approximation/MCFL solvers preserve input arcs
+as supplied. This reducer has specialized internal orientation rules: closing
+colored edges are stored in reverse orientation, and a legacy one-color CFL
+construction can create synthetic reverse terminals. These are internal
+summary semantics, not silent bidirecting of the shared input. Pass
+``--bidirected-input`` only when the dataset already represents both
+directions.
+
+Implementation boundary
+-----------------------
+
+Artifact-era ``CFLGraph``, ``CFLReach``, ``SummaryGraph``, and merge-list types
+live under ``lib/CFL/InterDyckGraphReduce/Legacy`` as private implementation
+details. They model intermediate color summaries and merge bookkeeping and
+therefore should not be unified with the immutable input representation in
+``InterleavedDyckCore``.
 
 See also :doc:`cfl_components`.

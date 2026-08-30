@@ -16,14 +16,42 @@ Grammar-driven CFL reachability utilities, solver backends, and SVF adapters.
 * Classical and set-constraint solvers for reachability closure
 * Adapters for alias and value-flow problems built on SVF structures
 
+Interleaved-Dyck Core
+---------------------
+
+Shared typed ``Label``, ``Edge``, ``Graph``, and ``Pair`` types plus the DOT
+parser used by interleaved-Dyck benchmark datasets.
+
+**Location**: ``include/CFL/InterleavedDyckCore/``,
+``lib/CFL/InterleavedDyckCore/``
+
+Approximation consumes this graph directly, Adaptive applies unary projection,
+and MCFL converts it through a typed-to-generic adapter.
+
+Exact Adaptive Interleaved Dyck
+-------------------------------
+
+Exact component reachability for bidirected unary
+``D1``-interleaved-``D1`` using adaptive counter flattening.
+
+**Location**: ``include/CFL/AdaptiveInterleavedDyck/``,
+``lib/CFL/AdaptiveInterleavedDyck/``
+
+See :doc:`adaptive_interleaved_dyck` for its exactness boundary and benchmark
+eligibility rules.
+
 Interleaved-Dyck Approximation
 ------------------------------
 
 Staged under- and overapproximation for reachability under two interleaved
 families of Dyck constraints.
 
-**Location**: ``include/CFL/InterleavedDyck/``,
-``lib/CFL/InterleavedDyck/``
+**Location**: ``include/CFL/InterleavedDyckApproximation/``,
+``lib/CFL/InterleavedDyckApproximation/``
+
+This component computes a certified union-Dyck lower bound and progressively
+tighter projected-CFL upper bounds; it is not an exact solver for the general
+typed problem.
 
 **Features**:
 
@@ -36,8 +64,8 @@ families of Dyck constraints.
 Multiple Context-Free Language Reachability
 -------------------------------------------
 
-All-pairs reachability for non-deleting, non-permuting MCFGs, plus the POPL
-2025 MCFL underapproximation hierarchy for interleaved Dyck languages.
+All-pairs reachability for non-deleting, non-permuting MCFGs and the POPL 2025
+typed underapproximation hierarchy.
 
 **Location**: ``include/CFL/MCFL/``, ``lib/CFL/MCFL/``
 
@@ -48,6 +76,27 @@ All-pairs reachability for non-deleting, non-permuting MCFGs, plus the POPL
 * Concrete path witnesses from retained derivation DAGs
 * ``G_d^circ`` and ``G_d^+`` grammar generation for arbitrary dimensions
 * Artifact-compatible staged condensation, DOT input, and command-line tool
+* Adapter from the shared typed interleaved-Dyck graph
+
+Guarantee Summary
+-----------------
+
+.. list-table:: Choosing an interleaved-Dyck implementation
+   :header-rows: 1
+   :widths: 31 39 30
+
+   * - API
+     - Intended use
+     - Guarantee
+   * - ``mcfl::InterleavedDyckSolver``
+     - Certified typed pairs through ``G_d``
+     - Underapproximation
+   * - ``adaptive_interleaved_dyck::AdaptiveInterleavedDyckSolver``
+     - Bidirected unary projection
+     - Exact component partition
+   * - ``interleaved_dyck_approximation::Solver``
+     - Typed lower/upper refinement
+     - Approximation bounds
 
 CSIndex (Context-Sensitive Indexing)
 ------------------------------------
@@ -67,25 +116,42 @@ Context-sensitive indexing for CFL reachability.
 InterDyckGraphReduce
 --------------------
 
-Interprocedural Dyck graph reduction algorithms.
+PLDI 2020 interleaved-Dyck graph simplification. This component transforms a
+DOT graph and does not itself return the final reachability relation.
 
 **Location**: ``lib/CFL/InterDyckGraphReduce/``
 
-**Features**: Interprocedural analysis with graph reduction techniques for Dyck languages.
+**Features**:
+
+* Two-color summary construction and degree-based node merging
+* Iterative Python orchestration until no further edge is removed
+* Explicit directed versus already-bidirected input mode
+* Private legacy summary representation under the ``lib`` subtree
 
 MutualRefinement
 ----------------
 
-Mutual refinement algorithms for CFL analysis.
+Grammar-agnostic CNF reachability and derivation tracing used by refinement
+experiments and by ``InterleavedDyckApproximation``.
 
 **Location**: ``lib/CFL/MutualRefinement/``
 
-**Features**: Bidirectional refinement techniques for improving analysis precision.
+**Features**:
+
+* Integer-encoded ``CnfGrammar`` and ``CnfGraph`` representation
+* CFL saturation with unary and binary derivation records
+* Backward closure to contributing input edges
+* Generic file-driven alternating-refinement experiment
+
+It does not own typed delimiter semantics, approximation grammars, benchmark
+preprocessing, or lower/upper-bound interpretation; those belong to
+``InterleavedDyckApproximation``.
 
 See also:
 
 - :doc:`classical`
 - :doc:`csindex`
+- :doc:`adaptive_interleaved_dyck`
 - :doc:`interleaved_dyck_approximation`
 - :doc:`inter_dyck_graph_reduce`
 - :doc:`mcfl`

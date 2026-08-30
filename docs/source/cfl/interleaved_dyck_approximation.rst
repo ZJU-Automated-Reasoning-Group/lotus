@@ -7,20 +7,56 @@ when projecting its label sequence onto either family produces a valid Dyck
 word. The two families may cross in the original path, so ordinary Dyck
 reachability over their union is sound but incomplete.
 
-**Location**: ``include/CFL/InterleavedDyck/``,
-``lib/CFL/InterleavedDyck/``
+.. warning::
+
+   This is a lower/upper approximation pipeline, not an exact solver for
+   general typed interleaved-Dyck reachability.
+
+**Location**: ``include/CFL/InterleavedDyckApproximation/``,
+``lib/CFL/InterleavedDyckApproximation/``
 
 The implementation is a native C++17 port of the staged algorithm from
 *A Better Approximation for Interleaved Dyck Reachability*. It reuses the
 ``CFL/MutualRefinement`` CNF saturation engine for reachability and derivation
-tracing.
+tracing and consumes the shared graph from ``CFL/InterleavedDyckCore``.
+
+Relationship to MutualRefinement
+--------------------------------
+
+``InterleavedDyckApproximation`` owns the domain-facing analysis policy, while
+``MutualRefinement`` supplies the integer-encoded CNF reachability and tracing
+engine used by some pipeline stages.
+
+.. list-table:: Responsibility boundary
+   :header-rows: 1
+   :widths: 24 38 38
+
+   * - Concern
+     - InterleavedDyckApproximation
+     - MutualRefinement
+   * - Input
+     - Structured typed delimiter graph
+     - Integer ``CnfGraph`` and supplied ``CnfGrammar``
+   * - Grammar construction
+     - Classic, union-Dyck, parity, endpoint grammars
+     - No domain grammar selection
+   * - Orchestration
+     - Regularization, bounds, condensation, on-demand checks
+     - CFL saturation and contributing-edge tracing
+   * - Output meaning
+     - Interleaved-Dyck lower and upper bounds
+     - Grammar-relative reachability edges and derivations
+
+The dependency is one-way. ``MutualRefinement`` has no knowledge of DOT label
+conventions, taint/value-flow modes, approximation direction, or the staged
+interleaved-Dyck pipeline.
 
 Graph Model
 -----------
 
-``lotus::cfl::interleaved_dyck::Graph`` stores signed integer vertex IDs and
-deduplicated labeled edges. ``Graph::parseDot`` and ``Graph::parseDotFile``
-accept the labels used by the reference datasets:
+``lotus::cfl::interleaved_dyck_approximation::Graph`` stores signed integer
+vertex IDs and deduplicated labeled edges. ``Graph::parseDot`` and
+``Graph::parseDotFile`` accept the labels used by the reference datasets:
 
 .. list-table:: Edge labels
    :header-rows: 1
@@ -80,14 +116,24 @@ reachability. The intersection and refinement stages are overapproximations;
 classic refinement, the stronger grammar, and on-demand checking progressively
 remove unsupported pairs.
 
+For a queried pair ``(u,v)``:
+
+* membership in ``underapproximation`` means definitely reachable;
+* absence from ``on_demand`` means definitely unreachable relative to the
+  modeled graph; and
+* membership in ``on_demand`` but not ``underapproximation`` remains unknown.
+
+The pipeline happens to be exact on an input when the lower and final upper
+bounds coincide. No general equality is assumed.
+
 Using the Solver
 ----------------
 
 .. code-block:: cpp
 
-   #include "CFL/InterleavedDyck/InterleavedDyck.h"
+   #include "CFL/InterleavedDyckApproximation/InterleavedDyckApproximation.h"
 
-   using namespace lotus::cfl::interleaved_dyck;
+   using namespace lotus::cfl::interleaved_dyck_approximation;
 
    Graph graph = Graph::parseDotFile("input.dot");
 
@@ -128,15 +174,22 @@ redistribution notes.
 Build and Test
 --------------
 
-The module builds as ``CanaryInterleavedDyck`` and links against
-``MutualRefinement``. Focused tests cover DOT parsing, crossing delimiters,
-different-witness rejection, value-flow preprocessing, the complete staged
-pipeline, and component-local parity refinement:
+The module builds as ``CanaryInterleavedDyckApproximation`` and links against
+``CanaryInterleavedDyckCore`` and ``MutualRefinement``. Focused tests cover DOT
+parsing, crossing delimiters, different-witness rejection, value-flow
+preprocessing, the complete staged pipeline, and component-local parity
+refinement:
 
 .. code-block:: console
 
-   cmake --build build --target interleaved_dyck_test
-   ctest --test-dir build -R interleaved_dyck_test --output-on-failure
+   cmake --build build --target lotus-cfl-interleaved-dyck-approximation
+   build/bin/lotus-cfl-interleaved-dyck-approximation input.dot
+   cmake --build build --target interleaved_dyck_approximation_test
+   ctest --test-dir build -R interleaved_dyck_approximation_test --output-on-failure
+
+The CLI exposes ``--value-flow``, ``--parity-groups N``, ``--no-on-demand``,
+``--print-lower``, and ``--print-final``. It preserves the directed input arcs
+exactly as parsed.
 
 Cost Considerations
 -------------------

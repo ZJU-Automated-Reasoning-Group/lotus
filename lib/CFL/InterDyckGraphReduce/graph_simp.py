@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import argparse
 import subprocess
 import queue
 import itertools
@@ -7,13 +8,8 @@ import time
 import sys
 
 single_directed = True
-if len(sys.argv) != 1:
-    if len(sys.argv) != 2:
-        print("Usage: ./filter.py [optional single/bidirected]")
-        exit(1)
-    else:
-        single_directed = sys.argv[-1] == "single"
-graphaux = "graphaux"
+graphaux = "lotus-cfl-inter-dyck-graphaux"
+dkmerge = "lotus-cfl-inter-dyck-dkmerge"
 exclude_time = 0.0
 
 # colorreach_mergenode_map: how nodes are merged during one color redeemed as reach
@@ -32,11 +28,6 @@ edge_merge_result = "tmp_edge_merge_result.txt"
 dkMerge_interNd_result = "tmp_dkMerge_nodes_representing_cannot_remove_edges.txt"
 
 dotfile = ""
-with open("dotfile/exp-2020", "r") as f:
-    for line in f:
-        line = line.strip()
-        if(len(line) > 0):
-            dotfile = line
 
 def get_merge_table():
     global exclude_time
@@ -383,8 +374,8 @@ def iteration():
     '''
     one iteration includes two steps, one for red color "op--", one for blue color "ob--"
     '''
-    cmd_graphaux = ["./graphaux"]
-    cmd_dkmerge = ["./dkmerge"]
+    cmd_graphaux = [graphaux, dotfile]
+    cmd_dkmerge = [dkmerge]
     
     # red color reach
     with open(colorreach_graph, "w") as outf:
@@ -442,10 +433,6 @@ def iteration():
 def graph_reduce():
     global single_directed
     clean()
-    cmd_make_redreach_graph = ["make", "aux"]
-    subprocess.call(cmd_make_redreach_graph, stderr=subprocess.DEVNULL)
-    cmd_make_dkmerge = ["make", "dkmerge"]
-    subprocess.call(cmd_make_dkmerge, stderr=subprocess.DEVNULL)
     stop_flag = False
     start_time = time.time()
     while(not stop_flag):
@@ -465,6 +452,21 @@ def graph_reduce():
 
 
 def main():
+    global dotfile, graphaux, dkmerge, single_directed
+    parser = argparse.ArgumentParser(
+        description="PLDI 2020 interleaved-Dyck graph simplification driver")
+    parser.add_argument("input", help="DOT graph to simplify in place")
+    parser.add_argument("--graphaux", default=graphaux,
+                        help="path to lotus-cfl-inter-dyck-graphaux")
+    parser.add_argument("--dkmerge", default=dkmerge,
+                        help="path to lotus-cfl-inter-dyck-dkmerge")
+    parser.add_argument("--bidirected-input", action="store_true",
+                        help="input already represents both directions")
+    args = parser.parse_args()
+    dotfile = args.input
+    graphaux = args.graphaux
+    dkmerge = args.dkmerge
+    single_directed = not args.bidirected_input
     graph_reduce()
 
 

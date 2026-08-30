@@ -1,26 +1,28 @@
-#ifndef GRAPH_H
-#define GRAPH_H
+#pragma once
 
-#include "CFL/MutualRefinement/Grammar.h"
+#include "CFL/MutualRefinement/CnfGrammar.h"
 #include "CFL/MutualRefinement/Hasher.h"
+
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
+namespace lotus::cfl::mutual_refinement {
+
 /* Graph on which CFL-reachability is run
  * The type Edge is an alias for std::tuple<int, int, int>,
  * which uses (i, A, j) to represent the edge i --A--> j */
-struct Graph {
+struct CnfGraph {
   void reinit(int n, const std::unordered_set<Edge, EdgeHasher> &edges);
   void addEdge(const Edge &e);
   bool hasEdge(const Edge &e) const;
   // Normal CFL-reachability (returns the set of S edges)
   std::unordered_set<Edge, EdgeHasher>
-  runCFLReachability(const Grammar &grammar);
+  runCFLReachability(const CnfGrammar &grammar);
   // CFL-reachability with tracing for mutual refinement (returns the set of S
   // edges)
   std::unordered_set<Edge, EdgeHasher> runCFLReachability(
-      const Grammar &grammar,
+      const CnfGrammar &grammar,
       std::unordered_map<Edge, std::unordered_set<int>, EdgeHasher>
           &singleRecord,
       std::unordered_map<
@@ -30,7 +32,7 @@ struct Graph {
           EdgeHasher> &binaryRecord);
   // Get original edges contributing to S edges
   std::unordered_set<Edge, EdgeHasher> getEdgeClosure(
-      const Grammar &grammar,
+      const CnfGrammar &grammar,
       const std::unordered_set<Edge, EdgeHasher> &result,
       const std::unordered_map<Edge, std::unordered_set<int>, EdgeHasher>
           &singleRecord,
@@ -47,7 +49,7 @@ private:
   // This function is called by the previous two overloaded runCFLReachability
   // functions
   std::unordered_set<Edge, EdgeHasher> runCFLReachabilityCore(
-      const Grammar &grammar, const bool record,
+      const CnfGrammar &grammar, const bool record,
       std::unordered_map<Edge, std::unordered_set<int>, EdgeHasher>
           &singleRecord,
       std::unordered_map<
@@ -55,4 +57,4 @@ private:
           EdgeHasher> &binaryRecord);
 };
 
-#endif
+} // namespace lotus::cfl::mutual_refinement

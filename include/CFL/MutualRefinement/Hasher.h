@@ -1,9 +1,10 @@
-#ifndef HASHER_H
-#define HASHER_H
+#pragma once
 
 #include <cstddef>
 #include <tuple>
 #include <utility>
+
+namespace lotus::cfl::mutual_refinement {
 
 struct IntPairHasher {
   std::size_t operator()(const std::pair<int, int> &p) const;
@@ -17,4 +18,4 @@ struct IntTripleHasher {
 using Edge = std::tuple<int, int, int>;
 using EdgeHasher = IntTripleHasher;
 
-#endif
+} // namespace lotus::cfl::mutual_refinement

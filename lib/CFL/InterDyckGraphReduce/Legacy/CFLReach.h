@@ -1,7 +1,7 @@
 #ifndef CFLREACH_H
 #define CFLREACH_H
 
-#include "CFL/InterDyckGraphReduce/CFLGraph.h"
+#include "CFLGraph.h"
 #include <algorithm>
 //#include <bitset>
 #include <fstream>
@@ -22,8 +22,6 @@ using namespace std;
 
 unordered_map<string, EdgeTy> EdgeMap;
 unsigned S_edge = 0;
-
-ifstream in("dotfile/exp-2020");
 
 // typedef unsigned int       u32;
 

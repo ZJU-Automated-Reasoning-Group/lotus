@@ -2,17 +2,46 @@ Mutual Refinement for CFL Reachability
 ======================================
 
 ``include/CFL/MutualRefinement/`` and ``lib/CFL/MutualRefinement/`` contain a
-mutual-refinement implementation for CFL reachability experiments.
+grammar-agnostic CNF reachability and derivation-tracing engine. It is a
+low-level dependency of :doc:`interleaved_dyck_approximation`, not a second
+domain-facing interleaved-Dyck solver.
 
 **Location**: ``include/CFL/MutualRefinement/``,
 ``lib/CFL/MutualRefinement/``
 
 **Main components**:
 
-- ``Grammar`` stores the integer-encoded grammar.
-- ``Graph`` stores the encoded graph instance.
+- ``CnfGrammar`` stores the integer-encoded grammar.
+- ``CnfGraph`` stores the encoded graph instance.
 - ``IntPairHasher`` supports the compact map/set structures used internally.
 - ``MutualRefinementMain.cpp`` provides the standalone driver.
+
+The reusable operations are ordinary CFL saturation, saturation with
+unary/binary derivation records, and backward closure from derived results to
+the original edges that contributed to them. The client supplies the grammar,
+integer graph encoding, refinement schedule, and result semantics.
+
+``MutualRefinementMain.cpp`` additionally preserves the original generic
+file-driven experiment and its alternating refinement loop. It treats parsed
+labels as opaque grammar symbols; it does not assign parenthesis/bracket
+meaning or expose the application pipeline implemented by
+``InterleavedDyckApproximation``.
+
+Responsibility Boundary
+-----------------------
+
+``MutualRefinement`` does **not** own:
+
+- typed ``op/cp/ob/cb`` label parsing;
+- projected, union-Dyck, parity, or endpoint grammar selection;
+- regularization, condensation, or on-demand policy;
+- taint and value-flow benchmark semantics; or
+- lower-bound versus upper-bound interpretation.
+
+Those responsibilities belong to
+:doc:`interleaved_dyck_approximation`, which translates its structured graph
+into the integer representation here and uses the derivation records to decide
+which original edges survive the next refinement round.
 
 The implementation is best treated as a focused research component within the
 broader CFL subsystem.
@@ -26,5 +55,13 @@ The local ``Grammar`` and ``Graph`` types are intentionally specialized; use a
 different CFL frontend when an application needs a stable LLVM-facing API or
 human-readable input format.  Record the encoding and benchmark corpus when
 comparing refinement strategies.
+
+.. code-block:: console
+
+   cmake --build build --target lotus-cfl-mutual-refinement
+   build/bin/lotus-cfl-mutual-refinement grammars.txt graph.dot refine
+
+The mode is ``naive`` or ``refine``. Grammar symbols and graph labels are
+opaque strings that are encoded to integers before invoking ``CnfGraph``.
 
 See also :doc:`cfl_components`.

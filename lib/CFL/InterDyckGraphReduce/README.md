@@ -1,48 +1,60 @@
-# Graph Simplification for Interleaved Dyck-Reachability
+# Interleaved-Dyck Graph Reduction
 
-This repository contains an implementation of the paper
-- Yuanbo Li, Qirun Zhang, Thomas Reps. Fast Graph Simplification for Interleaved Dyck-Reachability. In *PLDI 2020*.
-## Interleaved Dyck language
-The implementation currently supports the interleaved Dyck language of two Dyck languages representing brackets and parentheses, respectively.
+This module packages the graph-simplification pipeline from Yuanbo Li, Qirun
+Zhang, and Thomas Reps, *Fast Graph Simplification for Interleaved
+Dyck-Reachability* (PLDI 2020).
 
-## Input format
-The implementation accepts an input graph in the dot format. A labeled edge is encoded as
+It is a graph transformation, not a reachability solver. Its output is a
+smaller DOT graph intended to preserve the reachability property covered by
+the reduction theorem. A reduced graph must still be analyzed by a compatible
+downstream solver.
+
+## Input and bidirected semantics
+
+The driver consumes the same `op--N`, `cp--N`, `ob--N`, `cb--N`, and `normal`
+DOT format used by `InterleavedDyckCore`. It edits a caller-supplied working
+copy in place.
+
+The shared input graph is never implicitly mutated by `InterleavedDyckCore`,
+Approximation, or MCFL. This reducer has specialized internal orientation
+rules: closing colored edges are represented in reverse orientation, and the
+legacy one-color CFL construction can create synthetic reverse terminals for
+matching. Those edges are internal summaries, not an assertion that the
+original input was bidirected. Use `--bidirected-input` only when both
+directions are already represented by the input.
+
+## Build and run
+
+Build the driver and its two compiled helpers:
+
+```sh
+cmake --build build --target lotus-cfl-inter-dyck-graph-reduce
 ```
-0->1[label="ob--1"]
-```
- - 0 and 1 are the vertex ids;
- - "ob" means an open bracket. Similarly, we have "cb" for a close bracket, "op" for an open parenthesis, and "cp" for a close parenthesis;
- - "--1" means the id of the bracket/parenthesis is 1.
 
-## Usage
-Copy your dot file and name it as ``current.dot`` in the directory
+Copy a graph before simplifying because the Python driver updates it in place:
 
-run ./graph_reduce.sh
-
-## Example
-``example/example.dot`` contains the motivation example (Figure 1b) in the PLDI 2020 paper.
-```
-cp example/example.dot current.dot
-./graph_reduce.sh
+```sh
+cp input.dot reduced.dot
+python3 build/bin/lotus-cfl-inter-dyck-graph-reduce.py reduced.dot \
+  --graphaux build/bin/lotus-cfl-inter-dyck-graphaux \
+  --dkmerge build/bin/lotus-cfl-inter-dyck-dkmerge
 ```
 
-The resulting graph is in ``current.dot``.
+The driver now accepts explicit paths and no longer depends on a local
+Makefile, `dotfile/exp-2020`, or binaries in the current directory.
 
-## Relationship to other Lotus CFL components
+## Code organization
 
-This module is one of several related implementations for interleaved-Dyck
-reachability in Lotus:
+- `CanaryInterDyckGraphReduce` contains the low-level adjacency implementation;
+  private fast-list and summary types live under `Legacy/`.
+- `GraphAux.cpp` performs one-color component construction.
+- `dkMerge.cpp` performs the degree-based merge phase.
+- `graph_simp.py` alternates both colors and removes proven-redundant edges.
+- `Legacy/` contains private artifact-era data structures. They are not a
+  stable public C++ API and no longer occupy `include/CFL`.
 
-- [`MCFL`](../MCFL/README.md) provides a general multiple-context-free grammar
-  solver and dimension-indexed, witness-producing underapproximations.
-- [`MutualRefinement`](../MutualRefinement/README.md) refines multiple
-  context-free projections of the same graph problem.
-- [`InterleavedDyck`](../InterleavedDyck/README.md) builds a staged analysis on
-  top of projected CFL solving and `MutualRefinement`.
-
-`InterDyckGraphReduce` is currently standalone and uses the specialized public
-types under `include/CFL/InterDyckGraphReduce/`. It is conceptually suitable as
-a preprocessing stage for the other analyses, but no graph adapter or
-preservation contract currently connects them. Keeping the implementations
-separate avoids implying that a reduction proven for one reachability model is
-automatically valid for every MCFL grammar or refinement stage.
+The specialized reducer representation is intentionally not merged with
+`InterleavedDyckCore::Graph`: it stores intermediate merge classes, colored
+summary edges, degrees, and cancellation bookkeeping rather than just the
+input graph. The file-level boundary allows it to consume the same datasets
+without pretending the internal representations are interchangeable.

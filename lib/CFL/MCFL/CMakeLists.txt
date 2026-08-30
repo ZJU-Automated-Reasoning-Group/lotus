@@ -6,3 +6,5 @@ add_library(CanaryMCFL STATIC
 )
 
 target_compile_features(CanaryMCFL PUBLIC cxx_std_17)
+
+target_link_libraries(CanaryMCFL PUBLIC CanaryInterleavedDyckCore)

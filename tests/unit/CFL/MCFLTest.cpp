@@ -1,3 +1,4 @@
+#include "CFL/InterleavedDyckCore/Graph.h"
 #include "CFL/MCFL/Grammar.h"
 #include "CFL/MCFL/Graph.h"
 #include "CFL/MCFL/InterleavedDyck.h"
@@ -324,8 +325,8 @@ TEST(MCFLInterleavedSolverTest,
 }
 
 TEST(MCFLArtifactRegressionTest, ReproducesFaketaobaoPairCounts) {
-  const Graph graph =
-      Graph::parseDotFile(std::string(MCFL_BENCHMARK_DIR) + "/faketaobao.dot");
+  const interleaved_dyck::Graph graph = interleaved_dyck::Graph::parseDotFile(
+      std::string(MCFL_BENCHMARK_DIR) + "/faketaobao.dot");
   const InterleavedAnalysisResult result = InterleavedDyckSolver{}.solve(graph);
   ASSERT_EQ(result.dimensions.size(), 2U);
   EXPECT_EQ(result.dimensions[0].reachable_pairs.size(), 57U);

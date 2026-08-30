@@ -9,6 +9,23 @@
 - generators and a staged driver for the paper's `G_d^circ` and `G_d^+`
   underapproximations of interleaved-Dyck reachability.
 
+## Which API should I use?
+
+The two MCFL APIs have different notions of exactness:
+
+| API | Input language/model | Guarantee | Output |
+|---|---|---|---|
+| `Solver` | Any supported MCFG supplied by the client | Exact for that grammar | All-pairs relation, tuple facts, and witnesses |
+| `InterleavedDyckSolver` | Typed interleaved Dyck through `G_d^circ` or `G_d^+` | Sound underapproximation | One pair set and statistics per dimension |
+
+“Exact for an MCFG” does not mean “exact for general interleaved Dyck.” The
+`G_d` grammars recognize only a subset of the typed target language.
+
+For the staged typed lower/upper approximation pipeline, use the separately
+named **Interleaved-Dyck Approximation** module currently stored under the
+directory `CFL/InterleavedDyckApproximation`. For exact bidirected unary
+reachability, use the independent `CFL/AdaptiveInterleavedDyck` module.
+
 ## Generic solver
 
 The public API is split across `include/CFL/MCFL/Graph.h`, `Grammar.h`, and
@@ -42,6 +59,11 @@ positive dimension:
 - `InterleavedGrammarVariant::Full` is `G_d^+`: add the paper's insertion and
   nesting productions.
 
+For every dimension, reported pairs are certified members of the typed target
+relation. A pair that is not reported is unresolved: it may become derivable
+at a larger dimension or may lie outside the grammar hierarchy used in the
+run.
+
 The staged solver preserves the artifact's graph-side behavior:
 
 1. discard delimiter IDs that lack either an opening or a closing edge;
@@ -70,17 +92,27 @@ benchmarks. Public staged results omit reflexive pairs.
 MCFL belongs to the same interleaved-Dyck analysis family as
 [`InterDyckGraphReduce`](../InterDyckGraphReduce/README.md),
 [`MutualRefinement`](../MutualRefinement/README.md), and
-[`InterleavedDyck`](../InterleavedDyck/README.md), but it has a distinct role:
+[Interleaved-Dyck Approximation](../InterleavedDyckApproximation/README.md),
+but it has a distinct role:
 
 - `InterDyckGraphReduce` specializes in graph simplification for two Dyck
-  alphabets. Its reduced graph could become an MCFL input after an adapter and
-  a preservation check, but MCFL does not invoke it today.
-- `MutualRefinement` refines projected context-free views and provides the
-  backend used by `InterleavedDyck`. MCFL instead saturates multi-component
-  nonterminals directly.
-- `InterleavedDyck` is a staged under/overapproximation pipeline. MCFL's
-  `G_d^circ` and `G_d^+` results are complementary, witness-producing
+  alphabets. Its reduced DOT output can be reloaded through the shared core,
+  but using it before an MCFL grammar still requires the corresponding
+  preservation argument; MCFL does not invoke it automatically.
+- `MutualRefinement` provides grammar-agnostic CNF saturation and derivation
+  tracing used by `InterleavedDyckApproximation`. MCFL instead saturates
+  multi-component nonterminals directly.
+- Interleaved-Dyck Approximation is a staged lower/upper-bound pipeline.
+  MCFL's `G_d^circ` and `G_d^+` results are complementary, witness-producing
   underapproximations and are not currently wired into that pipeline.
+- `AdaptiveInterleavedDyck` computes the exact answer for the bidirected unary
+  specialization and is independent of the MCFG solver.
+
+The typed hierarchy accepts the shared `interleaved_dyck::Graph` directly and
+adapts it to the generic string-labeled MCFL graph. This lets Approximation and
+MCFL load the same benchmark file without duplicate parsers. The generic MCFL
+`Graph` remains necessary because arbitrary MCFG terminals are not limited to
+the fixed typed interleaved-Dyck alphabet.
 
 The implementations remain separate because MCFL tuple facts, grammar rules,
 and proof DAGs do not have a lossless one-to-one mapping to the specialized
@@ -102,6 +134,10 @@ Use `--simple` for `G_d^circ`, `--no-condense` to disable the artifact's cycle
 elimination, `--artifact-compatible` for the artifact's condensed
 cross-product expansion, `--stats` for saturation counters, and
 `--print-pairs` to emit the final relation.
+
+The exact unary algorithm has its own
+`lotus-cfl-adaptive-interleaved-dyck` executable; see the
+[AdaptiveInterleavedDyck README](../AdaptiveInterleavedDyck/README.md).
 
 ## Fidelity checks
 

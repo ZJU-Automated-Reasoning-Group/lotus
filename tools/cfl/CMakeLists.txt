@@ -5,3 +5,7 @@ if(LOTUS_ENABLE_CSR)
 endif()
 
 add_subdirectory(mcfl)
+add_subdirectory(adaptive-interleaved-dyck)
+add_subdirectory(interleaved-dyck-approximation)
+add_subdirectory(mutual-refinement)
+add_subdirectory(inter-dyck-graph-reduce)

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CFL/InterleavedDyckCore/Graph.h"
 #include "CFL/MCFL/Grammar.h"
 #include "CFL/MCFL/Graph.h"
 #include "CFL/MCFL/Solver.h"
@@ -37,6 +38,10 @@ struct InterleavedGrammar {
 
 InterleavedAlphabet discoverInterleavedAlphabet(const Graph &graph);
 
+/// Convert the shared typed interleaved-Dyck graph into the generic
+/// string-labeled MCFL graph without reparsing the input dataset.
+Graph adaptInterleavedDyckGraph(const interleaved_dyck::Graph &graph);
+
 InterleavedGrammar buildInterleavedDyckGrammar(
     unsigned dimension, const InterleavedAlphabet &alphabet,
     InterleavedGrammarVariant variant = InterleavedGrammarVariant::Full);
@@ -61,9 +66,14 @@ struct InterleavedOptions {
       CondensationExpansionPolicy::ReachabilityFiltered;
 };
 
+/// Dimension-indexed, sound underapproximations of typed interleaved-Dyck
+/// reachability. This is distinct from AdaptiveInterleavedDyckSolver, which is
+/// exact only for bidirected unary D1-interleaved-D1 after projection.
 class InterleavedDyckSolver {
 public:
   InterleavedAnalysisResult solve(const Graph &graph,
+                                  const InterleavedOptions &options = {}) const;
+  InterleavedAnalysisResult solve(const interleaved_dyck::Graph &graph,
                                   const InterleavedOptions &options = {}) const;
 };
 

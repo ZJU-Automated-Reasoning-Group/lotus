@@ -1,16 +1,17 @@
-#include "CFL/InterDyckGraphReduce/CFLReach.h"
-#include "CFL/InterDyckGraphReduce/FastDLL.h"
-//#include <bitset>
-//#include <deque>
+#include "Legacy/CFLReach.h"
+#include "Legacy/FastDLL.h"
+// #include <bitset>
+// #include <deque>
 #include <fstream>
 #include <iostream>
 #include <queue>
 #include <sstream>
 #include <string>
-#include <sys/time.h>
 #include <unordered_map>
 #include <utility>
-//#include <vector>
+
+#include <sys/time.h>
+// #include <vector>
 
 using namespace std;
 
@@ -27,8 +28,8 @@ public:
   unsigned bfrom;
   unsigned bto;
   unsigned eid;
-  MergedEdges(unsigned af, unsigned at, unsigned bf, unsigned bt, unsigned e) : afrom(af), ato(at), bfrom(bf), bto(bt), eid(e) {
-  }
+  MergedEdges(unsigned af, unsigned at, unsigned bf, unsigned bt, unsigned e)
+      : afrom(af), ato(at), bfrom(bf), bto(bt), eid(e) {}
 };
 
 int debug = 0;
@@ -547,53 +548,46 @@ void arrayreach(CFLHashMap &cm, unordered_map<string, unsigned> &edgeStrToID,
 int arrayversion() {
 
   // cout<<version<<'\n';
-  string line;
+  const string line = colorreach_graph;
 
-  // string line contains the filename
-  while (getline(in, line)) { // for every file
+  unsigned NodeNum;
+  SimpleDotParser dotparser;
 
-    // yuanbo modify
-    line = colorreach_graph;
+  unordered_map<string, unsigned> NodeID;
+  unordered_map<string, unsigned> EdgeID;
 
-    unsigned NodeNum;
-    SimpleDotParser dotparser;
+  // vector<CFLGrammar> CGVec;
 
-    unordered_map<string, unsigned> NodeID;
-    unordered_map<string, unsigned> EdgeID;
+  // cout<<"Processing "<<line<<'\n';
+  // cout<<"doing "<<line<<'\n';
+  NodeNum = dotparser.BuildNodeMap(line, NodeID);
+  // cout<<"doing "<<line<<" of size "<<NodeNum<<'\n';
+  // NodeNum = dotparser.BuildMatrix(line, NodeID);
 
-    // vector<CFLGrammar> CGVec;
+  // CFLBitTable bt(NodeNum);
+  // cout<<"node "<<NodeNum<<'\n';
+  // CFLMatrix cm(NodeNum);
+  // unsigned long abc = 100000;
+  // cout<<"lala" << abc*abc<<'\n';
+  // CFLMatrix cm(NodeNum);
+  CFLHashMap cm1(NodeNum);
 
-    // cout<<"Processing "<<line<<'\n';
-    // cout<<"doing "<<line<<'\n';
-    NodeNum = dotparser.BuildNodeMap(line, NodeID);
-    // cout<<"doing "<<line<<" of size "<<NodeNum<<'\n';
-    // NodeNum = dotparser.BuildMatrix(line, NodeID);
+  /*if(NodeNum>nodemax){
+    cout<<"max: "<<nodemax<<" new: "<<NodeNum<<"   "<<line<<'\n';
+    nodemax = NodeNum;
+    }*/
 
-    // CFLBitTable bt(NodeNum);
-    // cout<<"node "<<NodeNum<<'\n';
-    // CFLMatrix cm(NodeNum);
-    // unsigned long abc = 100000;
-    // cout<<"lala" << abc*abc<<'\n';
-    // CFLMatrix cm(NodeNum);
-    CFLHashMap cm1(NodeNum);
+  dotparser.BuildMyHashTable(line, NodeID, EdgeID, cm1);
+  // dotparser.BuildMatrix(line, NodeID, cm1);
+  // dotparser.BuildBitTable(line, NodeID, cm1);
 
-    /*if(NodeNum>nodemax){
-      cout<<"max: "<<nodemax<<" new: "<<NodeNum<<"   "<<line<<'\n';
-      nodemax = NodeNum;
-      }*/
+  // cout<<"Node: "<<cm1.GetVtxNum()<<" Edge "<<cm1.GetEdgNum()<<'\n';
+  // cout<<"Para "<<EdgeID.size()<<'\n';
 
-    dotparser.BuildMyHashTable(line, NodeID, EdgeID, cm1);
-    // dotparser.BuildMatrix(line, NodeID, cm1);
-    // dotparser.BuildBitTable(line, NodeID, cm1);
+  // EdgeID.clear();
+  // NodeID.clear();
 
-    // cout<<"Node: "<<cm1.GetVtxNum()<<" Edge "<<cm1.GetEdgNum()<<'\n';
-    // cout<<"Para "<<EdgeID.size()<<'\n';
-
-    // EdgeID.clear();
-    // NodeID.clear();
-
-    arrayreach(cm1, EdgeID, NodeID);
-  }
+  arrayreach(cm1, EdgeID, NodeID);
   // SimpleDotParser dotparser;
   // dotparser.ParsingFile("./data/CINT2000/254.gap/plist.o.lala.dot");
 

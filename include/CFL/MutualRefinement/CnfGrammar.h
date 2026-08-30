@@ -1,15 +1,17 @@
-#ifndef GRAMMAR_H
-#define GRAMMAR_H
+#pragma once
 
 #include "CFL/MutualRefinement/Hasher.h"
+
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
+namespace lotus::cfl::mutual_refinement {
+
 /* Context-free grammar in Chomsky normal form
  * Symbols are encoded as integers */
-struct Grammar {
+struct CnfGrammar {
   /* Member functions to add symbols and productions */
   void addTerminal(int t);
   void addNonterminal(int nt);
@@ -40,4 +42,4 @@ struct Grammar {
       binaryR;
 };
 
-#endif
+} // namespace lotus::cfl::mutual_refinement

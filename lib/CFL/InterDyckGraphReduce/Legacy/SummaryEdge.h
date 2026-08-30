@@ -96,6 +96,15 @@ public:
     constructGraph();
   }
 
+  ~SummaryGraph() {
+    for (SummaryNode *node : nodes) {
+      delete node;
+    }
+  }
+
+  SummaryGraph(const SummaryGraph &) = delete;
+  SummaryGraph &operator=(const SummaryGraph &) = delete;
+
   unordered_map<unsigned, string>
   getEidToOrig(unordered_map<string, unsigned> &str2eid) {
     unordered_map<unsigned, string> result;
@@ -163,6 +172,9 @@ if* return node pair in the string of an edge in the input file
       }
 
       string edgeLabel = getEdgeLabel(line);
+      if (edgeLabel == "normal") {
+        continue;
+      }
       edgeLabel = edgeLabel.substr(1);
       // cout << "edge label is " << edgeLabel << '\n';
       if (result.find(edgeLabel) == result.end()) {
@@ -238,6 +250,12 @@ if* return node pair in the string of an edge in the input file
       string from, to;
       pair<string, string> nodes = getNodePair(line);
       string edgeLabel = getEdgeLabel(line);
+
+      // Neutral edges are preserved in the original graph by graph_simp.py,
+      // but they do not participate in either colored Dyck projection.
+      if (edgeLabel == "normal") {
+        continue;
+      }
 
       if (isOpen(edgeLabel)) {
         from = nodes.first;

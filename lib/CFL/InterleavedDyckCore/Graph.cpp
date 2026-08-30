@@ -1,4 +1,4 @@
-#include "CFL/InterleavedDyck/InterleavedDyck.h"
+#include "CFL/InterleavedDyckCore/Graph.h"
 
 #include <algorithm>
 #include <charconv>
@@ -62,8 +62,20 @@ Label Label::neutral() { return {LabelKind::Neutral, 0}; }
 
 Label Label::parse(std::string_view text) {
   text = trim(text);
-  if (text == "normal") {
+  if (text.empty() || text == "normal" || text == "eps" || text == "epsilon") {
     return neutral();
+  }
+  if (text == "+1" || text == "+_1") {
+    return openParenthesis(0);
+  }
+  if (text == "-1" || text == "-_1") {
+    return closeParenthesis(0);
+  }
+  if (text == "+2" || text == "+_2") {
+    return openBracket(0);
+  }
+  if (text == "-2" || text == "-_2") {
+    return closeBracket(0);
   }
   if (text.size() <= 4 || text.substr(2, 2) != "--") {
     throw std::invalid_argument("unknown interleaved-Dyck label: " +
@@ -86,6 +98,22 @@ Label Label::parse(std::string_view text) {
   }
   throw std::invalid_argument("unknown interleaved-Dyck label: " +
                               std::string(text));
+}
+
+Label Label::complement() const {
+  switch (kind) {
+  case LabelKind::OpenParenthesis:
+    return closeParenthesis(id);
+  case LabelKind::CloseParenthesis:
+    return openParenthesis(id);
+  case LabelKind::OpenBracket:
+    return closeBracket(id);
+  case LabelKind::CloseBracket:
+    return openBracket(id);
+  case LabelKind::Neutral:
+    return neutral();
+  }
+  throw std::logic_error("unhandled interleaved-Dyck label kind");
 }
 
 std::string Label::str() const {
@@ -142,13 +170,19 @@ void Graph::addVertex(Vertex vertex) {
   }
 }
 
-void Graph::addEdge(Vertex source, Vertex target, Label label) {
+bool Graph::addEdge(Vertex source, Vertex target, Label label) {
   addVertex(source);
   addVertex(target);
   const Edge candidate{source, target, label};
   if (edge_set_.insert(candidate).second) {
     edges_.push_back(candidate);
+    return true;
   }
+  return false;
+}
+
+bool Graph::containsVertex(Vertex vertex) const {
+  return vertex_set_.count(vertex) != 0U;
 }
 
 Graph Graph::parseDot(std::istream &input) {

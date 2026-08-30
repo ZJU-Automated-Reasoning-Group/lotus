@@ -1,86 +1,20 @@
 #pragma once
 
+#include "CFL/InterleavedDyckCore/Graph.h"
+
 #include <cstddef>
-#include <cstdint>
-#include <iosfwd>
-#include <string>
-#include <string_view>
-#include <unordered_set>
-#include <vector>
 
-namespace lotus::cfl::interleaved_dyck {
+namespace lotus::cfl::interleaved_dyck_approximation {
 
-using Vertex = std::int64_t;
-
-enum class LabelKind {
-  OpenParenthesis,
-  CloseParenthesis,
-  OpenBracket,
-  CloseBracket,
-  Neutral,
-};
-
-struct Label {
-  LabelKind kind = LabelKind::Neutral;
-  unsigned id = 0;
-
-  static Label openParenthesis(unsigned id);
-  static Label closeParenthesis(unsigned id);
-  static Label openBracket(unsigned id);
-  static Label closeBracket(unsigned id);
-  static Label neutral();
-  static Label parse(std::string_view text);
-
-  std::string str() const;
-
-  bool operator==(const Label &other) const;
-  bool operator!=(const Label &other) const { return !(*this == other); }
-};
-
-struct Edge {
-  Vertex source = 0;
-  Vertex target = 0;
-  Label label;
-
-  bool operator==(const Edge &other) const;
-};
-
-struct EdgeHash {
-  std::size_t operator()(const Edge &edge) const;
-};
-
-struct Pair {
-  Vertex source = 0;
-  Vertex target = 0;
-
-  bool operator==(const Pair &other) const;
-  bool operator!=(const Pair &other) const { return !(*this == other); }
-};
-
-struct PairHash {
-  std::size_t operator()(const Pair &pair) const;
-};
-
-using PairSet = std::unordered_set<Pair, PairHash>;
-
-class Graph {
-public:
-  void addVertex(Vertex vertex);
-  void addEdge(Vertex source, Vertex target, Label label);
-
-  const std::vector<Vertex> &vertices() const { return vertices_; }
-  const std::vector<Edge> &edges() const { return edges_; }
-  bool empty() const { return edges_.empty(); }
-
-  static Graph parseDot(std::istream &input);
-  static Graph parseDotFile(const std::string &path);
-
-private:
-  std::vector<Vertex> vertices_;
-  std::vector<Edge> edges_;
-  std::unordered_set<Vertex> vertex_set_;
-  std::unordered_set<Edge, EdgeHash> edge_set_;
-};
+using interleaved_dyck::Edge;
+using interleaved_dyck::EdgeHash;
+using interleaved_dyck::Graph;
+using interleaved_dyck::Label;
+using interleaved_dyck::LabelKind;
+using interleaved_dyck::Pair;
+using interleaved_dyck::PairHash;
+using interleaved_dyck::PairSet;
+using interleaved_dyck::Vertex;
 
 enum class Alphabet { Parenthesis, Bracket };
 enum class GrammarStrength { Classic, Parity };
@@ -95,14 +29,26 @@ struct Options {
 };
 
 struct ApproximationResult {
+  /// Benchmark-specific regular-language candidate filter.
   PairSet regularization;
+  /// Overapproximation: each projection may use a different witness path.
   PairSet intersection;
+  /// Underapproximation: one union-Dyck witness satisfies both projections.
   PairSet underapproximation;
+  /// Overapproximation after classic derivation-tracing refinement.
   PairSet mutual_refinement;
+  /// Tighter overapproximation after parity/endpoint refinement.
   PairSet stronger_grammar;
+  /// Final overapproximation after pairwise refinement.
   PairSet on_demand;
 };
 
+/// Staged lower/upper approximations for typed interleaved-Dyck reachability.
+///
+/// This solver does not compute the exact general typed relation. A pair in
+/// `underapproximation` is definitely reachable; a pair absent from the final
+/// `on_demand` overapproximation is definitely unreachable; pairs between
+/// those bounds remain unresolved by this pipeline.
 class Solver {
 public:
   /// Runs one projected Dyck grammar. Edges in the other alphabet are treated
@@ -135,4 +81,4 @@ public:
                               const Options &options = {}) const;
 };
 
-} // namespace lotus::cfl::interleaved_dyck
+} // namespace lotus::cfl::interleaved_dyck_approximation

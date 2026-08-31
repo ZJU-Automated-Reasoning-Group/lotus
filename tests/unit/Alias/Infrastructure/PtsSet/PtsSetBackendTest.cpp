@@ -1,5 +1,6 @@
 #include "Alias/Infrastructure/PtsSet/BloomBitsetPtsSet.h"
 #include "Alias/Infrastructure/PtsSet/ChunkedSparseBitsetPtsSet.h"
+#include "Alias/Infrastructure/PtsSet/HashConsedPointsToSet.h"
 
 #include <cstdint>
 #include <vector>
@@ -103,3 +104,46 @@ TEST(BloomBitsetPtsSetTest, BloomFilterDoesNotChangeExactIntersection) {
   EXPECT_FALSE(lhs.contains(rhs));
 }
 
+TEST(HashConsedPointsToSetTest, InternsEqualSetsAndMemoizesOperations) {
+  lotus::alias::HashConsedPointsToSetArena arena;
+  const auto first = arena.intern({1, 2, 3});
+  const auto duplicate = arena.intern({1, 2, 3});
+  const auto second = arena.intern({3, 4});
+  EXPECT_EQ(first, duplicate);
+
+  const auto united = arena.unite(first, second);
+  EXPECT_EQ(arena.get(united),
+            lotus::alias::HashConsedPointsToSetArena::Set({1, 2, 3, 4}));
+  EXPECT_EQ(arena.unite(second, first), united);
+
+  const auto common = arena.intersect(first, second);
+  EXPECT_EQ(arena.get(common),
+            lotus::alias::HashConsedPointsToSetArena::Set({3}));
+  EXPECT_EQ(arena.intersect(second, first), common);
+
+  const auto remainder = arena.difference(first, second);
+  EXPECT_EQ(arena.get(remainder),
+            lotus::alias::HashConsedPointsToSetArena::Set({1, 2}));
+  EXPECT_EQ(arena.difference(first, second), remainder);
+
+  const auto stats = arena.statistics();
+  EXPECT_GT(stats.internHits, 0u);
+  EXPECT_GT(stats.unionCacheHits, 0u);
+  EXPECT_GT(stats.intersectionCacheHits, 0u);
+  EXPECT_GT(stats.differenceCacheHits, 0u);
+}
+
+TEST(HashConsedPointsToSetTest, ImmutableHandlesShareCanonicalIdentity) {
+  lotus::alias::HashConsedPointsToSetArena arena;
+  auto one = lotus::alias::HashConsedPointsToSet::singleton(arena, 1);
+  auto two = lotus::alias::HashConsedPointsToSet::singleton(arena, 2);
+  auto both = one.unite(two);
+  auto reverse = two.unite(one);
+
+  EXPECT_EQ(both, reverse);
+  EXPECT_TRUE(both.contains(1));
+  EXPECT_TRUE(both.contains(2));
+  EXPECT_EQ(both.size(), 2u);
+  EXPECT_EQ(both.difference(one), two);
+  EXPECT_TRUE(both.intersects(one));
+}

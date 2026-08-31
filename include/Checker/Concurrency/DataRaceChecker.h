@@ -1,9 +1,10 @@
-/** @file DataRaceChecker.h @brief Data race detection checker for concurrent programs. */
+/** @file DataRaceChecker.h @brief Data race detection checker for concurrent
+ * programs. */
 #ifndef DATA_RACE_CHECKER_H
 #define DATA_RACE_CHECKER_H
 
-#include "Concurrency/LockSet/LockSetAnalysis.h"
 #include "Checker/Concurrency/ConcurrencyBugReport.h"
+#include "Concurrency/LockSet/LockSetAnalysis.h"
 #include "Concurrency/MHP/IMHPAnalysis.h"
 #include "Concurrency/Memory/EscapeAnalysis.h"
 #include "Concurrency/Memory/StaticThreadSharingAnalysis.h"
@@ -22,9 +23,6 @@
 namespace lotus {
 class AliasAnalysisWrapper;
 class HappensBeforeAnalysis;
-namespace analysis {
-class SparseFlowSensitivePTA;
-}
 } // namespace lotus
 
 namespace concurrency {
@@ -49,8 +47,7 @@ public:
       ThreadLocal::ThreadLocalAnalysis *threadLocalAnalysis = nullptr,
       lotus::StaticThreadSharingAnalysis *staticThreadSharingAnalysis = nullptr,
       lotus::AliasAnalysisWrapper *aliasAnalysis = nullptr,
-      lotus::HappensBeforeAnalysis *happensBeforeAnalysis = nullptr,
-      const lotus::analysis::SparseFlowSensitivePTA *sparsePTA = nullptr);
+      lotus::HappensBeforeAnalysis *happensBeforeAnalysis = nullptr);
 
   /**
    * @brief Check for data races in the module
@@ -90,7 +87,6 @@ private:
   lotus::StaticThreadSharingAnalysis *m_staticThreadSharingAnalysis;
   lotus::AliasAnalysisWrapper *m_aliasAnalysis;
   lotus::HappensBeforeAnalysis *m_happensBeforeAnalysis;
-  const lotus::analysis::SparseFlowSensitivePTA *m_sparsePTA;
 
   bool mayAlias(const llvm::Value *v1, const llvm::Value *v2) const;
   bool isMemoryAccess(const llvm::Instruction *inst) const;

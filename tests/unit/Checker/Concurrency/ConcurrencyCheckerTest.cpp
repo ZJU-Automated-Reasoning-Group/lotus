@@ -721,6 +721,8 @@ TEST_F(ConcurrencyCheckerTest, MultiStageSparseRefinementRunsOnRacePath) {
 
   concurrency::ConcurrencyChecker checker(*module);
   checker.enableMultiStageSlicing(true);
+  checker.setSparsePointsToSetBackend(
+      lotus::alias::PointsToSetBackend::HashConsed);
   checker.enableDeadlockCheck(false);
   checker.enableAtomicityCheck(false);
   checker.enableCondVarCheck(false);
@@ -738,6 +740,8 @@ TEST_F(ConcurrencyCheckerTest, MultiStageSparseRefinementRunsOnRacePath) {
   EXPECT_EQ(stats.sparsePreThreads, 3u);
   EXPECT_EQ(stats.sparseMainThreads, 3u);
   EXPECT_GT(stats.sparseJoinMemoryEdges, 0u);
+  EXPECT_GT(stats.sparseHashConsedUniqueSets, 0u);
+  EXPECT_GT(stats.sparseHashConsedUnionCacheHits, 0u);
 }
 
 TEST_F(ConcurrencyCheckerTest, CUDAStatisticsAreCollected) {

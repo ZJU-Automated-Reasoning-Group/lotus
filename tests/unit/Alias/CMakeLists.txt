@@ -2,6 +2,7 @@
 
 add_subdirectory(DemandDriven/DDA)
 add_subdirectory(InclusionBased/AserPTA)
+add_subdirectory(InclusionBased/FlowSensitive)
 add_subdirectory(InclusionBased/LotusAA)
 add_subdirectory(InclusionBased/SparrowAA)
 add_subdirectory(InclusionBased/TPA)

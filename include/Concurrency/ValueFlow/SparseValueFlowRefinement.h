@@ -1,9 +1,10 @@
 /**
- * @file SparseFlowSensitivePTA.h
- * @brief Whole-program sparse flow-sensitive points-to refinement over SVFG.
+ * @file SparseValueFlowRefinement.h
+ * @brief Lightweight concurrency-specific value-flow refinement over SVFG.
  */
 #pragma once
 
+#include "Alias/Infrastructure/PtsSet/HashConsedPointsToSet.h"
 #include "IR/GraphView.h"
 
 #include <cstddef>
@@ -15,18 +16,24 @@ namespace lotus::analysis {
 /// Solves pointer-value flow over the SVFG and its thread-interference overlay.
 /// Memory values are attached to sparse MemorySSA definitions rather than to
 /// every LLVM instruction.
-class SparseFlowSensitivePTA {
+class SparseValueFlowRefinement {
 public:
   struct Statistics {
     std::size_t iterations = 0;
     std::size_t pointsToFacts = 0;
     std::size_t memoryFacts = 0;
     std::size_t strongUpdates = 0;
+    std::size_t hashConsedUniqueSets = 0;
+    std::size_t hashConsedStoredElements = 0;
+    std::size_t hashConsedUnionRequests = 0;
+    std::size_t hashConsedUnionCacheHits = 0;
   };
 
-  explicit SparseFlowSensitivePTA(const SVFG &graph,
-                                  const FilteredSVFGView *scope = nullptr)
-      : graph_(&graph), scope_(scope) {}
+  explicit SparseValueFlowRefinement(
+      const SVFG &graph, const FilteredSVFGView *scope = nullptr,
+      lotus::alias::PointsToSetBackend backend =
+          lotus::alias::PointsToSetBackend::Mutable)
+      : graph_(&graph), scope_(scope), backend_(backend) {}
 
   const Statistics &solve();
 
@@ -47,16 +54,31 @@ public:
                                        const llvm::Instruction *rhs) const;
 
   const Statistics &statistics() const { return stats_; }
+  lotus::alias::PointsToSetBackend backend() const { return backend_; }
 
 private:
+  struct WorkingSet {
+    SVFGNodeBS mutableSet;
+    lotus::alias::HashConsedPointsToSetArena::SetID interned =
+        lotus::alias::HashConsedPointsToSetArena::EmptySet;
+  };
+
   bool isStrongUpdate(const StoreSVFGNode &store) const;
   bool containsUnknown(const SVFGNodeBS &pointsTo) const;
   bool inScope(const SVFGNode *node) const;
+  WorkingSet singleton(uint32_t object);
+  bool mergeSet(WorkingSet &destination, const WorkingSet &source);
+  bool mergeSet(WorkingSet &destination, const SVFGNodeBS &source);
+  const SVFGNodeBS &materialize(const WorkingSet &set) const;
+  const WorkingSet &nodeSet(const SVFGNode *node) const;
+  const WorkingSet &memorySet(const SVFGNode *node) const;
 
   const SVFG *graph_;
   const FilteredSVFGView *scope_;
-  std::unordered_map<uint32_t, SVFGNodeBS> nodePointsTo_;
-  std::unordered_map<uint32_t, SVFGNodeBS> memoryValues_;
+  lotus::alias::PointsToSetBackend backend_;
+  lotus::alias::HashConsedPointsToSetArena hashConsedArena_;
+  std::unordered_map<uint32_t, WorkingSet> nodePointsTo_;
+  std::unordered_map<uint32_t, WorkingSet> memoryValues_;
   std::unordered_map<uint32_t, bool> nodeComplete_;
   std::unordered_map<uint32_t, bool> memoryComplete_;
   Statistics stats_;

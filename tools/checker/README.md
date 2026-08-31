@@ -66,7 +66,8 @@ build/bin/lotus-check --engine=concur test.bc --checks=data-race,deadlock
 # Context-bounded MSli refinement with thread-aware MemorySSA
 build/bin/lotus-check --engine=concur test.bc --checks=data-race \
   --concur.msli --concur.thread-context=2 \
-  --concur.memory-partition=inter-disjoint
+  --concur.memory-partition=inter-disjoint \
+  --concur.points-to-sets=hash-consed
 ```
 
 `--list-checkers` lists every check ID together with its engine, execution mode,

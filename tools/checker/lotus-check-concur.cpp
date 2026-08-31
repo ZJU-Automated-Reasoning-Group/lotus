@@ -71,6 +71,15 @@ static cl::opt<unsigned> ThreadContextLimit(
     "concur.thread-context",
     cl::desc("Maximum call-string depth in the thread creation tree"),
     cl::init(2), cl::sub(lotus::checker::tooling::concurrencySubCommand()));
+enum class PointsToSetOption { Mutable, HashConsed };
+static cl::opt<PointsToSetOption> PointsToSets(
+    "concur.points-to-sets", cl::desc("Sparse solver points-to set backend"),
+    cl::values(clEnumValN(PointsToSetOption::Mutable, "mutable",
+                          "Mutable ordered sets (default)"),
+               clEnumValN(PointsToSetOption::HashConsed, "hash-consed",
+                          "Immutable interned sets with memoized operations")),
+    cl::init(PointsToSetOption::Mutable),
+    cl::sub(lotus::checker::tooling::concurrencySubCommand()));
 
 int runConcurrencyCheckerTool(const char *argv0) {
   (void)lotus::checker::tooling::statsEnabled();
@@ -131,6 +140,10 @@ int runConcurrencyCheckerTool(const char *argv0) {
     break;
   }
   checker.setThreadContextLimit(ThreadContextLimit);
+  checker.setSparsePointsToSetBackend(
+      PointsToSets == PointsToSetOption::HashConsed
+          ? lotus::alias::PointsToSetBackend::HashConsed
+          : lotus::alias::PointsToSetBackend::Mutable);
 
   checker.runAnalyses();
 

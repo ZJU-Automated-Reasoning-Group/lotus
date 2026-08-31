@@ -51,8 +51,7 @@ WholeProgramSparseRefinement::build(llvm::Module &module,
   stats_.preOverlay = overlay_->build();
 
   if (refinementConfig.mode == Mode::MultiStageSlicing) {
-    slicer_ =
-        std::make_unique<MultiStageSlicer>(*svfg_, preThreadTree_.get());
+    slicer_ = std::make_unique<MultiStageSlicer>(*svfg_, preThreadTree_.get());
     slice_ = slicer_->slice();
     stats_.slicing = slicer_->statistics();
 
@@ -78,7 +77,9 @@ WholeProgramSparseRefinement::build(llvm::Module &module,
     stats_.slicing.pointsToNodes = svfg_->getNumNodes();
   }
 
-  solver_ = std::make_unique<SparseFlowSensitivePTA>(*svfg_, slice_.get());
+  solver_ = std::make_unique<FSMPTA>(
+      *svfg_,
+      FSMPTA::Config{slice_.get(), refinementConfig.pointsToSetBackend});
   stats_.solver = solver_->solve();
   return stats_;
 }

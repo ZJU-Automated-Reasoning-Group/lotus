@@ -21,8 +21,9 @@ set(Concurrency_SOURCES
   Memory/StaticThreadSharingAnalysis.cpp
   Thread/ThreadCreationTree.cpp
   ValueFlow/ThreadAwareSVFG.cpp
+  ValueFlow/FSMPTA.cpp
   ValueFlow/MultiStageSlicer.cpp
-  ValueFlow/SparseFlowSensitivePTA.cpp
+  ValueFlow/SparseValueFlowRefinement.cpp
   ValueFlow/WholeProgramSparseRefinement.cpp
   CUDA/CUDASemantics.cpp
   CUDA/CUDAAbstractState.cpp
@@ -61,6 +62,7 @@ add_library(Concurrency STATIC ${Concurrency_SOURCES})
 target_link_libraries(Concurrency
   CanaryLLVMUtils
   CanaryAliasAnalysisWrapper
+  FlowSensitivePTA
   SVFG)
 target_compile_definitions(Concurrency PRIVATE
   LOTUS_SOURCE_CONFIG_DIR="${PROJECT_SOURCE_DIR}/config"

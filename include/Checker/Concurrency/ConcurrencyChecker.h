@@ -155,6 +155,10 @@ public:
   void setThreadContextLimit(std::size_t limit) {
     m_threadContextLimit = limit;
   }
+  void
+  setSparsePointsToSetBackend(lotus::alias::PointsToSetBackend backend) {
+    m_sparsePointsToSetBackend = backend;
+  }
 
   /**
    * @brief Get statistics about the analysis
@@ -180,6 +184,8 @@ public:
     size_t sparseMainThreads;
     size_t sparseForkMemoryEdges;
     size_t sparseJoinMemoryEdges;
+    size_t sparseHashConsedUniqueSets;
+    size_t sparseHashConsedUnionCacheHits;
     OpenMP::OpenMPTaskGraph::AnalysisSummary openMPSummary;
     ConcurrencyFacade::MPISummary mpiSummary;
     ConcurrencyFacade::CUDASummary cudaSummary;
@@ -244,6 +250,8 @@ private:
   lotus::analysis::MemoryRegionPartitionStrategy m_sparseMemoryPartition =
       lotus::analysis::MemoryRegionPartitionStrategy::InterDisjoint;
   std::size_t m_threadContextLimit = 2;
+  lotus::alias::PointsToSetBackend m_sparsePointsToSetBackend =
+      lotus::alias::PointsToSetBackend::Mutable;
   MHPBackendKind m_mhpBackend = MHPBackendKind::Region;
 
   // Bug type IDs (registered with BugReportMgr)

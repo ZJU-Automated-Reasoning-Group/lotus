@@ -2,7 +2,7 @@
 #include "Concurrency/Thread/ThreadCreationTree.h"
 #include "Concurrency/Utils/ThreadAPI.h"
 #include "Concurrency/ValueFlow/MultiStageSlicer.h"
-#include "Concurrency/ValueFlow/SparseFlowSensitivePTA.h"
+#include "Concurrency/ValueFlow/SparseValueFlowRefinement.h"
 #include "Concurrency/ValueFlow/ThreadAwareSVFG.h"
 #include "IR/ICFG/ICFGBuilder.h"
 #include "IR/SVFG/SVFGBuilder.h"
@@ -204,7 +204,7 @@ TEST_F(ValueFlowTest, SparseSolverKillsOverwrittenSingletonGlobalValue) {
   graph.addEdge(storeY, result, SVFGEdgeK::IntraIndirect, nullptr,
                 {slotObject});
 
-  SparseFlowSensitivePTA solver(graph);
+  SparseValueFlowRefinement solver(graph);
   solver.solve();
 
   ASSERT_TRUE(solver.hasCompletePointsTo(result));
@@ -215,6 +215,16 @@ TEST_F(ValueFlowTest, SparseSolverKillsOverwrittenSingletonGlobalValue) {
   ASSERT_TRUE(solver.mayAliasAccesses(throughResult, directX).has_value());
   EXPECT_FALSE(*solver.mayAliasAccesses(throughResult, directX));
   EXPECT_GT(solver.statistics().strongUpdates, 0u);
+  EXPECT_EQ(solver.backend(), lotus::alias::PointsToSetBackend::Mutable);
+  EXPECT_EQ(solver.statistics().hashConsedUniqueSets, 0u);
+
+  SparseValueFlowRefinement hashConsedSolver(
+      graph, nullptr, lotus::alias::PointsToSetBackend::HashConsed);
+  hashConsedSolver.solve();
+  EXPECT_EQ(hashConsedSolver.pointsTo(result), SVFGNodeBS({yObject}));
+  EXPECT_EQ(hashConsedSolver.pointsTo(result), solver.pointsTo(result));
+  EXPECT_GT(hashConsedSolver.statistics().hashConsedUniqueSets, 0u);
+  EXPECT_GT(hashConsedSolver.statistics().hashConsedUnionRequests, 0u);
 }
 
 TEST_F(ValueFlowTest, MultiStageSliceDropsUnrelatedValueFlow) {

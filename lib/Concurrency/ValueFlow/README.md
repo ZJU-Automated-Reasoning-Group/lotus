@@ -7,7 +7,7 @@ concurrency checker:
   Store-to-Store `ThreadMHPIndirectVF` edges for accesses that may run in
   parallel. A `FilteredSVFGView` can restrict construction to an induced
   subgraph without copying graph nodes.
-- `SparseFlowSensitivePTA` propagates pointer values through the SVFG and keeps
+- `SparseValueFlowRefinement` propagates pointer values through the SVFG and keeps
   memory values on MemorySSA definitions. Sequential singleton-global stores
   use strong updates; thread-interference inputs are always weak updates.
 - `WholeProgramSparseRefinement` owns the ICFG, SVFG, overlay, and solver for a
@@ -46,10 +46,11 @@ Multi-stage slicing is enabled with:
 
 ```text
 lotus-check --engine=concur --checks=data-race --concur.msli \
-  --concur.memory-partition=inter-disjoint input.bc
+  --concur.memory-partition=inter-disjoint \
+  --concur.points-to-sets=hash-consed input.bc
 ```
 
-The option is off by default while performance and precision are evaluated on
-larger programs. Incomplete or wildcard points-to results never suppress a
-race candidate; the checker only removes a pair when complete sparse results
-prove its access-target sets disjoint.
+The sparse analysis and hash-consed backend are both opt-in. Mutable ordered
+sets remain the default. Incomplete or wildcard points-to results never
+suppress a race candidate; the checker only removes a pair when complete
+sparse results prove its access-target sets disjoint.

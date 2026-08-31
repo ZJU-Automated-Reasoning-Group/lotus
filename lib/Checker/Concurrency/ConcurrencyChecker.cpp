@@ -144,6 +144,8 @@ ConcurrencyChecker::ConcurrencyChecker(Module &module)
   m_stats.sparseMainThreads = 0;
   m_stats.sparseForkMemoryEdges = 0;
   m_stats.sparseJoinMemoryEdges = 0;
+  m_stats.sparseHashConsedUniqueSets = 0;
+  m_stats.sparseHashConsedUnionCacheHits = 0;
   m_stats.openMPSummary = OpenMP::OpenMPTaskGraph::AnalysisSummary{};
   m_stats.mpiSummary = ConcurrencyFacade::MPISummary{};
   m_stats.cudaSummary = ConcurrencyFacade::CUDASummary{};
@@ -184,6 +186,8 @@ void ConcurrencyChecker::runAnalyses() {
   m_stats.sparseMainThreads = 0;
   m_stats.sparseForkMemoryEdges = 0;
   m_stats.sparseJoinMemoryEdges = 0;
+  m_stats.sparseHashConsedUniqueSets = 0;
+  m_stats.sparseHashConsedUnionCacheHits = 0;
   m_stats.openMPSummary = OpenMP::OpenMPTaskGraph::AnalysisSummary{};
   m_stats.mpiSummary = ConcurrencyFacade::MPISummary{};
   m_stats.cudaSummary = ConcurrencyFacade::CUDASummary{};
@@ -346,10 +350,11 @@ void ConcurrencyChecker::runAnalyses() {
             : lotus::analysis::WholeProgramSparseRefinement::Mode::WholeProgram;
     sparseConfig.memoryPartition = m_sparseMemoryPartition;
     sparseConfig.threadContextLimit = m_threadContextLimit;
+    sparseConfig.pointsToSetBackend = m_sparsePointsToSetBackend;
     const auto &sparseStats = m_sparseRefinement->build(
         m_module, *m_mhpAnalysis, m_locksetAnalysisView, sparseConfig);
     m_stats.sparseInterferenceEdges = sparseStats.overlay.edgesAdded;
-    m_stats.sparsePointsToFacts = sparseStats.solver.pointsToFacts;
+    m_stats.sparsePointsToFacts = sparseStats.solver.topLevelFacts;
     m_stats.sparseMemoryRegions = sparseStats.memoryRegions.regions;
     m_stats.sparseOriginalNodes = sparseStats.slicing.originalNodes;
     m_stats.sparseSlicedNodes = sparseStats.slicing.pointsToNodes;
@@ -359,13 +364,16 @@ void ConcurrencyChecker::runAnalyses() {
                                     sparseStats.overlay.forkMemoryEdges;
     m_stats.sparseJoinMemoryEdges = sparseStats.preOverlay.joinMemoryEdges +
                                     sparseStats.overlay.joinMemoryEdges;
+    m_stats.sparseHashConsedUniqueSets =
+        sparseStats.solver.hashConsedUniqueSets;
+    m_stats.sparseHashConsedUnionCacheHits =
+        sparseStats.solver.hashConsedUnionCacheHits;
   }
 
   m_dataRaceChecker = std::make_unique<DataRaceChecker>(
       m_module, m_mhpAnalysis, m_locksetAnalysisView, m_escapeAnalysis.get(),
       m_threadLocalAnalysis.get(), m_staticThreadSharingAnalysis, aa,
-      m_happensBeforeAnalysis.get(),
-      m_sparseRefinement ? m_sparseRefinement->solver() : nullptr);
+      m_happensBeforeAnalysis.get());
   m_deadlockChecker = std::make_unique<DeadlockChecker>(
       m_module, m_locksetAnalysisView, m_mhpAnalysis,
       m_happensBeforeAnalysis.get(), m_threadAPI);

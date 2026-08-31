@@ -56,7 +56,8 @@ Features
 
 * **Multiple Alias Analysis Algorithms**: DyckAA, Sea-DSA, SparrowAA, AserPTA, TPA, FPA, CFL (via LLVM)
 * **Dynamic Analysis Validation**: DynAA for validating static analysis results
-* **Intermediate Representations**: PDG, SVFG, GVFG, ICFG, MemorySSA, path programs
+* **Intermediate Representations**: PDG, SVFG and its sparse MemorySSA, GVFG,
+  ICFG, ShadowMemSSA, and path programs
 * **Constraint Solving**: SMT (Z3), BDD (CUDD), WPDS, string constraints (Stingx)
 * **Data Flow Analysis**: IFDS/IDE framework, taint analysis
 * **Bug Detection**: Integer overflow, null pointer, buffer overflow, concurrency bugs, symbolic execution

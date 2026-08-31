@@ -12,7 +12,7 @@ add_library(CanaryPurityAnalysis STATIC
 target_link_libraries(CanaryPurityAnalysis
   PUBLIC
     AliasSpecManager
-    CanaryMemorySSA
+    CanaryShadowMemSSA
     #LLVMCore
     LLVMAnalysis
 )

@@ -75,7 +75,7 @@
 namespace previrt {
 namespace analysis {
 
-enum class MemSSAOp {
+enum class ShadowMemOp {
   MEM_SSA_LOAD,     /* load (use) */
   MEM_SSA_STORE,    /* store (definition) */
   MEM_SSA_ARG_INIT, /* initial value of a formal parameter or global with unique
@@ -90,36 +90,36 @@ enum class MemSSAOp {
   NON_MEM_SSA
 };
 
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &o, MemSSAOp op) {
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &o, ShadowMemOp op) {
   switch (op) {
-  case MemSSAOp::MEM_SSA_LOAD:
+  case ShadowMemOp::MEM_SSA_LOAD:
     o << "shadow.mem.load";
     break;
-  case MemSSAOp::MEM_SSA_STORE:
+  case ShadowMemOp::MEM_SSA_STORE:
     o << "shadow.mem.store";
     break;
-  case MemSSAOp::MEM_SSA_ARG_INIT:
+  case ShadowMemOp::MEM_SSA_ARG_INIT:
     o << "shadow.mem.arg.init";
     break;
-  case MemSSAOp::MEM_SSA_GLOBAL_INIT:
+  case ShadowMemOp::MEM_SSA_GLOBAL_INIT:
     o << "shadow.mem.global.init";
     break;
-  case MemSSAOp::MEM_SSA_ARG_REF:
+  case ShadowMemOp::MEM_SSA_ARG_REF:
     o << "shadow.mem.arg.ref";
     break;
-  case MemSSAOp::MEM_SSA_ARG_MOD:
+  case ShadowMemOp::MEM_SSA_ARG_MOD:
     o << "shadow.mem.arg.mod";
     break;
-  case MemSSAOp::MEM_SSA_ARG_REF_MOD:
+  case ShadowMemOp::MEM_SSA_ARG_REF_MOD:
     o << "shadow.mem.arg.ref_mod";
     break;
-  case MemSSAOp::MEM_SSA_ARG_NEW:
+  case ShadowMemOp::MEM_SSA_ARG_NEW:
     o << "shadow.mem.arg.new";
     break;
-  case MemSSAOp::MEM_SSA_FUN_IN:
+  case ShadowMemOp::MEM_SSA_FUN_IN:
     o << "shadow.mem.arg.in";
     break;
-  case MemSSAOp::MEM_SSA_FUN_OUT:
+  case ShadowMemOp::MEM_SSA_FUN_OUT:
     o << "shadow.mem.arg.out";
     break;
   default:
@@ -128,104 +128,108 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &o, MemSSAOp op) {
   return o;
 }
 
-inline MemSSAOp MemSSAStrToOp(llvm::StringRef name) {
+inline ShadowMemOp shadowMemStrToOp(llvm::StringRef name) {
   if (name.equals("shadow.mem.load"))
-    return MemSSAOp::MEM_SSA_LOAD;
+    return ShadowMemOp::MEM_SSA_LOAD;
   if (name.equals("shadow.mem.store"))
-    return MemSSAOp::MEM_SSA_STORE;
+    return ShadowMemOp::MEM_SSA_STORE;
   if (name.equals("shadow.mem.arg.init"))
-    return MemSSAOp::MEM_SSA_ARG_INIT;
+    return ShadowMemOp::MEM_SSA_ARG_INIT;
   if (name.equals("shadow.mem.global.init"))
-    return MemSSAOp::MEM_SSA_GLOBAL_INIT;
+    return ShadowMemOp::MEM_SSA_GLOBAL_INIT;
   if (name.equals("shadow.mem.arg.ref"))
-    return MemSSAOp::MEM_SSA_ARG_REF;
+    return ShadowMemOp::MEM_SSA_ARG_REF;
   if (name.equals("shadow.mem.arg.mod"))
-    return MemSSAOp::MEM_SSA_ARG_MOD;
+    return ShadowMemOp::MEM_SSA_ARG_MOD;
   if (name.equals("shadow.mem.arg.ref_mod"))
-    return MemSSAOp::MEM_SSA_ARG_REF_MOD;
+    return ShadowMemOp::MEM_SSA_ARG_REF_MOD;
   if (name.equals("shadow.mem.arg.new"))
-    return MemSSAOp::MEM_SSA_ARG_NEW;
+    return ShadowMemOp::MEM_SSA_ARG_NEW;
   if (name.equals("shadow.mem.in"))
-    return MemSSAOp::MEM_SSA_FUN_IN;
+    return ShadowMemOp::MEM_SSA_FUN_IN;
   if (name.equals("shadow.mem.out"))
-    return MemSSAOp::MEM_SSA_FUN_OUT;
-  return MemSSAOp::NON_MEM_SSA;
+    return ShadowMemOp::MEM_SSA_FUN_OUT;
+  return ShadowMemOp::NON_MEM_SSA;
 }
 
 // Return the "singleton" field from a memory ssa operation
-inline const llvm::Value *getMemSSASingleton(const llvm::CallBase *CB,
-                                             MemSSAOp op) {
+inline const llvm::Value *getShadowMemSingleton(const llvm::CallBase *CB,
+                                                ShadowMemOp op) {
   if (!CB)
     return nullptr;
   switch (op) {
-  case MemSSAOp::MEM_SSA_LOAD:
-  case MemSSAOp::MEM_SSA_STORE:
+  case ShadowMemOp::MEM_SSA_LOAD:
+  case ShadowMemOp::MEM_SSA_STORE:
     return CB->getArgOperand(2)->stripPointerCasts();
-  case MemSSAOp::MEM_SSA_ARG_INIT:
+  case ShadowMemOp::MEM_SSA_ARG_INIT:
     return CB->getArgOperand(1)->stripPointerCasts();
-  case MemSSAOp::MEM_SSA_ARG_REF:
-  case MemSSAOp::MEM_SSA_ARG_MOD:
-  case MemSSAOp::MEM_SSA_ARG_REF_MOD:
-  case MemSSAOp::MEM_SSA_ARG_NEW:
-  case MemSSAOp::MEM_SSA_FUN_IN:
-  case MemSSAOp::MEM_SSA_FUN_OUT:
+  case ShadowMemOp::MEM_SSA_ARG_REF:
+  case ShadowMemOp::MEM_SSA_ARG_MOD:
+  case ShadowMemOp::MEM_SSA_ARG_REF_MOD:
+  case ShadowMemOp::MEM_SSA_ARG_NEW:
+  case ShadowMemOp::MEM_SSA_FUN_IN:
+  case ShadowMemOp::MEM_SSA_FUN_OUT:
     return CB->getArgOperand(3)->stripPointerCasts();
   default:
     return nullptr;
   }
 }
 
-#define DeclareIsMemSSA(Name, MemSSAOp)                                        \
-  inline bool isMemSSA##Name(const llvm::CallBase *CB, bool onlySingleton) {   \
-    if (!CB || !CB->getCalledFunction())                                       \
-      return false;                                                            \
-    if (MemSSAStrToOp(CB->getCalledFunction()->getName()) == (MemSSAOp)) {     \
-      if (!onlySingleton || !llvm::isa<llvm::ConstantPointerNull>(             \
-                                getMemSSASingleton(CB, MemSSAOp))) {           \
-        return true;                                                           \
-      }                                                                        \
-    }                                                                          \
-    return false;                                                              \
-  }                                                                            \
-  inline bool isMemSSA##Name(const llvm::Instruction *I, bool onlySingleton) { \
-    if (const llvm::CallBase *CB = llvm::dyn_cast<const llvm::CallBase>(I)) {  \
-      return isMemSSA##Name(CB, onlySingleton);                                \
-    }                                                                          \
-    return false;                                                              \
+#define DeclareIsShadowMem(Name, Op)                                          \
+  inline bool isShadowMem##Name(const llvm::CallBase *CB,                     \
+                                bool onlySingleton) {                         \
+    if (!CB || !CB->getCalledFunction())                                      \
+      return false;                                                           \
+    if (shadowMemStrToOp(CB->getCalledFunction()->getName()) == (Op)) {        \
+      if (!onlySingleton ||                                                   \
+          !llvm::isa<llvm::ConstantPointerNull>(                              \
+              getShadowMemSingleton(CB, Op))) {                               \
+        return true;                                                          \
+      }                                                                       \
+    }                                                                         \
+    return false;                                                             \
+  }                                                                           \
+  inline bool isShadowMem##Name(const llvm::Instruction *I,                   \
+                                bool onlySingleton) {                         \
+    if (const llvm::CallBase *CB = llvm::dyn_cast<const llvm::CallBase>(I)) { \
+      return isShadowMem##Name(CB, onlySingleton);                            \
+    }                                                                         \
+    return false;                                                             \
   }
 
-// isMemSSALoad
-DeclareIsMemSSA(Load, MemSSAOp::MEM_SSA_LOAD)
-    // isMemSSAStore
-    DeclareIsMemSSA(Store, MemSSAOp::MEM_SSA_STORE)
-    // isMemSSAArgInit
-    DeclareIsMemSSA(ArgInit, MemSSAOp::MEM_SSA_ARG_INIT)
-    // isMemSSAGlobalInit
-    DeclareIsMemSSA(GlobalInit, MemSSAOp::MEM_SSA_GLOBAL_INIT)
-    // isMemSSAArgRef
-    DeclareIsMemSSA(ArgRef, MemSSAOp::MEM_SSA_ARG_REF)
-    // isMemSSAArgMod
-    DeclareIsMemSSA(ArgMod, MemSSAOp::MEM_SSA_ARG_MOD)
-    // isMemSSAArgRefMod
-    DeclareIsMemSSA(ArgRefMod, MemSSAOp::MEM_SSA_ARG_REF_MOD)
-    // isMemSSAArgNew
-    DeclareIsMemSSA(ArgNew, MemSSAOp::MEM_SSA_ARG_NEW)
-    // isMemSSAFunIn
-    DeclareIsMemSSA(FunIn, MemSSAOp::MEM_SSA_FUN_IN)
-    // isMemSSAFunOut
-    DeclareIsMemSSA(FunOut, MemSSAOp::MEM_SSA_FUN_OUT)
+// isShadowMemLoad
+DeclareIsShadowMem(Load, ShadowMemOp::MEM_SSA_LOAD)
+// isShadowMemStore
+DeclareIsShadowMem(Store, ShadowMemOp::MEM_SSA_STORE)
+// isShadowMemArgInit
+DeclareIsShadowMem(ArgInit, ShadowMemOp::MEM_SSA_ARG_INIT)
+// isShadowMemGlobalInit
+DeclareIsShadowMem(GlobalInit, ShadowMemOp::MEM_SSA_GLOBAL_INIT)
+// isShadowMemArgRef
+DeclareIsShadowMem(ArgRef, ShadowMemOp::MEM_SSA_ARG_REF)
+// isShadowMemArgMod
+DeclareIsShadowMem(ArgMod, ShadowMemOp::MEM_SSA_ARG_MOD)
+// isShadowMemArgRefMod
+DeclareIsShadowMem(ArgRefMod, ShadowMemOp::MEM_SSA_ARG_REF_MOD)
+// isShadowMemArgNew
+DeclareIsShadowMem(ArgNew, ShadowMemOp::MEM_SSA_ARG_NEW)
+// isShadowMemFunIn
+DeclareIsShadowMem(FunIn, ShadowMemOp::MEM_SSA_FUN_IN)
+// isShadowMemFunOut
+DeclareIsShadowMem(FunOut, ShadowMemOp::MEM_SSA_FUN_OUT)
 
-    // Return the "index" field from a memory ssa formal or actual
-    // parameters.
-    inline int64_t getMemSSAParamIdx(const llvm::CallBase *CB) {
+#undef DeclareIsShadowMem
+
+// Return the "index" field from memory SSA formal or actual parameters.
+inline int64_t getShadowMemParamIdx(const llvm::CallBase *CB) {
   int64_t idx = -1;
   if (CB && CB->getCalledFunction() &&
-      (isMemSSAArgRef(CB, false /*onlySingleton*/) ||
-       isMemSSAArgMod(CB, false /*onlySingleton*/) ||
-       isMemSSAArgRefMod(CB, false /*onlySingleton*/) ||
-       isMemSSAArgNew(CB, false /*onlySingleton*/) ||
-       isMemSSAFunIn(CB, false /*onlySingleton*/) ||
-       isMemSSAFunOut(CB, false /*onlySingleton*/))) {
+      (isShadowMemArgRef(CB, false /*onlySingleton*/) ||
+       isShadowMemArgMod(CB, false /*onlySingleton*/) ||
+       isShadowMemArgRefMod(CB, false /*onlySingleton*/) ||
+       isShadowMemArgNew(CB, false /*onlySingleton*/) ||
+       isShadowMemFunIn(CB, false /*onlySingleton*/) ||
+       isShadowMemFunOut(CB, false /*onlySingleton*/))) {
     const llvm::Value *arg = CB->getArgOperand(2);
     if (const llvm::ConstantInt *CI = llvm::dyn_cast<llvm::ConstantInt>(arg)) {
       idx = CI->getSExtValue();
@@ -239,24 +243,24 @@ DeclareIsMemSSA(Load, MemSSAOp::MEM_SSA_LOAD)
       %6 = call i32 @shadow.mem.arg.mod(i32 12, i32 %2, i32 1, ...)
    the non-primed variable is %2 and the primed one is %6.
 */
-inline const llvm::Value *getMemSSAParamNonPrimed(const llvm::CallBase *CB,
+inline const llvm::Value *getShadowMemParamNonPrimed(const llvm::CallBase *CB,
                                                   bool onlySingleton) {
   if (CB && CB->getCalledFunction() &&
-      (isMemSSAArgRef(CB, onlySingleton) || isMemSSAArgMod(CB, onlySingleton) ||
-       isMemSSAArgRefMod(CB, onlySingleton) ||
-       isMemSSAArgNew(CB, onlySingleton))) {
+      (isShadowMemArgRef(CB, onlySingleton) || isShadowMemArgMod(CB, onlySingleton) ||
+       isShadowMemArgRefMod(CB, onlySingleton) ||
+       isShadowMemArgNew(CB, onlySingleton))) {
     return CB->getArgOperand(1);
   } else {
     return nullptr;
   }
 }
 
-inline const llvm::Value *getMemSSAParamPrimed(const llvm::CallBase *CB,
+inline const llvm::Value *getShadowMemParamPrimed(const llvm::CallBase *CB,
                                                bool onlySingleton) {
   if (CB && CB->getCalledFunction() &&
-      (isMemSSAArgMod(CB, onlySingleton) ||
-       isMemSSAArgRefMod(CB, onlySingleton) ||
-       isMemSSAArgNew(CB, onlySingleton))) {
+      (isShadowMemArgMod(CB, onlySingleton) ||
+       isShadowMemArgRefMod(CB, onlySingleton) ||
+       isShadowMemArgNew(CB, onlySingleton))) {
     return CB;
   } else {
     return nullptr;
@@ -264,11 +268,11 @@ inline const llvm::Value *getMemSSAParamPrimed(const llvm::CallBase *CB,
 }
 
 // Linear on the number of uses.
-inline bool hasMemSSALoadUser(const llvm::Value *V, bool onlySingleton) {
+inline bool hasShadowMemLoadUser(const llvm::Value *V, bool onlySingleton) {
   for (auto const &use : V->uses()) {
     if (const llvm::Instruction *I =
             llvm::dyn_cast<const llvm::Instruction>(use.getUser())) {
-      if (isMemSSALoad(I, onlySingleton)) {
+      if (isShadowMemLoad(I, onlySingleton)) {
         return true;
       }
     }
@@ -302,14 +306,14 @@ inline bool hasMemSSALoadUser(const llvm::Value *V, bool onlySingleton) {
  * variable %4 represents the region before the update and %5 is the
  * region after the update.
  */
-class MemorySSACallSite {
+class ShadowMemSSACallSite {
 
   llvm::CallBase *m_ci;
   std::vector<const llvm::CallBase *> m_actual_params;
   bool m_only_singleton;
 
 public:
-  MemorySSACallSite(llvm::CallBase *ci, bool only_singleton);
+  ShadowMemSSACallSite(llvm::CallBase *ci, bool only_singleton);
 
   // Return number of memory-related actual parameters
   unsigned numParams() const { return m_actual_params.size(); }
@@ -352,7 +356,7 @@ public:
   Gather memory SSA-related input/output formal parameters of a
   function.
 */
-class MemorySSAFunction {
+class ShadowMemSSAFunction {
   llvm::Function &m_F;
   // map from index to Value*
   // Important: cannot use a vector because the indexes are not
@@ -362,7 +366,7 @@ class MemorySSAFunction {
   bool m_only_singleton;
 
 public:
-  MemorySSAFunction(llvm::Function &F, llvm::Pass &P, bool only_singleton);
+  ShadowMemSSAFunction(llvm::Function &F, llvm::Pass &P, bool only_singleton);
 
   // Return value can be null if not found
   const llvm::Value *getInFormal(unsigned idx) const;
@@ -376,20 +380,20 @@ public:
    Gather memory SSA-related information about functions and
    callsites for queries.
 */
-class MemorySSACallsManager {
+class ShadowMemSSACallsManager {
   llvm::Module &m_M;
-  llvm::DenseMap<const llvm::CallBase *, MemorySSACallSite *> m_callsites;
-  llvm::DenseMap<const llvm::Function *, MemorySSAFunction *> m_functions;
+  llvm::DenseMap<const llvm::CallBase *, ShadowMemSSACallSite *> m_callsites;
+  llvm::DenseMap<const llvm::Function *, ShadowMemSSAFunction *> m_functions;
   bool m_only_singleton;
 
 public:
-  MemorySSACallsManager(llvm::Module &M, llvm::Pass &P, bool only_singleton);
+  ShadowMemSSACallsManager(llvm::Module &M, llvm::Pass &P, bool only_singleton);
 
-  ~MemorySSACallsManager();
+  ~ShadowMemSSACallsManager();
 
-  const MemorySSAFunction *getFunction(const llvm::Function *F) const;
+  const ShadowMemSSAFunction *getFunction(const llvm::Function *F) const;
 
-  const MemorySSACallSite *getCallSite(const llvm::CallBase *CI) const;
+  const ShadowMemSSACallSite *getCallSite(const llvm::CallBase *CI) const;
 };
 } // namespace analysis
 } // namespace previrt

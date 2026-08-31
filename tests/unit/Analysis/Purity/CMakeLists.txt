@@ -9,6 +9,6 @@ add_lotus_test_suite(purity_analysis_tests
     PurityAttrInferencePassTest.cpp
   LINK_LIBS
     CanaryPurityAnalysis
-    CanaryMemorySSA
+    CanaryShadowMemSSA
     AliasSpecManager
     LLVMAnalysis)

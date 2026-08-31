@@ -41,6 +41,8 @@ public:
     std::size_t memoryOutFacts = 0;
     std::size_t strongUpdates = 0;
     std::size_t weakUpdates = 0;
+    std::size_t strongUpdateExecutions = 0;
+    std::size_t weakUpdateExecutions = 0;
     std::size_t indirectCallEdges = 0;
     std::size_t hashConsedUniqueSets = 0;
     std::size_t hashConsedUnionCacheHits = 0;
@@ -108,6 +110,8 @@ private:
   std::unordered_map<NodeID, MemoryState> dfOut_;
   MemoryState initialMemory_;
   std::unordered_set<const llvm::Function *> recursiveFunctions_;
+  std::unordered_set<NodeID> strongUpdateSites_;
+  std::unordered_set<NodeID> weakUpdateSites_;
   bool topologyChanged_ = false;
   Statistics stats_;
 };

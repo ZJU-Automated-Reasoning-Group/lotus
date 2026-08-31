@@ -6,7 +6,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "IR/MemorySSA/MemorySSA.h"
+#include "IR/ShadowMemSSA/ShadowMemSSA.h"
 
 //===----------------------------------------------------------------------===//
 /// @file IPStoreSinking.cpp
@@ -80,7 +80,7 @@ public:
           Changed = false;
           for (auto It = BB.begin(), Et = BB.end(); It != Et; ++It) {
             CallBase *CB = dyn_cast<CallBase>(&*It);
-            if (!CB || !isMemSSAStore(CB, OnlySingletonSink))
+            if (!CB || !isShadowMemStore(CB, OnlySingletonSink))
               continue;
 
             auto NextIt = std::next(It);

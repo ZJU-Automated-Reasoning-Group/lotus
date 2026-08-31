@@ -237,19 +237,32 @@ void SVFGBuilder::buildMemorySSA() {
     return nullptr;
   };
 
-  auto getDominatingStoredValue = [](const LoadInst *load) -> const Value * {
+  std::unordered_map<const Function *, std::unique_ptr<DominatorTree>>
+      dominanceCache;
+  auto getDominance = [&](const Function *function) -> DominatorTree * {
+    if (!function)
+      return nullptr;
+    auto &tree = dominanceCache[function];
+    if (!tree)
+      tree = std::make_unique<DominatorTree>(
+          *const_cast<Function *>(function));
+    return tree.get();
+  };
+  auto getDominatingStoredValue = [&](const LoadInst *load) -> const Value * {
     if (!load || !load->getFunction())
       return nullptr;
     const Value *location = load->getPointerOperand()->stripPointerCasts();
-    DominatorTree dominance(*const_cast<Function *>(load->getFunction()));
+    DominatorTree *dominance = getDominance(load->getFunction());
+    if (!dominance)
+      return nullptr;
     const StoreInst *nearest = nullptr;
     for (const User *user : location->users()) {
       const auto *store = dyn_cast<StoreInst>(user);
       if (!store || store->getFunction() != load->getFunction() ||
           store->getPointerOperand()->stripPointerCasts() != location ||
-          !dominance.dominates(store, load))
+          !dominance->dominates(store, load))
         continue;
-      if (!nearest || dominance.dominates(nearest, store))
+      if (!nearest || dominance->dominates(nearest, store))
         nearest = store;
     }
     return nearest ? nearest->getValueOperand() : nullptr;
@@ -562,6 +575,7 @@ void SVFGBuilder::buildMemorySSA() {
 
     const std::unordered_set<unsigned> syntacticOrigins =
         collectFormalPointerOrigins(context, ptr);
+    bool matchedArgument = !syntacticOrigins.empty();
     if (!syntacticOrigins.empty()) {
       for (unsigned argument : syntacticOrigins) {
         if (isRead)
@@ -569,7 +583,6 @@ void SVFGBuilder::buildMemorySSA() {
         if (isWrite)
           summary.writeArgs.insert(argument);
       }
-      return;
     }
 
     // A memory operand is often a load from an unoptimized local slot that
@@ -579,8 +592,7 @@ void SVFGBuilder::buildMemorySSA() {
     // checking only `ptr` itself for Argument misses all such spilled forms.
     const SVFGNodeBS accessObjects =
         convertPTAObjectsToObjIDs(getPointsToSet(ptr));
-    bool matchedArgument = false;
-    if (context && !accessObjects.empty()) {
+    if (!matchedArgument && context && !accessObjects.empty()) {
       for (const Argument &argument : context->args()) {
         if (!argument.getType()->isPointerTy())
           continue;
@@ -599,9 +611,6 @@ void SVFGBuilder::buildMemorySSA() {
         matchedArgument = true;
       }
     }
-    if (matchedArgument)
-      return;
-
     MemRegPtsMap visibleRegs = collectVisibleRegions(ptr);
     if (isRead)
       mergeRegions(summary.readGlobals, visibleRegs);

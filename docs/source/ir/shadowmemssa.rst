@@ -1,19 +1,18 @@
-MemorySSA — Memory Static Single Assignment
-============================================
+ShadowMem SSA — Sea-DSA Shadow Memory Queries
+==============================================
 
 Overview
 ========
 
-The **Memory Static Single Assignment (MemorySSA)** is an intermediate representation
-that extends SSA form to memory operations. It provides a structured way to track
-memory def-use chains by working with shadow memory instructions inserted by the
-Sea-DSA ShadowMem pass.
+**ShadowMem SSA** is the query layer for SSA-like shadow memory instructions
+inserted by the Sea-DSA ShadowMem pass. It is distinct from the sparse,
+AserPTA-backed MemorySSA constructed as part of :doc:`svfg`.
 
-* **Location**: ``lib/IR/MemorySSA/``, ``include/IR/MemorySSA/``
+* **Location**: ``lib/IR/ShadowMemSSA/``, ``include/IR/ShadowMemSSA/``
 
-MemorySSA operates on top of Sea-DSA's ShadowMem instrumentation, which inserts
+ShadowMem SSA operates on top of Sea-DSA's ShadowMem instrumentation, which inserts
 special shadow function calls (e.g., ``shadow.mem.load``, ``shadow.mem.store``,
-``shadow.mem.arg.ref``) into the LLVM IR. The MemorySSA infrastructure provides
+``shadow.mem.arg.ref``) into the LLVM IR. The ShadowMem SSA infrastructure provides
 APIs to extract and query memory def-use information from these shadow instructions,
 enabling interprocedural memory analysis and optimizations.
 
@@ -34,7 +33,7 @@ Key Features
 Shadow Memory Instructions
 ==========================
 
-MemorySSA works with shadow memory instructions inserted by Sea-DSA's ShadowMem pass.
+ShadowMem SSA works with instructions inserted by Sea-DSA's ShadowMem pass.
 These instructions provide information about memory operations:
 
 **Intraprocedural Operations**:
@@ -68,12 +67,12 @@ Where:
 Components
 ==========
 
-**MemorySSACallSite** (``MemorySSA.h``, ``MemorySSA.cpp``):
+**ShadowMemSSACallSite** (``ShadowMemSSA.h``, ``ShadowMemSSA.cpp``):
 
 Represents a call site with its associated memory SSA information. It gathers all
 shadow memory instructions related to actual parameters of a call instruction.
 
-* **Constructor**: ``MemorySSACallSite(CallInst *ci, bool only_singleton)`` – Builds
+* **Constructor**: ``ShadowMemSSACallSite(CallInst *ci, bool only_singleton)`` – Builds
   the call site representation by scanning backwards for shadow memory instructions
 * **Query Methods**:
   * ``numParams()`` – Returns the number of memory-related actual parameters
@@ -84,11 +83,11 @@ shadow memory instructions related to actual parameters of a call instruction.
   * ``getNonPrimed(idx)`` – Returns the non-primed (before update) variable
   * ``getPrimed(idx)`` – Returns the primed (after update) variable
 
-**MemorySSAFunction** (``MemorySSA.h``, ``MemorySSA.cpp``):
+**ShadowMemSSAFunction** (``ShadowMemSSA.h``, ``ShadowMemSSA.cpp``):
 
 Gathers memory SSA-related input/output formal parameters of a function.
 
-* **Constructor**: ``MemorySSAFunction(Function &F, Pass &P, bool only_singleton)`` –
+* **Constructor**: ``ShadowMemSSAFunction(Function &F, Pass &P, bool only_singleton)`` –
   Builds the function representation by scanning exit blocks for shadow.mem.in
   instructions
 * **Query Methods**:
@@ -96,31 +95,31 @@ Gathers memory SSA-related input/output formal parameters of a function.
     (returns null if not found)
   * ``getNumInFormals()`` – Returns the number of input formal parameters
 
-**MemorySSACallsManager** (``MemorySSA.h``, ``MemorySSA.cpp``):
+**ShadowMemSSACallsManager** (``ShadowMemSSA.h``, ``ShadowMemSSA.cpp``):
 
 Manages memory SSA information for all functions and call sites in a module.
 
-* **Constructor**: ``MemorySSACallsManager(Module &M, Pass &P, bool only_singleton)`` –
+* **Constructor**: ``ShadowMemSSACallsManager(Module &M, Pass &P, bool only_singleton)`` –
   Builds memory SSA information for all functions and call sites in the module
 * **Query Methods**:
-  * ``getFunction(Function *F)`` – Returns the MemorySSAFunction for the given function
-  * ``getCallSite(CallInst *CI)`` – Returns the MemorySSACallSite for the given call
+  * ``getFunction(Function *F)`` – Returns the ShadowMemSSAFunction for the given function
+  * ``getCallSite(CallInst *CI)`` – Returns the ShadowMemSSACallSite for the given call
     instruction
 
-**Utility Functions** (``MemorySSA.h``):
+**Utility Functions** (``ShadowMemSSA.h``):
 
-* ``MemSSAOp`` – Enumeration of shadow memory operation types
-* ``MemSSAStrToOp(StringRef name)`` – Converts shadow function name to operation type
-* ``isMemSSALoad(CallBase *CB, bool onlySingleton)`` – Checks if instruction is a
+* ``ShadowMemOp`` – Enumeration of shadow memory operation types
+* ``shadowMemStrToOp(StringRef name)`` – Converts shadow function name to operation type
+* ``isShadowMemLoad(CallBase *CB, bool onlySingleton)`` – Checks if instruction is a
   memory load
-* ``isMemSSAStore(CallBase *CB, bool onlySingleton)`` – Checks if instruction is a
+* ``isShadowMemStore(CallBase *CB, bool onlySingleton)`` – Checks if instruction is a
   memory store
-* ``isMemSSAArgRef/ArgMod/ArgRefMod/ArgNew(CallBase *CB, bool onlySingleton)`` –
+* ``isShadowMemArgRef/ArgMod/ArgRefMod/ArgNew(CallBase *CB, bool onlySingleton)`` –
   Checks for various parameter operation types
-* ``getMemSSAParamIdx(CallBase *CB)`` – Extracts parameter index from shadow instruction
-* ``getMemSSAParamNonPrimed/Primed(CallBase *CB, bool onlySingleton)`` – Extracts
+* ``getShadowMemParamIdx(CallBase *CB)`` – Extracts parameter index from shadow instruction
+* ``getShadowMemParamNonPrimed/Primed(CallBase *CB, bool onlySingleton)`` – Extracts
   non-primed/primed variables from shadow instructions
-* ``hasMemSSALoadUser(Value *V, bool onlySingleton)`` – Checks if a value has memory
+* ``hasShadowMemLoadUser(Value *V, bool onlySingleton)`` – Checks if a value has memory
   load users
 
 Usage
@@ -130,7 +129,7 @@ Usage
 
 .. code-block:: cpp
 
-   #include "IR/MemorySSA/MemorySSA.h"
+   #include "IR/ShadowMemSSA/ShadowMemSSA.h"
    #include "Alias/UnificationBased/seadsa/ShadowMem.hh"
    
    using namespace llvm;
@@ -141,14 +140,14 @@ Usage
    PM.add(new seadsa::ShadowMem(dsaAnalysis, asi));
    PM.run(module);
    
-   // Build MemorySSA information for the module
-   MemorySSACallsManager mssaManager(module, pass, false /* only_singleton */);
+   // Query ShadowMem SSA information for the module
+   ShadowMemSSACallsManager mssaManager(module, pass, false /* only_singleton */);
    
    // Analyze a call site
    for (auto &F : module) {
      for (auto &I : instructions(&F)) {
        if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-         const MemorySSACallSite *cs = mssaManager.getCallSite(CI);
+         const ShadowMemSSACallSite *cs = mssaManager.getCallSite(CI);
          if (cs) {
            // Query memory regions accessed by the callee
            for (unsigned i = 0; i < cs->numParams(); ++i) {
@@ -174,7 +173,7 @@ Usage
 .. code-block:: cpp
 
    // Get memory SSA information for a function
-   const MemorySSAFunction *mssaFunc = mssaManager.getFunction(&F);
+   const ShadowMemSSAFunction *mssaFunc = mssaManager.getFunction(&F);
    if (mssaFunc) {
      // Iterate over input formal parameters
      for (unsigned i = 0; i < mssaFunc->getNumInFormals(); ++i) {
@@ -191,11 +190,11 @@ Usage
 
    // Check if an instruction is a shadow memory operation
    if (const CallBase *CB = dyn_cast<CallBase>(&I)) {
-     if (isMemSSALoad(CB, false)) {
+     if (isShadowMemLoad(CB, false)) {
        // Handle memory load
-     } else if (isMemSSAStore(CB, false)) {
+     } else if (isShadowMemStore(CB, false)) {
        // Handle memory store
-     } else if (isMemSSAArgRef(CB, false)) {
+     } else if (isShadowMemArgRef(CB, false)) {
        // Handle read-only parameter
      }
    }
@@ -203,10 +202,10 @@ Usage
 Integration
 ===========
 
-MemorySSA is used by various analyses and optimizations in Lotus:
+ShadowMem SSA is used by various analyses and optimizations in Lotus:
 
 * **IPDeadStoreElimination**: Interprocedural dead store elimination pass that uses
-  MemorySSA to track memory def-use chains across function boundaries to identify
+  ShadowMem SSA to track memory def-use chains across function boundaries to identify
   and eliminate dead stores.
 
 * **Memory Analysis**: Provides foundation for memory-aware analyses that need to
@@ -215,6 +214,6 @@ MemorySSA is used by various analyses and optimizations in Lotus:
 * **Optimization Passes**: Enables memory-aware optimizations that can reason about
   memory side effects of function calls.
 
-The MemorySSA infrastructure provides a convenient abstraction over Sea-DSA's
+The ShadowMem SSA infrastructure provides a convenient abstraction over Sea-DSA's
 shadow memory instrumentation, making it easier to write analyses that need to
 understand memory operations and their dependencies across function boundaries.

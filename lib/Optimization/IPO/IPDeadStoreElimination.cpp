@@ -57,7 +57,7 @@
 
 #include "Alias/UnificationBased/seadsa/InitializePasses.hh"
 #include "Alias/UnificationBased/seadsa/ShadowMem.hh"
-#include "IR/MemorySSA/MemorySSA.h"
+#include "IR/ShadowMemSSA/ShadowMemSSA.h"
 
 #include <cstddef>
 #include <functional>
@@ -244,7 +244,7 @@ public:
     std::vector<QueueElem> queue;
     for (auto &F : M) {
       for (auto &I : instructions(&F)) {
-        if (isMemSSAStore(&I, OnlySingleton)) {
+        if (isShadowMemStore(&I, OnlySingleton)) {
           auto it = I.getIterator();
           ++it;
           auto end = I.getParent()->end();
@@ -274,13 +274,13 @@ public:
       }
       BasicBlock &entryBB = F->getEntryBlock();
       for (auto &I : entryBB) {
-        if (isMemSSAArgInit(&I, true /*only if singleton*/) ||
-            isMemSSAGlobalInit(&I,
+        if (isShadowMemArgInit(&I, true /*only if singleton*/) ||
+            isShadowMemGlobalInit(&I,
                                false /* global.init cannot be singleton */)) {
           if (const CallBase *CB = dyn_cast<const CallBase>(&I)) {
             if (GlobalVariable *GV =
                     const_cast<GlobalVariable *>(dyn_cast<const GlobalVariable>(
-                        getMemSSASingleton(CB, MemSSAOp::MEM_SSA_ARG_INIT)))) {
+                        getShadowMemSingleton(CB, ShadowMemOp::MEM_SSA_ARG_INIT)))) {
               if (GV->hasInitializer()) {
                 queue.push_back(QueueElem(&I, GV, 0));
                 markToRemove(GV);
@@ -311,7 +311,7 @@ public:
     unsigned skippedChains = 0;
     if (!queue.empty()) {
       errs() << "Number of stores: " << queue.size() << "\n";
-      MemorySSACallsManager MMan(M, *this, OnlySingleton);
+      ShadowMemSSACallsManager MMan(M, *this, OnlySingleton);
 
       DSE_LOG(errs() << "[IPDSE] BEGIN initial queue: \n";
               for (auto &e : queue) { errs() << e << "\n"; } errs()
@@ -336,7 +336,7 @@ public:
           continue;
         }
 
-        if (hasMemSSALoadUser(w.shadowMemInst, OnlySingleton)) {
+        if (hasShadowMemLoadUser(w.shadowMemInst, OnlySingleton)) {
           DSE_LOG(errs() << "\thas a load user: CANNOT be removed.\n");
           markToKeep(w.storeInstOrGvInit);
           continue;
@@ -367,20 +367,20 @@ public:
           } else if (CallBase *CB = dyn_cast<CallBase>(I)) {
             if (!CB->getCalledFunction())
               continue;
-            if (isMemSSAStore(CB, OnlySingleton)) {
+            if (isShadowMemStore(CB, OnlySingleton)) {
               DSE_LOG(errs() << "\tstore: skipped\n");
               continue;
-            } else if (isMemSSAArgRef(CB, OnlySingleton)) {
+            } else if (isShadowMemArgRef(CB, OnlySingleton)) {
               DSE_LOG(errs() << "\targ ref: CANNOT be removed\n");
               markToKeep(w.storeInstOrGvInit);
-            } else if (isMemSSAArgMod(CB, OnlySingleton) ||
-                       isMemSSAArgRefMod(CB, OnlySingleton)) {
+            } else if (isShadowMemArgMod(CB, OnlySingleton) ||
+                       isShadowMemArgRefMod(CB, OnlySingleton)) {
               DSE_LOG(errs() << "\tRecurse inter-procedurally in the callee\n");
               // Inter-procedural step: we recurse on the uses of
               // the corresponding formal (non-primed) variable in
               // the callee.
 
-              int64_t idx = getMemSSAParamIdx(CB);
+              int64_t idx = getShadowMemParamIdx(CB);
               if (idx < 0) {
                 report_fatal_error(
                     "[IPDSE] cannot find index in shadow.mem function");
@@ -394,9 +394,9 @@ public:
                 markToKeep(w.storeInstOrGvInit);
                 continue;
               }
-              const MemorySSAFunction *MemSsaFun = MMan.getFunction(calleeF);
+              const ShadowMemSSAFunction *MemSsaFun = MMan.getFunction(calleeF);
               if (!MemSsaFun) {
-                errs() << "Warning: [IPDSE] cannot find MemorySSAFunction for "
+                errs() << "Warning: [IPDSE] cannot find ShadowMemSSAFunction for "
                        << calleeF->getName()
                        << "; keeping store conservatively.\n";
                 markToKeep(w.storeInstOrGvInit);
@@ -424,7 +424,7 @@ public:
                 report_fatal_error("[IPDSE] expected to enqueue from callee");
               }
 
-            } else if (isMemSSAFunIn(CB, OnlySingleton)) {
+            } else if (isShadowMemFunIn(CB, OnlySingleton)) {
               DSE_LOG(errs() << "\tin: enqueue users\n");
               for (auto &InU : CB->uses()) {
                 if (Instruction *InUI = dyn_cast<Instruction>(InU.getUser())) {
@@ -432,13 +432,13 @@ public:
                           QueueElem(InUI, w.storeInstOrGvInit, w.length + 1));
                 }
               }
-            } else if (isMemSSAFunOut(CB, OnlySingleton)) {
+            } else if (isShadowMemFunOut(CB, OnlySingleton)) {
               DSE_LOG(errs() << "\tRecurse inter-procedurally in the caller\n");
               // Inter-procedural step: we recurse on the uses of
               // the corresponding actual (primed) variable in the
               // caller.
 
-              int64_t idx = getMemSSAParamIdx(CB);
+              int64_t idx = getShadowMemParamIdx(CB);
               if (idx < 0) {
                 report_fatal_error(
                     "[IPDSE] cannot find index in shadow.mem function");
@@ -448,7 +448,7 @@ public:
               Function *F = I->getParent()->getParent();
               for (auto &U : F->uses()) {
                 if (CallBase *CI = dyn_cast<CallBase>(U.getUser())) {
-                  const MemorySSACallSite *MemSsaCS = MMan.getCallSite(CI);
+                  const ShadowMemSSACallSite *MemSsaCS = MMan.getCallSite(CI);
                   // make things easier ...
                   if (!CI->getCalledFunction()) {
                     markToKeep(w.storeInstOrGvInit);

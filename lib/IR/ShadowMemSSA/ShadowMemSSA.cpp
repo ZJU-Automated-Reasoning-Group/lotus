@@ -1,8 +1,5 @@
-/*
-FIXME: this MemorySSA is tighly bounded to DSA alias analysis, which is not a
-good idea.
-*/
-#include "IR/MemorySSA/MemorySSA.h"
+// Queries the SSA-like shadow.mem instrumentation emitted by Sea-DSA.
+#include "IR/ShadowMemSSA/ShadowMemSSA.h"
 
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -14,7 +11,7 @@ namespace analysis {
 
 using namespace llvm;
 
-MemorySSACallSite::MemorySSACallSite(CallBase *ci, bool only_singleton)
+ShadowMemSSACallSite::ShadowMemSSACallSite(CallBase *ci, bool only_singleton)
     : m_ci(ci), m_only_singleton(only_singleton) {
   // Traverse backwards up to the beginning of the block searching
   // for shadow.mem.XXX functions.
@@ -29,12 +26,12 @@ MemorySSACallSite::MemorySSACallSite(CallBase *ci, bool only_singleton)
 
     // XXX: we store all actual parameters regardless only_singleton flag
     if (CB->getCalledFunction() &&
-        (isMemSSAArgRef(CB, false /*m_only_singleton*/) ||
-         isMemSSAArgMod(CB, false /*m_only_singleton*/) ||
-         isMemSSAArgRefMod(CB, false /*m_only_singleton*/) ||
-         isMemSSAArgNew(CB, false /*m_only_singleton*/))) {
+        (isShadowMemArgRef(CB, false /*m_only_singleton*/) ||
+         isShadowMemArgMod(CB, false /*m_only_singleton*/) ||
+         isShadowMemArgRefMod(CB, false /*m_only_singleton*/) ||
+         isShadowMemArgNew(CB, false /*m_only_singleton*/))) {
       // get "index" field from the callsite
-      int64_t idx = getMemSSAParamIdx(CB);
+      int64_t idx = getShadowMemParamIdx(CB);
       if (idx < 0) {
         report_fatal_error("[IP-DSE] cannot find index in shadow.mem function");
       }
@@ -52,64 +49,64 @@ MemorySSACallSite::MemorySSACallSite(CallBase *ci, bool only_singleton)
 
 // return true if the shadow.mem.XXX instruction associated with the
 // idx-th actual paramter is shadow.mem.arg_ref.
-bool MemorySSACallSite::isRef(unsigned idx) const {
+bool ShadowMemSSACallSite::isRef(unsigned idx) const {
   if (idx >= m_actual_params.size()) {
     report_fatal_error("[IP-DSE] out of range access to m_actual_params");
   }
-  return isMemSSAArgRef(m_actual_params[idx], m_only_singleton);
+  return isShadowMemArgRef(m_actual_params[idx], m_only_singleton);
 }
 
 // return true if the shadow.mem.XXX instruction associated with the
 // idx-th actual paramter is shadow.mem.arg_mod.
-bool MemorySSACallSite::isMod(unsigned idx) const {
+bool ShadowMemSSACallSite::isMod(unsigned idx) const {
   if (idx >= m_actual_params.size()) {
     report_fatal_error("[IP-DSE] out of range access to m_actual_params");
   }
-  return isMemSSAArgMod(m_actual_params[idx], m_only_singleton);
+  return isShadowMemArgMod(m_actual_params[idx], m_only_singleton);
 }
 
 // return true if the shadow.mem.XXX instruction associated with the
 // idx-th actual paramter is shadow.mem.arg_ref_mod.
-bool MemorySSACallSite::isRefMod(unsigned idx) const {
+bool ShadowMemSSACallSite::isRefMod(unsigned idx) const {
   if (idx >= m_actual_params.size()) {
     report_fatal_error("[IP-DSE] out of range access to m_actual_params");
   }
-  return isMemSSAArgRefMod(m_actual_params[idx], m_only_singleton);
+  return isShadowMemArgRefMod(m_actual_params[idx], m_only_singleton);
 }
 
 // return true if the shadow.mem.XXX instruction associated with the
 // idx-th actual paramter is shadow.mem.arg_new.
-bool MemorySSACallSite::isNew(unsigned idx) const {
+bool ShadowMemSSACallSite::isNew(unsigned idx) const {
   if (idx >= m_actual_params.size()) {
     report_fatal_error("[IP-DSE] out of range access to m_actual_params");
   }
-  return isMemSSAArgNew(m_actual_params[idx], m_only_singleton);
+  return isShadowMemArgNew(m_actual_params[idx], m_only_singleton);
 }
 
 // return the non-primed top-level variable of the shadow.mem.XXX
 // instruction associated with the idx-th actual parameter.
-const Value *MemorySSACallSite::getNonPrimed(unsigned idx) const {
+const Value *ShadowMemSSACallSite::getNonPrimed(unsigned idx) const {
   if (idx >= m_actual_params.size()) {
     errs() << "Number of actual parameters=" << m_actual_params.size() << "\n";
     errs() << "Accessing index=" << idx << "\n";
     report_fatal_error("[IP-DSE] out of range access to m_actual_params");
   }
-  return getMemSSAParamNonPrimed(m_actual_params[idx], m_only_singleton);
+  return getShadowMemParamNonPrimed(m_actual_params[idx], m_only_singleton);
 }
 
 // return the primed top-level variable of the shadow.mem.XXX
 // instruction associated with the idx-th actual parameter.
-const Value *MemorySSACallSite::getPrimed(unsigned idx) const {
+const Value *ShadowMemSSACallSite::getPrimed(unsigned idx) const {
   if (idx >= m_actual_params.size()) {
     errs() << "Number of actual parameters=" << m_actual_params.size() << "\n";
     errs() << "Accessing index=" << idx << "\n";
     report_fatal_error("[IP-DSE] out of range access to m_actual_params");
   }
   assert(isRefMod(idx) || isMod(idx) || isNew(idx));
-  return getMemSSAParamPrimed(m_actual_params[idx], m_only_singleton);
+  return getShadowMemParamPrimed(m_actual_params[idx], m_only_singleton);
 }
 
-void MemorySSACallSite::write(raw_ostream &o) const {
+void ShadowMemSSACallSite::write(raw_ostream &o) const {
   // TODO: pretty-printing
   o << *m_ci << "\n";
   for (unsigned i = 0, e = m_actual_params.size(); i < e; ++i) {
@@ -119,9 +116,9 @@ void MemorySSACallSite::write(raw_ostream &o) const {
   }
 }
 
-void MemorySSACallSite::dump() const { write(llvm::errs()); }
+void ShadowMemSSACallSite::dump() const { write(llvm::errs()); }
 
-MemorySSAFunction::MemorySSAFunction(Function &F, Pass &P, bool only_singleton)
+ShadowMemSSAFunction::ShadowMemSSAFunction(Function &F, Pass &P, bool only_singleton)
     : m_F(F), m_only_singleton(only_singleton) {
   (void)P;
   // XXX: We don't need main since it is the root of the call
@@ -135,8 +132,8 @@ MemorySSAFunction::MemorySSAFunction(Function &F, Pass &P, bool only_singleton)
     // shadow.mem.in and shadow.mem.out calls describing the summary state.
     for (auto const &inst : B) {
       if (const CallBase *CB = dyn_cast<const CallBase>(&inst)) {
-        if (CB->getCalledFunction() && isMemSSAFunIn(CB, m_only_singleton)) {
-          int64_t idx = getMemSSAParamIdx(CB);
+        if (CB->getCalledFunction() && isShadowMemFunIn(CB, m_only_singleton)) {
+          int64_t idx = getShadowMemParamIdx(CB);
           if (idx < 0) {
             report_fatal_error(
                 "[IP-DSE] Cannot find index in shadow.mem function");
@@ -147,8 +144,8 @@ MemorySSAFunction::MemorySSAFunction(Function &F, Pass &P, bool only_singleton)
           // shadow.mem.arg.init
           m_in_formal_params.insert(std::make_pair((unsigned)idx, in_formal));
         } else if (CB->getCalledFunction() &&
-                   isMemSSAFunOut(CB, m_only_singleton)) {
-          int64_t idx = getMemSSAParamIdx(CB);
+                   isShadowMemFunOut(CB, m_only_singleton)) {
+          int64_t idx = getShadowMemParamIdx(CB);
           if (idx < 0) {
             report_fatal_error(
                 "[IP-DSE] Cannot find index in shadow.mem function");
@@ -161,7 +158,7 @@ MemorySSAFunction::MemorySSAFunction(Function &F, Pass &P, bool only_singleton)
 }
 
 // Return value can be null if not found
-const Value *MemorySSAFunction::getInFormal(unsigned idx) const {
+const Value *ShadowMemSSAFunction::getInFormal(unsigned idx) const {
   auto it = m_in_formal_params.find(idx);
   if (it != m_in_formal_params.end())
     return it->second;
@@ -170,7 +167,7 @@ const Value *MemorySSAFunction::getInFormal(unsigned idx) const {
   }
 }
 
-const CallBase *MemorySSAFunction::getOutFormal(unsigned idx) const {
+const CallBase *ShadowMemSSAFunction::getOutFormal(unsigned idx) const {
   auto it = m_out_formal_params.find(idx);
   if (it != m_out_formal_params.end()) {
     return it->second;
@@ -178,7 +175,7 @@ const CallBase *MemorySSAFunction::getOutFormal(unsigned idx) const {
   return nullptr;
 }
 
-MemorySSACallsManager::MemorySSACallsManager(Module &M, Pass &P,
+ShadowMemSSACallsManager::ShadowMemSSACallsManager(Module &M, Pass &P,
                                              bool only_singleton)
     : m_M(M), m_only_singleton(only_singleton) {
 
@@ -187,20 +184,20 @@ MemorySSACallsManager::MemorySSACallsManager(Module &M, Pass &P,
       continue;
 
     m_functions.insert(
-        std::make_pair(&F, new MemorySSAFunction(F, P, m_only_singleton)));
+        std::make_pair(&F, new ShadowMemSSAFunction(F, P, m_only_singleton)));
     for (auto &I : instructions(&F)) {
       if (CallBase *CI = dyn_cast<CallBase>(&I)) {
         if (CI->getCalledFunction() &&
             !CI->getCalledFunction()->getName().startswith("shadow.mem")) {
           m_callsites.insert(
-              std::make_pair(CI, new MemorySSACallSite(CI, m_only_singleton)));
+              std::make_pair(CI, new ShadowMemSSACallSite(CI, m_only_singleton)));
         }
       }
     }
   }
 }
 
-MemorySSACallsManager::~MemorySSACallsManager() {
+ShadowMemSSACallsManager::~ShadowMemSSACallsManager() {
   for (auto &kv : m_callsites) {
     if (kv.second) {
       delete kv.second;
@@ -213,8 +210,8 @@ MemorySSACallsManager::~MemorySSACallsManager() {
   }
 }
 
-const MemorySSAFunction *
-MemorySSACallsManager::getFunction(const Function *F) const {
+const ShadowMemSSAFunction *
+ShadowMemSSACallsManager::getFunction(const Function *F) const {
   auto it = m_functions.find(F);
   if (it != m_functions.end()) {
     return it->second;
@@ -223,8 +220,8 @@ MemorySSACallsManager::getFunction(const Function *F) const {
   }
 }
 
-const MemorySSACallSite *
-MemorySSACallsManager::getCallSite(const CallBase *CI) const {
+const ShadowMemSSACallSite *
+ShadowMemSSACallsManager::getCallSite(const CallBase *CI) const {
   auto it = m_callsites.find(CI);
   if (it != m_callsites.end()) {
     return it->second;

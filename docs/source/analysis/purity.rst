@@ -127,4 +127,4 @@ See Also
 --------
 
 - :doc:`../transform/index` — Optimisation passes that consume purity info
-- :doc:`../ir/memoryssa` — MemorySSA used for summary generation
+- :doc:`../ir/shadowmemssa` — ShadowMem SSA used for summary generation

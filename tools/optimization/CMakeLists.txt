@@ -6,7 +6,7 @@ llvm_map_components_to_libnames(LLVM_LINK_COMPONENTS
 
 set(LOTUS_OPT_COMMON_LIBS
   CanaryPurityAnalysis
-  CanaryMemorySSA
+  CanaryShadowMemSSA
   CanaryLLVMUtils
   SeaDsaAnalysis
   ${LLVM_LINK_COMPONENTS}

@@ -18,6 +18,5 @@ The concurrency layer does not duplicate this solver. `FSMPTA` runs it over an
 SVFG augmented with fork/join and `ThreadMHPIndirectVF` edges. MSli supplies an
 optional filtered solve graph.
 
-This is the Lotus-native migration of SVF's default exhaustive `fspta` pipeline,
-not a source-level copy. SVF's separate `vfspta` versioned solver and clustering
+This is the Lotus-native migration of SVF's default exhaustive `fspta` pipeline. SVF's separate `vfspta` versioned solver and clustering
 variants are intentionally outside this module's scope.

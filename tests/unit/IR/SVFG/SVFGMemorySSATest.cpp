@@ -554,6 +554,46 @@ TEST_F(SVFGMemorySSATest, GlobalEntryFallbackCoversAllDirectUsersWithoutMain) {
   EXPECT_TRUE(hasIncomingFromGlobalEntry(svfg->getFormalIns(fooFn)));
   EXPECT_TRUE(hasIncomingFromGlobalEntry(svfg->getFormalIns(barFn)));
 }
+TEST_F(SVFGMemorySSATest, MixedArgumentAndGlobalAccessKeepsBothSummaries) {
+  const char *source = R"(
+    @g = global i8 0
+
+    define void @writer(i1 %condition, i8* %argument) {
+    entry:
+      %target = select i1 %condition, i8* %argument, i8* @g
+      store i8 1, i8* %target
+      ret void
+    }
+
+    define i32 @main(i1 %condition) {
+    entry:
+      %local = alloca i8
+      call void @writer(i1 %condition, i8* %local)
+      ret i32 0
+    }
+  )";
+
+  auto module = parseModule(source);
+  ASSERT_NE(module, nullptr);
+
+  ICFG icfg;
+  ICFGBuilder icfgBuilder(&icfg);
+  icfgBuilder.build(module.get());
+  SVFGBuilderConfig config;
+  config.usePointerAnalysis = true;
+  config.buildMSSA = true;
+  SVFGBuilder builder(config);
+  std::unique_ptr<SVFG> svfg(builder.build(&icfg));
+  ASSERT_NE(svfg, nullptr);
+
+  const Function *writerFn = getFunctionChecked(*module, "writer");
+  const Function *mainFn = getFunctionChecked(*module, "main");
+  const CallBase *call = findCallTo(mainFn, "writer");
+  ASSERT_NE(call, nullptr);
+
+  EXPECT_GE(svfg->getFormalOuts(writerFn).size(), 2u);
+  EXPECT_GE(svfg->getActualOuts(call).size(), 2u);
+}
 TEST_F(SVFGMemorySSATest, OnTheFlyIndirectCallUpdatesRefinedCallGraph) {
   const char *source = R"(
     define void @target(i8* %p) {
@@ -609,6 +649,59 @@ TEST_F(SVFGMemorySSATest, OnTheFlyIndirectCallUpdatesRefinedCallGraph) {
   ASSERT_NE(cg, nullptr);
   EXPECT_TRUE(callGraphHasEdge(*cg, applyFn, indCall, targetFn));
   ASSERT_EQ(cg, svfg->getRefinedCallGraph());
+}
+TEST_F(SVFGMemorySSATest, FunctionTableRecoveryKeepsBaseInstanceIdentity) {
+  const char *source = R"(
+    %Table = type { i8, void ()* }
+    @first = global %Table { i8 0, void ()* @first.target }
+    @second = global %Table { i8 0, void ()* @second.target }
+
+    define void @first.target() {
+    entry:
+      ret void
+    }
+
+    define void @second.target() {
+    entry:
+      ret void
+    }
+
+    define i32 @main() {
+    entry:
+      %slot = getelementptr %Table, %Table* @first, i32 0, i32 1
+      %target = load void ()*, void ()** %slot
+      call void %target()
+      ret i32 0
+    }
+  )";
+
+  auto module = parseModule(source);
+  ASSERT_NE(module, nullptr);
+
+  ICFG icfg;
+  ICFGBuilder icfgBuilder(&icfg);
+  icfgBuilder.build(module.get());
+  SVFGBuilderConfig config;
+  config.usePointerAnalysis = true;
+  config.buildMSSA = false;
+  config.resolveIndirectCalls = false;
+  SVFGBuilder builder(config);
+  std::unique_ptr<SVFG> svfg(builder.build(&icfg));
+  ASSERT_NE(svfg, nullptr);
+
+  const Function *mainFn = getFunctionChecked(*module, "main");
+  const Function *firstTarget = getFunctionChecked(*module, "first.target");
+  const Function *secondTarget =
+      getFunctionChecked(*module, "second.target");
+  const CallBase *call = findSingleIndirectCall(mainFn);
+  ASSERT_NE(call, nullptr);
+
+  const std::vector<const Function *> targets =
+      builder.getIndirectCallTargets(call);
+  EXPECT_NE(std::find(targets.begin(), targets.end(), firstTarget),
+            targets.end());
+  EXPECT_EQ(std::find(targets.begin(), targets.end(), secondTarget),
+            targets.end());
 }
 TEST_F(SVFGMemorySSATest, UpdateSVFGKeepsBuilderGraphAccessorsValid) {
   const char *source = R"(

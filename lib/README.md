@@ -14,8 +14,8 @@ Implementation sources for Lotus libraries.
   kernels, and related concurrency models.
 - `Dataflow/`: Dataflow analysis frameworks and instantiated analyses.
 - `Fuzzing/`: Fuzzing-oriented analysis and support components.
-- `IR/`: Lotus intermediate representations  such as ICFG, GVFG,
-  PDG, MemorySSA, SSI, SVFG, and related builders.
+- `IR/`: Lotus intermediate representations such as ICFG, GVFG, PDG,
+  ShadowMemSSA, SSI, SVFG, and related builders.
 - `Optimization/`: Program analysis driven optimization passes.
 - `Security/`: Security-focused analyses and verification infrastructure.
 - `Solvers/`: SMT and other solver integrations used by analyses,

@@ -72,7 +72,9 @@ TEST_F(FlowSensitivePTATest, MaintainsPerNodeMemoryInOutAndStrongUpdates) {
   EXPECT_EQ(solver.memoryIn(load, slotObject), PointsToSet({yObject}));
   EXPECT_EQ(solver.pointsTo(load), PointsToSet({yObject}));
   EXPECT_GT(stats.sccs, 0u);
-  EXPECT_GT(stats.strongUpdates, 0u);
+  EXPECT_EQ(stats.strongUpdates, 2u);
+  EXPECT_EQ(stats.weakUpdates, 0u);
+  EXPECT_GE(stats.strongUpdateExecutions, stats.strongUpdates);
 
   FlowSensitivePTA::Config hashConfig;
   hashConfig.setBackend = PointsToSetBackend::HashConsed;
@@ -295,6 +297,62 @@ TEST_F(FlowSensitivePTATest, AggregateGlobalInitializersRespectFieldOffsets) {
   EXPECT_FALSE(hasY);
 }
 
+TEST_F(FlowSensitivePTATest, ConstantGepGlobalInitializerKeepsExactField) {
+  auto module = parseModule(R"(
+    %S = type { i8*, i8* }
+    @x = global i8 0
+    @y = global i8 0
+    @aggregate = global %S { i8* @x, i8* @y }
+    @field.pointer = global i8** getelementptr (%S, %S* @aggregate,
+                                                i32 0, i32 1)
+    define i8* @main() {
+    entry:
+      %field = load i8**, i8*** @field.pointer
+      %result = load i8*, i8** %field
+      ret i8* %result
+    }
+  )");
+  ASSERT_NE(module, nullptr);
+
+  ICFG icfg;
+  ICFGBuilder icfgBuilder(&icfg);
+  icfgBuilder.build(module.get());
+  SVFGBuilderConfig graphConfig;
+  graphConfig.usePointerAnalysis = true;
+  SVFGBuilder graphBuilder(graphConfig);
+  std::unique_ptr<SVFG> graph(graphBuilder.build(&icfg));
+  ASSERT_NE(graph, nullptr);
+
+  const LoadInst *fieldLoad = nullptr;
+  const LoadInst *resultLoad = nullptr;
+  for (const Instruction &instruction :
+       instructions(module->getFunction("main"))) {
+    const auto *load = dyn_cast<LoadInst>(&instruction);
+    if (load && load->getName() == "field")
+      fieldLoad = load;
+    else if (load && load->getName() == "result")
+      resultLoad = load;
+  }
+  ASSERT_NE(fieldLoad, nullptr);
+  ASSERT_NE(resultLoad, nullptr);
+
+  FlowSensitivePTA solver(*graph);
+  solver.solve();
+  const auto fieldResult = solver.pointsTo(fieldLoad);
+  ASSERT_TRUE(fieldResult.has_value());
+  ASSERT_EQ(fieldResult->size(), 1u);
+  const SVFG::ObjectInfo *fieldInfo =
+      graph->getObjectInfo(*fieldResult->begin());
+  ASSERT_NE(fieldInfo, nullptr);
+  EXPECT_TRUE(fieldInfo->hasFieldOffset);
+  EXPECT_EQ(fieldInfo->fieldOffset, 8u);
+
+  const uint32_t aggregateObject =
+      graph->getObjectId(module->getGlobalVariable("aggregate"));
+  ASSERT_NE(aggregateObject, 0u);
+  EXPECT_NE(*fieldResult->begin(), aggregateObject);
+}
+
 TEST_F(FlowSensitivePTATest, StrongUpdateDoesNotReintroduceGlobalInitializer) {
   auto module = parseModule(R"(
     @x = global i8 0
@@ -453,6 +511,54 @@ TEST_F(FlowSensitivePTATest, MemcpyNullFieldKillsDestinationFact) {
     if (const auto *candidate = dyn_cast<LoadInst>(&instruction))
       load = candidate;
   ASSERT_NE(load, nullptr);
+  FlowSensitivePTA solver(*graph);
+  solver.solve();
+  const auto result = solver.pointsTo(load);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(result->empty());
+}
+
+TEST_F(FlowSensitivePTATest, MemcpyUsesPointerSizeOfFieldAddressSpace) {
+  auto module = parseModule(R"(
+    target datalayout = "e-p:64:64-p1:32:32"
+    %S = type { i8 addrspace(1)* }
+    @x = addrspace(1) global i8 0
+    define i8 addrspace(1)* @main() {
+    entry:
+      %source = alloca %S
+      %destination = alloca %S
+      %source.field = getelementptr %S, %S* %source, i32 0, i32 0
+      %destination.field = getelementptr %S, %S* %destination, i32 0, i32 0
+      store i8 addrspace(1)* null, i8 addrspace(1)** %source.field
+      store i8 addrspace(1)* @x, i8 addrspace(1)** %destination.field
+      %source.bytes = bitcast %S* %source to i8*
+      %destination.bytes = bitcast %S* %destination to i8*
+      call void @llvm.memcpy.p0i8.p0i8.i64(i8* %destination.bytes,
+                                           i8* %source.bytes,
+                                           i64 4, i1 false)
+      %result = load i8 addrspace(1)*, i8 addrspace(1)** %destination.field
+      ret i8 addrspace(1)* %result
+    }
+    declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1)
+  )");
+  ASSERT_NE(module, nullptr);
+
+  ICFG icfg;
+  ICFGBuilder icfgBuilder(&icfg);
+  icfgBuilder.build(module.get());
+  SVFGBuilderConfig graphConfig;
+  graphConfig.usePointerAnalysis = true;
+  SVFGBuilder graphBuilder(graphConfig);
+  std::unique_ptr<SVFG> graph(graphBuilder.build(&icfg));
+  ASSERT_NE(graph, nullptr);
+
+  const LoadInst *load = nullptr;
+  for (const Instruction &instruction :
+       instructions(module->getFunction("main")))
+    if (const auto *candidate = dyn_cast<LoadInst>(&instruction))
+      load = candidate;
+  ASSERT_NE(load, nullptr);
+
   FlowSensitivePTA solver(*graph);
   solver.solve();
   const auto result = solver.pointsTo(load);

@@ -1334,8 +1334,21 @@ SVFGBuilder::getIndirectCallTargets(const CallBase *call) {
     if (callGep && callAccess.valid) {
       const Module *module = call->getModule();
       Type *aggregateType = callGep->getSourceElementType();
+      auto basesMayAlias = [&](const Value *lhs, const Value *rhs) {
+        const std::vector<const void *> left = getPointsToSet(lhs);
+        const std::vector<const void *> right = getPointsToSet(rhs);
+        if (left.empty() || right.empty())
+          return true;
+        std::unordered_set<const void *> leftObjects(left.begin(), left.end());
+        return std::any_of(right.begin(), right.end(), [&](const void *object) {
+          return leftObjects.count(object) != 0;
+        });
+      };
+      const Value *callBase = callGep->getPointerOperand();
       for (const GlobalVariable &global : module->globals()) {
         if (!global.hasInitializer() || global.getValueType() != aggregateType)
+          continue;
+        if (!basesMayAlias(callBase, &global))
           continue;
         const auto *aggregate = dyn_cast<ConstantStruct>(global.getInitializer());
         auto *structure = dyn_cast<StructType>(aggregateType);
@@ -1365,6 +1378,8 @@ SVFGBuilder::getIndirectCallTargets(const CallBase *call) {
             if (!storeGep || !storeAccess.valid ||
                 storeGep->getSourceElementType() != aggregateType ||
                 storeAccess.offset != callAccess.offset)
+              continue;
+            if (!basesMayAlias(callBase, storeGep->getPointerOperand()))
               continue;
             const auto *target = dyn_cast<Function>(
                 store->getValueOperand()->stripPointerCasts());

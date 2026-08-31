@@ -228,6 +228,10 @@ int main(int argc, char **argv) {
            << "fspta.memory-out-facts=" << stats.memoryOutFacts << "\n"
            << "fspta.strong-updates=" << stats.strongUpdates << "\n"
            << "fspta.weak-updates=" << stats.weakUpdates << "\n"
+           << "fspta.strong-update-executions="
+           << stats.strongUpdateExecutions << "\n"
+           << "fspta.weak-update-executions=" << stats.weakUpdateExecutions
+           << "\n"
            << "fspta.indirect-call-edges=" << stats.indirectCallEdges << "\n"
            << "fspta.hash-consed-sets=" << stats.hashConsedUniqueSets << "\n";
   }

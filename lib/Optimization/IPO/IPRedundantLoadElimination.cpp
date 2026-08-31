@@ -5,7 +5,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "IR/MemorySSA/MemorySSA.h"
+#include "IR/ShadowMemSSA/ShadowMemSSA.h"
 
 //===----------------------------------------------------------------------===//
 /// @file IPRedundantLoadElimination.cpp
@@ -103,7 +103,7 @@ public:
           }
 
           CallBase *CB = dyn_cast<CallBase>(I);
-          if (!CB || !isMemSSALoad(CB, OnlySingletonRLE)) {
+          if (!CB || !isShadowMemLoad(CB, OnlySingletonRLE)) {
             ++It;
             continue;
           }

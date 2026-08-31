@@ -13,5 +13,5 @@ This section covers the intermediate representations used in Lotus.
    svfg
    gvfg
    gsa
-   memoryssa
+   shadowmemssa
    path_program

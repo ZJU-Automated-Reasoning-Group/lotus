@@ -227,16 +227,65 @@ FlowSensitivePTA::constantPointsTo(const Constant *constant) {
   if (!constant || isa<ConstantPointerNull>(constant) ||
       !constant->getType()->isPointerTy())
     return result;
+  if (const auto *expression = dyn_cast<ConstantExpr>(constant)) {
+    if (expression->getOpcode() == Instruction::GetElementPtr) {
+      const auto *gep = cast<GEPOperator>(expression);
+      const Value *underlying = gep->getPointerOperand()->stripPointerCasts();
+      const Module *module = nullptr;
+      if (const auto *global = dyn_cast<GlobalValue>(underlying))
+        module = global->getParent();
+      else if (const auto *instruction = dyn_cast<Instruction>(underlying))
+        module = instruction->getModule();
+      if (module) {
+        APInt offset(module->getDataLayout().getIndexTypeSizeInBits(
+                         gep->getPointerOperandType()),
+                     0);
+        if (gep->accumulateConstantOffset(module->getDataLayout(), offset)) {
+          StoredSet bases = constantPointsTo(
+              dyn_cast<Constant>(gep->getPointerOperand()));
+          StoredSet exact;
+          for (ObjectID base : materialize(bases)) {
+            ObjectID canonicalBase = base;
+            uint64_t baseOffset = 0;
+            if (const SVFG::ObjectInfo *info = graph_->getObjectInfo(base)) {
+              if (info->baseObjId != 0)
+                canonicalBase = info->baseObjId;
+              if (info->hasFieldOffset)
+                baseOffset = info->fieldOffset;
+            }
+            const uint64_t gepOffset = offset.getZExtValue();
+            if (gepOffset >
+                std::numeric_limits<uint64_t>::max() - baseOffset)
+              continue;
+            const uint64_t totalOffset = baseOffset + gepOffset;
+            const ObjectID field =
+                totalOffset == 0
+                    ? canonicalBase
+                    : graph_->getOffsetObject(canonicalBase, totalOffset);
+            if (field != 0)
+              merge(exact, singleton(field));
+          }
+          if (!materialize(exact).empty())
+            return exact;
+        }
+      }
+      const PointsToSet &known = graph_->getObjectIds(constant);
+      for (ObjectID object : known)
+        merge(result, singleton(object));
+      if (!known.empty())
+        return result;
+      return constantPointsTo(
+          dyn_cast<Constant>(expression->getOperand(0)));
+    }
+  }
   const PointsToSet &known = graph_->getObjectIds(constant);
   for (ObjectID object : known)
     merge(result, singleton(object));
   if (!known.empty())
     return result;
-  if (const auto *expression = dyn_cast<ConstantExpr>(constant)) {
-    if (expression->isCast() ||
-        expression->getOpcode() == Instruction::GetElementPtr)
+  if (const auto *expression = dyn_cast<ConstantExpr>(constant))
+    if (expression->isCast())
       return constantPointsTo(dyn_cast<Constant>(expression->getOperand(0)));
-  }
   const Value *stripped = constant->stripPointerCasts();
   if (const ObjectID object = graph_->getObjectId(stripped))
     merge(result, singleton(object));
@@ -504,15 +553,24 @@ bool FlowSensitivePTA::transfer(const SVFGNode &node) {
     PointsToSet targetSet =
         selectAccessTargets(targets, store->getMemoryPointsTo());
     const bool strong = isStrongUpdate(targetSet);
+    bool updatedAny = false;
     for (ObjectID object : targetSet) {
       if (graph_->isConstantObject(object))
         continue;
       if (strong) {
         assign(outgoing[object], stored);
-        ++stats_.strongUpdates;
       } else {
         merge(outgoing[object], stored);
-        ++stats_.weakUpdates;
+      }
+      updatedAny = true;
+    }
+    if (updatedAny) {
+      if (strong) {
+        strongUpdateSites_.insert(node.getId());
+        ++stats_.strongUpdateExecutions;
+      } else {
+        weakUpdateSites_.insert(node.getId());
+        ++stats_.weakUpdateExecutions;
       }
     }
   } else if (const auto *actualOut = dyn_cast<ActualOutSVFGNode>(&node)) {
@@ -605,9 +663,23 @@ bool FlowSensitivePTA::transfer(const SVFGNode &node) {
       const bool hasExactLength = lengthConstant != nullptr;
       const uint64_t copyLength =
           lengthConstant ? lengthConstant->getZExtValue() : 0;
-      const uint64_t pointerSize =
-          intrinsic->getModule()->getDataLayout().getPointerSize();
-      auto fullyCopied = [&](uint64_t relativeOffset) {
+      auto pointerSizeForObject = [&](ObjectID object) {
+        for (const auto &entry : graph_->getValueNodeMap()) {
+          const Value *value = entry.first;
+          const auto *gep = dyn_cast_or_null<GetElementPtrInst>(value);
+          if (!gep || graph_->getObjectIds(gep).count(object) == 0)
+            continue;
+          const auto *pointerType =
+              dyn_cast<PointerType>(gep->getResultElementType());
+          if (pointerType)
+            return static_cast<uint64_t>(
+                intrinsic->getModule()->getDataLayout().getPointerSize(
+                    pointerType->getAddressSpace()));
+        }
+        return static_cast<uint64_t>(
+            intrinsic->getModule()->getDataLayout().getPointerSize());
+      };
+      auto fullyCopied = [&](uint64_t relativeOffset, uint64_t pointerSize) {
         return !hasExactLength || (relativeOffset <= copyLength &&
                                    pointerSize <= copyLength - relativeOffset);
       };
@@ -632,7 +704,8 @@ bool FlowSensitivePTA::transfer(const SVFGNode &node) {
             if (root.base != destinationBase || destinationOffset < root.offset)
               continue;
             const uint64_t relativeOffset = destinationOffset - root.offset;
-            if (fullyCopied(relativeOffset)) {
+            if (fullyCopied(relativeOffset,
+                            pointerSizeForObject(destination))) {
               assign(outgoing[destination], empty);
             } else if (relativeOffset < copyLength && unknownObject != 0) {
               assign(outgoing[destination], singleton(unknownObject));
@@ -652,7 +725,7 @@ bool FlowSensitivePTA::transfer(const SVFGNode &node) {
           if (sourceRoot.base != sourceBase || sourceOffset < sourceRoot.offset)
             continue;
           const uint64_t relativeOffset = sourceOffset - sourceRoot.offset;
-          if (!fullyCopied(relativeOffset))
+          if (!fullyCopied(relativeOffset, pointerSizeForObject(source)))
             continue;
           for (const RootLocation &destinationRoot : destinationRoots) {
             const uint64_t destinationOffset =
@@ -812,6 +885,8 @@ const FlowSensitivePTA::Statistics &FlowSensitivePTA::solve() {
   dfIn_.clear();
   dfOut_.clear();
   initialMemory_.clear();
+  strongUpdateSites_.clear();
+  weakUpdateSites_.clear();
   stats_ = {};
   if (config_.setBackend == PointsToSetBackend::HashConsed)
     arena_.reset();
@@ -875,6 +950,8 @@ const FlowSensitivePTA::Statistics &FlowSensitivePTA::solve() {
   for (const auto &[node, state] : dfOut_)
     for (const auto &[object, pointsTo] : state)
       stats_.memoryOutFacts += materialize(pointsTo).size();
+  stats_.strongUpdates = strongUpdateSites_.size();
+  stats_.weakUpdates = weakUpdateSites_.size();
   if (config_.setBackend == PointsToSetBackend::HashConsed) {
     const auto hashStats = arena_.statistics();
     stats_.hashConsedUniqueSets = hashStats.uniqueSets;

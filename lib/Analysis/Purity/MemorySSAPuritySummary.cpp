@@ -1,6 +1,6 @@
 #include "Analysis/Purity/MemorySSAPuritySummary.h"
 
-#include "IR/MemorySSA/MemorySSA.h"
+#include "IR/ShadowMemSSA/ShadowMemSSA.h"
 
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Pass.h"
@@ -52,14 +52,14 @@ public:
   explicit Impl(Module &module)
       : hasInstrumentedIR_(moduleContainsShadowMem(module)) {
     if (hasInstrumentedIR_) {
-      manager_ = std::make_unique<previrt::analysis::MemorySSACallsManager>(
+      manager_ = std::make_unique<previrt::analysis::ShadowMemSSACallsManager>(
           module, pass_, false);
     }
   }
 
   bool hasInstrumentedIR_ = false;
   DummyMemorySSAPass pass_;
-  std::unique_ptr<previrt::analysis::MemorySSACallsManager> manager_;
+  std::unique_ptr<previrt::analysis::ShadowMemSSACallsManager> manager_;
 };
 
 MemorySSAPuritySummaryProvider::MemorySSAPuritySummaryProvider(Module &module)

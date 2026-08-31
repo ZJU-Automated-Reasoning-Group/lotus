@@ -1,4 +1,4 @@
-#include "IR/MemorySSA/MemorySSA.h"
+#include "IR/ShadowMemSSA/ShadowMemSSA.h"
 #include "Optimization/IPO/IPStoreSinking.h"
 #include "Optimization/IPO/IPStoreToLoadForwarding.h"
 #include "TestUtils/LLVMHelpers.h"
@@ -36,7 +36,7 @@ std::unique_ptr<Module> parseTestModule(LLVMContext &Context, StringRef IR) {
 
 } // namespace
 
-TEST(IPOMemorySSATest, MemorySSACallsManagerTracksInvokeCallsites) {
+TEST(IPOShadowMemSSATest, ShadowMemSSACallsManagerTracksInvokeCallsites) {
   LLVMContext Context;
   auto Module = parseTestModule(Context, R"(
     declare i32 @__gxx_personality_v0(...)
@@ -60,7 +60,7 @@ TEST(IPOMemorySSATest, MemorySSACallsManagerTracksInvokeCallsites) {
   )");
 
   DummyModulePass Pass;
-  MemorySSACallsManager Manager(*Module, Pass, false);
+  ShadowMemSSACallsManager Manager(*Module, Pass, false);
   Function *Caller = Module->getFunction("caller");
   ASSERT_NE(Caller, nullptr);
 
@@ -76,13 +76,13 @@ TEST(IPOMemorySSATest, MemorySSACallsManagerTracksInvokeCallsites) {
   }
 
   ASSERT_NE(Invoke, nullptr);
-  const MemorySSACallSite *CallSite = Manager.getCallSite(Invoke);
+  const ShadowMemSSACallSite *CallSite = Manager.getCallSite(Invoke);
   ASSERT_NE(CallSite, nullptr);
   ASSERT_EQ(CallSite->numParams(), 1u);
   EXPECT_TRUE(CallSite->isMod(0));
 }
 
-TEST(IPOMemorySSATest, StoreToLoadForwardingFollowsFunOutBackToInFormal) {
+TEST(IPOShadowMemSSATest, StoreToLoadForwardingFollowsFunOutBackToInFormal) {
   LLVMContext Context;
   auto Module = parseTestModule(Context, R"(
     declare i32 @shadow.mem.store(i32, i32, i8*)
@@ -132,7 +132,7 @@ TEST(IPOMemorySSATest, StoreToLoadForwardingFollowsFunOutBackToInFormal) {
   EXPECT_EQ(ReturnedConst->getSExtValue(), 42);
 }
 
-TEST(IPOMemorySSATest, StoreSinkingDoesNotTreatBenignPointerOperandUseAsHazard) {
+TEST(IPOShadowMemSSATest, StoreSinkingDoesNotTreatBenignPointerOperandUseAsHazard) {
   LLVMContext Context;
   auto Module = parseTestModule(Context, R"(
     declare i32 @shadow.mem.store(i32, i32, i8*)

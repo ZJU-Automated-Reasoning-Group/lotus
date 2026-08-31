@@ -89,6 +89,89 @@ void SVFGBuilder::buildNodes() {
       info.isSingleton = true;
       (void)getOrCreateCanonicalObjectIdForValue(&GV, info);
     }
+
+    // Constant-expression GEPs do not have an instruction node, but they can
+    // still be stored in globals and later loaded as pointers. Register their
+    // canonical field objects so clients use the field offset rather than the
+    // aggregate base object.
+    const DataLayout &layout = M->getDataLayout();
+    std::unordered_set<const Constant *> visited;
+    std::function<void(const Constant *)> registerConstantFields =
+        [&](const Constant *constant) {
+          if (!constant || !visited.insert(constant).second)
+            return;
+          for (const Use &operand : constant->operands())
+            registerConstantFields(dyn_cast<Constant>(operand.get()));
+
+          const auto *expression = dyn_cast<ConstantExpr>(constant);
+          if (!expression ||
+              expression->getOpcode() != Instruction::GetElementPtr)
+            return;
+          const auto *gep = cast<GEPOperator>(expression);
+          APInt offset(layout.getIndexTypeSizeInBits(
+                           gep->getPointerOperandType()),
+                       0);
+          if (!gep->accumulateConstantOffset(layout, offset) ||
+              offset.isNegative())
+            return;
+
+          uint32_t baseObject = 0;
+          uint64_t baseOffset = 0;
+          const SVFGNodeBS &pointerObjects =
+              svfg->getObjectIds(gep->getPointerOperand());
+          if (pointerObjects.size() == 1) {
+            baseObject = *pointerObjects.begin();
+            if (const auto *info = svfg->getObjectInfo(baseObject)) {
+              if (info->baseObjId != 0)
+                baseObject = info->baseObjId;
+              if (info->hasFieldOffset)
+                baseOffset = info->fieldOffset;
+            }
+          } else {
+            const Value *base =
+                gep->getPointerOperand()->stripPointerCasts();
+            while (const auto *baseGep = dyn_cast<GEPOperator>(base))
+              base = baseGep->getPointerOperand()->stripPointerCasts();
+            baseObject = svfg->getObjectId(base);
+          }
+          if (baseObject == 0)
+            return;
+          if (const auto *info = svfg->getObjectInfo(baseObject))
+            if (info->baseObjId != 0)
+              baseObject = info->baseObjId;
+
+          const uint64_t localOffset = offset.getZExtValue();
+          if (localOffset >
+              std::numeric_limits<uint64_t>::max() - baseOffset)
+            return;
+          const uint64_t byteOffset = baseOffset + localOffset;
+          uint32_t fieldObject =
+              byteOffset == 0 ? baseObject
+                              : svfg->getOffsetObject(baseObject, byteOffset);
+          if (fieldObject == 0) {
+            fieldObject = nextObjId++;
+            SVFG::ObjectInfo info;
+            if (const auto *baseInfo = svfg->getObjectInfo(baseObject))
+              info = *baseInfo;
+            info.baseObjId = baseObject;
+            info.fieldOffset = byteOffset;
+            info.hasFieldOffset = true;
+            svfg->setObjectInfo(fieldObject, info);
+            svfg->setObjectBase(fieldObject, baseObject);
+            svfg->setObjectOffset(fieldObject, byteOffset);
+            svfg->setOffsetObject(baseObject, byteOffset, fieldObject);
+            svfg->setObjectDebug(
+                fieldObject,
+                "FIELD(" + std::to_string(baseObject) + "," +
+                    std::to_string(byteOffset) + ")");
+          }
+          if (byteOffset != 0)
+            svfg->setObjectValue(fieldObject, expression);
+          svfg->setObjectsForValue(expression, SVFGNodeBS{fieldObject});
+        };
+    for (const GlobalVariable &GV : M->globals())
+      if (GV.hasInitializer())
+        registerConstantFields(GV.getInitializer());
   }
   buildTopLevelNodes();
   buildAddressTakenNodes();

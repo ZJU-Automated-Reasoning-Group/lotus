@@ -37,7 +37,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "IR/MemorySSA/MemorySSA.h"
+#include "IR/ShadowMemSSA/ShadowMemSSA.h"
 
 #include <deque>
 #include <unordered_set>
@@ -82,14 +82,14 @@ struct ForwardSearchState {
   /// @brief The type of the value being loaded
   Type *TargetTy;
   /// @brief Reference to the MemorySSA calls manager
-  const MemorySSACallsManager &MMan;
+  const ShadowMemSSACallsManager &MMan;
   /// @brief Set to true if a conflict is detected during search
   bool Conflict = false;
   /// @brief The value from the reaching store, if found
   const Value *ReachingStoreVal = nullptr;
 
   /// @brief Constructor
-  ForwardSearchState(const Value *Ptr, Type *Ty, const MemorySSACallsManager &M)
+  ForwardSearchState(const Value *Ptr, Type *Ty, const ShadowMemSSACallsManager &M)
       : TargetPtr(Ptr), TargetTy(Ty), MMan(M) {}
 
   /// @brief Merge a candidate store value into the state
@@ -150,7 +150,7 @@ static void exploreFunIn(const CallBase *CB, const Function *F, unsigned Idx,
     // Only handle direct calls where the callee is exactly F.
     if (CI->getCalledFunction() != F)
       continue;
-    const analysis::MemorySSACallSite *CS = State.MMan.getCallSite(CI);
+    const analysis::ShadowMemSSACallSite *CS = State.MMan.getCallSite(CI);
     if (!CS)
       continue;
     if (Idx >= CS->numParams())
@@ -174,7 +174,7 @@ static bool findReachingStore(const Value *StartVal,
       continue;
 
     if (const CallBase *CB = dyn_cast<CallBase>(V)) {
-      if (isMemSSAStore(CB, OnlySingletonForward)) {
+      if (isShadowMemStore(CB, OnlySingletonForward)) {
         if (const Instruction *Next = nextNonDebugInst(CB)) {
           if (const auto *SI = dyn_cast<StoreInst>(Next)) {
             const Value *StorePtr =
@@ -185,28 +185,28 @@ static bool findReachingStore(const Value *StartVal,
         continue;
       }
 
-      if (isMemSSAArgMod(CB, OnlySingletonForward) ||
-          isMemSSAArgRefMod(CB, OnlySingletonForward) ||
-          isMemSSAArgNew(CB, OnlySingletonForward)) {
-        const int64_t Idx = getMemSSAParamIdx(CB);
+      if (isShadowMemArgMod(CB, OnlySingletonForward) ||
+          isShadowMemArgRefMod(CB, OnlySingletonForward) ||
+          isShadowMemArgNew(CB, OnlySingletonForward)) {
+        const int64_t Idx = getShadowMemParamIdx(CB);
         const Function *Callee = findCalledFunction(CB);
         if (Idx >= 0 && Callee) {
-          if (const MemorySSAFunction *CalleeInfo =
+          if (const ShadowMemSSAFunction *CalleeInfo =
                   State.MMan.getFunction(Callee)) {
             enqueueIfInstruction(
                 Q, CalleeInfo->getOutFormal(static_cast<unsigned>(Idx)));
           }
         }
         // For mod/ref_mod, the pre-call state is also a possible reaching def.
-        if (!isMemSSAArgNew(CB, OnlySingletonForward)) {
+        if (!isShadowMemArgNew(CB, OnlySingletonForward)) {
           enqueueIfInstruction(
-              Q, getMemSSAParamNonPrimed(CB, OnlySingletonForward));
+              Q, getShadowMemParamNonPrimed(CB, OnlySingletonForward));
         }
         continue;
       }
 
-      if (isMemSSAFunIn(CB, OnlySingletonForward)) {
-        int64_t Idx = getMemSSAParamIdx(CB);
+      if (isShadowMemFunIn(CB, OnlySingletonForward)) {
+        int64_t Idx = getShadowMemParamIdx(CB);
         if (Idx >= 0) {
           exploreFunIn(CB, CB->getFunction(), static_cast<unsigned>(Idx), State,
                        Q);
@@ -214,14 +214,14 @@ static bool findReachingStore(const Value *StartVal,
         continue;
       }
 
-      if (isMemSSAFunOut(CB, OnlySingletonForward)) {
-        int64_t Idx = getMemSSAParamIdx(CB);
+      if (isShadowMemFunOut(CB, OnlySingletonForward)) {
+        int64_t Idx = getShadowMemParamIdx(CB);
         if (Idx < 0) {
           State.Conflict = true;
           continue;
         }
         enqueueIfInstruction(Q, CB->getArgOperand(1));
-        const MemorySSAFunction *FunInfo = State.MMan.getFunction(CB->getFunction());
+        const ShadowMemSSAFunction *FunInfo = State.MMan.getFunction(CB->getFunction());
         if (!FunInfo) {
           State.Conflict = true;
           continue;
@@ -233,7 +233,7 @@ static bool findReachingStore(const Value *StartVal,
           if (!Caller || Caller->getCalledFunction() != CB->getFunction()) {
             continue;
           }
-          const MemorySSACallSite *CS = State.MMan.getCallSite(Caller);
+          const ShadowMemSSACallSite *CS = State.MMan.getCallSite(Caller);
           if (!CS) {
             State.Conflict = true;
             continue;
@@ -251,9 +251,9 @@ static bool findReachingStore(const Value *StartVal,
         continue;
       }
 
-      if (isMemSSAArgInit(CB, OnlySingletonForward) ||
-          isMemSSAGlobalInit(CB, OnlySingletonForward) ||
-          isMemSSAArgRef(CB, OnlySingletonForward)) {
+      if (isShadowMemArgInit(CB, OnlySingletonForward) ||
+          isShadowMemGlobalInit(CB, OnlySingletonForward) ||
+          isShadowMemArgRef(CB, OnlySingletonForward)) {
         // Base cases: arg.init and global.init are initial values (no
         // preceding store to forward). arg.ref is a read-only use — no store.
         // Stop BFS here.
@@ -293,7 +293,7 @@ public:
       return false;
 
     unsigned NumForwarded = 0;
-    MemorySSACallsManager MMan(M, *this, OnlySingletonForward);
+    ShadowMemSSACallsManager MMan(M, *this, OnlySingletonForward);
 
     for (Function &F : M) {
       if (F.isDeclaration())
@@ -302,7 +302,7 @@ public:
         for (auto It = BB.begin(); It != BB.end();) {
           Instruction *Inst = &*It++;
           CallBase *CB = dyn_cast<CallBase>(Inst);
-          if (!CB || !isMemSSALoad(CB, OnlySingletonForward))
+          if (!CB || !isShadowMemLoad(CB, OnlySingletonForward))
             continue;
           // It now points to the instruction after CB (the load).
           if (It == BB.end())

@@ -10,6 +10,10 @@ combines Static Single Assignment (SSA) form with Memory SSA to track both
 top-level pointers (address-taken variables) and their value flows through
 memory operations.
 
+This sparse MemorySSA is constructed by the SVFG builder using AserPTA. It is
+independent of :doc:`shadowmemssa`, which queries Sea-DSA ``shadow.mem.*``
+instrumentation for interprocedural optimizations.
+
 * **Location**: ``lib/IR/SVFG/``, ``include/IR/SVFG/``
 * **Migrated from**: SVF (SVF-master, https://github.com/SVF-tools/SVF)
 

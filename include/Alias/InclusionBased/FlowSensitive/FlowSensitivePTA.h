@@ -12,6 +12,7 @@
 #include <functional>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace lotus::alias {
@@ -83,10 +84,17 @@ private:
   bool assignState(MemoryState &destination, const MemoryState &source);
   const StoredSet &topSet(const lotus::analysis::SVFGNode *node) const;
   const MemoryState &outState(const lotus::analysis::SVFGNode *node) const;
+  const MemoryState &inState(const lotus::analysis::SVFGNode *node) const;
+  PointsToSet expandIndirectObjects(const PointsToSet &objects) const;
+  void initializeRecursiveFunctions();
+  void initializeGlobalMemory();
+  StoredSet constantPointsTo(const llvm::Constant *constant);
   SCCInfo computeSCCs() const;
   bool transfer(const lotus::analysis::SVFGNode &node);
   StoredSet directInput(const lotus::analysis::SVFGNode &node);
   StoredSet pointerTargets(const llvm::Value *pointer);
+  PointsToSet selectAccessTargets(const StoredSet &flowSensitiveTargets,
+                                  const PointsToSet &preAnalysisTargets) const;
   bool isStrongUpdate(const PointsToSet &targets) const;
   bool resolveIndirectCalls(const lotus::analysis::SVFGNode &node,
                             const StoredSet &pointsTo);
@@ -98,6 +106,9 @@ private:
   std::unordered_map<NodeID, StoredSet> topLevelPointsTo_;
   std::unordered_map<NodeID, MemoryState> dfIn_;
   std::unordered_map<NodeID, MemoryState> dfOut_;
+  MemoryState initialMemory_;
+  MemoryState fallbackStoreFacts_;
+  std::unordered_set<const llvm::Function *> recursiveFunctions_;
   bool topologyChanged_ = false;
   Statistics stats_;
 };

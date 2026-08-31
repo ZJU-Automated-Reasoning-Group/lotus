@@ -30,6 +30,7 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/IntrinsicInst.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/Operator.h>
 
 using namespace lotus::analysis;
 using namespace llvm;
@@ -219,6 +220,68 @@ void SVFGBuilder::buildMemorySSA() {
     return SVFGNodeBS{getOrCreateUnknownObjId()};
   };
 
+  auto getGlobalBase = [](const Value *pointer) -> const GlobalValue * {
+    const Value *current = pointer;
+    std::unordered_set<const Value *> visited;
+    while (current && visited.insert(current).second) {
+      current = current->stripPointerCasts();
+      if (const auto *global = dyn_cast<GlobalValue>(current))
+        return global;
+      if (const auto *gep = dyn_cast<GEPOperator>(current)) {
+        current = gep->getPointerOperand();
+        continue;
+      }
+      break;
+    }
+    return nullptr;
+  };
+
+  auto getSpilledFormalOrigin = [](const Value *value) -> const Argument * {
+    const auto *instruction = dyn_cast_or_null<Instruction>(value);
+    const Function *context = instruction ? instruction->getFunction() : nullptr;
+    if (!context)
+      return nullptr;
+    std::unordered_set<const Value *> visited;
+    std::unordered_set<const Argument *> origins;
+    std::function<void(const Value *)> visit = [&](const Value *current) {
+      if (!current || !current->getType()->isPointerTy())
+        return;
+      current = current->stripPointerCasts();
+      if (!visited.insert(current).second)
+        return;
+      if (const auto *argument = dyn_cast<Argument>(current)) {
+        if (argument->getParent() == context)
+          origins.insert(argument);
+        return;
+      }
+      if (const auto *load = dyn_cast<LoadInst>(current)) {
+        const Value *location =
+            load->getPointerOperand()->stripPointerCasts();
+        for (const User *user : location->users()) {
+          const auto *store = dyn_cast<StoreInst>(user);
+          if (store && store->getFunction() == context &&
+              store->getPointerOperand()->stripPointerCasts() == location)
+            visit(store->getValueOperand());
+        }
+        return;
+      }
+      if (const auto *phi = dyn_cast<PHINode>(current)) {
+        for (const Value *incoming : phi->incoming_values())
+          visit(incoming);
+        return;
+      }
+      if (const auto *select = dyn_cast<SelectInst>(current)) {
+        visit(select->getTrueValue());
+        visit(select->getFalseValue());
+        return;
+      }
+      if (const auto *gep = dyn_cast<GEPOperator>(current))
+        visit(gep->getPointerOperand());
+    };
+    visit(value);
+    return origins.size() == 1 ? *origins.begin() : nullptr;
+  };
+
   auto getCanonicalRegionForPointer =
       [&](const Value *ptr) -> std::pair<uint32_t, SVFGNodeBS> {
     if (!ptr || !ptr->getType()->isPointerTy())
@@ -232,7 +295,38 @@ void SVFGBuilder::buildMemorySSA() {
       return {memRegId,
               canonical == memRegToPts.end() ? objIds : canonical->second};
     }
-    return {getOrCreateMemReg(ptr), SVFGNodeBS{getOrCreateUnknownObjId()}};
+    if (const Argument *origin = getSpilledFormalOrigin(ptr)) {
+      SVFGNodeBS originObjects =
+          convertPTAObjectsToObjIDs(getPointsToSet(origin));
+      if (!originObjects.empty()) {
+        const uint32_t memRegId = getOrCreateMemRegForPointsTo(
+            originObjects, getMemoryRegionScope(origin));
+        auto canonical = memRegToPts.find(memRegId);
+        return {memRegId, canonical == memRegToPts.end()
+                              ? originObjects
+                              : canonical->second};
+      }
+      return {getOrCreateMemReg(origin),
+              SVFGNodeBS{getOrCreateUnknownObjId()}};
+    }
+    if (const GlobalValue *global = getGlobalBase(ptr)) {
+      // AserPTA may omit a field object for ConstantExpr GEPs. Give that
+      // global-derived location its own canonical object instead of merging
+      // it into the universal black-hole object; otherwise an imprecise
+      // function-pointer field contaminates unrelated stack regions.
+      SVFG::ObjectInfo info;
+      info.isGlobal = true;
+      info.isSingleton = true;
+      info.isConstant =
+          isa<GlobalVariable>(global) && cast<GlobalVariable>(global)->isConstant();
+      const uint32_t object =
+          getOrCreateCanonicalObjectIdForValue(ptr, info);
+      const SVFGNodeBS synthetic{object};
+      const uint32_t memRegId = getOrCreateMemRegForPointsTo(synthetic);
+      return {memRegId, synthetic};
+    }
+    const uint32_t unknown = getOrCreateUnknownObjId();
+    return {getOrCreateMemReg(ptr), SVFGNodeBS{unknown}};
   };
 
   auto mergeRegions = [&](MemRegPtsMap &dst, const MemRegPtsMap &src) {
@@ -271,6 +365,12 @@ void SVFGBuilder::buildMemorySSA() {
 
     if (isa<GlobalVariable>(base) || isa<GlobalAlias>(base))
       return true;
+
+    // Constant-expression GEPs are common in unoptimized IR for global
+    // structure fields. They are GEPOperators but not Instructions, so they
+    // must be peeled before the instruction-only cases below.
+    if (const auto *gep = dyn_cast<GEPOperator>(base))
+      return isGlobalDerivedPointerRec(gep->getPointerOperand(), visited);
 
     const auto *inst = dyn_cast<Instruction>(base);
     if (!inst)
@@ -351,12 +451,19 @@ void SVFGBuilder::buildMemorySSA() {
       }
     }
 
-    if (globallyVisiblePointees && !objIds.empty()) {
-      const uint32_t region = getOrCreateMemRegForPointsTo(
-          objIds, getMemoryRegionScope(ptr));
-      auto canonical = memRegToPts.find(region);
-      addRegion(regions, region,
-                canonical == memRegToPts.end() ? objIds : canonical->second);
+    if (globallyVisiblePointees) {
+      if (!objIds.empty()) {
+        const uint32_t region = getOrCreateMemRegForPointsTo(
+            objIds, getMemoryRegionScope(ptr));
+        auto canonical = memRegToPts.find(region);
+        addRegion(regions, region,
+                  canonical == memRegToPts.end() ? objIds
+                                                 : canonical->second);
+      } else {
+        const auto region = getCanonicalRegionForPointer(ptr);
+        if (region.first != 0)
+          addRegion(regions, region.first, region.second);
+      }
       return regions;
     }
 
@@ -367,6 +474,50 @@ void SVFGBuilder::buildMemorySSA() {
 
     return regions;
   };
+
+  auto collectFormalPointerOrigins =
+      [](const Function *context, const Value *value) {
+        std::unordered_set<unsigned> origins;
+        std::unordered_set<const Value *> visited;
+        std::function<void(const Value *)> visit = [&](const Value *current) {
+          if (!current || !current->getType()->isPointerTy())
+            return;
+          current = current->stripPointerCasts();
+          if (!visited.insert(current).second)
+            return;
+          if (const auto *argument = dyn_cast<Argument>(current)) {
+            if (argument->getParent() == context)
+              origins.insert(argument->getArgNo());
+            return;
+          }
+          if (const auto *load = dyn_cast<LoadInst>(current)) {
+            const Value *location =
+                load->getPointerOperand()->stripPointerCasts();
+            for (const User *user : location->users()) {
+              const auto *store = dyn_cast<StoreInst>(user);
+              if (!store || store->getFunction() != context)
+                continue;
+              if (store->getPointerOperand()->stripPointerCasts() == location)
+                visit(store->getValueOperand());
+            }
+            return;
+          }
+          if (const auto *phi = dyn_cast<PHINode>(current)) {
+            for (const Value *incoming : phi->incoming_values())
+              visit(incoming);
+            return;
+          }
+          if (const auto *select = dyn_cast<SelectInst>(current)) {
+            visit(select->getTrueValue());
+            visit(select->getFalseValue());
+            return;
+          }
+          if (const auto *gep = dyn_cast<GEPOperator>(current))
+            visit(gep->getPointerOperand());
+        };
+        visit(value);
+        return origins;
+      };
 
   auto recordVisibleAccess = [&](const Function *context, const Value *ptr,
                                  FunctionMemorySummary &summary, bool isRead,
@@ -383,6 +534,48 @@ void SVFGBuilder::buildMemorySSA() {
         return;
       }
     }
+
+    const std::unordered_set<unsigned> syntacticOrigins =
+        collectFormalPointerOrigins(context, ptr);
+    if (!syntacticOrigins.empty()) {
+      for (unsigned argument : syntacticOrigins) {
+        if (isRead)
+          summary.readArgs.insert(argument);
+        if (isWrite)
+          summary.writeArgs.insert(argument);
+      }
+      return;
+    }
+
+    // A memory operand is often a load from an unoptimized local slot that
+    // contains a formal pointer (e.g. -O0 parameter spilling). Attribute the
+    // access to every formal whose auxiliary points-to set overlaps it. This
+    // is the region-level equivalent of SVF's PAG/MemSSA parameter summary;
+    // checking only `ptr` itself for Argument misses all such spilled forms.
+    const SVFGNodeBS accessObjects =
+        convertPTAObjectsToObjIDs(getPointsToSet(ptr));
+    bool matchedArgument = false;
+    if (context && !accessObjects.empty()) {
+      for (const Argument &argument : context->args()) {
+        if (!argument.getType()->isPointerTy())
+          continue;
+        const SVFGNodeBS argumentObjects =
+            convertPTAObjectsToObjIDs(getPointsToSet(&argument));
+        if (argumentObjects.empty())
+          continue;
+        if (intersectPointsToSets(accessObjects, argumentObjects,
+                                  getOrCreateUnknownObjId())
+                .empty())
+          continue;
+        if (isRead)
+          summary.readArgs.insert(argument.getArgNo());
+        if (isWrite)
+          summary.writeArgs.insert(argument.getArgNo());
+        matchedArgument = true;
+      }
+    }
+    if (matchedArgument)
+      return;
 
     MemRegPtsMap visibleRegs = collectVisibleRegions(ptr);
     if (isRead)
@@ -567,7 +760,7 @@ void SVFGBuilder::buildMemorySSA() {
     for (const BasicBlock &bb : F) {
       for (const Instruction &inst : bb) {
         const auto *call = dyn_cast<CallBase>(&inst);
-        if (!call || isa<IntrinsicInst>(call))
+        if (!call)
           continue;
 
         const bool mayRead = callMayReadMemory(call);
@@ -577,8 +770,38 @@ void SVFGBuilder::buildMemorySSA() {
 
         MemRegPtsMap readRegs;
         MemRegPtsMap writeRegs;
-        const std::vector<const Function *> callees = getCallTargets(call);
-        if (callees.empty()) {
+        const auto *intrinsic = dyn_cast<IntrinsicInst>(call);
+        if (intrinsic) {
+          auto addIntrinsicRegion = [&](unsigned argument, bool read,
+                                        bool write) {
+            if (argument >= call->arg_size())
+              return;
+            const Value *pointer = call->getArgOperand(argument);
+            if (!pointer->getType()->isPointerTy())
+              return;
+            const auto region = getCanonicalRegionForPointer(pointer);
+            if (region.first == 0)
+              return;
+            if (read)
+              addRegion(readRegs, region.first, region.second);
+            if (write)
+              addRegion(writeRegs, region.first, region.second);
+          };
+          switch (intrinsic->getIntrinsicID()) {
+          case Intrinsic::memcpy:
+          case Intrinsic::memmove:
+            addIntrinsicRegion(0, false, true);
+            addIntrinsicRegion(1, true, false);
+            break;
+          case Intrinsic::memset:
+            addIntrinsicRegion(0, false, true);
+            break;
+          default:
+            continue;
+          }
+        } else {
+          const std::vector<const Function *> callees = getCallTargets(call);
+          if (callees.empty()) {
           for (unsigned i = 0; i < call->arg_size(); ++i) {
             const Value *arg = call->getArgOperand(i);
             if (!arg->getType()->isPointerTy())
@@ -595,7 +818,7 @@ void SVFGBuilder::buildMemorySSA() {
             if (mayWrite && callArgMayModifyMemory(call, i))
               mergeRegions(writeRegs, argRegs);
           }
-        } else {
+          } else {
           for (const Function *callee : callees) {
             auto calleeIt = summaries.find(callee);
             if (calleeIt == summaries.end())
@@ -636,8 +859,15 @@ void SVFGBuilder::buildMemorySSA() {
               mergeRegions(writeRegs, calleeSummary.writeGlobals);
             }
           }
+          }
         }
 
+        // A may-write region is also an input to the callee: weak updates and
+        // untouched objects must see the reaching memory version. Model the
+        // SVF ActualIn/FormalIn side for MOD regions even when the callee does
+        // not explicitly read the old value, while ActualOut remains limited
+        // to the may-write set.
+        mergeRegions(readRegs, writeRegs);
         if (!readRegs.empty())
           callReadRegions.emplace(call, std::move(readRegs));
         if (!writeRegs.empty())
@@ -695,9 +925,6 @@ void SVFGBuilder::buildMemorySSA() {
         }
 
         if (const CallBase *call = dyn_cast<CallBase>(&inst)) {
-          if (isa<IntrinsicInst>(call))
-            continue;
-
           auto readRegsIt = callReadRegions.find(call);
           auto writeRegsIt = callWriteRegions.find(call);
           if (readRegsIt == callReadRegions.end() &&
@@ -743,6 +970,61 @@ void SVFGBuilder::buildMemorySSA() {
               svfg->addActualOut(call, actualOut);
               chiVec.push_back(actualOutId);
               svfg->setMSSADef(memRegId, actualOut, actualOutVersion);
+            }
+          }
+
+          // Memory-transfer intrinsics have no callee body whose FormalIn/
+          // FormalOut edges could order their source MU before destination
+          // CHI. Add explicit sparse dependencies so the fspta transfer for
+          // memcpy/memmove can consume every ActualIn state and re-run when a
+          // source fact changes.
+          if (const auto *intrinsic = dyn_cast<IntrinsicInst>(call)) {
+            if (intrinsic->getIntrinsicID() == Intrinsic::memcpy ||
+                intrinsic->getIntrinsicID() == Intrinsic::memmove) {
+              for (uint32_t muId : muVec)
+                for (uint32_t chiId : chiVec)
+                  svfg->addEdge(svfg->getNode(muId), svfg->getNode(chiId),
+                                SVFGEdgeK::IntraIndirect);
+
+              auto underlyingBase = [](const Value *value) {
+                const Value *current = value;
+                std::unordered_set<const Value *> visited;
+                while (current && visited.insert(current).second) {
+                  current = current->stripPointerCasts();
+                  if (const auto *gep = dyn_cast<GEPOperator>(current)) {
+                    current = gep->getPointerOperand();
+                    continue;
+                  }
+                  break;
+                }
+                return current;
+              };
+              const Value *destinationBase =
+                  underlyingBase(intrinsic->getArgOperand(0));
+              const Value *sourceBase =
+                  underlyingBase(intrinsic->getArgOperand(1));
+              for (const auto &[store, storeNodeId] : storeToStoreNode) {
+                const bool sameSourceBase =
+                    underlyingBase(store->getPointerOperand()) == sourceBase;
+                const bool precedingInBlock =
+                    store->getParent() == intrinsic->getParent() &&
+                    store->comesBefore(intrinsic);
+                if (!sameSourceBase && !precedingInBlock)
+                  continue;
+                for (uint32_t chiId : chiVec)
+                  svfg->addEdge(svfg->getNode(storeNodeId),
+                                svfg->getNode(chiId),
+                                SVFGEdgeK::IntraIndirect);
+              }
+              for (const auto &[load, loadNodeId] : loadToLoadNode) {
+                if (underlyingBase(load->getPointerOperand()) !=
+                    destinationBase)
+                  continue;
+                for (uint32_t chiId : chiVec)
+                  svfg->addEdge(svfg->getNode(chiId),
+                                svfg->getNode(loadNodeId),
+                                SVFGEdgeK::IntraIndirect);
+              }
             }
           }
 
@@ -905,9 +1187,11 @@ void SVFGBuilder::buildMemoryPHINodes() {
       }
     }
 
-    auto computeExitDefs =
-        [&](std::unordered_map<const BasicBlock *,
-                               std::unordered_map<uint32_t, SVFGNode *>> &out) {
+    using ReachingDefSet = std::set<SVFGNode *>;
+    using BlockReachingDefs =
+        std::unordered_map<const BasicBlock *,
+                           std::unordered_map<uint32_t, ReachingDefSet>>;
+    auto computeExitDefs = [&](BlockReachingDefs &out) {
           out.clear();
           std::queue<const BasicBlock *> worklist;
           std::set<const BasicBlock *> inQueue;
@@ -919,9 +1203,10 @@ void SVFGBuilder::buildMemoryPHINodes() {
             worklist.pop();
             inQueue.erase(bb);
 
-            std::unordered_map<uint32_t, SVFGNode *> current;
+            std::unordered_map<uint32_t, ReachingDefSet> current;
             if (bb == &F.getEntryBlock()) {
-              current = formalInByReg;
+              for (const auto &[memReg, formalIn] : formalInByReg)
+                current[memReg].insert(formalIn);
             } else {
               for (const BasicBlock *pred : predecessors(bb)) {
                 auto predIt = out.find(pred);
@@ -929,14 +1214,13 @@ void SVFGBuilder::buildMemoryPHINodes() {
                   continue;
                 for (const auto &pair : predIt->second) {
                   const uint32_t memReg = pair.first;
-                  SVFGNode *def = pair.second;
                   auto phiIt = bbToMemPhi[bb].find(memReg);
                   if (phiIt != bbToMemPhi[bb].end()) {
-                    current[memReg] = svfg->getNode(phiIt->second);
+                    current[memReg] = {svfg->getNode(phiIt->second)};
                     continue;
                   }
-                  if (current.find(memReg) == current.end())
-                    current[memReg] = def;
+                  current[memReg].insert(pair.second.begin(),
+                                         pair.second.end());
                 }
               }
             }
@@ -944,13 +1228,13 @@ void SVFGBuilder::buildMemoryPHINodes() {
             auto phiMapIt = bbToMemPhi.find(bb);
             if (phiMapIt != bbToMemPhi.end()) {
               for (const auto &phiPair : phiMapIt->second)
-                current[phiPair.first] = svfg->getNode(phiPair.second);
+                current[phiPair.first] = {svfg->getNode(phiPair.second)};
             }
 
             auto localIt = localDefs.find(bb);
             if (localIt != localDefs.end()) {
               for (const auto &pair : localIt->second)
-                current[pair.first] = pair.second;
+                current[pair.first] = {pair.second};
             }
 
             const bool changed =
@@ -970,9 +1254,7 @@ void SVFGBuilder::buildMemoryPHINodes() {
     while (changed) {
       changed = false;
 
-      std::unordered_map<const BasicBlock *,
-                         std::unordered_map<uint32_t, SVFGNode *>>
-          exitDefs;
+      BlockReachingDefs exitDefs;
       computeExitDefs(exitDefs);
 
       for (const BasicBlock &bb : F) {
@@ -987,21 +1269,24 @@ void SVFGBuilder::buildMemoryPHINodes() {
           std::vector<SVFGNode *> perPredDefs;
           std::set<SVFGNode *> distinctDefs;
           for (const BasicBlock *pred : predecessors(&bb)) {
-            SVFGNode *incomingDef = nullptr;
+            ReachingDefSet incomingDefs;
             auto predIt = exitDefs.find(pred);
             if (predIt != exitDefs.end()) {
               auto defIt = predIt->second.find(memReg);
               if (defIt != predIt->second.end())
-                incomingDef = defIt->second;
+                incomingDefs = defIt->second;
             }
-            if (!incomingDef) {
+            if (incomingDefs.empty()) {
               auto entryIt = formalInByReg.find(memReg);
               if (entryIt != formalInByReg.end())
-                incomingDef = entryIt->second;
+                incomingDefs.insert(entryIt->second);
             }
+            SVFGNode *incomingDef = nullptr;
+            for (SVFGNode *candidate : incomingDefs)
+              if (!incomingDef || candidate->getId() < incomingDef->getId())
+                incomingDef = candidate;
             perPredDefs.push_back(incomingDef);
-            if (incomingDef)
-              distinctDefs.insert(incomingDef);
+            distinctDefs.insert(incomingDefs.begin(), incomingDefs.end());
           }
 
           if (distinctDefs.size() < 2)

@@ -43,6 +43,7 @@
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/Operator.h>
 
 // Define DEBUG_TYPE after including AserPTA headers to avoid redefinition
 // warning
@@ -105,19 +106,19 @@ static SVFG::ObjectInfo inferObjectInfoFromValue(const Value *val) {
   if (const auto *inst = dyn_cast<Instruction>(val)) {
     if (isa<AllocaInst>(inst)) {
       info.isStack = true;
-      info.isSingleton = inst->getFunction()->getName() == "main" &&
-                         inst->getParent() ==
-                             &inst->getFunction()->getEntryBlock();
+      info.isSingleton =
+          inst->getFunction()->getName() == "main" &&
+          inst->getParent() == &inst->getFunction()->getEntryBlock();
     }
     if (isAllocationFn(inst, nullptr)) {
       info.isHeap = true;
       info.isConcreteHeap = isConcreteHeapAllocationSite(inst);
-      info.isSingleton = inst->getFunction()->getName() == "main" &&
-                         inst->getParent() ==
-                             &inst->getFunction()->getEntryBlock();
+      info.isSingleton =
+          inst->getFunction()->getName() == "main" &&
+          inst->getParent() == &inst->getFunction()->getEntryBlock();
     }
   }
-  if (isa<Constant>(val) && !isa<Function>(val))
+  if (isa<Constant>(val) && !isa<GlobalValue>(val))
     info.isConstant = true;
   if (val->getType()->isPointerTy()) {
     if (const Type *elemTy = val->getType()->getPointerElementType())
@@ -266,6 +267,39 @@ void SVFGBuilder::initializeIndirectCallReverseIndex() {
       }
     }
   }
+}
+
+std::size_t SVFGBuilder::connectPreAnalysisIndirectCalls(SVFG *graph) {
+  if (!graph || !config.usePointerAnalysis || !ptaSolverWrapper ||
+      !ptaSolverWrapper->solver || !icfg)
+    return 0;
+
+  const Module *module = getModuleFromICFG(icfg);
+  if (!module)
+    return 0;
+
+  std::size_t connected = 0;
+  for (const Function &function : *module) {
+    if (function.isDeclaration() || function.isIntrinsic())
+      continue;
+    for (const BasicBlock &block : function) {
+      for (const Instruction &instruction : block) {
+        const auto *call = dyn_cast<CallBase>(&instruction);
+        if (!call || call->getCalledFunction())
+          continue;
+
+        for (const Function *callee :
+             getIndirectCallTargets(call, /*includeTypeFallback=*/false)) {
+          if (!callee || callee->isDeclaration() || callee->isIntrinsic())
+            continue;
+          std::vector<SVFGEdge *> newEdges;
+          if (connectCallSiteToCalleeOnTheFly(graph, call, callee, newEdges))
+            ++connected;
+        }
+      }
+    }
+  }
+  return connected;
 }
 
 SVFG *SVFGBuilder::build(const ICFG *icfg) { return build(icfg, config); }
@@ -561,8 +595,8 @@ const Function *SVFGBuilder::getMemoryRegionScope(const Value *value) {
   return nullptr;
 }
 
-uint32_t SVFGBuilder::getOrCreateMemRegForPointsTo(
-    const SVFGNodeBS &pts, const Function *scope) {
+uint32_t SVFGBuilder::getOrCreateMemRegForPointsTo(const SVFGNodeBS &pts,
+                                                   const Function *scope) {
   if (pts.empty()) {
     // Callers should avoid using a points-to derived region for empty/unknown.
     return 0;
@@ -685,15 +719,16 @@ SVFGNodeBS SVFGBuilder::convertPTAObjectsToObjIDs(
   return result;
 }
 
-uint32_t SVFGBuilder::getOrCreateCanonicalObjectIdForValue(
-    const Value *v, SVFG::ObjectInfo info) {
+uint32_t
+SVFGBuilder::getOrCreateCanonicalObjectIdForValue(const Value *v,
+                                                  SVFG::ObjectInfo info) {
   if (!svfg || !v)
     return 0;
   if (const uint32_t existing = svfg->getObjectId(v))
     return existing;
 
-  if (config.usePointerAnalysis && ptaSolverWrapper && ptaSolverWrapper->solver &&
-      v->getType()->isPointerTy()) {
+  if (config.usePointerAnalysis && ptaSolverWrapper &&
+      ptaSolverWrapper->solver && v->getType()->isPointerTy()) {
     SVFGNodeBS canonicalIds = getObjectIdsForValue(v);
     if (canonicalIds.size() == 1) {
       const uint32_t objId = *canonicalIds.begin();
@@ -739,8 +774,8 @@ SVFGNodeBS SVFGBuilder::getObjectIdsForValue(const Value *ptr) {
   SVFG *graph = getActiveSVFG();
   if (!ptr)
     return result;
-  if (config.usePointerAnalysis && ptaSolverWrapper && ptaSolverWrapper->solver &&
-      ptr->getType()->isPointerTy()) {
+  if (config.usePointerAnalysis && ptaSolverWrapper &&
+      ptaSolverWrapper->solver && ptr->getType()->isPointerTy()) {
     std::vector<const void *> ptsVoid = getPointsToSet(ptr);
     result = convertPTAObjectsToObjIDs(ptsVoid, true);
     auto isCanonicalObjectValue = [&](const Value *v) {
@@ -763,6 +798,9 @@ SVFGNodeBS SVFGBuilder::getObjectIdsForValue(const Value *ptr) {
     if (objId != 0)
       result.insert(objId);
   }
+  if (graph)
+    for (uint32_t objId : result)
+      graph->addObjectForValue(ptr, objId);
   return result;
 }
 
@@ -985,14 +1023,16 @@ std::vector<const void *> SVFGBuilder::getPointsToSet(const Value *ptr) {
 }
 
 std::vector<const Function *>
-SVFGBuilder::getIndirectCallTargets(const CallBase *call) {
+SVFGBuilder::getIndirectCallTargets(const CallBase *call,
+                                    bool includeTypeFallback) {
   std::vector<const Function *> targets;
 
   if (!config.usePointerAnalysis || !ptaSolverWrapper ||
       !ptaSolverWrapper->solver)
     return targets;
 
-  if (const Function *directCallee = call ? call->getCalledFunction() : nullptr) {
+  if (const Function *directCallee =
+          call ? call->getCalledFunction() : nullptr) {
     if (!directCallee->isDeclaration())
       targets.push_back(directCallee);
     return targets;
@@ -1027,13 +1067,16 @@ SVFGBuilder::getIndirectCallTargets(const CallBase *call) {
 
   switch (ptaSolverWrapper->kind) {
   case SolverWrapper::SolverKind::Wave:
-    collectResolvedTargets(static_cast<CIWaveSolver *>(ptaSolverWrapper->solver));
+    collectResolvedTargets(
+        static_cast<CIWaveSolver *>(ptaSolverWrapper->solver));
     break;
   case SolverWrapper::SolverKind::Deep:
-    collectResolvedTargets(static_cast<CIDeepSolver *>(ptaSolverWrapper->solver));
+    collectResolvedTargets(
+        static_cast<CIDeepSolver *>(ptaSolverWrapper->solver));
     break;
   case SolverWrapper::SolverKind::Basic:
-    collectResolvedTargets(static_cast<CIBasicSolver *>(ptaSolverWrapper->solver));
+    collectResolvedTargets(
+        static_cast<CIBasicSolver *>(ptaSolverWrapper->solver));
     break;
   }
 
@@ -1083,15 +1126,92 @@ SVFGBuilder::getIndirectCallTargets(const CallBase *call) {
 
         const Value *srcVal = srcObj->getValue();
         if (srcVal && srcVal->getType()->isPointerTy()) {
-          if (const Function *F = dyn_cast<Function>(srcVal->stripPointerCasts()))
+          if (const Function *F =
+                  dyn_cast<Function>(srcVal->stripPointerCasts()))
             addUniqueTarget(F);
         }
       }
     }
 
     if (targets.empty()) {
-      if (const Function *F = dyn_cast<Function>(calledVal->stripPointerCasts()))
+      if (const Function *F =
+              dyn_cast<Function>(calledVal->stripPointerCasts()))
         addUniqueTarget(F);
+    }
+  }
+
+  // Recover field-initialized function pointers when the auxiliary solver
+  // loses the aggregate field object. Match the final constant struct index
+  // at the indirect load with stores of concrete functions to the same field.
+  // This preserves the field distinction (e.g. begin/end/render tables)
+  // without eagerly connecting every type-compatible address-taken function.
+  if (targets.empty() && call) {
+    auto finalFieldIndex = [](const Value *pointer) -> std::optional<uint64_t> {
+      const GEPOperator *gep = dyn_cast_or_null<GEPOperator>(pointer);
+      if (!gep) {
+        pointer = pointer ? pointer->stripPointerCasts() : nullptr;
+        gep = dyn_cast_or_null<GEPOperator>(pointer);
+      }
+      if (!gep || gep->getNumIndices() == 0)
+        return std::nullopt;
+      const auto *index = dyn_cast<ConstantInt>(gep->idx_end()[-1].get());
+      return index ? std::optional<uint64_t>(index->getZExtValue())
+                   : std::nullopt;
+    };
+    const auto *calledLoad = dyn_cast<LoadInst>(call->getCalledOperand());
+    const std::optional<uint64_t> callField =
+        calledLoad ? finalFieldIndex(calledLoad->getPointerOperand())
+                   : std::nullopt;
+    if (callField) {
+      const Module *module = call->getModule();
+      for (const GlobalVariable &global : module->globals()) {
+        if (!global.hasInitializer())
+          continue;
+        const auto *aggregate = dyn_cast<ConstantStruct>(global.getInitializer());
+        if (!aggregate || *callField >= aggregate->getNumOperands())
+          continue;
+        const auto *target = dyn_cast<Function>(
+            aggregate->getOperand(*callField)->stripPointerCasts());
+        if (target && !target->isDeclaration() &&
+            target->getFunctionType() == call->getFunctionType())
+          addUniqueTarget(target);
+      }
+      for (const Function &function : *module) {
+        for (const BasicBlock &block : function) {
+          for (const Instruction &instruction : block) {
+            const auto *store = dyn_cast<StoreInst>(&instruction);
+            if (!store ||
+                finalFieldIndex(store->getPointerOperand()) != callField)
+              continue;
+            const auto *target = dyn_cast<Function>(
+                store->getValueOperand()->stripPointerCasts());
+            if (target && !target->isDeclaration() &&
+                target->getFunctionType() == call->getFunctionType())
+              addUniqueTarget(target);
+          }
+        }
+      }
+    }
+  }
+
+  // AserPTA can currently lose function objects loaded through a
+  // ConstantExpr GEP of a global aggregate. Upstream SVF's preliminary
+  // Andersen analysis still supplies a conservative call-graph target
+  // universe in that situation. Preserve the same soundness boundary here:
+  // only when the auxiliary result is empty, admit address-taken definitions
+  // with the exact call signature. The flow-sensitive solver will select the
+  // actually discovered subset from this finite universe.
+  if (includeTypeFallback && targets.empty() && call) {
+    const Module *module = call->getModule();
+    const FunctionType *callType = call->getFunctionType();
+    if (module && callType) {
+      for (const Function &candidate : *module) {
+        if (candidate.isDeclaration() || candidate.isIntrinsic() ||
+            !candidate.hasAddressTaken())
+          continue;
+        if (candidate.getFunctionType() == callType)
+          addUniqueTarget(&candidate);
+      }
     }
   }
   if (svfg && call && !call->getCalledFunction()) {
@@ -1115,8 +1235,9 @@ bool SVFGBuilder::isHeapAllocation(const Instruction *inst) const {
       if (isAllocationFn(callee, nullptr))
         return true;
       StringRef name = callee->getName();
-      if (name == "_Znwm" || name == "_Znam" || name == "_Znwj" ||
-          name == "_Znaj")
+      if (name == "malloc" || name == "calloc" || name == "aligned_alloc" ||
+          name == "valloc" || name == "memalign" || name == "_Znwm" ||
+          name == "_Znam" || name == "_Znwj" || name == "_Znaj")
         return true;
     }
   }
@@ -1129,6 +1250,8 @@ bool SVFGBuilder::isAddressTakenPointer(const Value *ptr) const {
     return false;
 
   const Value *base = ptr->stripPointerCasts();
+  while (const auto *gep = dyn_cast<GEPOperator>(base))
+    base = gep->getPointerOperand()->stripPointerCasts();
   if (isa<AllocaInst>(base) || isa<GlobalVariable>(base))
     return true;
   if (const auto *arg = dyn_cast<Argument>(base)) {
@@ -1147,8 +1270,12 @@ bool SVFGBuilder::isAddressTakenPointer(const Value *ptr) const {
       !ptaSolverWrapper->solver)
     return true;
 
-  // PTA can identify memory-backed pointers even when base is a cast/gep/load.
-  return !const_cast<SVFGBuilder *>(this)->getPointsToSet(ptr).empty();
+  // A preliminary PTA empty set is not proof that a load/store operand is not
+  // memory-backed. In particular, the auxiliary AserPTA can miss values
+  // loaded through spilled parameters or global ConstantExpr fields. Keep the
+  // access and let MemorySSA assign a wildcard region when no object is known;
+  // dropping it here would make exhaustive flow-sensitive analysis unsound.
+  return true;
 }
 
 bool SVFGBuilder::mayAliasMemoryNodes(const MSSASVFGNode *lhs,

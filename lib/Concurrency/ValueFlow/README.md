@@ -7,9 +7,12 @@ concurrency checker:
   Store-to-Store `ThreadMHPIndirectVF` edges for accesses that may run in
   parallel. A `FilteredSVFGView` can restrict construction to an induced
   subgraph without copying graph nodes.
-- `SparseValueFlowRefinement` propagates pointer values through the SVFG and keeps
-  memory values on MemorySSA definitions. Sequential singleton-global stores
-  use strong updates; thread-interference inputs are always weak updates.
+- `SparseValueFlowRefinement` is a lightweight concurrency-specific diagnostic
+  refinement. It is not the alias-analysis oracle and cannot suppress race
+  candidates.
+- `Alias/InclusionBased/FlowSensitive/FlowSensitivePTA` owns the general
+  top-level points-to and per-node MemorySSA `IN/OUT` state. `FSMPTA` composes
+  that solver with the thread-aware SVFG and sliced solve scope.
 - `WholeProgramSparseRefinement` owns the ICFG, SVFG, overlay, and solver for a
   complete analysis run.
 - `MultiStageSlicer` implements the MSli pipeline: candidate closure,

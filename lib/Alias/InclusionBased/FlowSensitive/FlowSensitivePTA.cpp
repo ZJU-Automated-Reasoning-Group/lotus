@@ -5,7 +5,12 @@
 #include <queue>
 #include <unordered_set>
 
+#include <llvm/ADT/SCCIterator.h>
+#include <llvm/Analysis/CallGraph.h>
+#include <llvm/IR/Constants.h>
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/IntrinsicInst.h>
+#include <llvm/IR/Operator.h>
 #include <llvm/Support/Casting.h>
 
 using namespace llvm;
@@ -109,6 +114,139 @@ FlowSensitivePTA::outState(const SVFGNode *node) const {
   return it == dfOut_.end() ? empty : it->second;
 }
 
+const FlowSensitivePTA::MemoryState &
+FlowSensitivePTA::inState(const SVFGNode *node) const {
+  static const MemoryState empty;
+  if (!node)
+    return empty;
+  auto it = dfIn_.find(node->getId());
+  return it == dfIn_.end() ? empty : it->second;
+}
+
+FlowSensitivePTA::PointsToSet
+FlowSensitivePTA::expandIndirectObjects(const PointsToSet &objects) const {
+  PointsToSet expanded = objects;
+  for (ObjectID object : objects) {
+    if (!graph_->isFieldInsensitiveObject(object))
+      continue;
+    const PointsToSet fields = graph_->getFieldObjects(object);
+    expanded.insert(fields.begin(), fields.end());
+  }
+  return expanded;
+}
+
+void FlowSensitivePTA::initializeRecursiveFunctions() {
+  recursiveFunctions_.clear();
+  Module *module = nullptr;
+  for (const auto &entry : *graph_) {
+    if (const Function *function = entry.second->getFunction()) {
+      module = const_cast<Module *>(function->getParent());
+      break;
+    }
+  }
+  if (!module)
+    return;
+  CallGraph callGraph(*module);
+  for (scc_iterator<CallGraph *> it = scc_begin(&callGraph),
+                                 end = scc_end(&callGraph);
+       it != end; ++it) {
+    const std::vector<CallGraphNode *> &component = *it;
+    bool recursive = component.size() > 1;
+    if (!recursive && component.size() == 1) {
+      CallGraphNode *node = component.front();
+      for (const auto &edge : *node)
+        recursive |= edge.second == node;
+    }
+    if (!recursive)
+      continue;
+    for (CallGraphNode *node : component)
+      if (node && node->getFunction())
+        recursiveFunctions_.insert(node->getFunction());
+  }
+}
+
+FlowSensitivePTA::StoredSet
+FlowSensitivePTA::constantPointsTo(const Constant *constant) {
+  StoredSet result;
+  if (!constant || isa<ConstantPointerNull>(constant) ||
+      !constant->getType()->isPointerTy())
+    return result;
+  const PointsToSet &known = graph_->getObjectIds(constant);
+  for (ObjectID object : known)
+    merge(result, singleton(object));
+  if (!known.empty())
+    return result;
+  if (const auto *expression = dyn_cast<ConstantExpr>(constant)) {
+    if (expression->isCast() ||
+        expression->getOpcode() == Instruction::GetElementPtr)
+      return constantPointsTo(dyn_cast<Constant>(expression->getOperand(0)));
+  }
+  const Value *stripped = constant->stripPointerCasts();
+  if (const ObjectID object = graph_->getObjectId(stripped))
+    merge(result, singleton(object));
+  return result;
+}
+
+void FlowSensitivePTA::initializeGlobalMemory() {
+  initialMemory_.clear();
+  const Module *module = nullptr;
+  for (const auto &entry : *graph_) {
+    if (const Function *function = entry.second->getFunction()) {
+      module = function->getParent();
+      break;
+    }
+  }
+  if (!module)
+    return;
+  for (const GlobalVariable &global : module->globals()) {
+    if (!global.hasInitializer())
+      continue;
+    StoredSet initializer;
+    std::function<void(const Constant *)> collectPointerLeaves =
+        [&](const Constant *constant) {
+          if (!constant)
+            return;
+          if (constant->getType()->isPointerTy()) {
+            merge(initializer, constantPointsTo(constant));
+            return;
+          }
+          for (const Use &operand : constant->operands())
+            collectPointerLeaves(dyn_cast<Constant>(operand.get()));
+        };
+    collectPointerLeaves(global.getInitializer());
+    if (materialize(initializer).empty())
+      continue;
+    PointsToSet storage = graph_->getObjectIds(&global);
+    if (storage.empty())
+      if (const ObjectID object = graph_->getObjectId(&global))
+        storage.insert(object);
+    PointsToSet aggregateFields;
+    for (ObjectID object : storage) {
+      const PointsToSet fields = graph_->getFieldObjects(object);
+      aggregateFields.insert(fields.begin(), fields.end());
+    }
+    storage.insert(aggregateFields.begin(), aggregateFields.end());
+    auto underlyingGlobal = [](const Value *value) {
+      const Value *current = value;
+      std::unordered_set<const Value *> visited;
+      while (current && visited.insert(current).second) {
+        current = current->stripPointerCasts();
+        if (const auto *gep = dyn_cast<GEPOperator>(current)) {
+          current = gep->getPointerOperand();
+          continue;
+        }
+        break;
+      }
+      return dyn_cast_or_null<GlobalVariable>(current);
+    };
+    for (const auto &[object, label] : graph_->getObjectDebugMap())
+      if (underlyingGlobal(graph_->getObjectValue(object)) == &global)
+        storage.insert(object);
+    for (ObjectID object : storage)
+      merge(initialMemory_[object], initializer);
+  }
+}
+
 const Value *FlowSensitivePTA::accessPointer(const Instruction *instruction) {
   if (const auto *load = dyn_cast_or_null<LoadInst>(instruction))
     return load->getPointerOperand();
@@ -128,6 +266,25 @@ FlowSensitivePTA::pointerTargets(const Value *pointer) {
   return topSet(graph_->getValueNode(pointer));
 }
 
+FlowSensitivePTA::PointsToSet FlowSensitivePTA::selectAccessTargets(
+    const StoredSet &flowSensitiveTargets,
+    const PointsToSet &preAnalysisTargets) const {
+  const PointsToSet &flow = materialize(flowSensitiveTargets);
+  if (preAnalysisTargets.empty())
+    return flow;
+  if (flow.empty())
+    return preAnalysisTargets;
+  if (std::any_of(
+          preAnalysisTargets.begin(), preAnalysisTargets.end(),
+          [&](ObjectID object) { return graph_->isUnknownObject(object); }))
+    return flow;
+  if (std::any_of(flow.begin(), flow.end(), [&](ObjectID object) {
+        return graph_->isUnknownObject(object);
+      }))
+    return preAnalysisTargets;
+  return flow;
+}
+
 FlowSensitivePTA::StoredSet
 FlowSensitivePTA::directInput(const SVFGNode &node) {
   StoredSet result;
@@ -140,8 +297,20 @@ FlowSensitivePTA::directInput(const SVFGNode &node) {
 }
 
 bool FlowSensitivePTA::isStrongUpdate(const PointsToSet &targets) const {
-  return targets.size() == 1 && graph_->isSingletonObject(*targets.begin()) &&
-         !graph_->isUnknownObject(*targets.begin());
+  if (targets.size() != 1)
+    return false;
+  const ObjectID object = *targets.begin();
+  const SVFG::ObjectInfo *info = graph_->getObjectInfo(object);
+  if (!info || info->isUnknown || info->isHeap || info->isArray ||
+      info->isFieldInsensitive)
+    return false;
+  const Value *allocation = graph_->getObjectValue(object);
+  if (!allocation && info->baseObjId != 0)
+    allocation = graph_->getObjectValue(info->baseObjId);
+  if (const auto *instruction = dyn_cast_or_null<Instruction>(allocation))
+    if (recursiveFunctions_.count(instruction->getFunction()) != 0)
+      return false;
+  return true;
 }
 
 bool FlowSensitivePTA::resolveIndirectCalls(const SVFGNode &node,
@@ -167,10 +336,56 @@ bool FlowSensitivePTA::resolveIndirectCalls(const SVFGNode &node,
 bool FlowSensitivePTA::transfer(const SVFGNode &node) {
   ++stats_.nodeProcesses;
   bool changed = false;
-  MemoryState incoming;
-  for (const SVFGEdge *edge : node.getInEdges())
-    if (edge && inScope(edge->getSrcNode()))
-      mergeState(incoming, outState(edge->getSrcNode()));
+  MemoryState incoming = initialMemory_;
+  for (const SVFGEdge *edge : node.getInEdges()) {
+    if (!edge || !inScope(edge->getSrcNode()) ||
+        !isIndirectVFGEdge(edge->getEdgeKind()))
+      continue;
+    const SVFGNode *source = edge->getSrcNode();
+    const MemoryState &sourceState =
+        isa<StoreSVFGNode, ActualOutSVFGNode>(source) ? outState(source)
+                                                      : inState(source);
+    if (isa<StoreSVFGNode>(source)) {
+      // Store OUT is a complete post-state. Keeping its object keys intact is
+      // necessary when Aser's edge guard uses a different field-object ID
+      // than the flow-sensitive Store target; destination Loads will still
+      // select only their own target objects.
+      mergeState(incoming, sourceState);
+      continue;
+    }
+    PointsToSet guarded = edge->getPointsTo();
+    const bool wildcard =
+        std::any_of(guarded.begin(), guarded.end(), [&](ObjectID object) {
+          return graph_->isUnknownObject(object);
+        });
+    if (guarded.empty() || wildcard) {
+      mergeState(incoming, sourceState);
+      continue;
+    }
+    guarded = expandIndirectObjects(guarded);
+    bool matchedGuard = false;
+    for (ObjectID object : guarded) {
+      auto value = sourceState.find(object);
+      if (value != sourceState.end()) {
+        merge(incoming[object], value->second);
+        matchedGuard = true;
+      } else {
+        // A wildcard fact is a conservative substitute only while no fact is
+        // available for the precise guarded object. Unconditionally joining
+        // it would collapse unrelated memory regions after one imprecise
+        // access (for example a global function-pointer field and stack data).
+        for (const auto &[sourceObject, sourceValue] : sourceState)
+          if (graph_->isUnknownObject(sourceObject))
+            merge(incoming[object], sourceValue);
+      }
+    }
+    // The auxiliary PTA and the flow-sensitive top-level solver may assign
+    // different IDs to the same field-derived object. A Store's OUT state is
+    // already restricted by its flow-sensitive access targets; if none of the
+    // pre-analysis guard IDs match, retain those precise OUT facts rather than
+    // dropping the memory definition entirely.
+    (void)matchedGuard;
+  }
   changed |= assignState(dfIn_[node.getId()], incoming);
 
   MemoryState outgoing = incoming;
@@ -184,13 +399,30 @@ bool FlowSensitivePTA::transfer(const SVFGNode &node) {
   } else if (const auto *load = dyn_cast<LoadSVFGNode>(&node)) {
     top = {};
     StoredSet targets = pointerTargets(accessPointer(load->getInstruction()));
-    PointsToSet targetSet = materialize(targets);
-    if (targetSet.empty())
-      targetSet = load->getMemoryPointsTo();
+    PointsToSet targetSet =
+        selectAccessTargets(targets, load->getMemoryPointsTo());
+    targetSet = expandIndirectObjects(targetSet);
     for (ObjectID object : targetSet) {
+      if (graph_->isConstantObject(object))
+        continue;
       auto value = incoming.find(object);
-      if (value != incoming.end())
+      if (value != incoming.end()) {
         merge(top, value->second);
+      } else {
+        for (const auto &[memoryObject, memoryValue] : incoming)
+          if (graph_->isUnknownObject(memoryObject))
+            merge(top, memoryValue);
+      }
+      if (value == incoming.end() || materialize(value->second).empty()) {
+        // Compatibility fallback for a missing sparse def-use edge: retain a
+        // Store fact only when it uses the exact same flow-sensitive object
+        // key as this Load. This is chiefly needed for heap fields in loops,
+        // where Aser's pre-analysis region ID can differ from the fspta target
+        // and MemorySSA otherwise omits the reaching edge entirely.
+        auto storedValue = fallbackStoreFacts_.find(object);
+        if (storedValue != fallbackStoreFacts_.end())
+          merge(top, storedValue->second);
+      }
     }
   } else if (const auto *store = dyn_cast<StoreSVFGNode>(&node)) {
     const auto *instruction =
@@ -198,14 +430,19 @@ bool FlowSensitivePTA::transfer(const SVFGNode &node) {
     StoredSet stored = instruction
                            ? pointerTargets(instruction->getValueOperand())
                            : directInput(node);
+    if (instruction &&
+        instruction->getValueOperand()->getType()->isPointerTy() &&
+        materialize(stored).empty())
+      stored = directInput(node);
     StoredSet targets = instruction
                             ? pointerTargets(instruction->getPointerOperand())
                             : StoredSet{};
-    PointsToSet targetSet = materialize(targets);
-    if (targetSet.empty())
-      targetSet = store->getMemoryPointsTo();
+    PointsToSet targetSet =
+        selectAccessTargets(targets, store->getMemoryPointsTo());
     const bool strong = isStrongUpdate(targetSet);
     for (ObjectID object : targetSet) {
+      if (graph_->isConstantObject(object))
+        continue;
       if (strong) {
         assign(outgoing[object], stored);
         ++stats_.strongUpdates;
@@ -214,10 +451,91 @@ bool FlowSensitivePTA::transfer(const SVFGNode &node) {
         ++stats_.weakUpdates;
       }
     }
+    mergeState(fallbackStoreFacts_, outgoing);
+  } else if (const auto *actualOut = dyn_cast<ActualOutSVFGNode>(&node)) {
+    const auto *intrinsic =
+        dyn_cast_or_null<IntrinsicInst>(actualOut->getCallSite());
+    if (intrinsic &&
+        (intrinsic->getIntrinsicID() == Intrinsic::memcpy ||
+         intrinsic->getIntrinsicID() == Intrinsic::memmove) &&
+        intrinsic->arg_size() >= 2) {
+      auto objectsWithFields = [&](const Value *pointer) {
+        PointsToSet objects = materialize(pointerTargets(pointer));
+        if (objects.empty()) {
+          const PointsToSet &preAnalysis = graph_->getObjectIds(pointer);
+          objects.insert(preAnalysis.begin(), preAnalysis.end());
+        }
+        PointsToSet expanded = objects;
+        for (ObjectID object : objects) {
+          const PointsToSet fields = graph_->getFieldObjects(object);
+          expanded.insert(fields.begin(), fields.end());
+        }
+        auto underlyingBase = [](const Value *value) {
+          const Value *current = value;
+          std::unordered_set<const Value *> visited;
+          while (current && visited.insert(current).second) {
+            current = current->stripPointerCasts();
+            if (const auto *gep = dyn_cast<GEPOperator>(current)) {
+              current = gep->getPointerOperand();
+              continue;
+            }
+            break;
+          }
+          return current;
+        };
+        const Value *base = underlyingBase(pointer);
+        if (base) {
+          for (const auto &[candidate, nodeID] : graph_->getValueNodeMap()) {
+            if (!candidate || !candidate->getType()->isPointerTy() ||
+                underlyingBase(candidate) != base)
+              continue;
+            const PointsToSet &candidateObjects =
+                graph_->getObjectIds(candidate);
+            expanded.insert(candidateObjects.begin(), candidateObjects.end());
+            if (ObjectID candidateObject = graph_->getObjectId(candidate))
+              expanded.insert(candidateObject);
+          }
+        }
+        return expanded;
+      };
+
+      const PointsToSet sourceObjects =
+          objectsWithFields(intrinsic->getArgOperand(1));
+      StoredSet copiedPointers;
+      MemoryState allInputs = incoming;
+      for (const SVFGNode *actualInNode :
+           graph_->getActualIns(actualOut->getCallSite()))
+        mergeState(allInputs, inState(actualInNode));
+      for (ObjectID source : sourceObjects) {
+        auto value = allInputs.find(source);
+        if (value != allInputs.end())
+          merge(copiedPointers, value->second);
+      }
+      // Array elements and pointer-derived nested fields may be collapsed by
+      // the auxiliary memory model and therefore lack a stable one-to-one
+      // source object id. A whole-object byte copy must retain every pointer
+      // fact reaching its source surface; field/offset precision can refine
+      // this later, but dropping an unmatched nested field is unsound.
+      for (const auto &[object, value] : allInputs)
+        merge(copiedPointers, value);
+
+      if (!materialize(copiedPointers).empty()) {
+        const PointsToSet destinationObjects =
+            objectsWithFields(intrinsic->getArgOperand(0));
+        for (ObjectID destination : destinationObjects)
+          assign(outgoing[destination], copiedPointers);
+      }
+    }
   } else if (const auto *gep = dyn_cast<GepSVFGNode>(&node)) {
-    const ObjectID field =
-        gep->getValue() ? graph_->getObjectId(gep->getValue()) : 0;
-    top = field != 0 ? singleton(field) : directInput(node);
+    const PointsToSet &fields =
+        gep->getValue() ? graph_->getObjectIds(gep->getValue()) : PointsToSet{};
+    if (!fields.empty()) {
+      top = {};
+      for (ObjectID field : fields)
+        merge(top, singleton(field));
+    } else {
+      top = directInput(node);
+    }
   } else if (!isa<MSSASVFGNode>(&node)) {
     top = directInput(node);
   }
@@ -292,9 +610,13 @@ const FlowSensitivePTA::Statistics &FlowSensitivePTA::solve() {
   topLevelPointsTo_.clear();
   dfIn_.clear();
   dfOut_.clear();
+  initialMemory_.clear();
+  fallbackStoreFacts_.clear();
   stats_ = {};
   if (config_.setBackend == PointsToSetBackend::HashConsed)
     arena_.reset();
+  initializeRecursiveFunctions();
+  initializeGlobalMemory();
   do {
     topologyChanged_ = false;
     SCCInfo scc = computeSCCs();
@@ -305,21 +627,36 @@ const FlowSensitivePTA::Statistics &FlowSensitivePTA::solve() {
     for (std::size_t i = 0; i < scc.components.size(); ++i) {
       worklist.push(i);
       stats_.nodes += scc.components[i].size();
-      stats_.maxSccSize =
-          std::max(stats_.maxSccSize, scc.components[i].size());
+      stats_.maxSccSize = std::max(stats_.maxSccSize, scc.components[i].size());
     }
     while (!worklist.empty()) {
       const std::size_t component = worklist.front();
       worklist.pop();
       queued[component] = false;
       bool anyChanged = false;
-      bool localChanged;
-      do {
-        localChanged = false;
-        for (const SVFGNode *node : scc.components[component])
-          localChanged |= transfer(*node);
-        anyChanged |= localChanged;
-      } while (localChanged && !topologyChanged_);
+      std::queue<const SVFGNode *> localWorklist;
+      std::unordered_set<NodeID> locallyQueued;
+      for (const SVFGNode *node : scc.components[component]) {
+        localWorklist.push(node);
+        locallyQueued.insert(node->getId());
+      }
+      while (!localWorklist.empty() && !topologyChanged_) {
+        const SVFGNode *node = localWorklist.front();
+        localWorklist.pop();
+        locallyQueued.erase(node->getId());
+        if (!transfer(*node))
+          continue;
+        anyChanged = true;
+        for (const SVFGEdge *edge : node->getOutEdges()) {
+          const SVFGNode *successor = edge ? edge->getDstNode() : nullptr;
+          if (!inScope(successor) ||
+              scc.nodeToComponent[successor->getId()] != component ||
+              locallyQueued.count(successor->getId()) != 0)
+            continue;
+          localWorklist.push(successor);
+          locallyQueued.insert(successor->getId());
+        }
+      }
       if (topologyChanged_)
         break;
       if (anyChanged)

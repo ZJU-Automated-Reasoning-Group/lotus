@@ -365,7 +365,9 @@ public:
   uint32_t getUnknownObjId();
 
   /// @brief Get indirect call targets using pointer analysis
-  std::vector<const llvm::Function *> getIndirectCallTargets(const llvm::CallBase *call);
+  std::vector<const llvm::Function *>
+  getIndirectCallTargets(const llvm::CallBase *call,
+                         bool includeTypeFallback = true);
 
   /// @brief Build SVFG with configuration
   ///
@@ -434,6 +436,11 @@ public:
   bool connectCallSiteToCalleeOnTheFly(SVFG *svfg, const llvm::CallBase *cs,
                                        const llvm::Function *callee,
                                        std::vector<SVFGEdge *> &newEdges);
+
+  /// Materialize every indirect-call target admitted by the auxiliary
+  /// inclusion-based pre-analysis. Exhaustive fspta uses this before solving;
+  /// later flow-sensitive discoveries remain bounded by this target universe.
+  std::size_t connectPreAnalysisIndirectCalls(SVFG *graph);
 
   //===------------------------------------------------------------------===
   // Builder phases

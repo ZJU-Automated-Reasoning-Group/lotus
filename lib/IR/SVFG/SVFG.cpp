@@ -225,6 +225,7 @@ void SVFG::setObjectValue(uint32_t objId, const llvm::Value *v) {
   if (objId == 0 || !v)
     return;
   objIdToValue[objId] = v;
+  valueToObjIds[v].insert(objId);
   // Preserve the first reverse mapping to avoid clobbering a canonical base
   // object with a later refined alias to the same abstract object.
   if (valueToObjId.find(v) == valueToObjId.end())
@@ -431,7 +432,6 @@ void SVFG::removeNode(SVFGNode *node) {
   nodesForUpdate.erase(node);
   delete node;
 }
-
 
 static void adjustNodeStat(SVFGStat &stat, SVFGNode *node, int delta) {
   if (!node)
@@ -664,7 +664,8 @@ void SVFG::getInterVFEdgesForIndirectCallSite(
     if (!actualParm)
       continue;
     const unsigned actualIdx = actualParm->getParamIndex();
-    const bool isVarArgExtra = callee->isVarArg() && actualIdx >= callee->arg_size();
+    const bool isVarArgExtra =
+        callee->isVarArg() && actualIdx >= callee->arg_size();
     for (SVFGNode *formalParmNode : getFormalParms(callee)) {
       if (isVarArgExtra) {
         if (!isa<VarArgSVFGNode>(formalParmNode))
@@ -674,17 +675,17 @@ void SVFG::getInterVFEdgesForIndirectCallSite(
         if (!formalParm || formalParm->getParamIndex() != actualIdx)
           continue;
       }
-      findInterEdge(actualParmNode, formalParmNode,
-                    {SVFGEdgeK::CallDir, SVFGEdgeK::CallInd,
-                     SVFGEdgeK::ParamCall});
+      findInterEdge(
+          actualParmNode, formalParmNode,
+          {SVFGEdgeK::CallDir, SVFGEdgeK::CallInd, SVFGEdgeK::ParamCall});
     }
   }
 
   for (SVFGNode *formalRetNode : getFormalRets(callee)) {
     for (SVFGNode *actualRetNode : getActualRets(cs)) {
-      findInterEdge(formalRetNode, actualRetNode,
-                    {SVFGEdgeK::RetDir, SVFGEdgeK::RetInd,
-                     SVFGEdgeK::ParamRet});
+      findInterEdge(
+          formalRetNode, actualRetNode,
+          {SVFGEdgeK::RetDir, SVFGEdgeK::RetInd, SVFGEdgeK::ParamRet});
     }
   }
 
@@ -765,6 +766,7 @@ void SVFG::swapWith(SVFG &other) {
   swap(objectDebug, other.objectDebug);
   swap(objIdToValue, other.objIdToValue);
   swap(valueToObjId, other.valueToObjId);
+  swap(valueToObjIds, other.valueToObjIds);
   swap(objIdToInfo, other.objIdToInfo);
   swap(nodeFunctionDebug, other.nodeFunctionDebug);
   swap(nodeCallSiteDebug, other.nodeCallSiteDebug);

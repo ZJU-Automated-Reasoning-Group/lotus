@@ -15,6 +15,13 @@ target_link_libraries(lotus-alias-aser-aa PRIVATE
   ${LLVM_LINK_COMPONENTS}
 )
 
+add_executable(lotus-alias-fspta lotus-alias-fspta.cpp)
+target_link_libraries(lotus-alias-fspta PRIVATE
+  FlowSensitivePTA
+  CanaryAliasCLIUtils
+  ${LLVM_LINK_COMPONENTS}
+)
+
 # Sea-DSA Memory Graph Analysis Tool
 add_executable(lotus-alias-sea-dsa-dg lotus-alias-sea-dsa-dg.cpp)
 target_link_libraries(lotus-alias-sea-dsa-dg PRIVATE

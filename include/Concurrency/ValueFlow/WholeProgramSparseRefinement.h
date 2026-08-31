@@ -24,6 +24,8 @@ class LockSetAnalysis;
 
 namespace lotus::analysis {
 
+class SVFGBuilder;
+
 class WholeProgramSparseRefinement {
 public:
   enum class Mode { WholeProgram, MultiStageSlicing };
@@ -48,7 +50,7 @@ public:
     lotus::alias::FlowSensitivePTA::Statistics solver;
   };
 
-  WholeProgramSparseRefinement() = default;
+  WholeProgramSparseRefinement();
   ~WholeProgramSparseRefinement();
 
   WholeProgramSparseRefinement(const WholeProgramSparseRefinement &) = delete;
@@ -70,6 +72,7 @@ private:
   // Declaration order preserves the source graphs until their non-owning
   // overlay and solver have been destroyed.
   std::unique_ptr<ICFG> icfg_;
+  std::unique_ptr<SVFGBuilder> graphBuilder_;
   std::unique_ptr<SVFG> svfg_;
   std::unique_ptr<ThreadCreationTree> preThreadTree_;
   std::unique_ptr<MultiStageSlicer> slicer_;

@@ -4,8 +4,11 @@
 #include "IR/ICFG/ICFGBuilder.h"
 #include "IR/SVFG/SVFGBuilder.h"
 
+#include <algorithm>
+
 namespace lotus::analysis {
 
+WholeProgramSparseRefinement::WholeProgramSparseRefinement() = default;
 WholeProgramSparseRefinement::~WholeProgramSparseRefinement() = default;
 
 const WholeProgramSparseRefinement::Statistics &
@@ -28,6 +31,7 @@ WholeProgramSparseRefinement::build(llvm::Module &module,
   slicer_.reset();
   preThreadTree_.reset();
   svfg_.reset();
+  graphBuilder_.reset();
   icfg_.reset();
   stats_ = {};
 
@@ -38,10 +42,12 @@ WholeProgramSparseRefinement::build(llvm::Module &module,
   SVFGBuilderConfig config;
   config.buildMSSA = true;
   config.usePointerAnalysis = refinementConfig.usePointerAnalysis;
+  config.resolveIndirectCalls = false;
   config.memoryPartition = refinementConfig.memoryPartition;
-  SVFGBuilder svfgBuilder(config);
-  svfg_.reset(svfgBuilder.build(icfg_.get()));
-  stats_.memoryRegions = svfgBuilder.getMemoryRegionPartitionStatistics();
+  graphBuilder_ = std::make_unique<SVFGBuilder>(config);
+  svfg_.reset(graphBuilder_->build(icfg_.get()));
+  graphBuilder_->connectPreAnalysisIndirectCalls(svfg_.get());
+  stats_.memoryRegions = graphBuilder_->getMemoryRegionPartitionStatistics();
 
   preThreadTree_ = std::make_unique<ThreadCreationTree>(
       module, *ThreadAPI::getThreadAPI(), refinementConfig.threadContextLimit);
@@ -77,9 +83,20 @@ WholeProgramSparseRefinement::build(llvm::Module &module,
     stats_.slicing.pointsToNodes = svfg_->getNumNodes();
   }
 
-  solver_ = std::make_unique<FSMPTA>(
-      *svfg_,
-      FSMPTA::Config{slice_.get(), refinementConfig.pointsToSetBackend});
+  FSMPTA::Config solverConfig;
+  solverConfig.scope = slice_.get();
+  solverConfig.setBackend = refinementConfig.pointsToSetBackend;
+  solverConfig.connectIndirectCall = [this](const llvm::CallBase *callSite,
+                                            const llvm::Function *target) {
+    const std::vector<const llvm::Function *> allowed =
+        graphBuilder_->getIndirectCallTargets(callSite);
+    if (std::find(allowed.begin(), allowed.end(), target) == allowed.end())
+      return false;
+    std::vector<SVFGEdge *> edges;
+    return graphBuilder_->connectCallSiteToCalleeOnTheFly(svfg_.get(), callSite,
+                                                          target, edges);
+  };
+  solver_ = std::make_unique<FSMPTA>(*svfg_, std::move(solverConfig));
   stats_.solver = solver_->solve();
   return stats_;
 }

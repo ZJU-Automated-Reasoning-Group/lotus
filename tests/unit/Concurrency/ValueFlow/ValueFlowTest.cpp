@@ -141,7 +141,7 @@ TEST_F(ValueFlowTest, ThreadOverlayRejectsSequentialPairs) {
   EXPECT_TRUE(storeNode->getOutEdges().empty());
 }
 
-TEST_F(ValueFlowTest, SparseSolverKillsOverwrittenSingletonGlobalValue) {
+TEST_F(ValueFlowTest, LightweightRefinementKillsOverwrittenSingletonGlobal) {
   auto module = parseModule(R"(
     @slot = global i8* null
     @x = global i8 0

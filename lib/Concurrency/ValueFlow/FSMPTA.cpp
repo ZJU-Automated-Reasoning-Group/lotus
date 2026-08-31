@@ -7,6 +7,7 @@ FSMPTA::FSMPTA(const SVFG &threadAwareGraph)
 
 FSMPTA::FSMPTA(const SVFG &threadAwareGraph, Config config)
     : solver_(threadAwareGraph, lotus::alias::FlowSensitivePTA::Config{
-                                    config.setBackend, config.scope}) {}
+                                    config.setBackend, config.scope,
+                                    std::move(config.connectIndirectCall)}) {}
 
 } // namespace lotus::analysis

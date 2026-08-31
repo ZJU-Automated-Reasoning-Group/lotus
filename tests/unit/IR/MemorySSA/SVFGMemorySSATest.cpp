@@ -230,7 +230,10 @@ TEST_F(SVFGMemorySSATest, GlobalOnlyCalleeCreatesInterproceduralMemoryNodes) {
   const CallBase *call = findCallTo(mainFn, "writer");
   ASSERT_NE(call, nullptr);
 
-  EXPECT_TRUE(svfg->getActualIns(call).empty());
+  // A MOD region is also an input to the callee: weak updates must receive
+  // the reaching memory version even when the old value is not explicitly
+  // read in the callee body.
+  EXPECT_FALSE(svfg->getActualIns(call).empty());
   EXPECT_FALSE(svfg->getActualOuts(call).empty());
   EXPECT_FALSE(svfg->getFormalOuts(writerFn).empty());
 

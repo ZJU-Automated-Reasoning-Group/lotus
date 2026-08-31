@@ -14,6 +14,8 @@ public:
     const FilteredSVFGView *scope = nullptr;
     lotus::alias::PointsToSetBackend setBackend =
         lotus::alias::PointsToSetBackend::Mutable;
+    lotus::alias::FlowSensitivePTA::Config::IndirectCallConnector
+        connectIndirectCall;
   };
 
   explicit FSMPTA(const SVFG &threadAwareGraph);

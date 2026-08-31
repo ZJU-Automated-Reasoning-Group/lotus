@@ -12,7 +12,7 @@
 
 namespace llvm {
 class Function;
-}
+} // namespace llvm
 
 namespace lotus::analysis {
 

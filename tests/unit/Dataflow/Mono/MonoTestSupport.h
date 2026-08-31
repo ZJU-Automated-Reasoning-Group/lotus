@@ -52,39 +52,3 @@ protected:
     return nullptr;
   }
 };
-
-// Test live variables analysis on simple function
-
-// Test live variables with multiple blocks
-
-// Test empty function
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

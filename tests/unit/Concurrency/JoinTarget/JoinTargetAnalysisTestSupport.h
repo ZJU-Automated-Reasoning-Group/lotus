@@ -31,25 +31,3 @@ findCallsByName(const Module &module, StringRef functionName,
   return calls;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

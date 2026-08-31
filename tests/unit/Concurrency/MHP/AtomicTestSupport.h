@@ -34,26 +34,3 @@ protected:
     return nullptr;
   }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Main function for tests

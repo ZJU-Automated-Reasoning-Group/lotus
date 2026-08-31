@@ -1,5 +1,7 @@
 #include "Alias/InclusionBased/FlowSensitive/FlowSensitivePTA.h"
 
+#include "IR/ICFG/CallGraph.h"
+
 #include <algorithm>
 #include <functional>
 #include <queue>
@@ -137,6 +139,60 @@ FlowSensitivePTA::expandIndirectObjects(const PointsToSet &objects) const {
 
 void FlowSensitivePTA::initializeRecursiveFunctions() {
   recursiveFunctions_.clear();
+  if (const LTCallGraph *callGraph = graph_->getRefinedCallGraph()) {
+    std::unordered_map<const Function *, int> index;
+    std::unordered_map<const Function *, int> lowlink;
+    std::unordered_set<const Function *> onStack;
+    std::vector<const Function *> stack;
+    int nextIndex = 0;
+    std::function<void(const Function *)> visit =
+        [&](const Function *function) {
+          index[function] = lowlink[function] = nextIndex++;
+          stack.push_back(function);
+          onStack.insert(function);
+          const LTCallGraphNode *node = (*callGraph)[function];
+          for (const auto &edge : *node) {
+            const LTCallGraphNode *calleeNode = edge.second;
+            const Function *callee =
+                calleeNode ? calleeNode->getFunction() : nullptr;
+            if (!callee || callee->isDeclaration())
+              continue;
+            if (index.find(callee) == index.end()) {
+              visit(callee);
+              lowlink[function] = std::min(lowlink[function], lowlink[callee]);
+            } else if (onStack.count(callee) != 0) {
+              lowlink[function] = std::min(lowlink[function], index[callee]);
+            }
+          }
+          if (lowlink[function] != index[function])
+            return;
+          std::vector<const Function *> component;
+          do {
+            const Function *member = stack.back();
+            stack.pop_back();
+            onStack.erase(member);
+            component.push_back(member);
+            if (member == function)
+              break;
+          } while (!stack.empty());
+          bool recursive = component.size() > 1;
+          if (!recursive && !component.empty()) {
+            const LTCallGraphNode *single = (*callGraph)[component.front()];
+            for (const auto &edge : *single)
+              recursive |= edge.second == single;
+          }
+          if (recursive)
+            recursiveFunctions_.insert(component.begin(), component.end());
+        };
+    for (const auto &entry : *callGraph) {
+      const Function *function = entry.first;
+      if (function && !function->isDeclaration() &&
+          index.find(function) == index.end())
+        visit(function);
+    }
+    return;
+  }
+
   Module *module = nullptr;
   for (const auto &entry : *graph_) {
     if (const Function *function = entry.second->getFunction()) {
@@ -368,11 +424,13 @@ bool FlowSensitivePTA::resolveIndirectCalls(const SVFGNode &node,
 bool FlowSensitivePTA::transfer(const SVFGNode &node) {
   ++stats_.nodeProcesses;
   bool changed = false;
-  MemoryState incoming = initialMemory_;
+  MemoryState incoming;
+  bool hasIndirectPredecessor = false;
   for (const SVFGEdge *edge : node.getInEdges()) {
     if (!edge || !inScope(edge->getSrcNode()) ||
         !isIndirectVFGEdge(edge->getEdgeKind()))
       continue;
+    hasIndirectPredecessor = true;
     const SVFGNode *source = edge->getSrcNode();
     const MemoryState &sourceState =
         isa<StoreSVFGNode, ActualOutSVFGNode>(source) ? outState(source)
@@ -382,7 +440,9 @@ bool FlowSensitivePTA::transfer(const SVFGNode &node) {
         std::any_of(guarded.begin(), guarded.end(), [&](ObjectID object) {
           return graph_->isUnknownObject(object);
         });
-    if (guarded.empty() || wildcard) {
+    if (guarded.empty())
+      continue;
+    if (wildcard) {
       mergeState(incoming, sourceState);
       continue;
     }
@@ -402,6 +462,8 @@ bool FlowSensitivePTA::transfer(const SVFGNode &node) {
       }
     }
   }
+  if (!hasIndirectPredecessor)
+    mergeState(incoming, initialMemory_);
   changed |= assignState(dfIn_[node.getId()], incoming);
 
   MemoryState outgoing = incoming;
@@ -500,30 +562,73 @@ bool FlowSensitivePTA::transfer(const SVFGNode &node) {
         return expanded;
       };
 
-      const PointsToSet sourceObjects =
-          objectsWithFields(intrinsic->getArgOperand(1));
-      MemoryState allInputs = incoming;
+      struct RootLocation {
+        ObjectID base = 0;
+        uint64_t offset = 0;
+      };
+      auto rootLocations = [&](const Value *pointer) {
+        PointsToSet roots = materialize(pointerTargets(pointer));
+        if (roots.empty()) {
+          const PointsToSet &preAnalysis = graph_->getObjectIds(pointer);
+          roots.insert(preAnalysis.begin(), preAnalysis.end());
+        }
+        std::vector<RootLocation> locations;
+        for (ObjectID root : roots) {
+          const SVFG::ObjectInfo *info = graph_->getObjectInfo(root);
+          locations.push_back(
+              {info && info->baseObjId != 0 ? info->baseObjId : root,
+               info && info->hasFieldOffset ? info->fieldOffset : 0});
+        }
+        return locations;
+      };
+
+      MemoryState allInputs;
       for (const SVFGNode *actualInNode :
-           graph_->getActualIns(actualOut->getCallSite()))
+           graph_->getActualIns(actualOut->getCallSite())) {
         mergeState(allInputs, inState(actualInNode));
-      std::unordered_set<ObjectID> sourceBases;
-      for (ObjectID source : sourceObjects) {
-        const SVFG::ObjectInfo *info = graph_->getObjectInfo(source);
-        sourceBases.insert(info && info->baseObjId != 0 ? info->baseObjId
-                                                        : source);
+        mergeState(outgoing, inState(actualInNode));
       }
-      PointsToSet destinationRoots =
-          materialize(pointerTargets(intrinsic->getArgOperand(0)));
-      if (destinationRoots.empty()) {
-        const PointsToSet &preAnalysis =
-            graph_->getObjectIds(intrinsic->getArgOperand(0));
-        destinationRoots.insert(preAnalysis.begin(), preAnalysis.end());
+      for (const SVFGEdge *edge : node.getInEdges()) {
+        const SVFGNode *source = edge ? edge->getSrcNode() : nullptr;
+        if (isa_and_nonnull<StoreSVFGNode>(source))
+          mergeState(allInputs, outState(source));
       }
-      std::unordered_set<ObjectID> destinationBases;
-      for (ObjectID destination : destinationRoots) {
-        const SVFG::ObjectInfo *info = graph_->getObjectInfo(destination);
-        destinationBases.insert(info && info->baseObjId != 0 ? info->baseObjId
-                                                             : destination);
+
+      const std::vector<RootLocation> sourceRoots =
+          rootLocations(intrinsic->getArgOperand(1));
+      const std::vector<RootLocation> destinationRoots =
+          rootLocations(intrinsic->getArgOperand(0));
+      const auto *lengthConstant =
+          intrinsic->arg_size() >= 3
+              ? dyn_cast<ConstantInt>(intrinsic->getArgOperand(2))
+              : nullptr;
+      const bool hasExactLength = lengthConstant != nullptr;
+      const uint64_t copyLength =
+          lengthConstant ? lengthConstant->getZExtValue() : 0;
+      const uint64_t pointerSize =
+          intrinsic->getModule()->getDataLayout().getPointerSize();
+      auto fullyCopied = [&](uint64_t relativeOffset) {
+        return !hasExactLength || (relativeOffset <= copyLength &&
+                                   pointerSize <= copyLength - relativeOffset);
+      };
+
+      if (hasExactLength) {
+        const PointsToSet destinationObjects =
+            objectsWithFields(intrinsic->getArgOperand(0));
+        StoredSet empty;
+        for (ObjectID destination : destinationObjects) {
+          const SVFG::ObjectInfo *info = graph_->getObjectInfo(destination);
+          const ObjectID destinationBase =
+              info && info->baseObjId != 0 ? info->baseObjId : destination;
+          const uint64_t destinationOffset =
+              info && info->hasFieldOffset ? info->fieldOffset : 0;
+          for (const RootLocation &root : destinationRoots) {
+            if (root.base != destinationBase || destinationOffset < root.offset)
+              continue;
+            if (fullyCopied(destinationOffset - root.offset))
+              assign(outgoing[destination], empty);
+          }
+        }
       }
 
       MemoryState copiedByDestination;
@@ -531,20 +636,34 @@ bool FlowSensitivePTA::transfer(const SVFGNode &node) {
         const SVFG::ObjectInfo *info = graph_->getObjectInfo(source);
         const ObjectID sourceBase =
             info && info->baseObjId != 0 ? info->baseObjId : source;
-        if (sourceBases.count(sourceBase) == 0)
-          continue;
-        const uint64_t offset =
+        const uint64_t sourceOffset =
             info && info->hasFieldOffset ? info->fieldOffset : 0;
-        for (ObjectID destinationBase : destinationBases) {
-          const ObjectID destination =
-              offset == 0 ? destinationBase
-                          : graph_->getOffsetObject(destinationBase, offset);
-          if (destination != 0)
-            merge(copiedByDestination[destination], value);
+        for (const RootLocation &sourceRoot : sourceRoots) {
+          if (sourceRoot.base != sourceBase || sourceOffset < sourceRoot.offset)
+            continue;
+          const uint64_t relativeOffset = sourceOffset - sourceRoot.offset;
+          if (!fullyCopied(relativeOffset))
+            continue;
+          for (const RootLocation &destinationRoot : destinationRoots) {
+            const uint64_t destinationOffset =
+                destinationRoot.offset + relativeOffset;
+            if (destinationOffset < destinationRoot.offset)
+              continue;
+            const ObjectID destination =
+                destinationOffset == 0
+                    ? destinationRoot.base
+                    : graph_->getOffsetObject(destinationRoot.base,
+                                              destinationOffset);
+            if (destination != 0)
+              merge(copiedByDestination[destination], value);
+          }
         }
       }
       for (const auto &[destination, value] : copiedByDestination)
-        assign(outgoing[destination], value);
+        if (hasExactLength)
+          assign(outgoing[destination], value);
+        else
+          merge(outgoing[destination], value);
     }
   } else if (const auto *gep = dyn_cast<GepSVFGNode>(&node)) {
     const auto *instruction =
@@ -686,10 +805,10 @@ const FlowSensitivePTA::Statistics &FlowSensitivePTA::solve() {
   stats_ = {};
   if (config_.setBackend == PointsToSetBackend::HashConsed)
     arena_.reset();
-  initializeRecursiveFunctions();
   initializeGlobalMemory();
   do {
     topologyChanged_ = false;
+    initializeRecursiveFunctions();
     SCCInfo scc = computeSCCs();
     stats_.sccs = scc.components.size();
     stats_.nodes = 0;

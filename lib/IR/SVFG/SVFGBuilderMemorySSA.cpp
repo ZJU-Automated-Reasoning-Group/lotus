@@ -237,9 +237,28 @@ void SVFGBuilder::buildMemorySSA() {
     return nullptr;
   };
 
-  auto getSpilledFormalOrigin = [](const Value *value) -> const Argument * {
+  auto getDominatingStoredValue = [](const LoadInst *load) -> const Value * {
+    if (!load || !load->getFunction())
+      return nullptr;
+    const Value *location = load->getPointerOperand()->stripPointerCasts();
+    DominatorTree dominance(*const_cast<Function *>(load->getFunction()));
+    const StoreInst *nearest = nullptr;
+    for (const User *user : location->users()) {
+      const auto *store = dyn_cast<StoreInst>(user);
+      if (!store || store->getFunction() != load->getFunction() ||
+          store->getPointerOperand()->stripPointerCasts() != location ||
+          !dominance.dominates(store, load))
+        continue;
+      if (!nearest || dominance.dominates(nearest, store))
+        nearest = store;
+    }
+    return nearest ? nearest->getValueOperand() : nullptr;
+  };
+
+  auto getSpilledFormalOrigin = [&](const Value *value) -> const Argument * {
     const auto *instruction = dyn_cast_or_null<Instruction>(value);
-    const Function *context = instruction ? instruction->getFunction() : nullptr;
+    const Function *context =
+        instruction ? instruction->getFunction() : nullptr;
     if (!context)
       return nullptr;
     std::unordered_set<const Value *> visited;
@@ -256,14 +275,7 @@ void SVFGBuilder::buildMemorySSA() {
         return;
       }
       if (const auto *load = dyn_cast<LoadInst>(current)) {
-        const Value *location =
-            load->getPointerOperand()->stripPointerCasts();
-        for (const User *user : location->users()) {
-          const auto *store = dyn_cast<StoreInst>(user);
-          if (store && store->getFunction() == context &&
-              store->getPointerOperand()->stripPointerCasts() == location)
-            visit(store->getValueOperand());
-        }
+        visit(getDominatingStoredValue(load));
         return;
       }
       if (const auto *phi = dyn_cast<PHINode>(current)) {
@@ -290,8 +302,8 @@ void SVFGBuilder::buildMemorySSA() {
     if (isa<GetElementPtrInst>(ptr)) {
       const SVFGNodeBS &mapped = svfg->getObjectIds(ptr);
       if (!mapped.empty()) {
-        const uint32_t memRegId = getOrCreateMemRegForPointsTo(
-            mapped, getMemoryRegionScope(ptr));
+        const uint32_t memRegId =
+            getOrCreateMemRegForPointsTo(mapped, getMemoryRegionScope(ptr));
         auto canonical = memRegToPts.find(memRegId);
         return {memRegId,
                 canonical == memRegToPts.end() ? mapped : canonical->second};
@@ -300,8 +312,8 @@ void SVFGBuilder::buildMemorySSA() {
     std::vector<const void *> ptsVoid = getPointsToSet(ptr);
     SVFGNodeBS objIds = convertPTAObjectsToObjIDs(ptsVoid);
     if (!objIds.empty()) {
-      const uint32_t memRegId = getOrCreateMemRegForPointsTo(
-          objIds, getMemoryRegionScope(ptr));
+      const uint32_t memRegId =
+          getOrCreateMemRegForPointsTo(objIds, getMemoryRegionScope(ptr));
       auto canonical = memRegToPts.find(memRegId);
       return {memRegId,
               canonical == memRegToPts.end() ? objIds : canonical->second};
@@ -313,12 +325,10 @@ void SVFGBuilder::buildMemorySSA() {
         const uint32_t memRegId = getOrCreateMemRegForPointsTo(
             originObjects, getMemoryRegionScope(origin));
         auto canonical = memRegToPts.find(memRegId);
-        return {memRegId, canonical == memRegToPts.end()
-                              ? originObjects
-                              : canonical->second};
+        return {memRegId, canonical == memRegToPts.end() ? originObjects
+                                                         : canonical->second};
       }
-      return {getOrCreateMemReg(origin),
-              SVFGNodeBS{getOrCreateUnknownObjId()}};
+      return {getOrCreateMemReg(origin), SVFGNodeBS{getOrCreateUnknownObjId()}};
     }
     if (const GlobalValue *global = getGlobalBase(ptr)) {
       // AserPTA may omit a field object for ConstantExpr GEPs. Give that
@@ -328,10 +338,9 @@ void SVFGBuilder::buildMemorySSA() {
       SVFG::ObjectInfo info;
       info.isGlobal = true;
       info.isSingleton = true;
-      info.isConstant =
-          isa<GlobalVariable>(global) && cast<GlobalVariable>(global)->isConstant();
-      const uint32_t object =
-          getOrCreateCanonicalObjectIdForValue(ptr, info);
+      info.isConstant = isa<GlobalVariable>(global) &&
+                        cast<GlobalVariable>(global)->isConstant();
+      const uint32_t object = getOrCreateCanonicalObjectIdForValue(ptr, info);
       if (const auto *gep = dyn_cast<GEPOperator>(ptr)) {
         APInt offset(M->getDataLayout().getIndexTypeSizeInBits(
                          gep->getPointerOperandType()),
@@ -463,8 +472,10 @@ void SVFGBuilder::buildMemorySSA() {
     std::vector<const void *> ptsVoid = getPointsToSet(ptr);
     SVFGNodeBS objIds = convertPTAObjectsToObjIDs(ptsVoid);
     const Value *base = ptr->stripPointerCasts();
-    const bool directlyGlobal = isa<GlobalVariable>(base) || isa<GlobalAlias>(base);
-    bool globallyVisiblePointees = directlyGlobal || isGlobalDerivedPointer(ptr);
+    const bool directlyGlobal =
+        isa<GlobalVariable>(base) || isa<GlobalAlias>(base);
+    bool globallyVisiblePointees =
+        directlyGlobal || isGlobalDerivedPointer(ptr);
     if (!globallyVisiblePointees && !globalReachableObjIds.empty()) {
       for (uint32_t objId : objIds) {
         if (globalReachableObjIds.count(objId) != 0) {
@@ -476,12 +487,11 @@ void SVFGBuilder::buildMemorySSA() {
 
     if (globallyVisiblePointees) {
       if (!objIds.empty()) {
-        const uint32_t region = getOrCreateMemRegForPointsTo(
-            objIds, getMemoryRegionScope(ptr));
+        const uint32_t region =
+            getOrCreateMemRegForPointsTo(objIds, getMemoryRegionScope(ptr));
         auto canonical = memRegToPts.find(region);
         addRegion(regions, region,
-                  canonical == memRegToPts.end() ? objIds
-                                                 : canonical->second);
+                  canonical == memRegToPts.end() ? objIds : canonical->second);
       } else {
         const auto region = getCanonicalRegionForPointer(ptr);
         if (region.first != 0)
@@ -498,49 +508,41 @@ void SVFGBuilder::buildMemorySSA() {
     return regions;
   };
 
-  auto collectFormalPointerOrigins =
-      [](const Function *context, const Value *value) {
-        std::unordered_set<unsigned> origins;
-        std::unordered_set<const Value *> visited;
-        std::function<void(const Value *)> visit = [&](const Value *current) {
-          if (!current || !current->getType()->isPointerTy())
-            return;
-          current = current->stripPointerCasts();
-          if (!visited.insert(current).second)
-            return;
-          if (const auto *argument = dyn_cast<Argument>(current)) {
-            if (argument->getParent() == context)
-              origins.insert(argument->getArgNo());
-            return;
-          }
-          if (const auto *load = dyn_cast<LoadInst>(current)) {
-            const Value *location =
-                load->getPointerOperand()->stripPointerCasts();
-            for (const User *user : location->users()) {
-              const auto *store = dyn_cast<StoreInst>(user);
-              if (!store || store->getFunction() != context)
-                continue;
-              if (store->getPointerOperand()->stripPointerCasts() == location)
-                visit(store->getValueOperand());
-            }
-            return;
-          }
-          if (const auto *phi = dyn_cast<PHINode>(current)) {
-            for (const Value *incoming : phi->incoming_values())
-              visit(incoming);
-            return;
-          }
-          if (const auto *select = dyn_cast<SelectInst>(current)) {
-            visit(select->getTrueValue());
-            visit(select->getFalseValue());
-            return;
-          }
-          if (const auto *gep = dyn_cast<GEPOperator>(current))
-            visit(gep->getPointerOperand());
-        };
-        visit(value);
-        return origins;
-      };
+  auto collectFormalPointerOrigins = [&](const Function *context,
+                                         const Value *value) {
+    std::unordered_set<unsigned> origins;
+    std::unordered_set<const Value *> visited;
+    std::function<void(const Value *)> visit = [&](const Value *current) {
+      if (!current || !current->getType()->isPointerTy())
+        return;
+      current = current->stripPointerCasts();
+      if (!visited.insert(current).second)
+        return;
+      if (const auto *argument = dyn_cast<Argument>(current)) {
+        if (argument->getParent() == context)
+          origins.insert(argument->getArgNo());
+        return;
+      }
+      if (const auto *load = dyn_cast<LoadInst>(current)) {
+        visit(getDominatingStoredValue(load));
+        return;
+      }
+      if (const auto *phi = dyn_cast<PHINode>(current)) {
+        for (const Value *incoming : phi->incoming_values())
+          visit(incoming);
+        return;
+      }
+      if (const auto *select = dyn_cast<SelectInst>(current)) {
+        visit(select->getTrueValue());
+        visit(select->getFalseValue());
+        return;
+      }
+      if (const auto *gep = dyn_cast<GEPOperator>(current))
+        visit(gep->getPointerOperand());
+    };
+    visit(value);
+    return origins;
+  };
 
   auto recordVisibleAccess = [&](const Function *context, const Value *ptr,
                                  FunctionMemorySummary &summary, bool isRead,
@@ -825,63 +827,63 @@ void SVFGBuilder::buildMemorySSA() {
         } else {
           const std::vector<const Function *> callees = getCallTargets(call);
           if (callees.empty()) {
-          for (unsigned i = 0; i < call->arg_size(); ++i) {
-            const Value *arg = call->getArgOperand(i);
-            if (!arg->getType()->isPointerTy())
-              continue;
-            MemRegPtsMap argRegs;
-            const auto region = getCanonicalRegionForPointer(arg);
-            const uint32_t memRegId = region.first;
-            const SVFGNodeBS &pts = region.second;
-            if (memRegId == 0)
-              continue;
-            addRegion(argRegs, memRegId, pts);
-            if (mayRead && callArgMayReadMemory(call, i))
-              mergeRegions(readRegs, argRegs);
-            if (mayWrite && callArgMayModifyMemory(call, i))
-              mergeRegions(writeRegs, argRegs);
-          }
+            for (unsigned i = 0; i < call->arg_size(); ++i) {
+              const Value *arg = call->getArgOperand(i);
+              if (!arg->getType()->isPointerTy())
+                continue;
+              MemRegPtsMap argRegs;
+              const auto region = getCanonicalRegionForPointer(arg);
+              const uint32_t memRegId = region.first;
+              const SVFGNodeBS &pts = region.second;
+              if (memRegId == 0)
+                continue;
+              addRegion(argRegs, memRegId, pts);
+              if (mayRead && callArgMayReadMemory(call, i))
+                mergeRegions(readRegs, argRegs);
+              if (mayWrite && callArgMayModifyMemory(call, i))
+                mergeRegions(writeRegs, argRegs);
+            }
           } else {
-          for (const Function *callee : callees) {
-            auto calleeIt = summaries.find(callee);
-            if (calleeIt == summaries.end())
-              continue;
-            const FunctionMemorySummary &calleeSummary = calleeIt->second;
+            for (const Function *callee : callees) {
+              auto calleeIt = summaries.find(callee);
+              if (calleeIt == summaries.end())
+                continue;
+              const FunctionMemorySummary &calleeSummary = calleeIt->second;
 
-            if (mayRead) {
-              for (unsigned argIdx : calleeSummary.readArgs) {
-                if (argIdx >= call->arg_size() ||
-                    !callArgMayReadMemory(call, argIdx))
-                  continue;
-                const Value *arg = call->getArgOperand(argIdx);
-                if (!arg->getType()->isPointerTy())
-                  continue;
-                const auto region = getCanonicalRegionForPointer(arg);
-                const uint32_t memRegId = region.first;
-                const SVFGNodeBS &pts = region.second;
-                if (memRegId != 0)
-                  addRegion(readRegs, memRegId, pts);
+              if (mayRead) {
+                for (unsigned argIdx : calleeSummary.readArgs) {
+                  if (argIdx >= call->arg_size() ||
+                      !callArgMayReadMemory(call, argIdx))
+                    continue;
+                  const Value *arg = call->getArgOperand(argIdx);
+                  if (!arg->getType()->isPointerTy())
+                    continue;
+                  const auto region = getCanonicalRegionForPointer(arg);
+                  const uint32_t memRegId = region.first;
+                  const SVFGNodeBS &pts = region.second;
+                  if (memRegId != 0)
+                    addRegion(readRegs, memRegId, pts);
+                }
+                mergeRegions(readRegs, calleeSummary.readGlobals);
               }
-              mergeRegions(readRegs, calleeSummary.readGlobals);
-            }
 
-            if (mayWrite) {
-              for (unsigned argIdx : calleeSummary.writeArgs) {
-                if (argIdx >= call->arg_size() ||
-                    !callArgMayModifyMemory(call, argIdx))
-                  continue;
-                const Value *arg = call->getArgOperand(argIdx);
-                if (!arg->getType()->isPointerTy())
-                  continue;
-                const auto region = getCanonicalRegionForPointer(arg);
-                const uint32_t memRegId = region.first;
-                const SVFGNodeBS &pts = region.second;
-                if (memRegId != 0)
-                  addRegion(writeRegs, memRegId, pts);
+              if (mayWrite) {
+                for (unsigned argIdx : calleeSummary.writeArgs) {
+                  if (argIdx >= call->arg_size() ||
+                      !callArgMayModifyMemory(call, argIdx))
+                    continue;
+                  const Value *arg = call->getArgOperand(argIdx);
+                  if (!arg->getType()->isPointerTy())
+                    continue;
+                  const auto region = getCanonicalRegionForPointer(arg);
+                  const uint32_t memRegId = region.first;
+                  const SVFGNodeBS &pts = region.second;
+                  if (memRegId != 0)
+                    addRegion(writeRegs, memRegId, pts);
+                }
+                mergeRegions(writeRegs, calleeSummary.writeGlobals);
               }
-              mergeRegions(writeRegs, calleeSummary.writeGlobals);
             }
-          }
           }
         }
 
@@ -917,7 +919,8 @@ void SVFGBuilder::buildMemorySSA() {
           auto loadIt = loadToLoadNode.find(load);
           if (loadIt == loadToLoadNode.end())
             continue;
-          auto *loadNode = dyn_cast<LoadSVFGNode>(svfg->getNode(loadIt->second));
+          auto *loadNode =
+              dyn_cast<LoadSVFGNode>(svfg->getNode(loadIt->second));
           if (!loadNode)
             continue;
           const auto region = getCanonicalRegionForPointer(ptr);
@@ -1032,8 +1035,8 @@ void SVFGBuilder::buildMemorySSA() {
                   underlyingBase(intrinsic->getArgOperand(0));
               const Value *sourceBase =
                   underlyingBase(intrinsic->getArgOperand(1));
-              const auto sourceRegion = getCanonicalRegionForPointer(
-                  intrinsic->getArgOperand(1));
+              const auto sourceRegion =
+                  getCanonicalRegionForPointer(intrinsic->getArgOperand(1));
               std::unordered_set<uint32_t> sourceObjectBases;
               for (uint32_t object : sourceRegion.second) {
                 const SVFG::ObjectInfo *info = svfg->getObjectInfo(object);
@@ -1058,17 +1061,20 @@ void SVFGBuilder::buildMemorySSA() {
                   continue;
                 for (uint32_t chiId : chiVec)
                   svfg->addEdge(svfg->getNode(storeNodeId),
-                                svfg->getNode(chiId),
-                                SVFGEdgeK::IntraIndirect);
+                                svfg->getNode(chiId), SVFGEdgeK::IntraIndirect);
               }
               for (const auto &[load, loadNodeId] : loadToLoadNode) {
                 if (underlyingBase(load->getPointerOperand()) !=
                     destinationBase)
                   continue;
+                const auto loadRegion =
+                    getCanonicalRegionForPointer(load->getPointerOperand());
+                SVFGNodeBS guard = loadRegion.second;
+                if (guard.empty())
+                  guard.insert(getOrCreateUnknownObjId());
                 for (uint32_t chiId : chiVec)
-                  svfg->addEdge(svfg->getNode(chiId),
-                                svfg->getNode(loadNodeId),
-                                SVFGEdgeK::IntraIndirect);
+                  svfg->addEdge(svfg->getNode(chiId), svfg->getNode(loadNodeId),
+                                SVFGEdgeK::IntraIndirect, nullptr, guard);
               }
             }
           }
@@ -1237,63 +1243,61 @@ void SVFGBuilder::buildMemoryPHINodes() {
         std::unordered_map<const BasicBlock *,
                            std::unordered_map<uint32_t, ReachingDefSet>>;
     auto computeExitDefs = [&](BlockReachingDefs &out) {
-          out.clear();
-          std::queue<const BasicBlock *> worklist;
-          std::set<const BasicBlock *> inQueue;
-          worklist.push(&F.getEntryBlock());
-          inQueue.insert(&F.getEntryBlock());
+      out.clear();
+      std::queue<const BasicBlock *> worklist;
+      std::set<const BasicBlock *> inQueue;
+      worklist.push(&F.getEntryBlock());
+      inQueue.insert(&F.getEntryBlock());
 
-          while (!worklist.empty()) {
-            const BasicBlock *bb = worklist.front();
-            worklist.pop();
-            inQueue.erase(bb);
+      while (!worklist.empty()) {
+        const BasicBlock *bb = worklist.front();
+        worklist.pop();
+        inQueue.erase(bb);
 
-            std::unordered_map<uint32_t, ReachingDefSet> current;
-            if (bb == &F.getEntryBlock()) {
-              for (const auto &[memReg, formalIn] : formalInByReg)
-                current[memReg].insert(formalIn);
-            } else {
-              for (const BasicBlock *pred : predecessors(bb)) {
-                auto predIt = out.find(pred);
-                if (predIt == out.end())
-                  continue;
-                for (const auto &pair : predIt->second) {
-                  const uint32_t memReg = pair.first;
-                  auto phiIt = bbToMemPhi[bb].find(memReg);
-                  if (phiIt != bbToMemPhi[bb].end()) {
-                    current[memReg] = {svfg->getNode(phiIt->second)};
-                    continue;
-                  }
-                  current[memReg].insert(pair.second.begin(),
-                                         pair.second.end());
-                }
-              }
-            }
-
-            auto phiMapIt = bbToMemPhi.find(bb);
-            if (phiMapIt != bbToMemPhi.end()) {
-              for (const auto &phiPair : phiMapIt->second)
-                current[phiPair.first] = {svfg->getNode(phiPair.second)};
-            }
-
-            auto localIt = localDefs.find(bb);
-            if (localIt != localDefs.end()) {
-              for (const auto &pair : localIt->second)
-                current[pair.first] = {pair.second};
-            }
-
-            const bool changed =
-                (out.find(bb) == out.end()) || out[bb] != current;
-            if (!changed)
+        std::unordered_map<uint32_t, ReachingDefSet> current;
+        if (bb == &F.getEntryBlock()) {
+          for (const auto &[memReg, formalIn] : formalInByReg)
+            current[memReg].insert(formalIn);
+        } else {
+          for (const BasicBlock *pred : predecessors(bb)) {
+            auto predIt = out.find(pred);
+            if (predIt == out.end())
               continue;
-
-            out[bb] = std::move(current);
-            for (const BasicBlock *succ : successors(bb)) {
-              if (inQueue.insert(succ).second)
-                worklist.push(succ);
+            for (const auto &pair : predIt->second) {
+              const uint32_t memReg = pair.first;
+              auto phiIt = bbToMemPhi[bb].find(memReg);
+              if (phiIt != bbToMemPhi[bb].end()) {
+                current[memReg] = {svfg->getNode(phiIt->second)};
+                continue;
+              }
+              current[memReg].insert(pair.second.begin(), pair.second.end());
             }
           }
-        };
+        }
+
+        auto phiMapIt = bbToMemPhi.find(bb);
+        if (phiMapIt != bbToMemPhi.end()) {
+          for (const auto &phiPair : phiMapIt->second)
+            current[phiPair.first] = {svfg->getNode(phiPair.second)};
+        }
+
+        auto localIt = localDefs.find(bb);
+        if (localIt != localDefs.end()) {
+          for (const auto &pair : localIt->second)
+            current[pair.first] = {pair.second};
+        }
+
+        const bool changed = (out.find(bb) == out.end()) || out[bb] != current;
+        if (!changed)
+          continue;
+
+        out[bb] = std::move(current);
+        for (const BasicBlock *succ : successors(bb)) {
+          if (inQueue.insert(succ).second)
+            worklist.push(succ);
+        }
+      }
+    };
 
     bool changed = true;
     while (changed) {
@@ -1307,9 +1311,9 @@ void SVFGBuilder::buildMemoryPHINodes() {
         if (numPreds < 2)
           continue;
 
-          for (uint32_t memReg : memRegsWithDefs) {
-            if (bbToMemPhi[&bb].count(memReg))
-              continue;
+        for (uint32_t memReg : memRegsWithDefs) {
+          if (bbToMemPhi[&bb].count(memReg))
+            continue;
 
           std::vector<SVFGNode *> perPredDefs;
           std::set<SVFGNode *> distinctDefs;
@@ -1542,7 +1546,8 @@ void SVFGBuilder::connectMemorySSAEdges() {
 
       for (const Instruction &inst : *bb) {
         if (const LoadInst *load = dyn_cast<LoadInst>(&inst)) {
-          auto *loadNode = dyn_cast_or_null<LoadSVFGNode>(getLoadStmtNode(load));
+          auto *loadNode =
+              dyn_cast_or_null<LoadSVFGNode>(getLoadStmtNode(load));
           if (!loadNode || loadNode->getMemoryUseReg() == 0)
             continue;
           const uint32_t memReg = loadNode->getMemoryUseReg();
@@ -1568,7 +1573,8 @@ void SVFGBuilder::connectMemorySSAEdges() {
           SVFGNodeBS defPts;
           if (!getDefInfo(reachingDef, defReg, defVersion, defPts))
             continue;
-          loadNode->setMemoryUse(memReg, defVersion, loadNode->getMemoryPointsTo());
+          loadNode->setMemoryUse(memReg, defVersion,
+                                 loadNode->getMemoryPointsTo());
           svfg->addEdge(reachingDef, loadNode, SVFGEdgeK::IntraIndirect,
                         nullptr,
                         buildGuard(defPts, loadNode->getMemoryPointsTo()));
@@ -1586,9 +1592,9 @@ void SVFGBuilder::connectMemorySSAEdges() {
             uint32_t prevVersion = 0;
             SVFGNodeBS prevPts;
             if (getDefInfo(prevIt->second, prevReg, prevVersion, prevPts)) {
-              svfg->addEdge(prevIt->second, storeNode, SVFGEdgeK::IntraIndirect,
-                            nullptr,
-                            buildGuard(prevPts, storeNode->getMemoryPointsTo()));
+              svfg->addEdge(
+                  prevIt->second, storeNode, SVFGEdgeK::IntraIndirect, nullptr,
+                  buildGuard(prevPts, storeNode->getMemoryPointsTo()));
             }
           }
           lastDef[memReg] = storeNode;
@@ -1645,9 +1651,9 @@ void SVFGBuilder::connectMemorySSAEdges() {
                   SVFGNodeBS defPts;
                   if (getDefInfo(reachingDef, defReg, defVersion, defPts)) {
                     actualIn->setSSAVersion(defVersion);
-                    svfg->addEdge(reachingDef, actualInNode,
-                                  SVFGEdgeK::IntraIndirect, nullptr,
-                                  buildGuard(defPts, actualIn->getDefSVFVars()));
+                    svfg->addEdge(
+                        reachingDef, actualInNode, SVFGEdgeK::IntraIndirect,
+                        nullptr, buildGuard(defPts, actualIn->getDefSVFVars()));
                   }
                 }
               }
@@ -1815,11 +1821,10 @@ void SVFGBuilder::buildCallEdges() {
               const bool isDirectEdge =
                   (directCallee && directCallee == callee &&
                    !directCallee->isDeclaration());
-              if (SVFGEdge *e =
-                      svfg->addEdge(actualParm, varArgNode,
-                                    isDirectEdge ? SVFGEdgeK::CallDir
-                                                 : SVFGEdgeK::CallInd,
-                                    call)) {
+              if (SVFGEdge *e = svfg->addEdge(actualParm, varArgNode,
+                                              isDirectEdge ? SVFGEdgeK::CallDir
+                                                           : SVFGEdgeK::CallInd,
+                                              call)) {
                 if (!isDirectEdge)
                   vfEdgesAtIndCallSite.insert(e);
               }
@@ -1838,11 +1843,10 @@ void SVFGBuilder::buildCallEdges() {
               const bool isDirectEdge =
                   (directCallee && directCallee == callee &&
                    !directCallee->isDeclaration());
-              if (SVFGEdge *e =
-                      svfg->addEdge(actualParm, formalParm,
-                                    isDirectEdge ? SVFGEdgeK::CallDir
-                                                 : SVFGEdgeK::CallInd,
-                                    call)) {
+              if (SVFGEdge *e = svfg->addEdge(actualParm, formalParm,
+                                              isDirectEdge ? SVFGEdgeK::CallDir
+                                                           : SVFGEdgeK::CallInd,
+                                              call)) {
                 // Track pre-computed indirect edges for spurious-edge
                 // filtering.
                 if (!isDirectEdge)
@@ -1871,9 +1875,8 @@ void SVFGBuilder::buildCallEdges() {
                                       formalIn->getDefSVFVars(), unknownObjId);
             if (edgePts.empty())
               continue;
-            if (SVFGEdge *e =
-                    svfg->addEdge(actualIn, formalIn, SVFGEdgeK::CallAIn,
-                                  call, edgePts)) {
+            if (SVFGEdge *e = svfg->addEdge(
+                    actualIn, formalIn, SVFGEdgeK::CallAIn, call, edgePts)) {
               if (!directCallee)
                 vfEdgesAtIndCallSite.insert(e);
             }
@@ -1924,11 +1927,10 @@ void SVFGBuilder::buildReturnEdges() {
             // for ParamCall above).
             const bool isDirectEdge = (directCallee && directCallee == callee &&
                                        !directCallee->isDeclaration());
-            if (SVFGEdge *e =
-                    svfg->addEdge(formalRet, actualRet,
-                                  isDirectEdge ? SVFGEdgeK::RetDir
-                                               : SVFGEdgeK::RetInd,
-                                  call)) {
+            if (SVFGEdge *e = svfg->addEdge(formalRet, actualRet,
+                                            isDirectEdge ? SVFGEdgeK::RetDir
+                                                         : SVFGEdgeK::RetInd,
+                                            call)) {
               if (!isDirectEdge)
                 vfEdgesAtIndCallSite.insert(e);
             }
@@ -1954,9 +1956,8 @@ void SVFGBuilder::buildReturnEdges() {
                                       actualOut->getDefSVFVars(), unknownObjId);
             if (edgePts.empty())
               continue;
-            if (SVFGEdge *e =
-                    svfg->addEdge(formalOut, actualOut, SVFGEdgeK::RetAOut,
-                                  call, edgePts)) {
+            if (SVFGEdge *e = svfg->addEdge(
+                    formalOut, actualOut, SVFGEdgeK::RetAOut, call, edgePts)) {
               if (!directCallee)
                 vfEdgesAtIndCallSite.insert(e);
             }
@@ -2004,11 +2005,9 @@ bool SVFGBuilder::connectCallSiteToCalleeOnTheFly(
         auto *varArgNode = dyn_cast<VarArgSVFGNode>(formalNode);
         if (!varArgNode)
           continue;
-        if (SVFGEdge *e =
-                g->addEdge(actualParm, varArgNode,
-                           isDirectEdge ? SVFGEdgeK::CallDir
-                                        : SVFGEdgeK::CallInd,
-                           cs)) {
+        if (SVFGEdge *e = g->addEdge(
+                actualParm, varArgNode,
+                isDirectEdge ? SVFGEdgeK::CallDir : SVFGEdgeK::CallInd, cs)) {
           newEdges.push_back(e);
           created = true;
           if (!isDirectEdge)
@@ -2025,11 +2024,9 @@ bool SVFGBuilder::connectCallSiteToCalleeOnTheFly(
           continue;
         // Emit only CallDir/CallInd – ParamCall is a duplicate (see
         // buildCallEdges).
-        if (SVFGEdge *e =
-                g->addEdge(actualParm, formalParm,
-                           isDirectEdge ? SVFGEdgeK::CallDir
-                                        : SVFGEdgeK::CallInd,
-                           cs)) {
+        if (SVFGEdge *e = g->addEdge(
+                actualParm, formalParm,
+                isDirectEdge ? SVFGEdgeK::CallDir : SVFGEdgeK::CallInd, cs)) {
           newEdges.push_back(e);
           created = true;
           if (!isDirectEdge)
@@ -2075,11 +2072,9 @@ bool SVFGBuilder::connectCallSiteToCalleeOnTheFly(
         continue;
       // Emit only RetDir/RetInd – ParamRet is a duplicate (see
       // buildReturnEdges).
-      if (SVFGEdge *e =
-              g->addEdge(formalRet, actualRet,
-                         isDirectEdge ? SVFGEdgeK::RetDir
-                                      : SVFGEdgeK::RetInd,
-                         cs)) {
+      if (SVFGEdge *e = g->addEdge(
+              formalRet, actualRet,
+              isDirectEdge ? SVFGEdgeK::RetDir : SVFGEdgeK::RetInd, cs)) {
         newEdges.push_back(e);
         created = true;
         if (!isDirectEdge)
@@ -2103,9 +2098,8 @@ bool SVFGBuilder::connectCallSiteToCalleeOnTheFly(
           formalOut->getDefSVFVars(), actualOut->getDefSVFVars(), unknownObjId);
       if (edgePts.empty())
         continue;
-      if (SVFGEdge *e =
-              g->addEdge(formalOut, actualOut, SVFGEdgeK::RetAOut, cs,
-                         edgePts)) {
+      if (SVFGEdge *e = g->addEdge(formalOut, actualOut, SVFGEdgeK::RetAOut, cs,
+                                   edgePts)) {
         newEdges.push_back(e);
         created = true;
         if (!isDirectEdge)

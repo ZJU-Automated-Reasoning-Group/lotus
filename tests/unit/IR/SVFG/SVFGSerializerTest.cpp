@@ -224,6 +224,12 @@ TEST_F(SVFGSerializerTest, RoundTripsCanonicalGepOffsets) {
       sys::fs::createTemporaryFile("svfg-gep-offset", "txt", fd, path));
   ::close(fd);
   ASSERT_TRUE(original->writeToFile(path.str().str()));
+  {
+    std::ifstream serialized(path.c_str());
+    std::string header;
+    ASSERT_TRUE(static_cast<bool>(std::getline(serialized, header)));
+    EXPECT_EQ(header, "SVFG-TEXT-V8");
+  }
 
   SVFG reloaded;
   reloaded.setICFG(&icfg);

@@ -149,8 +149,18 @@ static NormalizedGepOffset getNormalizedGepOffset(const GEPOperator *gep,
       if (!index) {
         result.traversesArray = true;
       } else if (!current->isArrayTy() && !index->isZero()) {
-        result.offset +=
-            index->getZExtValue() * layout.getTypeAllocSize(current);
+        if (index->isNegative())
+          return result;
+        const uint64_t elementSize = layout.getTypeAllocSize(current);
+        const uint64_t element = index->getZExtValue();
+        if (elementSize != 0 &&
+            element > std::numeric_limits<uint64_t>::max() / elementSize)
+          return result;
+        const uint64_t increment = element * elementSize;
+        if (increment >
+            std::numeric_limits<uint64_t>::max() - result.offset)
+          return result;
+        result.offset += increment;
       }
       continue;
     }
@@ -158,8 +168,11 @@ static NormalizedGepOffset getNormalizedGepOffset(const GEPOperator *gep,
       if (!index || index->getZExtValue() >= structure->getNumElements())
         return result;
       const unsigned field = static_cast<unsigned>(index->getZExtValue());
-      result.offset += layout.getStructLayout(structure)->getElementOffset(
-          field);
+      const uint64_t increment =
+          layout.getStructLayout(structure)->getElementOffset(field);
+      if (increment > std::numeric_limits<uint64_t>::max() - result.offset)
+        return result;
+      result.offset += increment;
       current = structure->getElementType(field);
       continue;
     }
@@ -876,6 +889,14 @@ uint32_t SVFGBuilder::getGepObjectId(uint32_t baseObjId,
   SVFG *graph = getActiveSVFG();
   const uint32_t canonicalBaseObjId = getCanonicalBaseObjId(baseObjId);
 
+  if (graph && graph->isUnknownObject(baseObjId))
+    return baseObjId;
+  if (graph && graph->isFieldInsensitiveObject(baseObjId))
+    return getOrCreateFIObjId(canonicalBaseObjId);
+  if (config.memModelType ==
+      SVFGBuilderConfig::MemModelType::FieldInsensitive)
+    return baseObjId;
+
   auto queryAserFieldObject = [&]() -> uint32_t {
     if (!config.usePointerAnalysis || !ptaSolverWrapper ||
         !ptaSolverWrapper->solver ||
@@ -931,6 +952,9 @@ uint32_t SVFGBuilder::getGepObjectId(uint32_t baseObjId,
     if (const SVFG::ObjectInfo *baseInfo = graph->getObjectInfo(baseObjId))
       if (baseInfo->hasFieldOffset)
         baseOffset = baseInfo->fieldOffset;
+    if (normalized.offset >
+        std::numeric_limits<uint64_t>::max() - baseOffset)
+      return baseObjId;
     const uint64_t totalOffset = baseOffset + normalized.offset;
     if (totalOffset == 0) {
       if (normalized.traversesArray) {
@@ -975,17 +999,6 @@ uint32_t SVFGBuilder::getGepObjectId(uint32_t baseObjId,
   // Early return if PTA is unavailable
   if (!config.usePointerAnalysis || !ptaSolverWrapper ||
       !ptaSolverWrapper->solver)
-    return baseObjId;
-
-  // Check field-insensitivity markers (heap objects with unknown size, large
-  // structs)
-  if (graph && graph->isUnknownObject(baseObjId))
-    return baseObjId;
-  if (graph && graph->isFieldInsensitiveObject(baseObjId))
-    return getOrCreateFIObjId(canonicalBaseObjId);
-
-  // Field-insensitive memory model bypasses field analysis
-  if (config.memModelType == SVFGBuilderConfig::MemModelType::FieldInsensitive)
     return baseObjId;
 
   // GEP with non-constant indices falls back to base object (array element

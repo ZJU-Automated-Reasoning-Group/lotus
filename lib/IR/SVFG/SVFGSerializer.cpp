@@ -33,6 +33,7 @@ static constexpr const char *kHeaderV4 = "SVFG-TEXT-V4";
 static constexpr const char *kHeaderV5 = "SVFG-TEXT-V5";
 static constexpr const char *kHeaderV6 = "SVFG-TEXT-V6";
 static constexpr const char *kHeaderV7 = "SVFG-TEXT-V7";
+static constexpr const char *kHeaderV8 = "SVFG-TEXT-V8";
 
 namespace {
 
@@ -827,7 +828,7 @@ bool SVFGSerializer::writeText(const SVFG &graph, const std::string &filename) {
   if (!file.is_open())
     return false;
 
-  file << kHeaderV7 << "\n";
+  file << kHeaderV8 << "\n";
 
   // Persist object debug labels to preserve points-to identity across reloads.
   for (const auto &pair : graph.getObjectDebugMap()) {
@@ -1027,6 +1028,10 @@ bool SVFGSerializer::readText(SVFG &graph, const std::string &filename) {
       continue;
     }
     if (line == kHeaderV7) {
+      sawV5 = true;
+      continue;
+    }
+    if (line == kHeaderV8) {
       sawV5 = true;
       continue;
     }

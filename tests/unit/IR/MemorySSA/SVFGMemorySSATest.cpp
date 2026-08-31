@@ -316,6 +316,44 @@ TEST_F(SVFGMemorySSATest, CallsiteMemoryNodesTrackOnlyTouchedArguments) {
 
   EXPECT_NE(actualIn->getMemReg(), 0u);
 }
+
+TEST_F(SVFGMemorySSATest, SpilledFormalUsesNearestDominatingStore) {
+  const char *source = R"(
+    @value = global i8 0
+
+    define void @overwrite_slot(i8** %a, i8** %b) {
+    entry:
+      %slot = alloca i8**
+      store i8** %a, i8*** %slot
+      store i8** %b, i8*** %slot
+      %selected = load i8**, i8*** %slot
+      store i8* @value, i8** %selected
+      ret void
+    }
+
+    define i32 @main() {
+    entry:
+      %x = alloca i8*
+      %y = alloca i8*
+      call void @overwrite_slot(i8** %x, i8** %y)
+      ret i32 0
+    }
+  )";
+
+  auto module = parseModule(source);
+  ASSERT_NE(module, nullptr);
+  ICFG icfg;
+  std::unique_ptr<SVFG> svfg = buildSVFG(module.get(), icfg);
+  ASSERT_NE(svfg, nullptr);
+
+  const Function *mainFn = module->getFunction("main");
+  ASSERT_NE(mainFn, nullptr);
+  const CallBase *call = findCallTo(mainFn, "overwrite_slot");
+  ASSERT_NE(call, nullptr);
+
+  EXPECT_EQ(svfg->getActualOuts(call).size(), 1u);
+}
+
 TEST_F(SVFGMemorySSATest, InterproceduralValueNodesUseEntryExitAndReturnSite) {
   const char *source = R"(
     declare i8* @sink(...)
@@ -657,7 +695,8 @@ TEST_F(SVFGMemorySSATest, SelectProducesPhiNodeAndPhiEdges) {
   }
   EXPECT_EQ(phiInEdges, 2u);
 }
-TEST_F(SVFGMemorySSATest, InternalPointerReturningCallDoesNotCopyArgumentIntoResult) {
+TEST_F(SVFGMemorySSATest,
+       InternalPointerReturningCallDoesNotCopyArgumentIntoResult) {
   const char *source = R"(
     define i8* @id(i8* %p) {
     entry:

@@ -611,6 +611,12 @@ bool FlowSensitivePTA::transfer(const SVFGNode &node) {
         return !hasExactLength || (relativeOffset <= copyLength &&
                                    pointerSize <= copyLength - relativeOffset);
       };
+      ObjectID unknownObject = 0;
+      for (const auto &[object, label] : graph_->getObjectDebugMap())
+        if (graph_->isUnknownObject(object)) {
+          unknownObject = object;
+          break;
+        }
 
       if (hasExactLength) {
         const PointsToSet destinationObjects =
@@ -625,8 +631,12 @@ bool FlowSensitivePTA::transfer(const SVFGNode &node) {
           for (const RootLocation &root : destinationRoots) {
             if (root.base != destinationBase || destinationOffset < root.offset)
               continue;
-            if (fullyCopied(destinationOffset - root.offset))
+            const uint64_t relativeOffset = destinationOffset - root.offset;
+            if (fullyCopied(relativeOffset)) {
               assign(outgoing[destination], empty);
+            } else if (relativeOffset < copyLength && unknownObject != 0) {
+              assign(outgoing[destination], singleton(unknownObject));
+            }
           }
         }
       }

@@ -532,6 +532,58 @@ TEST_F(FlowSensitivePTATest, PartialMemcpyPreservesFieldsOutsideRange) {
   EXPECT_FALSE(pointsToGlobal(preserved, "y"));
 }
 
+TEST_F(FlowSensitivePTATest, PartialPointerOverwriteBecomesUnknown) {
+  auto module = parseModule(R"(
+    %S = type { i8* }
+    @x = global i8 0
+    define i8* @main() {
+    entry:
+      %source = alloca %S
+      %destination = alloca %S
+      %source.field = getelementptr %S, %S* %source, i32 0, i32 0
+      %destination.field = getelementptr %S, %S* %destination, i32 0, i32 0
+      store i8* null, i8** %source.field
+      store i8* @x, i8** %destination.field
+      %source.bytes = bitcast %S* %source to i8*
+      %destination.bytes = bitcast %S* %destination to i8*
+      call void @llvm.memcpy.p0i8.p0i8.i64(i8* %destination.bytes,
+                                           i8* %source.bytes,
+                                           i64 4, i1 false)
+      %result = load i8*, i8** %destination.field
+      ret i8* %result
+    }
+    declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1)
+  )");
+  ASSERT_NE(module, nullptr);
+
+  ICFG icfg;
+  ICFGBuilder icfgBuilder(&icfg);
+  icfgBuilder.build(module.get());
+  SVFGBuilderConfig graphConfig;
+  graphConfig.usePointerAnalysis = true;
+  SVFGBuilder graphBuilder(graphConfig);
+  std::unique_ptr<SVFG> graph(graphBuilder.build(&icfg));
+  ASSERT_NE(graph, nullptr);
+
+  const LoadInst *load = nullptr;
+  for (const Instruction &instruction :
+       instructions(module->getFunction("main")))
+    if (const auto *candidate = dyn_cast<LoadInst>(&instruction))
+      load = candidate;
+  ASSERT_NE(load, nullptr);
+  FlowSensitivePTA solver(*graph);
+  solver.solve();
+  const auto result = solver.pointsTo(load);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(std::any_of(result->begin(), result->end(), [&](uint32_t object) {
+    return graph->isUnknownObject(object);
+  }));
+  EXPECT_FALSE(
+      std::any_of(result->begin(), result->end(), [&](uint32_t object) {
+        return graph->getObjectValue(object) == module->getGlobalVariable("x");
+      }));
+}
+
 TEST_F(FlowSensitivePTATest, NegativeGepIndexDoesNotCreateUnsignedOffset) {
   auto module = parseModule(R"(
     define i8** @main(i8** %pointer) {

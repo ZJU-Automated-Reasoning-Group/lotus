@@ -138,14 +138,18 @@ int main(int argc, char **argv) {
     for (const auto &[value, nodeID] : graph->getValueNodeMap()) {
       if (!value || !value->getType()->isPointerTy())
         continue;
+      const auto result = solver.pointsTo(value);
+      if (!result)
+        continue;
       outs() << "pts(";
       printValue(value, outs());
       outs() << ") = {";
       bool first = true;
-      for (uint32_t object : solver.pointsTo(graph->getNode(nodeID))) {
+      for (uint32_t object : *result) {
         if (!first)
           outs() << ", ";
         first = false;
+        outs() << object << ":";
         printValue(graph->getObjectValue(object), outs());
       }
       outs() << "}\n";
@@ -190,6 +194,10 @@ int main(int argc, char **argv) {
         }
         outs() << "  obj " << object << " [" << label
                << (graph->isConstantObject(object) ? ",constant" : "")
+               << ",base="
+               << (graph->getObjectInfo(object)
+                       ? graph->getObjectInfo(object)->baseObjId
+                       : 0)
                << "] in={";
         bool first = true;
         for (uint32_t target : in) {
@@ -248,6 +256,10 @@ int main(int argc, char **argv) {
             errs() << "unresolved";
           else
             errs() << (*result ? "alias" : "no-alias");
+          errs() << " for ";
+          printValue(call->getArgOperand(0), errs());
+          errs() << " and ";
+          printValue(call->getArgOperand(1), errs());
           errs() << "\n";
         }
       }

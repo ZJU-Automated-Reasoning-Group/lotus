@@ -10,10 +10,11 @@
 #include <fstream>
 #include <sstream>
 
+#include <gtest/gtest.h>
+#include <llvm/IR/InstIterator.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/Path.h>
-#include <gtest/gtest.h>
 #include <unistd.h>
 
 using namespace llvm;
@@ -169,13 +170,76 @@ TEST_F(SVFGSerializerTest, RoundTripsSemanticBindings) {
   }
   ASSERT_NE(allocaX, nullptr);
 
-  auto *addrNode = dyn_cast_or_null<AddrSVFGNode>(reloaded.getValueNode(allocaX));
+  auto *addrNode =
+      dyn_cast_or_null<AddrSVFGNode>(reloaded.getValueNode(allocaX));
   ASSERT_NE(addrNode, nullptr);
   ASSERT_NE(addrNode->getObjectId(), 0u);
   const auto *info = reloaded.getObjectInfo(addrNode->getObjectId());
   ASSERT_NE(info, nullptr);
   EXPECT_TRUE(info->isStack);
   EXPECT_EQ(reloaded.getObjectValue(addrNode->getObjectId()), allocaX);
+}
+
+TEST_F(SVFGSerializerTest, RoundTripsCanonicalGepOffsets) {
+  auto module = parseModule(R"(
+    %S = type { i8*, i8* }
+    define i8** @main() {
+    entry:
+      %object = alloca %S
+      %field = getelementptr %S, %S* %object, i32 0, i32 1
+      ret i8** %field
+    }
+  )");
+  ASSERT_NE(module, nullptr);
+
+  ICFG icfg;
+  ICFGBuilder icfgBuilder(&icfg);
+  icfgBuilder.build(module.get());
+  SVFGBuilderConfig config;
+  config.usePointerAnalysis = true;
+  SVFGBuilder builder(config);
+  std::unique_ptr<SVFG> original(builder.build(&icfg));
+  ASSERT_NE(original, nullptr);
+
+  const GetElementPtrInst *gep = nullptr;
+  for (const Instruction &instruction :
+       instructions(module->getFunction("main")))
+    if (const auto *candidate = dyn_cast<GetElementPtrInst>(&instruction))
+      gep = candidate;
+  ASSERT_NE(gep, nullptr);
+  const SVFG::GepAccessInfo access = original->getGepAccess(gep);
+  ASSERT_TRUE(access.valid);
+  EXPECT_GT(access.relativeOffset, 0u);
+
+  const SVFGNodeBS &objects = original->getObjectIds(gep);
+  ASSERT_FALSE(objects.empty());
+  const uint32_t fieldObject = *objects.begin();
+  const SVFG::ObjectInfo *fieldInfo = original->getObjectInfo(fieldObject);
+  ASSERT_NE(fieldInfo, nullptr);
+  ASSERT_TRUE(fieldInfo->hasFieldOffset);
+
+  SmallString<256> path;
+  int fd = -1;
+  ASSERT_FALSE(
+      sys::fs::createTemporaryFile("svfg-gep-offset", "txt", fd, path));
+  ::close(fd);
+  ASSERT_TRUE(original->writeToFile(path.str().str()));
+
+  SVFG reloaded;
+  reloaded.setICFG(&icfg);
+  ASSERT_TRUE(reloaded.readFromFile(path.str().str()));
+  sys::fs::remove(path);
+
+  const SVFG::GepAccessInfo reloadedAccess = reloaded.getGepAccess(gep);
+  EXPECT_TRUE(reloadedAccess.valid);
+  EXPECT_EQ(reloadedAccess.relativeOffset, access.relativeOffset);
+  const SVFG::ObjectInfo *reloadedInfo = reloaded.getObjectInfo(fieldObject);
+  ASSERT_NE(reloadedInfo, nullptr);
+  EXPECT_TRUE(reloadedInfo->hasFieldOffset);
+  EXPECT_EQ(reloadedInfo->fieldOffset, fieldInfo->fieldOffset);
+  EXPECT_EQ(reloaded.getOffsetObject(reloadedInfo->baseObjId,
+                                     reloadedInfo->fieldOffset),
+            fieldObject);
 }
 
 TEST_F(SVFGSerializerTest, RoundTripsInterPhiOperands) {
@@ -340,8 +404,10 @@ TEST_F(SVFGSerializerTest, SVFGOPTBuildAndWriteSerializesFullGraph) {
   bool sawFormalParmBefore = false;
   bool sawActualRetBefore = false;
   for (const auto &pair : *graph) {
-    sawFormalParmBefore = sawFormalParmBefore || isa<FormalParmSVFGNode>(pair.second);
-    sawActualRetBefore = sawActualRetBefore || isa<ActualRetSVFGNode>(pair.second);
+    sawFormalParmBefore =
+        sawFormalParmBefore || isa<FormalParmSVFGNode>(pair.second);
+    sawActualRetBefore =
+        sawActualRetBefore || isa<ActualRetSVFGNode>(pair.second);
     ASSERT_FALSE(isa<InterPhiSVFGNode>(pair.second));
   }
   ASSERT_TRUE(sawFormalParmBefore);
@@ -360,7 +426,8 @@ TEST_F(SVFGSerializerTest, SVFGOPTBuildAndWriteSerializesFullGraph) {
 
   bool optimizedHasInterPhi = false;
   for (const auto &pair : optimized)
-    optimizedHasInterPhi = optimizedHasInterPhi || isa<InterPhiSVFGNode>(pair.second);
+    optimizedHasInterPhi =
+        optimizedHasInterPhi || isa<InterPhiSVFGNode>(pair.second);
   EXPECT_TRUE(optimizedHasInterPhi);
 
   SVFG reloaded;
@@ -372,9 +439,12 @@ TEST_F(SVFGSerializerTest, SVFGOPTBuildAndWriteSerializesFullGraph) {
   bool reloadedHasActualRet = false;
   bool reloadedHasInterPhi = false;
   for (const auto &pair : reloaded) {
-    reloadedHasFormalParm = reloadedHasFormalParm || isa<FormalParmSVFGNode>(pair.second);
-    reloadedHasActualRet = reloadedHasActualRet || isa<ActualRetSVFGNode>(pair.second);
-    reloadedHasInterPhi = reloadedHasInterPhi || isa<InterPhiSVFGNode>(pair.second);
+    reloadedHasFormalParm =
+        reloadedHasFormalParm || isa<FormalParmSVFGNode>(pair.second);
+    reloadedHasActualRet =
+        reloadedHasActualRet || isa<ActualRetSVFGNode>(pair.second);
+    reloadedHasInterPhi =
+        reloadedHasInterPhi || isa<InterPhiSVFGNode>(pair.second);
   }
 
   EXPECT_TRUE(reloadedHasFormalParm);
@@ -676,8 +746,8 @@ TEST_F(SVFGSerializerTest, RoundTripsDeferredIndirectCallState) {
   const Argument *fpArg = &*applyFn->arg_begin();
   SVFGNode *fpNode = reloaded.getValueNode(fpArg);
   ASSERT_NE(fpNode, nullptr);
-  const uint32_t funPtrKey = fpNode->hasValueId() ? fpNode->getValueId()
-                                                  : fpNode->getId();
+  const uint32_t funPtrKey =
+      fpNode->hasValueId() ? fpNode->getValueId() : fpNode->getId();
   EXPECT_EQ(reloaded.getIndCallSites(funPtrKey).count(indCall), 1u);
 
   std::vector<SVFGEdge *> newEdges;

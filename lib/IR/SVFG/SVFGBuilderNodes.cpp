@@ -270,6 +270,7 @@ void SVFGBuilder::buildTopLevelNodes() {
           svfg->addGlobalStoreNode(storeNode);
         }
       } else if (isa<GetElementPtrInst>(&inst)) {
+        const auto *gep = cast<GetElementPtrInst>(&inst);
         uint32_t nodeId = nextNode();
         auto *gepNode = new GepSVFGNode(nodeId, blockNode, &inst);
         gepNode->setValueId(getOrCreateValueId(&inst));
@@ -277,6 +278,17 @@ void SVFGBuilder::buildTopLevelNodes() {
         svfg->setDef(&inst, nodeId);
         valueToNode[&inst] = nodeId;
         svfg->setValueNode(&inst, nodeId);
+        SVFGNodeBS fieldObjects;
+        for (uint32_t baseObject :
+             getObjectIdsForValue(gep->getPointerOperand())) {
+          const uint32_t fieldObject = getGepObjectId(baseObject, gep);
+          if (fieldObject != 0) {
+            fieldObjects.insert(fieldObject);
+            svfg->setGepObject(gep, baseObject, fieldObject);
+          }
+        }
+        if (!fieldObjects.empty())
+          svfg->setObjectsForValue(&inst, fieldObjects);
       } else if (isa<BinaryOperator>(&inst)) {
         uint32_t nodeId = nextNode();
         auto *binaryNode = new BinaryOpSVFGNode(nodeId, blockNode, &inst);

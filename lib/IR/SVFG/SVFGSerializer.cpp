@@ -57,7 +57,14 @@ struct ParsedObjectInfo {
   uint32_t objId = 0;
   uint32_t flags = 0;
   uint32_t baseObjId = 0;
+  uint64_t fieldOffset = 0;
   Anchor valueAnchor;
+};
+
+struct ParsedGepAccess {
+  uint64_t relativeOffset = 0;
+  bool traversesArray = false;
+  Anchor gepAnchor;
 };
 
 struct ParsedIndCallSite {
@@ -289,11 +296,13 @@ static uint32_t packObjectInfoFlags(const SVFG::ObjectInfo &info) {
   flags |= info.isArray ? (1u << 7) : 0;
   flags |= info.isUnknown ? (1u << 8) : 0;
   flags |= info.isSingleton ? (1u << 9) : 0;
+  flags |= info.hasFieldOffset ? (1u << 10) : 0;
   return flags;
 }
 
 static SVFG::ObjectInfo unpackObjectInfoFlags(uint32_t flags,
-                                              uint32_t baseObjId) {
+                                              uint32_t baseObjId,
+                                              uint64_t fieldOffset) {
   SVFG::ObjectInfo info;
   info.isHeap = (flags & (1u << 0)) != 0;
   info.isConcreteHeap = (flags & (1u << 1)) != 0;
@@ -305,7 +314,9 @@ static SVFG::ObjectInfo unpackObjectInfoFlags(uint32_t flags,
   info.isArray = (flags & (1u << 7)) != 0;
   info.isUnknown = (flags & (1u << 8)) != 0;
   info.isSingleton = (flags & (1u << 9)) != 0;
+  info.hasFieldOffset = (flags & (1u << 10)) != 0;
   info.baseObjId = baseObjId;
+  info.fieldOffset = fieldOffset;
   return info;
 }
 
@@ -830,6 +841,15 @@ bool SVFGSerializer::writeText(const SVFG &graph, const std::string &filename) {
     const uint32_t baseObjId = info ? info->baseObjId : 0;
     file << "T " << objId << " " << flags << " " << baseObjId << " ";
     writeAnchor(file, getAnchorForValue(graph.getObjectValue(objId)));
+    file << " " << (info ? info->fieldOffset : 0) << "\n";
+  }
+
+  for (const auto &[gep, access] : graph.getGepAccessMap()) {
+    if (!access.valid)
+      continue;
+    file << "G " << access.relativeOffset << " " << access.traversesArray
+         << " ";
+    writeAnchor(file, getAnchorForValue(gep));
     file << "\n";
   }
 
@@ -982,6 +1002,7 @@ bool SVFGSerializer::readText(SVFG &graph, const std::string &filename) {
   std::unordered_map<uint32_t, ParsedNodeMeta> nodeMeta;
   std::vector<ParsedEdge> edges;
   std::vector<ParsedObjectInfo> objects;
+  std::vector<ParsedGepAccess> gepAccesses;
   std::vector<ParsedIndCallSite> indCallSites;
   std::string line;
   bool sawV5 = false;
@@ -1026,8 +1047,18 @@ bool SVFGSerializer::readText(SVFG &graph, const std::string &filename) {
     if (tag == 'T') {
       ParsedObjectInfo parsed;
       iss >> parsed.objId >> parsed.flags >> parsed.baseObjId;
-      if (readAnchor(iss, parsed.valueAnchor))
+      if (readAnchor(iss, parsed.valueAnchor)) {
+        if ((parsed.flags & (1u << 10)) != 0)
+          iss >> parsed.fieldOffset;
         objects.push_back(std::move(parsed));
+      }
+      continue;
+    }
+    if (tag == 'G') {
+      ParsedGepAccess parsed;
+      iss >> parsed.relativeOffset >> parsed.traversesArray;
+      if (readAnchor(iss, parsed.gepAnchor))
+        gepAccesses.push_back(std::move(parsed));
       continue;
     }
     if (tag == 'I') {
@@ -1165,10 +1196,21 @@ bool SVFGSerializer::readText(SVFG &graph, const std::string &filename) {
   }
 
   for (const ParsedObjectInfo &object : objects) {
-    graph.setObjectInfo(object.objId,
-                        unpackObjectInfoFlags(object.flags, object.baseObjId));
+    graph.setObjectInfo(
+        object.objId,
+        unpackObjectInfoFlags(object.flags, object.baseObjId,
+                              object.fieldOffset));
+    if ((object.flags & (1u << 10)) != 0 && object.baseObjId != 0)
+      graph.setOffsetObject(object.baseObjId, object.fieldOffset, object.objId);
     if (const Value *V = resolveValueAnchor(module, object.valueAnchor))
       graph.setObjectValue(object.objId, V);
+  }
+
+  for (const ParsedGepAccess &parsed : gepAccesses) {
+    const auto *gep = dyn_cast_or_null<GetElementPtrInst>(
+        resolveValueAnchor(module, parsed.gepAnchor));
+    if (gep)
+      graph.setGepAccess(gep, parsed.relativeOffset, parsed.traversesArray);
   }
 
   for (const ParsedIndCallSite &entry : indCallSites) {

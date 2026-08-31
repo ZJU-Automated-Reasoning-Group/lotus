@@ -27,6 +27,7 @@
 #include <queue>
 
 #include <llvm/IR/CFG.h>
+#include <llvm/IR/Dominators.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/IntrinsicInst.h>
 #include <llvm/IR/Module.h>
@@ -286,6 +287,16 @@ void SVFGBuilder::buildMemorySSA() {
       [&](const Value *ptr) -> std::pair<uint32_t, SVFGNodeBS> {
     if (!ptr || !ptr->getType()->isPointerTy())
       return {0, {}};
+    if (isa<GetElementPtrInst>(ptr)) {
+      const SVFGNodeBS &mapped = svfg->getObjectIds(ptr);
+      if (!mapped.empty()) {
+        const uint32_t memRegId = getOrCreateMemRegForPointsTo(
+            mapped, getMemoryRegionScope(ptr));
+        auto canonical = memRegToPts.find(memRegId);
+        return {memRegId,
+                canonical == memRegToPts.end() ? mapped : canonical->second};
+      }
+    }
     std::vector<const void *> ptsVoid = getPointsToSet(ptr);
     SVFGNodeBS objIds = convertPTAObjectsToObjIDs(ptsVoid);
     if (!objIds.empty()) {
@@ -321,6 +332,18 @@ void SVFGBuilder::buildMemorySSA() {
           isa<GlobalVariable>(global) && cast<GlobalVariable>(global)->isConstant();
       const uint32_t object =
           getOrCreateCanonicalObjectIdForValue(ptr, info);
+      if (const auto *gep = dyn_cast<GEPOperator>(ptr)) {
+        APInt offset(M->getDataLayout().getIndexTypeSizeInBits(
+                         gep->getPointerOperandType()),
+                     0);
+        if (gep->accumulateConstantOffset(M->getDataLayout(), offset)) {
+          const uint32_t baseObject =
+              getOrCreateCanonicalObjectIdForValue(global, info);
+          svfg->setObjectBase(object, baseObject);
+          svfg->setObjectOffset(object, offset.getZExtValue());
+          svfg->setOffsetObject(baseObject, offset.getZExtValue(), object);
+        }
+      }
       const SVFGNodeBS synthetic{object};
       const uint32_t memRegId = getOrCreateMemRegForPointsTo(synthetic);
       return {memRegId, synthetic};
@@ -879,6 +902,7 @@ void SVFGBuilder::buildMemorySSA() {
   for (const Function &F : *M) {
     if (F.isDeclaration())
       continue;
+    DominatorTree dominance(const_cast<Function &>(F));
 
     // Canonical MemorySSA surface:
     //   - Load/store statements carry the direct memory use/def metadata.
@@ -899,8 +923,11 @@ void SVFGBuilder::buildMemorySSA() {
           const auto region = getCanonicalRegionForPointer(ptr);
           const uint32_t memRegId = region.first;
           const SVFGNodeBS &pts = region.second;
-          if (memRegId != 0)
+          if (memRegId != 0) {
             loadNode->setMemoryUse(memRegId, 0, pts);
+            if (isa<GetElementPtrInst>(ptr) && !pts.empty())
+              svfg->setObjectsForValue(ptr, pts);
+          }
         }
 
         if (const StoreInst *store = dyn_cast<StoreInst>(&inst)) {
@@ -919,6 +946,8 @@ void SVFGBuilder::buildMemorySSA() {
           const SVFGNodeBS &pts = region.second;
           if (memRegId == 0)
             continue;
+          if (isa<GetElementPtrInst>(ptr) && !pts.empty())
+            svfg->setObjectsForValue(ptr, pts);
           const uint32_t version = nextVersion(&F, memRegId);
           storeNode->setMemoryDef(memRegId, version, pts);
           svfg->setMSSADef(memRegId, storeNode, version);
@@ -1003,13 +1032,29 @@ void SVFGBuilder::buildMemorySSA() {
                   underlyingBase(intrinsic->getArgOperand(0));
               const Value *sourceBase =
                   underlyingBase(intrinsic->getArgOperand(1));
+              const auto sourceRegion = getCanonicalRegionForPointer(
+                  intrinsic->getArgOperand(1));
+              std::unordered_set<uint32_t> sourceObjectBases;
+              for (uint32_t object : sourceRegion.second) {
+                const SVFG::ObjectInfo *info = svfg->getObjectInfo(object);
+                sourceObjectBases.insert(
+                    info && info->baseObjId != 0 ? info->baseObjId : object);
+              }
               for (const auto &[store, storeNodeId] : storeToStoreNode) {
                 const bool sameSourceBase =
                     underlyingBase(store->getPointerOperand()) == sourceBase;
-                const bool precedingInBlock =
-                    store->getParent() == intrinsic->getParent() &&
-                    store->comesBefore(intrinsic);
-                if (!sameSourceBase && !precedingInBlock)
+                bool sameSourceObject = false;
+                if (const auto *storeNode = dyn_cast_or_null<StoreSVFGNode>(
+                        svfg->getNode(storeNodeId))) {
+                  for (uint32_t object : storeNode->getMemoryPointsTo()) {
+                    const SVFG::ObjectInfo *info = svfg->getObjectInfo(object);
+                    const uint32_t base =
+                        info && info->baseObjId != 0 ? info->baseObjId : object;
+                    sameSourceObject |= sourceObjectBases.count(base) != 0;
+                  }
+                }
+                if ((!sameSourceBase && !sameSourceObject) ||
+                    !dominance.dominates(store, intrinsic))
                   continue;
                 for (uint32_t chiId : chiVec)
                   svfg->addEdge(svfg->getNode(storeNodeId),

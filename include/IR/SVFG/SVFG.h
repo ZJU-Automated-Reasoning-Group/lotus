@@ -204,7 +204,14 @@ public:
     bool isArray = false;
     bool isUnknown = false;
     uint32_t baseObjId = 0;
+    uint64_t fieldOffset = 0;
+    bool hasFieldOffset = false;
     bool isSingleton = false;
+  };
+  struct GepAccessInfo {
+    uint64_t relativeOffset = 0;
+    bool traversesArray = false;
+    bool valid = false;
   };
 
 private:
@@ -259,6 +266,12 @@ private:
   std::unordered_map<uint32_t, const llvm::Value *> objIdToValue;
   std::unordered_map<const llvm::Value *, uint32_t> valueToObjId;
   std::unordered_map<const llvm::Value *, SVFGNodeBS> valueToObjIds;
+  std::unordered_map<const llvm::GetElementPtrInst *,
+                     std::unordered_map<uint32_t, uint32_t>>
+      gepBaseToFieldObject;
+  std::map<std::pair<uint32_t, uint64_t>, uint32_t> baseOffsetToFieldObject;
+  std::unordered_map<const llvm::GetElementPtrInst *, GepAccessInfo>
+      gepAccessInfo;
   std::unordered_map<uint32_t, ObjectInfo> objIdToInfo;
   std::unordered_map<uint32_t, std::string> nodeFunctionDebug;
   std::unordered_map<uint32_t, std::string> nodeCallSiteDebug;
@@ -380,6 +393,11 @@ public:
   //===------------------------------------------------------------------===
 
   inline SVFGNode *getValueNode(const llvm::Value *val) const {
+    if (const auto *instruction = llvm::dyn_cast_or_null<llvm::Instruction>(val)) {
+      auto def = instToDefMap.find(instruction);
+      if (def != instToDefMap.end())
+        return getNode(def->second);
+    }
     auto it = valueToNodeMap.find(val);
     return (it != valueToNodeMap.end()) ? getNode(it->second) : nullptr;
   }
@@ -551,11 +569,44 @@ public:
     if (value && objId != 0)
       valueToObjIds[value].insert(objId);
   }
+  inline void setObjectsForValue(const llvm::Value *value,
+                                 const SVFGNodeBS &objIds) {
+    if (!value)
+      return;
+    if (objIds.empty())
+      valueToObjIds.erase(value);
+    else
+      valueToObjIds[value] = objIds;
+  }
   inline const SVFGNodeBS &getObjectIds(const llvm::Value *value) const {
     static const SVFGNodeBS empty;
     auto it = valueToObjIds.find(value);
     return it == valueToObjIds.end() ? empty : it->second;
   }
+  inline void setGepObject(const llvm::GetElementPtrInst *gep,
+                           uint32_t baseObjId, uint32_t fieldObjId) {
+    if (gep && baseObjId != 0 && fieldObjId != 0)
+      gepBaseToFieldObject[gep][baseObjId] = fieldObjId;
+  }
+  inline uint32_t getGepObject(const llvm::GetElementPtrInst *gep,
+                               uint32_t baseObjId) const {
+    auto gepIt = gepBaseToFieldObject.find(gep);
+    if (gepIt == gepBaseToFieldObject.end())
+      return 0;
+    auto baseIt = gepIt->second.find(baseObjId);
+    return baseIt == gepIt->second.end() ? 0 : baseIt->second;
+  }
+  inline void setGepAccess(const llvm::GetElementPtrInst *gep,
+                           uint64_t relativeOffset, bool traversesArray) {
+    if (gep)
+      gepAccessInfo[gep] = {relativeOffset, traversesArray, true};
+  }
+  inline GepAccessInfo
+  getGepAccess(const llvm::GetElementPtrInst *gep) const {
+    auto it = gepAccessInfo.find(gep);
+    return it == gepAccessInfo.end() ? GepAccessInfo{} : it->second;
+  }
+  inline const auto &getGepAccessMap() const { return gepAccessInfo; }
 
   //===------------------------------------------------------------------===
   // Indirect callsite index (DDA)
@@ -685,12 +736,36 @@ public:
     dst.isSingleton = dst.isSingleton || info.isSingleton;
     if (dst.baseObjId == 0)
       dst.baseObjId = info.baseObjId;
+    if (!dst.hasFieldOffset && info.hasFieldOffset) {
+      dst.fieldOffset = info.fieldOffset;
+      dst.hasFieldOffset = true;
+    }
   }
 
   /// @brief Get object metadata (nullptr if unknown).
   inline const ObjectInfo *getObjectInfo(uint32_t objId) const {
     auto it = objIdToInfo.find(objId);
     return (it != objIdToInfo.end()) ? &it->second : nullptr;
+  }
+
+  inline void setObjectBase(uint32_t objId, uint32_t baseObjId) {
+    if (objId != 0 && baseObjId != 0)
+      objIdToInfo[objId].baseObjId = baseObjId;
+  }
+  inline void setObjectOffset(uint32_t objId, uint64_t offset) {
+    if (objId == 0)
+      return;
+    objIdToInfo[objId].fieldOffset = offset;
+    objIdToInfo[objId].hasFieldOffset = true;
+  }
+  inline uint32_t getOffsetObject(uint32_t baseObjId, uint64_t offset) const {
+    auto it = baseOffsetToFieldObject.find({baseObjId, offset});
+    return it == baseOffsetToFieldObject.end() ? 0 : it->second;
+  }
+  inline void setOffsetObject(uint32_t baseObjId, uint64_t offset,
+                              uint32_t fieldObjId) {
+    if (baseObjId != 0 && fieldObjId != 0)
+      baseOffsetToFieldObject[{baseObjId, offset}] = fieldObjId;
   }
 
   inline bool isHeapObject(uint32_t objId) const {

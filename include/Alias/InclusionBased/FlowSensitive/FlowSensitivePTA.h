@@ -107,7 +107,6 @@ private:
   std::unordered_map<NodeID, MemoryState> dfIn_;
   std::unordered_map<NodeID, MemoryState> dfOut_;
   MemoryState initialMemory_;
-  MemoryState fallbackStoreFacts_;
   std::unordered_set<const llvm::Function *> recursiveFunctions_;
   bool topologyChanged_ = false;
   Statistics stats_;

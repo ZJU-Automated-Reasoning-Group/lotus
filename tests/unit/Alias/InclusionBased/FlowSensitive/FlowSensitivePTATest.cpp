@@ -253,6 +253,158 @@ TEST_F(FlowSensitivePTATest, HashConsedBackendKeepsGlobalInitializerSets) {
   }));
 }
 
+TEST_F(FlowSensitivePTATest, AggregateGlobalInitializersRespectFieldOffsets) {
+  auto module = parseModule(R"(
+    %G = type { i8*, i8* }
+    @x = global i8 0
+    @y = global i8 0
+    @g = global %G { i8* @x, i8* @y }
+    define i8* @main() {
+    entry:
+      %result = load i8*, i8** getelementptr (%G, %G* @g, i32 0, i32 0)
+      ret i8* %result
+    }
+  )");
+  ASSERT_NE(module, nullptr);
+
+  ICFG icfg;
+  ICFGBuilder icfgBuilder(&icfg);
+  icfgBuilder.build(module.get());
+  SVFGBuilderConfig graphConfig;
+  graphConfig.usePointerAnalysis = true;
+  SVFGBuilder graphBuilder(graphConfig);
+  std::unique_ptr<SVFG> graph(graphBuilder.build(&icfg));
+  ASSERT_NE(graph, nullptr);
+
+  const auto *load = dyn_cast<LoadInst>(
+      &*module->getFunction("main")->getEntryBlock().begin());
+  ASSERT_NE(load, nullptr);
+  FlowSensitivePTA solver(*graph);
+  solver.solve();
+
+  const auto result = solver.pointsTo(load);
+  ASSERT_TRUE(result.has_value());
+  bool hasX = false;
+  bool hasY = false;
+  for (uint32_t object : *result) {
+    const Value *value = graph->getObjectValue(object);
+    hasX |= value == module->getGlobalVariable("x");
+    hasY |= value == module->getGlobalVariable("y");
+  }
+  EXPECT_TRUE(hasX);
+  EXPECT_FALSE(hasY);
+}
+
+TEST_F(FlowSensitivePTATest, CanonicalGepOffsetsSeparateStructFields) {
+  auto module = parseModule(R"(
+    %S = type { i8*, i8* }
+    @x = global i8 0
+    @y = global i8 0
+    define i8* @main() {
+    entry:
+      %object = alloca %S
+      %field0 = getelementptr %S, %S* %object, i32 0, i32 0
+      %field1 = getelementptr %S, %S* %object, i32 0, i32 1
+      store i8* @x, i8** %field0
+      store i8* @y, i8** %field1
+      %result = load i8*, i8** %field0
+      ret i8* %result
+    }
+  )");
+  ASSERT_NE(module, nullptr);
+
+  ICFG icfg;
+  ICFGBuilder icfgBuilder(&icfg);
+  icfgBuilder.build(module.get());
+  SVFGBuilderConfig graphConfig;
+  graphConfig.usePointerAnalysis = true;
+  SVFGBuilder graphBuilder(graphConfig);
+  std::unique_ptr<SVFG> graph(graphBuilder.build(&icfg));
+  ASSERT_NE(graph, nullptr);
+
+  const GetElementPtrInst *field0 = nullptr;
+  const GetElementPtrInst *field1 = nullptr;
+  const LoadInst *resultLoad = nullptr;
+  for (const Instruction &instruction :
+       instructions(module->getFunction("main"))) {
+    if (const auto *gep = dyn_cast<GetElementPtrInst>(&instruction)) {
+      if (gep->getName() == "field0")
+        field0 = gep;
+      else if (gep->getName() == "field1")
+        field1 = gep;
+    } else if (const auto *load = dyn_cast<LoadInst>(&instruction)) {
+      resultLoad = load;
+    }
+  }
+  ASSERT_NE(field0, nullptr);
+  ASSERT_NE(field1, nullptr);
+  ASSERT_NE(resultLoad, nullptr);
+  EXPECT_EQ(graph->getValueNode(field0), graph->getDef(field0));
+  EXPECT_EQ(graph->getValueNode(field1), graph->getDef(field1));
+
+  FlowSensitivePTA solver(*graph);
+  solver.solve();
+  const auto result = solver.pointsTo(resultLoad);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(std::any_of(result->begin(), result->end(), [&](uint32_t object) {
+    return graph->getObjectValue(object) == module->getGlobalVariable("x");
+  }));
+  EXPECT_FALSE(
+      std::any_of(result->begin(), result->end(), [&](uint32_t object) {
+        return graph->getObjectValue(object) == module->getGlobalVariable("y");
+      }));
+}
+
+TEST_F(FlowSensitivePTATest, ArrayElementsUseWeakUpdates) {
+  auto module = parseModule(R"(
+    %A = type { [2 x i8*] }
+    @x = global i8 0
+    @y = global i8 0
+    define i8* @main() {
+    entry:
+      %object = alloca %A
+      %element0 = getelementptr %A, %A* %object, i32 0, i32 0, i64 0
+      %element1 = getelementptr %A, %A* %object, i32 0, i32 0, i64 1
+      store i8* @x, i8** %element0
+      store i8* @y, i8** %element1
+      %result = load i8*, i8** %element0
+      ret i8* %result
+    }
+  )");
+  ASSERT_NE(module, nullptr);
+
+  ICFG icfg;
+  ICFGBuilder icfgBuilder(&icfg);
+  icfgBuilder.build(module.get());
+  SVFGBuilderConfig graphConfig;
+  graphConfig.usePointerAnalysis = true;
+  SVFGBuilder graphBuilder(graphConfig);
+  std::unique_ptr<SVFG> graph(graphBuilder.build(&icfg));
+  ASSERT_NE(graph, nullptr);
+
+  const LoadInst *resultLoad = nullptr;
+  for (const Instruction &instruction :
+       instructions(module->getFunction("main")))
+    if (const auto *load = dyn_cast<LoadInst>(&instruction))
+      resultLoad = load;
+  ASSERT_NE(resultLoad, nullptr);
+
+  FlowSensitivePTA solver(*graph);
+  solver.solve();
+  const auto result = solver.pointsTo(resultLoad);
+  ASSERT_TRUE(result.has_value());
+  bool hasX = false;
+  bool hasY = false;
+  for (uint32_t object : *result) {
+    const Value *value = graph->getObjectValue(object);
+    hasX |= value == module->getGlobalVariable("x");
+    hasY |= value == module->getGlobalVariable("y");
+  }
+  EXPECT_TRUE(hasX);
+  EXPECT_TRUE(hasY);
+  EXPECT_GT(solver.statistics().weakUpdates, 0u);
+}
+
 TEST_F(FlowSensitivePTATest, RestartsAfterOnTheFlyIndirectCallConnection) {
   auto module = parseModule(R"(
     define i8* @target(i8* %arg) { ret i8* %arg }

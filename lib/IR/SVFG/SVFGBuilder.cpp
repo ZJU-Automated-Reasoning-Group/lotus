@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <limits>
 #include <map>
+#include <optional>
 #include <queue>
 #include <set>
 
@@ -125,6 +126,65 @@ static SVFG::ObjectInfo inferObjectInfoFromValue(const Value *val) {
       info.isArray = elemTy->isArrayTy();
   }
   return info;
+}
+
+struct NormalizedGepOffset {
+  uint64_t offset = 0;
+  bool traversesArray = false;
+  bool valid = false;
+};
+
+static NormalizedGepOffset getNormalizedGepOffset(const GEPOperator *gep,
+                                                  const DataLayout &layout) {
+  NormalizedGepOffset result;
+  if (!gep)
+    return result;
+
+  Type *current = gep->getSourceElementType();
+  bool firstIndex = true;
+  for (const Use &indexUse : gep->indices()) {
+    const auto *index = dyn_cast<ConstantInt>(indexUse.get());
+    if (firstIndex) {
+      firstIndex = false;
+      if (!index) {
+        result.traversesArray = true;
+      } else if (!current->isArrayTy() && !index->isZero()) {
+        result.offset +=
+            index->getZExtValue() * layout.getTypeAllocSize(current);
+      }
+      continue;
+    }
+    if (auto *structure = dyn_cast<StructType>(current)) {
+      if (!index || index->getZExtValue() >= structure->getNumElements())
+        return result;
+      const unsigned field = static_cast<unsigned>(index->getZExtValue());
+      result.offset += layout.getStructLayout(structure)->getElementOffset(
+          field);
+      current = structure->getElementType(field);
+      continue;
+    }
+    if (auto *array = dyn_cast<ArrayType>(current)) {
+      result.traversesArray = true;
+      current = array->getElementType();
+      continue;
+    }
+    if (auto *vector = dyn_cast<VectorType>(current)) {
+      result.traversesArray = true;
+      current = vector->getElementType();
+      continue;
+    }
+    return result;
+  }
+  result.valid = true;
+  return result;
+}
+
+static NormalizedGepOffset getNormalizedGepOffset(
+    const GetElementPtrInst *gep) {
+  if (!gep || !gep->getModule())
+    return {};
+  return getNormalizedGepOffset(cast<GEPOperator>(gep),
+                                gep->getModule()->getDataLayout());
 }
 
 } // namespace
@@ -289,7 +349,7 @@ std::size_t SVFGBuilder::connectPreAnalysisIndirectCalls(SVFG *graph) {
           continue;
 
         for (const Function *callee :
-             getIndirectCallTargets(call, /*includeTypeFallback=*/false)) {
+             getIndirectCallTargets(call)) {
           if (!callee || callee->isDeclaration() || callee->isIntrinsic())
             continue;
           std::vector<SVFGEdge *> newEdges;
@@ -774,6 +834,11 @@ SVFGNodeBS SVFGBuilder::getObjectIdsForValue(const Value *ptr) {
   SVFG *graph = getActiveSVFG();
   if (!ptr)
     return result;
+  if (graph && isa<GetElementPtrInst>(ptr)) {
+    const SVFGNodeBS &mapped = graph->getObjectIds(ptr);
+    if (!mapped.empty())
+      return mapped;
+  }
   if (config.usePointerAnalysis && ptaSolverWrapper &&
       ptaSolverWrapper->solver && ptr->getType()->isPointerTy()) {
     std::vector<const void *> ptsVoid = getPointsToSet(ptr);
@@ -810,6 +875,102 @@ uint32_t SVFGBuilder::getGepObjectId(uint32_t baseObjId,
     return 0;
   SVFG *graph = getActiveSVFG();
   const uint32_t canonicalBaseObjId = getCanonicalBaseObjId(baseObjId);
+
+  auto queryAserFieldObject = [&]() -> uint32_t {
+    if (!config.usePointerAnalysis || !ptaSolverWrapper ||
+        !ptaSolverWrapper->solver ||
+        config.memModelType ==
+            SVFGBuilderConfig::MemModelType::FieldInsensitive)
+      return 0;
+    auto baseIt = objIdToPTAObject.find(baseObjId);
+    if (baseIt == objIdToPTAObject.end())
+      baseIt = objIdToPTAObject.find(canonicalBaseObjId);
+    if (baseIt == objIdToPTAObject.end())
+      return 0;
+    const auto *baseObject = static_cast<const FSObjectTy *>(baseIt->second);
+    ObjNodeTy *objectNode = baseObject ? baseObject->getObjNode() : nullptr;
+    if (!objectNode)
+      return 0;
+    CGNodeBase<NoCtx> *fieldNode = nullptr;
+    switch (ptaSolverWrapper->kind) {
+    case SolverWrapper::SolverKind::Wave:
+      fieldNode = LMT::indexObjectForClients(
+          static_cast<CIWaveSolver *>(ptaSolverWrapper->solver)
+              ->getLangModelForClients(),
+          objectNode, gep);
+      break;
+    case SolverWrapper::SolverKind::Deep:
+      fieldNode = LMT::indexObjectForClients(
+          static_cast<CIDeepSolver *>(ptaSolverWrapper->solver)
+              ->getLangModelForClients(),
+          objectNode, gep);
+      break;
+    case SolverWrapper::SolverKind::Basic:
+      fieldNode = LMT::indexObjectForClients(
+          static_cast<CIBasicSolver *>(ptaSolverWrapper->solver)
+              ->getLangModelForClients(),
+          objectNode, gep);
+      break;
+    }
+    auto *fieldObjectNode = static_cast<ObjNodeTy *>(fieldNode);
+    const FSObjectTy *fieldObject =
+        fieldObjectNode ? fieldObjectNode->getObject() : nullptr;
+    if (!fieldObject)
+      return 0;
+    auto cached = ptaObjectToObjId.find(fieldObject);
+    if (cached != ptaObjectToObjId.end())
+      return cached->second;
+    const SVFGNodeBS ids = convertPTAObjectsToObjIDs({fieldObject}, true);
+    return ids.empty() ? 0 : *ids.begin();
+  };
+
+  const NormalizedGepOffset normalized = getNormalizedGepOffset(gep);
+  if (graph && normalized.valid) {
+    graph->setGepAccess(gep, normalized.offset, normalized.traversesArray);
+    uint64_t baseOffset = 0;
+    if (const SVFG::ObjectInfo *baseInfo = graph->getObjectInfo(baseObjId))
+      if (baseInfo->hasFieldOffset)
+        baseOffset = baseInfo->fieldOffset;
+    const uint64_t totalOffset = baseOffset + normalized.offset;
+    if (totalOffset == 0) {
+      if (normalized.traversesArray) {
+        SVFG::ObjectInfo arrayInfo;
+        arrayInfo.isArray = true;
+        graph->updateObjectInfo(canonicalBaseObjId, arrayInfo);
+      }
+      return canonicalBaseObjId;
+    }
+    if (const uint32_t existing =
+            graph->getOffsetObject(canonicalBaseObjId, totalOffset)) {
+      if (normalized.traversesArray) {
+        SVFG::ObjectInfo arrayInfo;
+        arrayInfo.isArray = true;
+        graph->updateObjectInfo(existing, arrayInfo);
+      }
+      return existing;
+    }
+
+    uint32_t fieldObjId = queryAserFieldObject();
+    if (fieldObjId == 0)
+      fieldObjId = nextObjId++;
+    SVFG::ObjectInfo info;
+    if (const SVFG::ObjectInfo *baseInfo =
+            graph->getObjectInfo(canonicalBaseObjId))
+      info = *baseInfo;
+    info.baseObjId = canonicalBaseObjId;
+    info.fieldOffset = totalOffset;
+    info.hasFieldOffset = true;
+    info.isArray = info.isArray || normalized.traversesArray;
+    graph->setObjectInfo(fieldObjId, info);
+    graph->setObjectValue(fieldObjId, gep);
+    graph->setObjectBase(fieldObjId, canonicalBaseObjId);
+    graph->setObjectOffset(fieldObjId, totalOffset);
+    graph->setObjectDebug(
+        fieldObjId, "FIELD(" + std::to_string(canonicalBaseObjId) + "," +
+                        std::to_string(totalOffset) + ")");
+    graph->setOffsetObject(canonicalBaseObjId, totalOffset, fieldObjId);
+    return fieldObjId;
+  }
 
   // Early return if PTA is unavailable
   if (!config.usePointerAnalysis || !ptaSolverWrapper ||
@@ -888,8 +1049,10 @@ uint32_t SVFGBuilder::getGepObjectId(uint32_t baseObjId,
 
   auto cached = ptaObjectToObjId.find(fieldObj);
   if (cached != ptaObjectToObjId.end()) {
-    if (graph)
+    if (graph) {
       graph->setObjectValue(cached->second, gep);
+      graph->setObjectBase(cached->second, canonicalBaseObjId);
+    }
     return cached->second;
   }
 
@@ -898,8 +1061,10 @@ uint32_t SVFGBuilder::getGepObjectId(uint32_t baseObjId,
   if (tmp.empty())
     return 0;
   const uint32_t objId = *tmp.begin();
-  if (graph)
+  if (graph) {
     graph->setObjectValue(objId, gep);
+    graph->setObjectBase(objId, canonicalBaseObjId);
+  }
   return objId;
 }
 
@@ -1023,8 +1188,7 @@ std::vector<const void *> SVFGBuilder::getPointsToSet(const Value *ptr) {
 }
 
 std::vector<const Function *>
-SVFGBuilder::getIndirectCallTargets(const CallBase *call,
-                                    bool includeTypeFallback) {
+SVFGBuilder::getIndirectCallTargets(const CallBase *call) {
   std::vector<const Function *> targets;
 
   if (!config.usePointerAnalysis || !ptaSolverWrapper ||
@@ -1141,47 +1305,53 @@ SVFGBuilder::getIndirectCallTargets(const CallBase *call,
   }
 
   // Recover field-initialized function pointers when the auxiliary solver
-  // loses the aggregate field object. Match the final constant struct index
-  // at the indirect load with stores of concrete functions to the same field.
-  // This preserves the field distinction (e.g. begin/end/render tables)
-  // without eagerly connecting every type-compatible address-taken function.
+  // loses the aggregate field object. Match the source aggregate type and
+  // normalized byte offset, rather than just the final field number.
   if (targets.empty() && call) {
-    auto finalFieldIndex = [](const Value *pointer) -> std::optional<uint64_t> {
-      const GEPOperator *gep = dyn_cast_or_null<GEPOperator>(pointer);
-      if (!gep) {
-        pointer = pointer ? pointer->stripPointerCasts() : nullptr;
-        gep = dyn_cast_or_null<GEPOperator>(pointer);
-      }
-      if (!gep || gep->getNumIndices() == 0)
-        return std::nullopt;
-      const auto *index = dyn_cast<ConstantInt>(gep->idx_end()[-1].get());
-      return index ? std::optional<uint64_t>(index->getZExtValue())
-                   : std::nullopt;
-    };
     const auto *calledLoad = dyn_cast<LoadInst>(call->getCalledOperand());
-    const std::optional<uint64_t> callField =
-        calledLoad ? finalFieldIndex(calledLoad->getPointerOperand())
-                   : std::nullopt;
-    if (callField) {
+    const auto *callGep =
+        calledLoad ? dyn_cast<GEPOperator>(calledLoad->getPointerOperand())
+                   : nullptr;
+    const NormalizedGepOffset callAccess = callGep
+                                               ? getNormalizedGepOffset(
+                                                     callGep,
+                                                     call->getModule()
+                                                         ->getDataLayout())
+                                               : NormalizedGepOffset{};
+    if (callGep && callAccess.valid) {
       const Module *module = call->getModule();
+      Type *aggregateType = callGep->getSourceElementType();
       for (const GlobalVariable &global : module->globals()) {
-        if (!global.hasInitializer())
+        if (!global.hasInitializer() || global.getValueType() != aggregateType)
           continue;
         const auto *aggregate = dyn_cast<ConstantStruct>(global.getInitializer());
-        if (!aggregate || *callField >= aggregate->getNumOperands())
+        auto *structure = dyn_cast<StructType>(aggregateType);
+        if (!aggregate || !structure)
           continue;
-        const auto *target = dyn_cast<Function>(
-            aggregate->getOperand(*callField)->stripPointerCasts());
-        if (target && !target->isDeclaration() &&
-            target->getFunctionType() == call->getFunctionType())
-          addUniqueTarget(target);
+        const StructLayout *layout = module->getDataLayout().getStructLayout(
+            structure);
+        for (unsigned field = 0; field < aggregate->getNumOperands(); ++field) {
+          if (layout->getElementOffset(field) != callAccess.offset)
+            continue;
+          const auto *target = dyn_cast<Function>(
+              aggregate->getOperand(field)->stripPointerCasts());
+          if (target && !target->isDeclaration() &&
+              target->getFunctionType() == call->getFunctionType())
+            addUniqueTarget(target);
+        }
       }
       for (const Function &function : *module) {
         for (const BasicBlock &block : function) {
           for (const Instruction &instruction : block) {
             const auto *store = dyn_cast<StoreInst>(&instruction);
-            if (!store ||
-                finalFieldIndex(store->getPointerOperand()) != callField)
+            const auto *storeGep =
+                store ? dyn_cast<GEPOperator>(store->getPointerOperand())
+                      : nullptr;
+            const NormalizedGepOffset storeAccess =
+                getNormalizedGepOffset(storeGep, module->getDataLayout());
+            if (!storeGep || !storeAccess.valid ||
+                storeGep->getSourceElementType() != aggregateType ||
+                storeAccess.offset != callAccess.offset)
               continue;
             const auto *target = dyn_cast<Function>(
                 store->getValueOperand()->stripPointerCasts());
@@ -1194,26 +1364,6 @@ SVFGBuilder::getIndirectCallTargets(const CallBase *call,
     }
   }
 
-  // AserPTA can currently lose function objects loaded through a
-  // ConstantExpr GEP of a global aggregate. Upstream SVF's preliminary
-  // Andersen analysis still supplies a conservative call-graph target
-  // universe in that situation. Preserve the same soundness boundary here:
-  // only when the auxiliary result is empty, admit address-taken definitions
-  // with the exact call signature. The flow-sensitive solver will select the
-  // actually discovered subset from this finite universe.
-  if (includeTypeFallback && targets.empty() && call) {
-    const Module *module = call->getModule();
-    const FunctionType *callType = call->getFunctionType();
-    if (module && callType) {
-      for (const Function &candidate : *module) {
-        if (candidate.isDeclaration() || candidate.isIntrinsic() ||
-            !candidate.hasAddressTaken())
-          continue;
-        if (candidate.getFunctionType() == callType)
-          addUniqueTarget(&candidate);
-      }
-    }
-  }
   if (svfg && call && !call->getCalledFunction()) {
     for (const Function *target : targets)
       svfg->addCalleeToIndCallSite(target, call);
@@ -1574,9 +1724,21 @@ std::vector<const Function *> SVFGBuilder::getRootFunctionsFromICFG() const {
   return roots;
 }
 
+static bool isAliasValidationCall(const CallBase *call) {
+  const Function *callee = call ? call->getCalledFunction() : nullptr;
+  if (!callee)
+    return false;
+  const StringRef name = callee->getName();
+  return name == "__aser_alias__" || name == "__aser_no_alias__" ||
+         name.startswith("EXPECTEDFAIL_MAYALIAS") ||
+         name.startswith("EXPECTEDFAIL_NOALIAS");
+}
+
 bool SVFGBuilder::callMayReadMemory(const CallBase *call) {
   if (!call)
     return true;
+  if (isAliasValidationCall(call))
+    return false;
 
   if (call->doesNotAccessMemory() || call->hasFnAttr(Attribute::ReadNone))
     return false;
@@ -1599,6 +1761,8 @@ bool SVFGBuilder::callMayReadMemory(const CallBase *call) {
 bool SVFGBuilder::callMayModifyMemory(const CallBase *call) {
   if (!call)
     return true;
+  if (isAliasValidationCall(call))
+    return false;
 
   if (call->doesNotAccessMemory() || call->onlyReadsMemory() ||
       call->hasFnAttr(Attribute::ReadNone) ||

@@ -5,7 +5,9 @@
 - top-level points-to sets for pointer-producing SVFG nodes;
 - per-node, per-object MemorySSA `IN` and `OUT` points-to state;
 - explicit Addr/Copy/GEP/Phi/Load/Store and parameter-flow transfer;
-- aggregate global initializers and `memcpy`/`memmove` memory transfer;
+- canonical `(allocation, normalized byte offset)` field objects, with array
+  indices collapsed for field-insensitive updates;
+- field-offset-aware aggregate global initializers and `memcpy`/`memmove`;
 - singleton-object strong updates and conservative weak updates;
 - Tarjan SCC decomposition with SCC-local fixed points and successor requeueing;
 - auxiliary-PTA call-graph initialization plus on-the-fly indirect-call

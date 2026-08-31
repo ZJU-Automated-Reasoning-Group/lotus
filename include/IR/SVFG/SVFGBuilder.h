@@ -52,8 +52,8 @@
 
 #include "IR/ICFG/CallGraph.h"
 #include "IR/ICFG/ICFG.h"
-#include "IR/SVFG/PointsToSetHash.h"
 #include "IR/SVFG/MemoryRegionPartitioner.h"
+#include "IR/SVFG/PointsToSetHash.h"
 #include "IR/SVFG/SVFG.h"
 
 #include <limits>
@@ -366,8 +366,7 @@ public:
 
   /// @brief Get indirect call targets using pointer analysis
   std::vector<const llvm::Function *>
-  getIndirectCallTargets(const llvm::CallBase *call,
-                         bool includeTypeFallback = true);
+  getIndirectCallTargets(const llvm::CallBase *call);
 
   /// @brief Build SVFG with configuration
   ///

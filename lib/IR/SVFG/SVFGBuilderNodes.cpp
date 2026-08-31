@@ -86,6 +86,7 @@ void SVFGBuilder::buildNodes() {
       SVFG::ObjectInfo info;
       info.isGlobal = true;
       info.isConstant = GV.isConstant();
+      info.isSingleton = true;
       (void)getOrCreateCanonicalObjectIdForValue(&GV, info);
     }
   }
@@ -202,6 +203,9 @@ void SVFGBuilder::buildTopLevelNodes() {
         getOrCreateMemReg(cast<AllocaInst>(&inst));
         SVFG::ObjectInfo info;
         info.isStack = true;
+        info.isSingleton = inst.getFunction()->getName() == "main" &&
+                           inst.getParent() ==
+                               &inst.getFunction()->getEntryBlock();
         uint32_t baseObjId = ensureBaseObjIdForValue(&inst, info);
         // Set object ID on AddrSVFGNode (mirrors SVF's getPAGSrcNodeID).
         // Use the base object ID which is also used for edge guard population.
@@ -221,6 +225,9 @@ void SVFGBuilder::buildTopLevelNodes() {
         SVFG::ObjectInfo info;
         info.isHeap = true;
         info.isConcreteHeap = isConcreteHeapAllocationSite(&inst);
+        info.isSingleton = inst.getFunction()->getName() == "main" &&
+                           inst.getParent() ==
+                               &inst.getFunction()->getEntryBlock();
         uint32_t baseObjId = ensureBaseObjIdForValue(&inst, info);
         // Set object ID on AddrSVFGNode (mirrors SVF's getPAGSrcNodeID).
         if (baseObjId != 0)
@@ -406,7 +413,7 @@ void SVFGBuilder::buildAddressTakenNodes() {
               funcEntryChiMemRegs[entryFunc].insert(memReg);
             } else {
               funcEntryChiMemRegs[entryFunc].insert(
-                  getOrCreateMemRegForPointsTo(objIds));
+                  getOrCreateMemRegForPointsTo(objIds, entryFunc));
             }
           }
         }
@@ -442,8 +449,11 @@ void SVFGBuilder::buildAddressTakenNodes() {
           const uint32_t memReg = getOrCreateMemReg(&gv);
           globalEntryRegions[memReg] = SVFGNodeBS{getOrCreateUnknownObjId()};
         } else {
-          const uint32_t memReg = getOrCreateMemRegForPointsTo(objIds);
-          globalEntryRegions[memReg] = objIds;
+          const uint32_t memReg =
+              getOrCreateMemRegForPointsTo(objIds, nullptr);
+          auto canonical = memRegToPts.find(memReg);
+          globalEntryRegions[memReg] =
+              canonical == memRegToPts.end() ? objIds : canonical->second;
         }
 
         for (const Function *entryFunc : getRootFunctionsFromICFG()) {
@@ -452,7 +462,7 @@ void SVFGBuilder::buildAddressTakenNodes() {
             funcEntryChiMemRegs[entryFunc].insert(memReg);
           } else {
             funcEntryChiMemRegs[entryFunc].insert(
-                getOrCreateMemRegForPointsTo(objIds));
+                getOrCreateMemRegForPointsTo(objIds, entryFunc));
           }
         }
       }
@@ -499,7 +509,7 @@ void SVFGBuilder::buildFormalParmNodes() {
         continue;
       }
 
-      memRegsForArg.push_back(getOrCreateMemRegForPointsTo(objIds));
+      memRegsForArg.push_back(getOrCreateMemRegForPointsTo(objIds, &F));
     }
 
     // Create VarArgSVFGNode for variadic functions

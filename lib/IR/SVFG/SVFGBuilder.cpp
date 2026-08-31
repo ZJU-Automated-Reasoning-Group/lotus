@@ -91,20 +91,30 @@ static SVFG::ObjectInfo inferObjectInfoFromValue(const Value *val) {
     return info;
   if (const auto *F = dyn_cast<Function>(val)) {
     info.isFunction = true;
+    info.isSingleton = true;
     return info;
   }
   if (const auto *GV = dyn_cast<GlobalVariable>(val)) {
     info.isGlobal = true;
     info.isConstant = GV->isConstant();
+    info.isSingleton = true;
   } else if (isa<GlobalValue>(val)) {
     info.isGlobal = true;
+    info.isSingleton = true;
   }
   if (const auto *inst = dyn_cast<Instruction>(val)) {
-    if (isa<AllocaInst>(inst))
+    if (isa<AllocaInst>(inst)) {
       info.isStack = true;
+      info.isSingleton = inst->getFunction()->getName() == "main" &&
+                         inst->getParent() ==
+                             &inst->getFunction()->getEntryBlock();
+    }
     if (isAllocationFn(inst, nullptr)) {
       info.isHeap = true;
       info.isConcreteHeap = isConcreteHeapAllocationSite(inst);
+      info.isSingleton = inst->getFunction()->getName() == "main" &&
+                         inst->getParent() ==
+                             &inst->getFunction()->getEntryBlock();
     }
   }
   if (isa<Constant>(val) && !isa<Function>(val))
@@ -268,6 +278,8 @@ SVFG *SVFGBuilder::build(const ICFG *icfg, const SVFGBuilderConfig &cfg) {
     runPointerAnalysis();
   }
 
+  prepareMemoryRegionPartitioning();
+
   initializeIndirectCallReverseIndex();
   buildNodes();
   buildEdges();
@@ -327,6 +339,7 @@ void SVFGBuilder::initialize(const ICFG *cfg) {
   memRegToObjId.clear();
   memRegToPts.clear();
   ptsToMemReg.clear();
+  memoryRegionPartitioner.reset(config.memoryPartition);
   memRegVersion.clear();
   bbToMemPhi.clear();
   argToMemRegs.clear();
@@ -381,6 +394,50 @@ void SVFGBuilder::runPointerAnalysis() {
     break;
   }
   }
+}
+
+void SVFGBuilder::prepareMemoryRegionPartitioning() {
+  const Module *module = getModuleFromICFG(icfg);
+  if (!module) {
+    memoryRegionPartitioner.freeze();
+    return;
+  }
+
+  auto observe = [&](const Value *pointer, const Function *scope) {
+    if (!pointer || !pointer->getType()->isPointerTy())
+      return;
+    const SVFGNodeBS objects = getObjectIdsForValue(pointer);
+    if (!objects.empty())
+      memoryRegionPartitioner.observe(scope, objects);
+  };
+
+  for (const GlobalVariable &global : module->globals())
+    observe(&global, nullptr);
+
+  for (const Function &function : *module) {
+    if (function.isDeclaration())
+      continue;
+    for (const Argument &argument : function.args())
+      observe(&argument, &function);
+    for (const BasicBlock &block : function) {
+      for (const Instruction &instruction : block) {
+        if (const auto *load = dyn_cast<LoadInst>(&instruction))
+          observe(load->getPointerOperand(), &function);
+        else if (const auto *store = dyn_cast<StoreInst>(&instruction))
+          observe(store->getPointerOperand(), &function);
+
+        if (instruction.getType()->isPointerTy())
+          observe(&instruction, &function);
+        if (const auto *call = dyn_cast<CallBase>(&instruction))
+          for (const Use &argument : call->args())
+            observe(argument.get(), &function);
+      }
+    }
+  }
+
+  if (unknownObjId != 0)
+    memoryRegionPartitioner.setUnknownObject(unknownObjId);
+  memoryRegionPartitioner.freeze();
 }
 uint32_t SVFGBuilder::getOrCreateNode(const Value *val) {
   auto it = valueToNode.find(val);
@@ -496,20 +553,30 @@ uint32_t SVFGBuilder::getOrCreateMemReg(const Value *ptrVal) {
   return memRegId;
 }
 
-uint32_t SVFGBuilder::getOrCreateMemRegForPointsTo(const SVFGNodeBS &pts) {
+const Function *SVFGBuilder::getMemoryRegionScope(const Value *value) {
+  if (const auto *instruction = dyn_cast_or_null<Instruction>(value))
+    return instruction->getFunction();
+  if (const auto *argument = dyn_cast_or_null<Argument>(value))
+    return argument->getParent();
+  return nullptr;
+}
+
+uint32_t SVFGBuilder::getOrCreateMemRegForPointsTo(
+    const SVFGNodeBS &pts, const Function *scope) {
   if (pts.empty()) {
     // Callers should avoid using a points-to derived region for empty/unknown.
     return 0;
   }
 
-  auto it = ptsToMemReg.find(pts);
+  const SVFGNodeBS canonical = memoryRegionPartitioner.canonicalize(scope, pts);
+  auto it = ptsToMemReg.find(canonical);
   if (it != ptsToMemReg.end()) {
     return it->second;
   }
 
   const uint32_t memRegId = nextMemRegId++;
-  ptsToMemReg.emplace(pts, memRegId);
-  memRegToPts.emplace(memRegId, pts);
+  ptsToMemReg.emplace(canonical, memRegId);
+  memRegToPts.emplace(memRegId, canonical);
   return memRegId;
 }
 
@@ -560,6 +627,7 @@ SVFGNodeBS SVFGBuilder::convertPTAObjectsToObjIDs(
     info.isFieldInsensitive = obj->isFIObject();
     const Value *val = obj->getValue();
     if (val) {
+      info.isSingleton = inferObjectInfoFromValue(val).isSingleton;
       if (const auto *gv = dyn_cast<GlobalVariable>(val))
         info.isConstant = gv->isConstant();
       else

@@ -38,15 +38,16 @@ bool SparseFlowSensitivePTA::containsUnknown(
                      [&](uint32_t id) { return graph_->isUnknownObject(id); });
 }
 
+bool SparseFlowSensitivePTA::inScope(const SVFGNode *node) const {
+  return node && (!scope_ || scope_->contains(node));
+}
+
 bool SparseFlowSensitivePTA::isStrongUpdate(const StoreSVFGNode &store) const {
   const SVFGNodeBS &targets = store.getMemoryPointsTo();
   if (targets.size() != 1 || containsUnknown(targets))
     return false;
 
-  // Globals denote one concrete program object. Stack/heap allocation sites
-  // may denote multiple dynamic instances under recursion or loops, so they
-  // remain weak until instance-sensitive singleton reasoning is available.
-  return graph_->isGlobalObject(*targets.begin());
+  return graph_->isSingletonObject(*targets.begin());
 }
 
 const SparseFlowSensitivePTA::Statistics &SparseFlowSensitivePTA::solve() {
@@ -58,6 +59,8 @@ const SparseFlowSensitivePTA::Statistics &SparseFlowSensitivePTA::solve() {
 
   for (const auto &entry : *graph_) {
     const SVFGNode *node = entry.second;
+    if (!inScope(node))
+      continue;
     if (const auto *addr = dyn_cast_or_null<AddrSVFGNode>(node)) {
       uint32_t object = addr->getObjectId();
       if (object == 0 && addr->getValue())
@@ -81,7 +84,8 @@ const SparseFlowSensitivePTA::Statistics &SparseFlowSensitivePTA::solve() {
 
     for (const auto &entry : *graph_) {
       const SVFGNode *node = entry.second;
-      if (!node || isa<AddrSVFGNode>(node) || isa<NullPtrSVFGNode>(node))
+      if (!inScope(node) || isa<AddrSVFGNode>(node) ||
+          isa<NullPtrSVFGNode>(node))
         continue;
 
       const uint32_t nodeId = node->getId();
@@ -107,6 +111,8 @@ const SparseFlowSensitivePTA::Statistics &SparseFlowSensitivePTA::solve() {
           if (!edge || !isIndirectVFGEdge(edge->getEdgeKind()))
             continue;
           const SVFGNode *source = edge->getSrcNode();
+          if (!inScope(source))
+            continue;
           const bool threadEdge = edge->isThreadMHPEdge();
           if (!threadEdge && strong) {
             sawStrongSequentialInput = true;
@@ -135,6 +141,8 @@ const SparseFlowSensitivePTA::Statistics &SparseFlowSensitivePTA::solve() {
           if (!edge || !isIndirectVFGEdge(edge->getEdgeKind()))
             continue;
           const SVFGNode *source = edge->getSrcNode();
+          if (!inScope(source))
+            continue;
           sawMemoryInput = true;
           mergeSet(transfer, memoryValue(source));
           if (!memoryComplete_[source->getId()])
@@ -156,6 +164,8 @@ const SparseFlowSensitivePTA::Statistics &SparseFlowSensitivePTA::solve() {
           if (!edge || !isIndirectVFGEdge(edge->getEdgeKind()))
             continue;
           const SVFGNode *source = edge->getSrcNode();
+          if (!inScope(source))
+            continue;
           sawMemoryInput = true;
           mergeSet(transfer, memoryValue(source));
           if (!memoryComplete_[source->getId()])
@@ -179,6 +189,8 @@ const SparseFlowSensitivePTA::Statistics &SparseFlowSensitivePTA::solve() {
         if (!edge || !isDirectVFGEdge(edge->getEdgeKind()))
           continue;
         const SVFGNode *source = edge->getSrcNode();
+        if (!inScope(source))
+          continue;
         sawDirectInput = true;
         mergeSet(transfer, pointsTo(source));
         if (!hasCompletePointsTo(source))
@@ -229,7 +241,7 @@ SparseFlowSensitivePTA::pointsTo(const Value *value) const {
   if (!value || !value->getType()->isPointerTy())
     return std::nullopt;
   const SVFGNode *node = graph_->getValueNode(value);
-  if (!node || !hasCompletePointsTo(node))
+  if (!inScope(node) || !hasCompletePointsTo(node))
     return std::nullopt;
   const SVFGNodeBS &result = pointsTo(node);
   if (containsUnknown(result))
@@ -247,6 +259,8 @@ SparseFlowSensitivePTA::accessTargets(const Instruction *access) const {
 
   // Fall back to the complete flow-insensitive guard attached to the access.
   const SVFGNode *node = graph_->getDef(access);
+  if (!inScope(node))
+    return std::nullopt;
   const SVFGNodeBS *targets = node ? node->getPointsTo() : nullptr;
   if (!targets || targets->empty() || containsUnknown(*targets))
     return std::nullopt;

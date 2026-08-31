@@ -62,6 +62,11 @@ build/bin/lotus-check --engine=generic --checks=forbidden.system test.bc
 build/bin/lotus-check --engine=generic test.bc --checks=forbidden.system
 build/bin/lotus-check --engine=ae test.bc --checks=all
 build/bin/lotus-check --engine=concur test.bc --checks=data-race,deadlock
+
+# Context-bounded MSli refinement with thread-aware MemorySSA
+build/bin/lotus-check --engine=concur test.bc --checks=data-race \
+  --concur.msli --concur.thread-context=2 \
+  --concur.memory-partition=inter-disjoint
 ```
 
 `--list-checkers` lists every check ID together with its engine, execution mode,

@@ -226,8 +226,11 @@ void SVFGBuilder::buildMemorySSA() {
     std::vector<const void *> ptsVoid = getPointsToSet(ptr);
     SVFGNodeBS objIds = convertPTAObjectsToObjIDs(ptsVoid);
     if (!objIds.empty()) {
-      const uint32_t memRegId = getOrCreateMemRegForPointsTo(objIds);
-      return {memRegId, objIds};
+      const uint32_t memRegId = getOrCreateMemRegForPointsTo(
+          objIds, getMemoryRegionScope(ptr));
+      auto canonical = memRegToPts.find(memRegId);
+      return {memRegId,
+              canonical == memRegToPts.end() ? objIds : canonical->second};
     }
     return {getOrCreateMemReg(ptr), SVFGNodeBS{getOrCreateUnknownObjId()}};
   };
@@ -349,7 +352,11 @@ void SVFGBuilder::buildMemorySSA() {
     }
 
     if (globallyVisiblePointees && !objIds.empty()) {
-      addRegion(regions, getOrCreateMemRegForPointsTo(objIds), objIds);
+      const uint32_t region = getOrCreateMemRegForPointsTo(
+          objIds, getMemoryRegionScope(ptr));
+      auto canonical = memRegToPts.find(region);
+      addRegion(regions, region,
+                canonical == memRegToPts.end() ? objIds : canonical->second);
       return regions;
     }
 

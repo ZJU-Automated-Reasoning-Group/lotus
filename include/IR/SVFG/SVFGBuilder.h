@@ -53,6 +53,7 @@
 #include "IR/ICFG/CallGraph.h"
 #include "IR/ICFG/ICFG.h"
 #include "IR/SVFG/PointsToSetHash.h"
+#include "IR/SVFG/MemoryRegionPartitioner.h"
 #include "IR/SVFG/SVFG.h"
 
 #include <limits>
@@ -98,6 +99,10 @@ struct SVFGBuilderConfig {
     FieldSensitive,  // FSMemModel (default)
     FieldInsensitive // FIMemModel
   } memModelType = MemModelType::FieldSensitive;
+
+  /// Memory-region cover used by sparse MemorySSA.
+  MemoryRegionPartitionStrategy memoryPartition =
+      MemoryRegionPartitionStrategy::Distinct;
 
   /// @brief Constructor with defaults
   SVFGBuilderConfig() = default;
@@ -234,6 +239,8 @@ private:
   /// Uses hash-based lookup (O(1)) instead of string construction (O(n)).
   std::unordered_map<SVFGNodeBS, uint32_t, PointsToSetHash, PointsToSetEqual> ptsToMemReg;
 
+  MemoryRegionPartitioner memoryRegionPartitioner;
+
   /// @brief Alloca instruction to memory region mapping
   std::unordered_map<const llvm::AllocaInst *, uint32_t> allocaToMemReg;
 
@@ -308,7 +315,8 @@ public:
   /// @brief Constructor
   SVFGBuilder(const SVFGBuilderConfig &cfg = SVFGBuilderConfig())
       : config(cfg), icfg(nullptr), svfg(nullptr), ptaSolverWrapper(nullptr),
-        nextNodeId(0), nextMemRegId(1) {}
+        nextNodeId(0), nextMemRegId(1),
+        memoryRegionPartitioner(cfg.memoryPartition) {}
 
   /// @brief Destructor
   ~SVFGBuilder();
@@ -410,6 +418,11 @@ public:
     return lastBuiltSVFG ? lastBuiltSVFG->getRefinedCallGraph() : nullptr;
   }
 
+  const MemoryRegionPartitioner::Statistics &
+  getMemoryRegionPartitionStatistics() const {
+    return memoryRegionPartitioner.statistics();
+  }
+
   /// @brief SVF-style on-the-fly connection of an indirect callsite to a callee.
   ///
   /// When SVFGBuilderConfig::resolveIndirectCalls is false, SVFGBuilder builds
@@ -432,6 +445,7 @@ private:
   void buildNodes();
   void buildEdges();
   void initializeIndirectCallReverseIndex();
+  void prepareMemoryRegionPartitioning();
   void buildMemorySSA();
   void buildMemoryPHINodes();
   void buildInterproceduralMemoryPHINodes();
@@ -512,7 +526,10 @@ private:
   ///
   /// When pts is empty, callers should fall back to value-based region IDs
   /// (e.g., getOrCreateMemReg(ptrVal)) to avoid collapsing unrelated unknowns.
-  uint32_t getOrCreateMemRegForPointsTo(const SVFGNodeBS &pts);
+  uint32_t getOrCreateMemRegForPointsTo(
+      const SVFGNodeBS &pts, const llvm::Function *scope = nullptr);
+
+  static const llvm::Function *getMemoryRegionScope(const llvm::Value *value);
 
   /// @brief Get or create a stable memory region for an abstract object ID.
   uint32_t getOrCreateMemRegForObject(uint32_t objId);

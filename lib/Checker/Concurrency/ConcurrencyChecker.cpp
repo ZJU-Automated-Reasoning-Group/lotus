@@ -137,6 +137,13 @@ ConcurrencyChecker::ConcurrencyChecker(Module &module)
   m_stats.cudaBugsFound = 0;
   m_stats.sparseInterferenceEdges = 0;
   m_stats.sparsePointsToFacts = 0;
+  m_stats.sparseMemoryRegions = 0;
+  m_stats.sparseOriginalNodes = 0;
+  m_stats.sparseSlicedNodes = 0;
+  m_stats.sparsePreThreads = 0;
+  m_stats.sparseMainThreads = 0;
+  m_stats.sparseForkMemoryEdges = 0;
+  m_stats.sparseJoinMemoryEdges = 0;
   m_stats.openMPSummary = OpenMP::OpenMPTaskGraph::AnalysisSummary{};
   m_stats.mpiSummary = ConcurrencyFacade::MPISummary{};
   m_stats.cudaSummary = ConcurrencyFacade::CUDASummary{};
@@ -170,6 +177,13 @@ void ConcurrencyChecker::runAnalyses() {
   m_stats.cudaBugsFound = 0;
   m_stats.sparseInterferenceEdges = 0;
   m_stats.sparsePointsToFacts = 0;
+  m_stats.sparseMemoryRegions = 0;
+  m_stats.sparseOriginalNodes = 0;
+  m_stats.sparseSlicedNodes = 0;
+  m_stats.sparsePreThreads = 0;
+  m_stats.sparseMainThreads = 0;
+  m_stats.sparseForkMemoryEdges = 0;
+  m_stats.sparseJoinMemoryEdges = 0;
   m_stats.openMPSummary = OpenMP::OpenMPTaskGraph::AnalysisSummary{};
   m_stats.mpiSummary = ConcurrencyFacade::MPISummary{};
   m_stats.cudaSummary = ConcurrencyFacade::CUDASummary{};
@@ -324,10 +338,27 @@ void ConcurrencyChecker::runAnalyses() {
       m_mhpAnalysis) {
     m_sparseRefinement =
         std::make_unique<lotus::analysis::WholeProgramSparseRefinement>();
+    lotus::analysis::WholeProgramSparseRefinement::Config sparseConfig;
+    sparseConfig.mode =
+        m_enableMultiStageSlicing
+            ? lotus::analysis::WholeProgramSparseRefinement::Mode::
+                  MultiStageSlicing
+            : lotus::analysis::WholeProgramSparseRefinement::Mode::WholeProgram;
+    sparseConfig.memoryPartition = m_sparseMemoryPartition;
+    sparseConfig.threadContextLimit = m_threadContextLimit;
     const auto &sparseStats = m_sparseRefinement->build(
-        m_module, *m_mhpAnalysis, m_locksetAnalysisView);
+        m_module, *m_mhpAnalysis, m_locksetAnalysisView, sparseConfig);
     m_stats.sparseInterferenceEdges = sparseStats.overlay.edgesAdded;
     m_stats.sparsePointsToFacts = sparseStats.solver.pointsToFacts;
+    m_stats.sparseMemoryRegions = sparseStats.memoryRegions.regions;
+    m_stats.sparseOriginalNodes = sparseStats.slicing.originalNodes;
+    m_stats.sparseSlicedNodes = sparseStats.slicing.pointsToNodes;
+    m_stats.sparsePreThreads = sparseStats.preThreads.nodes;
+    m_stats.sparseMainThreads = sparseStats.mainThreads.nodes;
+    m_stats.sparseForkMemoryEdges = sparseStats.preOverlay.forkMemoryEdges +
+                                    sparseStats.overlay.forkMemoryEdges;
+    m_stats.sparseJoinMemoryEdges = sparseStats.preOverlay.joinMemoryEdges +
+                                    sparseStats.overlay.joinMemoryEdges;
   }
 
   m_dataRaceChecker = std::make_unique<DataRaceChecker>(

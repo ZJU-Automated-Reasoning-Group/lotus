@@ -686,12 +686,13 @@ TEST_F(ConcurrencyCheckerTest, StaticVectorClockBackendRunsAnalyses) {
   EXPECT_GT(stats.mhpPairs, 0u);
 }
 
-TEST_F(ConcurrencyCheckerTest, SparseFlowSensitiveRefinementRunsOnRacePath) {
+TEST_F(ConcurrencyCheckerTest, MultiStageSparseRefinementRunsOnRacePath) {
   auto module = parseModule(R"(
     @shared = global i8* null
     @x = global i8 0
     @y = global i8 0
     declare i32 @pthread_create(i8*, i8*, i8* (i8*)*, i8*)
+    declare i32 @pthread_join(i8*, i8**)
 
     define i8* @writer_x(i8* %arg) {
     entry:
@@ -711,13 +712,15 @@ TEST_F(ConcurrencyCheckerTest, SparseFlowSensitiveRefinementRunsOnRacePath) {
                                i8* (i8*)* @writer_x, i8* null)
       call i32 @pthread_create(i8* %t2, i8* null,
                                i8* (i8*)* @writer_y, i8* null)
+      call i32 @pthread_join(i8* %t1, i8** null)
+      call i32 @pthread_join(i8* %t2, i8** null)
       ret i32 0
     }
   )");
   ASSERT_NE(module, nullptr);
 
   concurrency::ConcurrencyChecker checker(*module);
-  checker.enableSparseFlowSensitiveRefinement(true);
+  checker.enableMultiStageSlicing(true);
   checker.enableDeadlockCheck(false);
   checker.enableAtomicityCheck(false);
   checker.enableCondVarCheck(false);
@@ -730,6 +733,11 @@ TEST_F(ConcurrencyCheckerTest, SparseFlowSensitiveRefinementRunsOnRacePath) {
   const auto stats = checker.getStatistics();
   EXPECT_GT(stats.sparseInterferenceEdges, 0u);
   EXPECT_GT(stats.sparsePointsToFacts, 0u);
+  EXPECT_GT(stats.sparseMemoryRegions, 0u);
+  EXPECT_GT(stats.sparseOriginalNodes, stats.sparseSlicedNodes);
+  EXPECT_EQ(stats.sparsePreThreads, 3u);
+  EXPECT_EQ(stats.sparseMainThreads, 3u);
+  EXPECT_GT(stats.sparseJoinMemoryEdges, 0u);
 }
 
 TEST_F(ConcurrencyCheckerTest, CUDAStatisticsAreCollected) {

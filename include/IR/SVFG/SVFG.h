@@ -203,6 +203,7 @@ public:
         bool isArray = false;
         bool isUnknown = false;
         uint32_t baseObjId = 0;
+        bool isSingleton = false;
     };
 
 private:
@@ -654,6 +655,7 @@ public:
         dst.isFieldInsensitive = dst.isFieldInsensitive || info.isFieldInsensitive;
         dst.isArray = dst.isArray || info.isArray;
         dst.isUnknown = dst.isUnknown || info.isUnknown;
+        dst.isSingleton = dst.isSingleton || info.isSingleton;
         if (dst.baseObjId == 0)
             dst.baseObjId = info.baseObjId;
     }
@@ -699,6 +701,11 @@ public:
     }
     inline bool isUnknownObject(uint32_t objId) const {
         if (const ObjectInfo *info = getObjectInfo(objId)) return info->isUnknown;
+        return false;
+    }
+    inline bool isSingletonObject(uint32_t objId) const {
+        if (const ObjectInfo *info = getObjectInfo(objId))
+            return info->isSingleton;
         return false;
     }
 

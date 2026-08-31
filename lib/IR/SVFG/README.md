@@ -151,6 +151,7 @@ config.buildMSSA = true;                    // Enable Memory SSA
 config.resolveIndirectCalls = true;         // Resolve indirect calls via PTA
 config.solverType = SVFGBuilderConfig::SolverType::Andersen;
 config.memModelType = SVFGBuilderConfig::MemModelType::FieldSensitive;
+config.memoryPartition = MemoryRegionPartitionStrategy::InterDisjoint;
 
 SVFGBuilder builder(config);
 SVFG* svfg = builder.build(icfg);

@@ -5,6 +5,7 @@ add_subdirectory(MemorySSA)
 add_lotus_test_suite(ir_misc_tests
   SOURCES
     GraphViewTest.cpp
+    MemoryRegionPartitionerTest.cpp
     GSATest.cpp
     SVFGSerializerTest.cpp
     SeaDsaFieldTypeTest.cpp

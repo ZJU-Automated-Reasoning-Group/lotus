@@ -1,6 +1,11 @@
 #include "Concurrency/MHP/IMHPAnalysis.h"
+#include "Concurrency/Thread/ThreadCreationTree.h"
+#include "Concurrency/Utils/ThreadAPI.h"
+#include "Concurrency/ValueFlow/MultiStageSlicer.h"
 #include "Concurrency/ValueFlow/SparseFlowSensitivePTA.h"
 #include "Concurrency/ValueFlow/ThreadAwareSVFG.h"
+#include "IR/ICFG/ICFGBuilder.h"
+#include "IR/SVFG/SVFGBuilder.h"
 #include "TestUtils/LLVMHelpers.h"
 
 #include <gtest/gtest.h>
@@ -190,6 +195,7 @@ TEST_F(ValueFlowTest, SparseSolverKillsOverwrittenSingletonGlobalValue) {
 
   SVFG::ObjectInfo global;
   global.isGlobal = true;
+  global.isSingleton = true;
   graph.setObjectInfo(xObject, global);
   graph.setObjectInfo(yObject, global);
   graph.setObjectInfo(slotObject, global);
@@ -209,6 +215,242 @@ TEST_F(ValueFlowTest, SparseSolverKillsOverwrittenSingletonGlobalValue) {
   ASSERT_TRUE(solver.mayAliasAccesses(throughResult, directX).has_value());
   EXPECT_FALSE(*solver.mayAliasAccesses(throughResult, directX));
   EXPECT_GT(solver.statistics().strongUpdates, 0u);
+}
+
+TEST_F(ValueFlowTest, MultiStageSliceDropsUnrelatedValueFlow) {
+  auto module = parseModule(R"(
+    @shared = global i8 0
+    @other = global i8 0
+    define void @writer() {
+    entry:
+      store i8 1, i8* @shared
+      ret void
+    }
+    define i8 @reader() {
+    entry:
+      %value = load i8, i8* @shared
+      ret i8 %value
+    }
+    define void @unrelated() {
+    entry:
+      store i8 2, i8* @other
+      ret void
+    }
+  )");
+  ASSERT_NE(module, nullptr);
+
+  auto findStore = [](llvm::Function *function) {
+    for (llvm::Instruction &instruction : llvm::instructions(function))
+      if (auto *store = llvm::dyn_cast<llvm::StoreInst>(&instruction))
+        return store;
+    return static_cast<llvm::StoreInst *>(nullptr);
+  };
+  auto findLoad = [](llvm::Function *function) {
+    for (llvm::Instruction &instruction : llvm::instructions(function))
+      if (auto *load = llvm::dyn_cast<llvm::LoadInst>(&instruction))
+        return load;
+    return static_cast<llvm::LoadInst *>(nullptr);
+  };
+
+  StoreInst *writer = findStore(module->getFunction("writer"));
+  LoadInst *reader = findLoad(module->getFunction("reader"));
+  StoreInst *unrelated = findStore(module->getFunction("unrelated"));
+  ASSERT_NE(writer, nullptr);
+  ASSERT_NE(reader, nullptr);
+  ASSERT_NE(unrelated, nullptr);
+
+  SVFG graph;
+  auto *writerNode = new StoreSVFGNode(1, nullptr, writer, 0);
+  writerNode->setMemoryDef(1, 1, {100});
+  auto *readerNode = new LoadSVFGNode(2, nullptr, reader, 0);
+  readerNode->setMemoryUse(1, 1, {100});
+  auto *unrelatedNode = new StoreSVFGNode(3, nullptr, unrelated, 0);
+  unrelatedNode->setMemoryDef(2, 1, {200});
+  auto *sharedAddress =
+      new AddrSVFGNode(4, nullptr, module->getGlobalVariable("shared"), 100);
+  auto *otherAddress =
+      new AddrSVFGNode(5, nullptr, module->getGlobalVariable("other"), 200);
+  graph.addNode(writerNode);
+  graph.addNode(readerNode);
+  graph.addNode(unrelatedNode);
+  graph.addNode(sharedAddress);
+  graph.addNode(otherAddress);
+  graph.addEdge(sharedAddress, writerNode, SVFGEdgeK::IntraDirect);
+  graph.addEdge(writerNode, readerNode, SVFGEdgeK::ThreadMHPIndirectVF, nullptr,
+                {100});
+  graph.addEdge(otherAddress, unrelatedNode, SVFGEdgeK::IntraDirect);
+
+  MultiStageSlicer slicer(graph);
+  std::unique_ptr<FilteredSVFGView> slice = slicer.slice();
+  ASSERT_NE(slice, nullptr);
+  EXPECT_TRUE(slice->contains(writerNode));
+  EXPECT_TRUE(slice->contains(readerNode));
+  EXPECT_TRUE(slice->contains(sharedAddress));
+  EXPECT_FALSE(slice->contains(unrelatedNode));
+  EXPECT_FALSE(slice->contains(otherAddress));
+  EXPECT_LT(slice->nodeCount(), graph.getNumNodes());
+}
+
+TEST_F(ValueFlowTest, ThreadCreationTreeResolvesForkContextAndJoinHandle) {
+  auto module = parseModule(R"(
+    declare i32 @pthread_create(i8*, i8*, i8* (i8*)*, i8*)
+    declare i32 @pthread_join(i8*, i8**)
+    define i8* @worker(i8* %arg) { ret i8* null }
+    define void @spawn(i8* %tid) {
+    entry:
+      call i32 @pthread_create(i8* %tid, i8* null,
+                               i8* (i8*)* @worker, i8* null)
+      ret void
+    }
+    define i32 @main() {
+    entry:
+      %tid = alloca i8
+      call void @spawn(i8* %tid)
+      call i32 @pthread_join(i8* %tid, i8** null)
+      ret i32 0
+    }
+  )");
+  ASSERT_NE(module, nullptr);
+
+  ThreadCreationTree tree(*module, *ThreadAPI::getThreadAPI(), 2);
+  ASSERT_EQ(tree.nodes().size(), 2u);
+  ASSERT_EQ(tree.forkRelations().size(), 1u);
+  EXPECT_EQ(tree.forkRelations().front().target, module->getFunction("worker"));
+  EXPECT_EQ(tree.nodes()[1].parent, 0u);
+  EXPECT_EQ(tree.nodes()[1].context.size(), 2u);
+
+  const CallBase *join = nullptr;
+  for (Instruction &instruction : instructions(module->getFunction("main"))) {
+    auto *call = dyn_cast<CallBase>(&instruction);
+    if (call && call->getCalledFunction() &&
+        call->getCalledFunction()->getName() == "pthread_join")
+      join = call;
+  }
+  ASSERT_NE(join, nullptr);
+  ASSERT_EQ(tree.joinedFunctions(join).size(), 1u);
+  EXPECT_EQ(tree.joinedFunctions(join).front(), module->getFunction("worker"));
+}
+
+TEST_F(ValueFlowTest, ThreadCreationTreeMarksLoopForkAndSupportsSlicedRebuild) {
+  auto module = parseModule(R"(
+    declare i32 @pthread_create(i8*, i8*, i8* (i8*)*, i8*)
+    define i8* @worker(i8* %arg) { ret i8* null }
+    define i32 @main(i1 %again) {
+    entry:
+      %tid = alloca i8
+      br label %loop
+    loop:
+      call i32 @pthread_create(i8* %tid, i8* null,
+                               i8* (i8*)* @worker, i8* null)
+      br i1 %again, label %loop, label %exit
+    exit:
+      ret i32 0
+    }
+  )");
+  ASSERT_NE(module, nullptr);
+
+  ThreadCreationTree full(*module, *ThreadAPI::getThreadAPI(), 2);
+  ASSERT_EQ(full.nodes().size(), 2u);
+  EXPECT_TRUE(full.nodes()[1].multiInstance);
+
+  InstructionScope scope;
+  for (Instruction &instruction : instructions(module->getFunction("main")))
+    if (!isa<CallBase>(instruction))
+      scope.insert(&instruction);
+  ThreadCreationTree sliced(*module, *ThreadAPI::getThreadAPI(), 2, &scope);
+  EXPECT_EQ(sliced.nodes().size(), 1u);
+  EXPECT_TRUE(sliced.forkRelations().empty());
+}
+
+TEST_F(ValueFlowTest, ThreadCallGraphResolvesTypedIndirectForkTarget) {
+  auto module = parseModule(R"(
+    @start = global i8* (i8*)* @worker
+    declare i32 @pthread_create(i8*, i8*, i8* (i8*)*, i8*)
+    define i8* @worker(i8* %arg) { ret i8* null }
+    define i32 @main() {
+    entry:
+      %tid = alloca i8
+      %target = load i8* (i8*)*, i8* (i8*)** @start
+      call i32 @pthread_create(i8* %tid, i8* null,
+                               i8* (i8*)* %target, i8* null)
+      ret i32 0
+    }
+  )");
+  ASSERT_NE(module, nullptr);
+
+  ThreadCreationTree tree(*module, *ThreadAPI::getThreadAPI(), 2);
+  ASSERT_EQ(tree.forkRelations().size(), 1u);
+  EXPECT_EQ(tree.forkRelations().front().target, module->getFunction("worker"));
+}
+
+TEST_F(ValueFlowTest, ThreadAwareMemorySSAConnectsForkInputsAndJoinOutputs) {
+  auto module = parseModule(R"(
+    @shared = global i8* null
+    @x = global i8 0
+    @y = global i8 0
+    declare i32 @pthread_create(i8*, i8*, i8* (i8*)*, i8*)
+    declare i32 @pthread_join(i8*, i8**)
+    define i8* @worker(i8* %arg) {
+    entry:
+      %before = load i8*, i8** @shared
+      store i8* @y, i8** @shared
+      ret i8* null
+    }
+    define i32 @main() {
+    entry:
+      %tid = alloca i8
+      store i8* @x, i8** @shared
+      call i32 @pthread_create(i8* %tid, i8* null,
+                               i8* (i8*)* @worker, i8* @x)
+      call i32 @pthread_join(i8* %tid, i8** null)
+      %after = load i8*, i8** @shared
+      ret i32 0
+    }
+  )");
+  ASSERT_NE(module, nullptr);
+
+  ICFG icfg;
+  ICFGBuilder icfgBuilder(&icfg);
+  icfgBuilder.build(module.get());
+  SVFGBuilderConfig config;
+  config.usePointerAnalysis = true;
+  config.memoryPartition = MemoryRegionPartitionStrategy::InterDisjoint;
+  SVFGBuilder svfgBuilder(config);
+  std::unique_ptr<SVFG> graph(svfgBuilder.build(&icfg));
+  ASSERT_NE(graph, nullptr);
+
+  ThreadCreationTree tree(*module, *ThreadAPI::getThreadAPI(), 2);
+  FixedMHP parallel(true);
+  ThreadAwareSVFGBuilder overlay(*graph, parallel, nullptr, nullptr, &tree);
+  const auto &stats = overlay.build();
+
+  EXPECT_GT(stats.forkParameterEdges, 0u);
+  EXPECT_GT(stats.forkMemoryEdges, 0u);
+  EXPECT_GT(stats.joinMemoryNodes, 0u);
+  EXPECT_GT(stats.joinMemoryEdges, 0u);
+
+  const CallBase *join = nullptr;
+  const LoadInst *after = nullptr;
+  for (Instruction &instruction : instructions(module->getFunction("main"))) {
+    if (auto *call = dyn_cast<CallBase>(&instruction)) {
+      if (call->getCalledFunction() &&
+          call->getCalledFunction()->getName() == "pthread_join")
+        join = call;
+    }
+    if (auto *load = dyn_cast<LoadInst>(&instruction))
+      after = load;
+  }
+  ASSERT_NE(join, nullptr);
+  ASSERT_NE(after, nullptr);
+  ASSERT_FALSE(graph->getActualOuts(join).empty());
+  SVFGNode *afterNode = graph->getDef(after);
+  ASSERT_NE(afterNode, nullptr);
+  bool sawJoinFlow = false;
+  for (SVFGNode *actualOut : graph->getActualOuts(join))
+    for (SVFGEdge *edge : actualOut->getOutEdges())
+      sawJoinFlow |= edge->getDstNode() == afterNode &&
+                     edge->getEdgeKind() == SVFGEdgeK::IntraIndirect;
+  EXPECT_TRUE(sawJoinFlow);
 }
 
 } // namespace

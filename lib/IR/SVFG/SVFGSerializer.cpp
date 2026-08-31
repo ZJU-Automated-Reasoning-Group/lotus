@@ -288,6 +288,7 @@ static uint32_t packObjectInfoFlags(const SVFG::ObjectInfo &info) {
   flags |= info.isFieldInsensitive ? (1u << 6) : 0;
   flags |= info.isArray ? (1u << 7) : 0;
   flags |= info.isUnknown ? (1u << 8) : 0;
+  flags |= info.isSingleton ? (1u << 9) : 0;
   return flags;
 }
 
@@ -303,6 +304,7 @@ static SVFG::ObjectInfo unpackObjectInfoFlags(uint32_t flags,
   info.isFieldInsensitive = (flags & (1u << 6)) != 0;
   info.isArray = (flags & (1u << 7)) != 0;
   info.isUnknown = (flags & (1u << 8)) != 0;
+  info.isSingleton = (flags & (1u << 9)) != 0;
   info.baseObjId = baseObjId;
   return info;
 }

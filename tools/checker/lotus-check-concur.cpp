@@ -48,8 +48,29 @@ static cl::opt<bool> SparseFlowSensitive(
     "concur.sparse-flow-sensitive",
     cl::desc("Refine data-race alias pairs with a thread-aware sparse "
              "flow-sensitive points-to solve"),
-    cl::init(false),
+    cl::init(false), cl::sub(lotus::checker::tooling::concurrencySubCommand()));
+static cl::opt<bool> MultiStageSlicing(
+    "concur.msli",
+    cl::desc("Run multi-stage synchronization and points-to slicing before "
+             "sparse race refinement"),
+    cl::init(false), cl::sub(lotus::checker::tooling::concurrencySubCommand()));
+enum class MemoryPartitionOption { Distinct, IntraDisjoint, InterDisjoint };
+static cl::opt<MemoryPartitionOption> MemoryPartition(
+    "concur.memory-partition", cl::desc("Sparse MemorySSA region policy"),
+    cl::values(clEnumValN(MemoryPartitionOption::Distinct, "distinct",
+                          "Preserve exact points-to sets"),
+               clEnumValN(MemoryPartitionOption::IntraDisjoint,
+                          "intra-disjoint",
+                          "Merge overlapping regions per function"),
+               clEnumValN(MemoryPartitionOption::InterDisjoint,
+                          "inter-disjoint",
+                          "Merge overlapping regions over the module")),
+    cl::init(MemoryPartitionOption::InterDisjoint),
     cl::sub(lotus::checker::tooling::concurrencySubCommand()));
+static cl::opt<unsigned> ThreadContextLimit(
+    "concur.thread-context",
+    cl::desc("Maximum call-string depth in the thread creation tree"),
+    cl::init(2), cl::sub(lotus::checker::tooling::concurrencySubCommand()));
 
 int runConcurrencyCheckerTool(const char *argv0) {
   (void)lotus::checker::tooling::statsEnabled();
@@ -94,6 +115,22 @@ int runConcurrencyCheckerTool(const char *argv0) {
   checker.enableMPICheck(selected.count("mpi"));
   checker.enableCUDACheck(selected.count("cuda"));
   checker.enableSparseFlowSensitiveRefinement(SparseFlowSensitive);
+  checker.enableMultiStageSlicing(MultiStageSlicing);
+  switch (MemoryPartition) {
+  case MemoryPartitionOption::Distinct:
+    checker.setSparseMemoryPartition(
+        lotus::analysis::MemoryRegionPartitionStrategy::Distinct);
+    break;
+  case MemoryPartitionOption::IntraDisjoint:
+    checker.setSparseMemoryPartition(
+        lotus::analysis::MemoryRegionPartitionStrategy::IntraDisjoint);
+    break;
+  case MemoryPartitionOption::InterDisjoint:
+    checker.setSparseMemoryPartition(
+        lotus::analysis::MemoryRegionPartitionStrategy::InterDisjoint);
+    break;
+  }
+  checker.setThreadContextLimit(ThreadContextLimit);
 
   checker.runAnalyses();
 

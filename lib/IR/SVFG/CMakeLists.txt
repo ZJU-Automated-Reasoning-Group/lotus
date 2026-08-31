@@ -3,6 +3,7 @@
 
 # Sources
 set(SVFG_SOURCES
+    MemoryRegionPartitioner.cpp
     SVFG.cpp
     SVFGBuilder.cpp
     SVFGBuilderNodes.cpp

@@ -1,4 +1,5 @@
-/** @file ConcurrencyChecker.h @brief Aggregate concurrency checker driver orchestrating multiple analyses. */
+/** @file ConcurrencyChecker.h @brief Aggregate concurrency checker driver
+ * orchestrating multiple analyses. */
 #ifndef CONCURRENCY_CHECKER_H
 #define CONCURRENCY_CHECKER_H
 
@@ -143,6 +144,17 @@ public:
   void enableSparseFlowSensitiveRefinement(bool enable) {
     m_enableSparseFlowSensitiveRefinement = enable;
   }
+  void enableMultiStageSlicing(bool enable) {
+    m_enableMultiStageSlicing = enable;
+    m_enableSparseFlowSensitiveRefinement |= enable;
+  }
+  void setSparseMemoryPartition(
+      lotus::analysis::MemoryRegionPartitionStrategy strategy) {
+    m_sparseMemoryPartition = strategy;
+  }
+  void setThreadContextLimit(std::size_t limit) {
+    m_threadContextLimit = limit;
+  }
 
   /**
    * @brief Get statistics about the analysis
@@ -161,6 +173,13 @@ public:
     size_t cudaBugsFound;
     size_t sparseInterferenceEdges;
     size_t sparsePointsToFacts;
+    size_t sparseMemoryRegions;
+    size_t sparseOriginalNodes;
+    size_t sparseSlicedNodes;
+    size_t sparsePreThreads;
+    size_t sparseMainThreads;
+    size_t sparseForkMemoryEdges;
+    size_t sparseJoinMemoryEdges;
     OpenMP::OpenMPTaskGraph::AnalysisSummary openMPSummary;
     ConcurrencyFacade::MPISummary mpiSummary;
     ConcurrencyFacade::CUDASummary cudaSummary;
@@ -221,6 +240,10 @@ private:
   bool m_checkMPI = true;
   bool m_checkCUDA = true;
   bool m_enableSparseFlowSensitiveRefinement = false;
+  bool m_enableMultiStageSlicing = false;
+  lotus::analysis::MemoryRegionPartitionStrategy m_sparseMemoryPartition =
+      lotus::analysis::MemoryRegionPartitionStrategy::InterDisjoint;
+  std::size_t m_threadContextLimit = 2;
   MHPBackendKind m_mhpBackend = MHPBackendKind::Region;
 
   // Bug type IDs (registered with BugReportMgr)

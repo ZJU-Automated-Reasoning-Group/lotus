@@ -4,7 +4,7 @@
  */
 #pragma once
 
-#include "IR/SVFG/SVFG.h"
+#include "IR/GraphView.h"
 
 #include <cstddef>
 #include <optional>
@@ -24,7 +24,9 @@ public:
     std::size_t strongUpdates = 0;
   };
 
-  explicit SparseFlowSensitivePTA(const SVFG &graph) : graph_(&graph) {}
+  explicit SparseFlowSensitivePTA(const SVFG &graph,
+                                  const FilteredSVFGView *scope = nullptr)
+      : graph_(&graph), scope_(scope) {}
 
   const Statistics &solve();
 
@@ -49,8 +51,10 @@ public:
 private:
   bool isStrongUpdate(const StoreSVFGNode &store) const;
   bool containsUnknown(const SVFGNodeBS &pointsTo) const;
+  bool inScope(const SVFGNode *node) const;
 
   const SVFG *graph_;
+  const FilteredSVFGView *scope_;
   std::unordered_map<uint32_t, SVFGNodeBS> nodePointsTo_;
   std::unordered_map<uint32_t, SVFGNodeBS> memoryValues_;
   std::unordered_map<uint32_t, bool> nodeComplete_;

@@ -19,7 +19,9 @@ set(Concurrency_SOURCES
   LockSet/LockSetAnalysisInterprocedural.cpp
   Memory/EscapeAnalysis.cpp
   Memory/StaticThreadSharingAnalysis.cpp
+  Thread/ThreadCreationTree.cpp
   ValueFlow/ThreadAwareSVFG.cpp
+  ValueFlow/MultiStageSlicer.cpp
   ValueFlow/SparseFlowSensitivePTA.cpp
   ValueFlow/WholeProgramSparseRefinement.cpp
   CUDA/CUDASemantics.cpp

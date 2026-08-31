@@ -452,10 +452,12 @@ bool FlowSensitivePTA::isStrongUpdate(const PointsToSet &targets) const {
 
 bool FlowSensitivePTA::resolveIndirectCalls(const SVFGNode &node,
                                             const StoredSet &pointsTo) {
-  if (!config_.connectIndirectCall || !node.hasValueId())
+  if (!config_.connectIndirectCall)
     return false;
   bool changed = false;
-  for (const CallBase *callSite : graph_->getIndCallSites(node.getValueId())) {
+  const NodeID functionPointer =
+      node.hasValueId() ? node.getValueId() : node.getId();
+  for (const CallBase *callSite : graph_->getIndCallSites(functionPointer)) {
     for (ObjectID object : materialize(pointsTo)) {
       const auto *target =
           dyn_cast_or_null<Function>(graph_->getObjectValue(object));

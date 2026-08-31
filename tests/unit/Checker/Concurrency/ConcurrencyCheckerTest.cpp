@@ -685,6 +685,53 @@ TEST_F(ConcurrencyCheckerTest, StaticVectorClockBackendRunsAnalyses) {
   auto stats = checker.getStatistics();
   EXPECT_GT(stats.mhpPairs, 0u);
 }
+
+TEST_F(ConcurrencyCheckerTest, SparseFlowSensitiveRefinementRunsOnRacePath) {
+  auto module = parseModule(R"(
+    @shared = global i8* null
+    @x = global i8 0
+    @y = global i8 0
+    declare i32 @pthread_create(i8*, i8*, i8* (i8*)*, i8*)
+
+    define i8* @writer_x(i8* %arg) {
+    entry:
+      store i8* @x, i8** @shared
+      ret i8* null
+    }
+    define i8* @writer_y(i8* %arg) {
+    entry:
+      store i8* @y, i8** @shared
+      ret i8* null
+    }
+    define i32 @main() {
+    entry:
+      %t1 = alloca i8
+      %t2 = alloca i8
+      call i32 @pthread_create(i8* %t1, i8* null,
+                               i8* (i8*)* @writer_x, i8* null)
+      call i32 @pthread_create(i8* %t2, i8* null,
+                               i8* (i8*)* @writer_y, i8* null)
+      ret i32 0
+    }
+  )");
+  ASSERT_NE(module, nullptr);
+
+  concurrency::ConcurrencyChecker checker(*module);
+  checker.enableSparseFlowSensitiveRefinement(true);
+  checker.enableDeadlockCheck(false);
+  checker.enableAtomicityCheck(false);
+  checker.enableCondVarCheck(false);
+  checker.enableLockMismatchCheck(false);
+  checker.enableOpenMPCheck(false);
+  checker.enableMPICheck(false);
+  checker.enableCUDACheck(false);
+  EXPECT_NO_THROW(checker.runAnalyses());
+
+  const auto stats = checker.getStatistics();
+  EXPECT_GT(stats.sparseInterferenceEdges, 0u);
+  EXPECT_GT(stats.sparsePointsToFacts, 0u);
+}
+
 TEST_F(ConcurrencyCheckerTest, CUDAStatisticsAreCollected) {
   const char *source = R"(
     declare void @__set_CUDAConfig(i32, i32)

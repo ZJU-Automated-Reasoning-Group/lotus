@@ -1,6 +1,7 @@
 add_subdirectory(MHP)
 add_subdirectory(LockSet)
 add_subdirectory(Memory)
+add_subdirectory(ValueFlow)
 add_subdirectory(JoinTarget)
 add_subdirectory(Utils/Clocks)
 add_subdirectory(Utils/ThreadAPI)
@@ -19,6 +20,7 @@ add_custom_target(concurrency_core_tests
     concurrency_atomic_tests
     concurrency_lockset_tests
     concurrency_memory_tests
+    concurrency_valueflow_tests
     concurrency_join_target_tests
     concurrency_clock_tests
     concurrency_thread_api_tests

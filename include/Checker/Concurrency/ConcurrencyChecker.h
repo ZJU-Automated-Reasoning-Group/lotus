@@ -24,6 +24,7 @@
 #include "Concurrency/Memory/StaticThreadSharingAnalysis.h"
 #include "Concurrency/OpenMP/OpenMPTaskGraph.h"
 #include "Concurrency/Utils/ThreadLocalAnalysis.h"
+#include "Concurrency/ValueFlow/WholeProgramSparseRefinement.h"
 
 #include <memory>
 #include <string>
@@ -139,6 +140,9 @@ public:
   void enableMPICheck(bool enable) { m_checkMPI = enable; }
   void enableCUDACheck(bool enable) { m_checkCUDA = enable; }
   void setMHPBackend(MHPBackendKind backend) { m_mhpBackend = backend; }
+  void enableSparseFlowSensitiveRefinement(bool enable) {
+    m_enableSparseFlowSensitiveRefinement = enable;
+  }
 
   /**
    * @brief Get statistics about the analysis
@@ -155,6 +159,8 @@ public:
     size_t openMPBugsFound;
     size_t mpiBugsFound;
     size_t cudaBugsFound;
+    size_t sparseInterferenceEdges;
+    size_t sparsePointsToFacts;
     OpenMP::OpenMPTaskGraph::AnalysisSummary openMPSummary;
     ConcurrencyFacade::MPISummary mpiSummary;
     ConcurrencyFacade::CUDASummary cudaSummary;
@@ -190,6 +196,8 @@ private:
   std::unique_ptr<OpenMP::OpenMPTaskGraph> m_openMPTaskGraph;
   std::unique_ptr<mpi::MPIAnalysis> m_mpiAnalysis;
   std::unique_ptr<cuda::CUDAAnalysis> m_cudaAnalysis;
+  std::unique_ptr<lotus::analysis::WholeProgramSparseRefinement>
+      m_sparseRefinement;
   lotus::AliasAnalysisWrapper *m_aliasAnalysis;
   ThreadAPI *m_threadAPI;
 
@@ -212,6 +220,7 @@ private:
   bool m_checkOpenMP = true;
   bool m_checkMPI = true;
   bool m_checkCUDA = true;
+  bool m_enableSparseFlowSensitiveRefinement = false;
   MHPBackendKind m_mhpBackend = MHPBackendKind::Region;
 
   // Bug type IDs (registered with BugReportMgr)

@@ -135,6 +135,8 @@ ConcurrencyChecker::ConcurrencyChecker(Module &module)
   m_stats.openMPBugsFound = 0;
   m_stats.mpiBugsFound = 0;
   m_stats.cudaBugsFound = 0;
+  m_stats.sparseInterferenceEdges = 0;
+  m_stats.sparsePointsToFacts = 0;
   m_stats.openMPSummary = OpenMP::OpenMPTaskGraph::AnalysisSummary{};
   m_stats.mpiSummary = ConcurrencyFacade::MPISummary{};
   m_stats.cudaSummary = ConcurrencyFacade::CUDASummary{};
@@ -148,6 +150,8 @@ ConcurrencyChecker::ConcurrencyChecker(Module &module)
 }
 
 void ConcurrencyChecker::runAnalyses() {
+  // The previous checker may retain a non-owning pointer to the sparse solver.
+  m_dataRaceChecker.reset();
   m_mhpAnalysis = nullptr;
   m_mhpAnalysisStorage.reset();
   m_locksetAnalysis.reset();
@@ -160,9 +164,12 @@ void ConcurrencyChecker::runAnalyses() {
   m_openMPTaskGraph.reset();
   m_mpiAnalysis.reset();
   m_cudaAnalysis.reset();
+  m_sparseRefinement.reset();
   m_stats.mhpPairs = 0;
   m_stats.locksAnalyzed = 0;
   m_stats.cudaBugsFound = 0;
+  m_stats.sparseInterferenceEdges = 0;
+  m_stats.sparsePointsToFacts = 0;
   m_stats.openMPSummary = OpenMP::OpenMPTaskGraph::AnalysisSummary{};
   m_stats.mpiSummary = ConcurrencyFacade::MPISummary{};
   m_stats.cudaSummary = ConcurrencyFacade::CUDASummary{};
@@ -313,10 +320,21 @@ void ConcurrencyChecker::runAnalyses() {
   if (!aa && regionMHP)
     aa = regionMHP->getAliasAnalysis();
 
+  if (m_enableSparseFlowSensitiveRefinement && m_checkDataRaces &&
+      m_mhpAnalysis) {
+    m_sparseRefinement =
+        std::make_unique<lotus::analysis::WholeProgramSparseRefinement>();
+    const auto &sparseStats = m_sparseRefinement->build(
+        m_module, *m_mhpAnalysis, m_locksetAnalysisView);
+    m_stats.sparseInterferenceEdges = sparseStats.overlay.edgesAdded;
+    m_stats.sparsePointsToFacts = sparseStats.solver.pointsToFacts;
+  }
+
   m_dataRaceChecker = std::make_unique<DataRaceChecker>(
       m_module, m_mhpAnalysis, m_locksetAnalysisView, m_escapeAnalysis.get(),
       m_threadLocalAnalysis.get(), m_staticThreadSharingAnalysis, aa,
-      m_happensBeforeAnalysis.get());
+      m_happensBeforeAnalysis.get(),
+      m_sparseRefinement ? m_sparseRefinement->solver() : nullptr);
   m_deadlockChecker = std::make_unique<DeadlockChecker>(
       m_module, m_locksetAnalysisView, m_mhpAnalysis,
       m_happensBeforeAnalysis.get(), m_threadAPI);

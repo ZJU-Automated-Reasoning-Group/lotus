@@ -3,6 +3,7 @@
  * Author: rainoftime
  */
 #include "Checker/Concurrency/DataRaceChecker.h"
+#include "Concurrency/ValueFlow/SparseFlowSensitivePTA.h"
 
 #include "Alias/Infrastructure/AliasAnalysisWrapper/AliasAnalysisWrapper.h"
 #include "Concurrency/MHP/HappensBeforeAnalysis.h"
@@ -131,13 +132,14 @@ DataRaceChecker::DataRaceChecker(
     ThreadLocal::ThreadLocalAnalysis *threadLocalAnalysis,
     lotus::StaticThreadSharingAnalysis *staticThreadSharingAnalysis,
     AliasAnalysisWrapper *aliasAnalysis,
-    HappensBeforeAnalysis *happensBeforeAnalysis)
+    HappensBeforeAnalysis *happensBeforeAnalysis,
+    const lotus::analysis::SparseFlowSensitivePTA *sparsePTA)
     : m_module(module), m_mhpAnalysis(mhpAnalysis),
       m_locksetAnalysis(locksetAnalysis), m_escapeAnalysis(escapeAnalysis),
       m_threadLocalAnalysis(threadLocalAnalysis),
       m_staticThreadSharingAnalysis(staticThreadSharingAnalysis),
       m_aliasAnalysis(aliasAnalysis),
-      m_happensBeforeAnalysis(happensBeforeAnalysis),
+      m_happensBeforeAnalysis(happensBeforeAnalysis), m_sparsePTA(sparsePTA),
       m_threadAPI(ThreadAPI::getThreadAPI()) {}
 
 bool DataRaceChecker::areIndependent(const Instruction *inst1,
@@ -505,6 +507,13 @@ bool DataRaceChecker::mayAccessSameLocation(const Instruction *inst1,
     if (cache_it != m_location_overlap_cache.end()) {
       return cache_it->second;
     }
+  }
+
+  if (m_sparsePTA) {
+    const std::optional<bool> sparseMayAlias =
+        m_sparsePTA->mayAliasAccesses(inst1, inst2);
+    if (sparseMayAlias && !*sparseMayAlias)
+      return (a && b) ? (m_location_overlap_cache[{a, b}] = false) : false;
   }
 
   const Value *ptr1 = getMemoryLocation(inst1);

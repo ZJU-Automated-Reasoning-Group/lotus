@@ -1,0 +1,2 @@
+add_lotus_concurrency_test_suite(concurrency_valueflow_tests
+  ValueFlowTest.cpp)

@@ -588,7 +588,11 @@ void LockSetAnalysis::computeIntraproceduralLockSets(Function *func) {
     const CallBase *depth_call = dyn_cast<CallBase>(inst);
     const Function *depth_callee =
         depth_call ? m_thread_api->getCallee(depth_call) : nullptr;
-    LockID depth_lock = depth_call ? getLockValue(depth_call) : nullptr;
+    const bool depth_lock_operation =
+        depth_call && (m_thread_api->isTDAcquire(inst) ||
+                       m_thread_api->isTDRelease(inst));
+    LockID depth_lock =
+        depth_lock_operation ? getLockValue(depth_call) : nullptr;
     const bool known_recursive_mutex =
         depth_callee && depth_lock &&
         depth_callee->getName().contains("recursive_mutex");

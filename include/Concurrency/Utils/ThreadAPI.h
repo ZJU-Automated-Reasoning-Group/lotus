@@ -1329,8 +1329,8 @@ public:
   //@{
   /// First argument of pthread_mutex_lock/pthread_mutex_unlock/pthread_rwlock_*
   inline const llvm::Value *getLockVal(const llvm::Instruction *inst) const {
-    assert((isTDAcquire(inst) || isTDRelease(inst)) &&
-           "not a lock acquire or release function");
+    if (!inst || (!isTDAcquire(inst) && !isTDRelease(inst)))
+      return nullptr;
     const llvm::CallBase *cb = getLLVMCallSite(inst);
     if (!cb || cb->arg_size() == 0)
       return nullptr;

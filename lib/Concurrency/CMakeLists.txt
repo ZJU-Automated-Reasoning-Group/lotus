@@ -19,6 +19,9 @@ set(Concurrency_SOURCES
   LockSet/LockSetAnalysisInterprocedural.cpp
   Memory/EscapeAnalysis.cpp
   Memory/StaticThreadSharingAnalysis.cpp
+  ValueFlow/ThreadAwareSVFG.cpp
+  ValueFlow/SparseFlowSensitivePTA.cpp
+  ValueFlow/WholeProgramSparseRefinement.cpp
   CUDA/CUDASemantics.cpp
   CUDA/CUDAAbstractState.cpp
   CUDA/CUDAParticipantAnalysis.cpp
@@ -53,7 +56,10 @@ set(Concurrency_SOURCES
   LinuxKernel/LinuxKernelWaitAnalysis.cpp
 )
 add_library(Concurrency STATIC ${Concurrency_SOURCES})
-target_link_libraries(Concurrency CanaryLLVMUtils CanaryAliasAnalysisWrapper)
+target_link_libraries(Concurrency
+  CanaryLLVMUtils
+  CanaryAliasAnalysisWrapper
+  SVFG)
 target_compile_definitions(Concurrency PRIVATE
   LOTUS_SOURCE_CONFIG_DIR="${PROJECT_SOURCE_DIR}/config"
   LOTUS_INSTALL_CONFIG_DIR="${CMAKE_INSTALL_PREFIX}/share/lotus/config")

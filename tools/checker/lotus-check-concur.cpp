@@ -44,6 +44,12 @@ static cl::opt<std::string>
     Output("concur.output", cl::desc("Write analysis output to this file"),
            cl::value_desc("filename"), cl::init(""),
            cl::sub(lotus::checker::tooling::concurrencySubCommand()));
+static cl::opt<bool> SparseFlowSensitive(
+    "concur.sparse-flow-sensitive",
+    cl::desc("Refine data-race alias pairs with a thread-aware sparse "
+             "flow-sensitive points-to solve"),
+    cl::init(false),
+    cl::sub(lotus::checker::tooling::concurrencySubCommand()));
 
 int runConcurrencyCheckerTool(const char *argv0) {
   (void)lotus::checker::tooling::statsEnabled();
@@ -87,6 +93,7 @@ int runConcurrencyCheckerTool(const char *argv0) {
   checker.enableOpenMPCheck(selected.count("openmp"));
   checker.enableMPICheck(selected.count("mpi"));
   checker.enableCUDACheck(selected.count("cuda"));
+  checker.enableSparseFlowSensitiveRefinement(SparseFlowSensitive);
 
   checker.runAnalyses();
 

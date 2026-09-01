@@ -91,7 +91,10 @@ private:
 
   struct VersionedObjectHash {
     std::size_t operator()(const VersionedObject &value) const {
-      return (static_cast<std::size_t>(value.object) << 32) ^ value.version;
+      const std::size_t objectHash = std::hash<ObjectID>{}(value.object);
+      const std::size_t versionHash = std::hash<Version>{}(value.version);
+      return objectHash ^ (versionHash + 0x9e3779b9U + (objectHash << 6) +
+                           (objectHash >> 2));
     }
   };
 
@@ -123,6 +126,7 @@ private:
   };
 
   bool inScope(const lotus::analysis::SVFGNode *node) const;
+  void initializeRecursiveFunctions();
   void buildVersionLabels();
   void labelObject(ObjectID object);
   std::vector<FootprintEntry> versionFootprint(ObjectID object) const;
@@ -135,6 +139,7 @@ private:
                       ObjectID object) const;
   bool intrinsicMayDefine(const lotus::analysis::ActualOutSVFGNode &actualOut,
                           ObjectID object) const;
+  bool memoryPhiNeedsInitial(const lotus::analysis::MSSAPhiSVFGNode &phi) const;
   PointsToSet objectsWithFields(const llvm::Value *pointer) const;
   Version internVersion(ObjectID object, const MeldSet &meld);
   bool addReliance(ObjectID object, Version source, Version destination);
@@ -176,6 +181,7 @@ private:
   std::vector<ObjectID> versionProcessingOrder_;
   std::unordered_set<NodeID> strongUpdateSites_;
   std::unordered_set<NodeID> weakUpdateSites_;
+  std::unordered_set<const llvm::Function *> recursiveFunctions_;
   bool topologyChanged_ = false;
   Statistics stats_;
 };

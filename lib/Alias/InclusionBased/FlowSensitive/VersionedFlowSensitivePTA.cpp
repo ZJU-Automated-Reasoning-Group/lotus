@@ -1,10 +1,15 @@
 #include "Alias/InclusionBased/FlowSensitive/VersionedFlowSensitivePTA.h"
 
+#include "IR/ICFG/CallGraph.h"
+
 #include <algorithm>
 #include <fstream>
 #include <limits>
 #include <map>
 
+#include <llvm/ADT/SCCIterator.h>
+#include <llvm/Analysis/CallGraph.h>
+#include <llvm/IR/CFG.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/Instructions.h>
@@ -30,6 +35,83 @@ VersionedFlowSensitivePTA::VersionedFlowSensitivePTA(const SVFG &graph,
 
 bool VersionedFlowSensitivePTA::inScope(const SVFGNode *node) const {
   return node && (!config_.scope || config_.scope->contains(node));
+}
+
+void VersionedFlowSensitivePTA::initializeRecursiveFunctions() {
+  recursiveFunctions_.clear();
+  if (const LTCallGraph *callGraph = graph_->getRefinedCallGraph()) {
+    std::unordered_map<const Function *, int> index;
+    std::unordered_map<const Function *, int> lowlink;
+    std::unordered_set<const Function *> onStack;
+    std::vector<const Function *> stack;
+    int nextIndex = 0;
+    std::function<void(const Function *)> visit =
+        [&](const Function *function) {
+          index[function] = lowlink[function] = nextIndex++;
+          stack.push_back(function);
+          onStack.insert(function);
+          const LTCallGraphNode *node = (*callGraph)[function];
+          for (const auto &edge : *node) {
+            const Function *callee =
+                edge.second ? edge.second->getFunction() : nullptr;
+            if (!callee || callee->isDeclaration())
+              continue;
+            if (index.find(callee) == index.end()) {
+              visit(callee);
+              lowlink[function] = std::min(lowlink[function], lowlink[callee]);
+            } else if (onStack.count(callee) != 0) {
+              lowlink[function] = std::min(lowlink[function], index[callee]);
+            }
+          }
+          if (lowlink[function] != index[function])
+            return;
+          std::vector<const Function *> component;
+          do {
+            const Function *member = stack.back();
+            stack.pop_back();
+            onStack.erase(member);
+            component.push_back(member);
+            if (member == function)
+              break;
+          } while (!stack.empty());
+          bool recursive = component.size() > 1;
+          if (!recursive && !component.empty()) {
+            const LTCallGraphNode *single = (*callGraph)[component.front()];
+            for (const auto &edge : *single)
+              recursive |= edge.second == single;
+          }
+          if (recursive)
+            recursiveFunctions_.insert(component.begin(), component.end());
+        };
+    for (const auto &entry : *callGraph)
+      if (entry.first && !entry.first->isDeclaration() &&
+          index.find(entry.first) == index.end())
+        visit(entry.first);
+    return;
+  }
+
+  Module *module = nullptr;
+  for (const auto &[nodeID, node] : *graph_)
+    if (const Function *function = node->getFunction()) {
+      module = const_cast<Module *>(function->getParent());
+      break;
+    }
+  if (!module)
+    return;
+  CallGraph callGraph(*module);
+  for (scc_iterator<CallGraph *> it = scc_begin(&callGraph),
+                                 end = scc_end(&callGraph);
+       it != end; ++it) {
+    const std::vector<CallGraphNode *> &component = *it;
+    bool recursive = component.size() > 1;
+    if (!recursive && component.size() == 1)
+      for (const auto &edge : *component.front())
+        recursive |= edge.second == component.front();
+    if (recursive)
+      for (CallGraphNode *node : component)
+        if (node && node->getFunction())
+          recursiveFunctions_.insert(node->getFunction());
+  }
 }
 
 VersionedFlowSensitivePTA::PointsToSet
@@ -119,6 +201,20 @@ bool VersionedFlowSensitivePTA::intrinsicMayDefine(
                      });
 }
 
+bool VersionedFlowSensitivePTA::memoryPhiNeedsInitial(
+    const MSSAPhiSVFGNode &phi) const {
+  for (auto operand = phi.opVerBegin(); operand != phi.opVerEnd(); ++operand)
+    if (operand->second.version == 0)
+      return true;
+  const ICFGNode *icfgNode = phi.getICFGNode();
+  const BasicBlock *block = icfgNode ? icfgNode->getBasicBlock() : nullptr;
+  if (!block)
+    return false;
+  const unsigned predecessorCount =
+      static_cast<unsigned>(std::distance(pred_begin(block), pred_end(block)));
+  return phi.getOpVerNum() < predecessorCount;
+}
+
 VersionedFlowSensitivePTA::PointsToSet
 VersionedFlowSensitivePTA::relevantObjects() const {
   PointsToSet objects;
@@ -191,7 +287,8 @@ void VersionedFlowSensitivePTA::labelObject(ObjectID object) {
     // the bypass/entry definition is retained in the PHI operands but has no
     // dedicated value-flow node. Seed such PHIs with the initial token so the
     // meld version represents both the bypass and updated paths.
-    if (!hasIncoming || isa<MSSAPhiSVFGNode>(node))
+    const auto *memoryPhi = dyn_cast<MSSAPhiSVFGNode>(node);
+    if (!hasIncoming || (memoryPhi && memoryPhiNeedsInitial(*memoryPhi)))
       consumedMeld[nodeID].insert(InitialMeldToken);
   }
 
@@ -201,13 +298,19 @@ void VersionedFlowSensitivePTA::labelObject(ObjectID object) {
     for (const auto &[nodeID, node] : *graph_) {
       if (!inScope(node))
         continue;
-      MeldSet nextYield = consumedMeld[nodeID];
+      bool definesNewVersion = false;
       if (const auto *store = dyn_cast<StoreSVFGNode>(node))
-        if (storeMayTarget(*store, object))
-          nextYield.insert(nodeID + 2);
+        definesNewVersion = storeMayTarget(*store, object);
       if (const auto *actualOut = dyn_cast<ActualOutSVFGNode>(node))
-        if (intrinsicMayDefine(*actualOut, object))
-          nextYield.insert(nodeID + 2);
+        definesNewVersion |= intrinsicMayDefine(*actualOut, object);
+      // Match SVF's storesYieldedMeldVersion: a definition's yielded meld is
+      // its fresh prelabel, not consume U prelabel. Weak updates explicitly
+      // copy consume into yield during transfer; strong updates do not.
+      MeldSet nextYield;
+      if (definesNewVersion)
+        nextYield.insert(nodeID + 2);
+      else
+        nextYield = consumedMeld[nodeID];
       if (yieldedMeld[nodeID] != nextYield) {
         yieldedMeld[nodeID] = std::move(nextYield);
         changed = true;
@@ -234,7 +337,9 @@ void VersionedFlowSensitivePTA::labelObject(ObjectID object) {
     if (!consumedMeld[nodeID].empty()) {
       const Version consumed = internVersion(object, consumedMeld[nodeID]);
       consume_[nodeID][object] = consumed;
-      if (consumedMeld[nodeID].count(InitialMeldToken) != 0)
+      const auto *memoryPhi = dyn_cast<MSSAPhiSVFGNode>(node);
+      if (memoryPhi && memoryPhiNeedsInitial(*memoryPhi) &&
+          consumedMeld[nodeID].count(InitialMeldToken) != 0)
         addReliance(object, initialVersion_[object], consumed);
     }
     if (!yieldedMeld[nodeID].empty())
@@ -278,7 +383,8 @@ VersionedFlowSensitivePTA::versionFootprint(ObjectID object) const {
     if (const auto *actualOut = dyn_cast<ActualOutSVFGNode>(node))
       if (intrinsicMayDefine(*actualOut, object))
         footprint.push_back({2, nodeID, nodeID});
-    if (isa<MSSAPhiSVFGNode>(node))
+    if (const auto *memoryPhi = dyn_cast<MSSAPhiSVFGNode>(node);
+        memoryPhi && memoryPhiNeedsInitial(*memoryPhi))
       footprint.push_back({3, nodeID, nodeID});
     for (const SVFGEdge *edge : node->getOutEdges())
       if (edge && inScope(edge->getDstNode()) &&
@@ -767,8 +873,14 @@ bool VersionedFlowSensitivePTA::isStrongUpdate(
   const ObjectID object = *targets.begin();
   const SVFG::ObjectInfo *info = graph_->getObjectInfo(object);
   if (!info || info->isUnknown || info->isHeap || info->isArray ||
-      info->isFieldInsensitive || (info->isStack && !info->isSingleton))
+      info->isFieldInsensitive)
     return false;
+  const Value *allocation = graph_->getObjectValue(object);
+  if (!allocation && info->baseObjId != 0)
+    allocation = graph_->getObjectValue(info->baseObjId);
+  if (const auto *instruction = dyn_cast_or_null<Instruction>(allocation))
+    if (recursiveFunctions_.count(instruction->getFunction()) != 0)
+      return false;
   return true;
 }
 
@@ -819,6 +931,7 @@ bool VersionedFlowSensitivePTA::resolveIndirectCalls(
         for (const SVFGEdge *edge : graphNode->getOutEdges())
           if (edge)
             oldEdges.insert(edge);
+      const auto oldRecursiveFunctions = recursiveFunctions_;
       if (config_.connectIndirectCall(callSite, target)) {
         ++stats_.indirectCallEdges;
         changed = true;
@@ -828,6 +941,9 @@ bool VersionedFlowSensitivePTA::resolveIndirectCalls(
             if (edge && oldEdges.count(edge) == 0)
               newEdges.push_back(edge);
         updateConnectedNodes(newEdges);
+        initializeRecursiveFunctions();
+        if (recursiveFunctions_ != oldRecursiveFunctions)
+          topologyChanged_ = true;
       }
     }
   return changed;
@@ -1026,39 +1142,42 @@ bool VersionedFlowSensitivePTA::processIntrinsicActualOut(
       if (root.base == destination.base && destination.offset >= root.offset)
         relativeOffset =
             std::min(relativeOffset, destination.offset - root.offset);
-    if (relativeOffset == std::numeric_limits<uint64_t>::max() ||
-        (exactLength && relativeOffset >= copiedBytes))
-      continue;
 
     PointsToSet replacement;
-    if (intrinsicId == Intrinsic::memcpy || intrinsicId == Intrinsic::memmove) {
+    const bool outsideWrite =
+        relativeOffset == std::numeric_limits<uint64_t>::max() ||
+        (exactLength && relativeOffset >= copiedBytes);
+    if (outsideWrite) {
+      replacement = memoryBeforeCall(destination.object);
+    } else if (intrinsicId == Intrinsic::memcpy ||
+               intrinsicId == Intrinsic::memmove) {
+      bool matchedSource = false;
       for (const Location &sourceRoot : sourceRoots) {
         const uint64_t sourceOffset = sourceRoot.offset + relativeOffset;
         if (sourceOffset < sourceRoot.offset)
           continue;
         for (const Location &source : sourceLocations)
           if (source.base == sourceRoot.base && source.offset == sourceOffset) {
+            matchedSource = true;
             const PointsToSet sourceMemory = memoryBeforeCall(source.object);
             replacement.insert(sourceMemory.begin(), sourceMemory.end());
           }
       }
+      if (!matchedSource && unknownObject != 0)
+        replacement.insert(unknownObject);
     } else {
       const auto *fill = dyn_cast<ConstantInt>(intrinsic->getArgOperand(1));
       if ((!fill || !fill->isZero()) && unknownObject != 0)
         replacement.insert(unknownObject);
     }
 
-    if (!fullyCovered(destination.object, relativeOffset)) {
+    if (!outsideWrite && !fullyCovered(destination.object, relativeOffset)) {
       if (unknownObject != 0) {
         replacement.clear();
         replacement.insert(unknownObject);
       }
-    } else if (!exactLength) {
-      Version consumed = getConsume(actualOut.getId(), destination.object);
-      if (consumed == InvalidVersion)
-        consumed = initialVersion(destination.object);
-      const PointsToSet &oldMemory =
-          versionedPointsTo(destination.object, consumed);
+    } else if (!outsideWrite && !exactLength) {
+      const PointsToSet oldMemory = memoryBeforeCall(destination.object);
       replacement.insert(oldMemory.begin(), oldMemory.end());
     }
 
@@ -1176,6 +1295,7 @@ VersionedFlowSensitivePTA::solve() {
   stats_ = {};
   do {
     topologyChanged_ = false;
+    initializeRecursiveFunctions();
     topLevelPointsTo_.clear();
     versionedPointsTo_.clear();
     strongUpdateSites_.clear();

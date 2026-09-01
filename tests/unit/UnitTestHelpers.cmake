@@ -1,47 +1,58 @@
+set(LOTUS_UNIT_TEST_ROOT ${CMAKE_CURRENT_LIST_DIR})
 set(LOTUS_UNIT_TEST_COMMON_INCLUDES
     ${CMAKE_CURRENT_LIST_DIR}/../utils
     ${CMAKE_CURRENT_LIST_DIR}
     ${CMAKE_CURRENT_LIST_DIR}/../../include
     ${LLVM_INCLUDE_DIRS})
 
-set(LOTUS_TEST_BASE_LIBS
+add_library(lotus_test_utils INTERFACE)
+target_include_directories(lotus_test_utils INTERFACE
+    ${LOTUS_UNIT_TEST_COMMON_INCLUDES})
+target_link_libraries(lotus_test_utils INTERFACE
     GTest::gtest
     GTest::gtest_main
     LLVMAsmParser
     LLVMIRReader
     LLVMPasses)
 
-set(LOTUS_TEST_HARNESS_BASE_LIBS
+add_library(lotus_test_harness_utils INTERFACE)
+target_include_directories(lotus_test_harness_utils INTERFACE
+    ${LOTUS_UNIT_TEST_COMMON_INCLUDES})
+target_link_libraries(lotus_test_harness_utils INTERFACE
     GTest::gtest
     LLVMAsmParser
     LLVMIRReader
     LLVMPasses)
 
-add_library(lotus_test_utils INTERFACE)
-target_include_directories(lotus_test_utils INTERFACE
-    ${LOTUS_UNIT_TEST_COMMON_INCLUDES})
-target_link_libraries(lotus_test_utils INTERFACE ${LOTUS_TEST_BASE_LIBS})
-
-add_library(lotus_test_harness_utils INTERFACE)
-target_include_directories(lotus_test_harness_utils INTERFACE
-    ${LOTUS_UNIT_TEST_COMMON_INCLUDES})
-target_link_libraries(lotus_test_harness_utils INTERFACE
-    ${LOTUS_TEST_HARNESS_BASE_LIBS})
-
 include(GoogleTest)
 
-function(add_lotus_test_suite test_name)
-    set(options DISCOVER_TESTS)
-    set(oneValueArgs TIMEOUT)
-    set(multiValueArgs
-        SOURCES
-        LINK_LIBS
-        INCLUDE_DIRS
-        COMPILE_DEFINITIONS
-        DEPENDS)
-    cmake_parse_arguments(LOTUS_SUITE "${options}" "${oneValueArgs}"
-        "${multiValueArgs}" ${ARGN})
+# Child directories declare sources; a parent links one cohesive executable.
+function(lotus_collect_test_sources suite_name)
+    foreach(source_file IN LISTS ARGN)
+        if(IS_ABSOLUTE "${source_file}")
+            set(source "${source_file}")
+        else()
+            set(source "${CMAKE_CURRENT_SOURCE_DIR}/${source_file}")
+        endif()
+        set_property(GLOBAL APPEND PROPERTY
+            LOTUS_TEST_SUITE_${suite_name}_SOURCES "${source}")
+    endforeach()
+endfunction()
 
+function(add_lotus_collected_test_suite suite_name)
+    get_property(sources GLOBAL PROPERTY
+        LOTUS_TEST_SUITE_${suite_name}_SOURCES)
+    if(NOT sources)
+        message(FATAL_ERROR
+            "add_lotus_collected_test_suite(${suite_name}) has no sources")
+    endif()
+    add_lotus_test_suite(${suite_name} SOURCES ${sources} ${ARGN})
+endfunction()
+
+function(add_lotus_test_suite test_name)
+    cmake_parse_arguments(LOTUS_SUITE "" "TIMEOUT;TEST_KIND"
+        "SOURCES;LINK_LIBS;INCLUDE_DIRS;COMPILE_DEFINITIONS;DEPENDS;LABELS"
+        ${ARGN})
     if(NOT LOTUS_SUITE_SOURCES)
         message(FATAL_ERROR
             "add_lotus_test_suite(${test_name}) requires at least one source")
@@ -52,8 +63,7 @@ function(add_lotus_test_suite test_name)
         RUNTIME_OUTPUT_DIRECTORY ${LOTUS_TEST_BIN_DIR}
         CXX_STANDARD 17
         CXX_STANDARD_REQUIRED ON
-        CXX_EXTENSIONS OFF
-    )
+        CXX_EXTENSIONS OFF)
     target_include_directories(${test_name} PRIVATE
         ${LOTUS_UNIT_TEST_COMMON_INCLUDES}
         ${LOTUS_SUITE_INCLUDE_DIRS})
@@ -63,7 +73,6 @@ function(add_lotus_test_suite test_name)
     target_link_libraries(${test_name}
         lotus_test_utils
         ${LOTUS_SUITE_LINK_LIBS})
-
     if(LOTUS_SUITE_DEPENDS)
         add_dependencies(${test_name} ${LOTUS_SUITE_DEPENDS})
     endif()
@@ -73,351 +82,52 @@ function(add_lotus_test_suite test_name)
     else()
         set(test_timeout ${LOTUS_UNIT_TEST_TIMEOUT})
     endif()
-
-    if(LOTUS_SUITE_DISCOVER_TESTS)
-        gtest_discover_tests(${test_name}
-            TEST_PREFIX "${test_name}."
-            WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+    if(LOTUS_SUITE_TEST_KIND)
+        string(TOLOWER "${LOTUS_SUITE_TEST_KIND}" test_kind)
     else()
-        add_test(NAME ${test_name} COMMAND ${LOTUS_TEST_BIN_DIR}/${test_name})
-        set_tests_properties(${test_name} PROPERTIES
-            TIMEOUT ${test_timeout}
-            WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+        set(test_kind unit)
     endif()
+    if(NOT test_kind MATCHES "^(unit|component|integration)$")
+        message(FATAL_ERROR
+            "add_lotus_test_suite(${test_name}) has invalid TEST_KIND "
+            "'${LOTUS_SUITE_TEST_KIND}'")
+    endif()
+
+    file(RELATIVE_PATH relative_dir
+        ${LOTUS_UNIT_TEST_ROOT} ${CMAKE_CURRENT_SOURCE_DIR})
+    if(relative_dir STREQUAL "")
+        set(subsystem unit)
+    else()
+        string(REGEX REPLACE "/.*$" "" subsystem "${relative_dir}")
+        string(TOLOWER "${subsystem}" subsystem)
+    endif()
+
+    set(labels lotus ${test_kind} ${subsystem} ${LOTUS_SUITE_LABELS})
+    list(REMOVE_DUPLICATES labels)
+    string(REPLACE ";" "\\;" labels_property "${labels}")
+    gtest_discover_tests(${test_name}
+        TEST_PREFIX "${test_name}."
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        PROPERTIES
+            TIMEOUT ${test_timeout}
+            LABELS "${labels_property}")
 endfunction()
 
 function(add_lotus_targeted_test test_name source_file)
-    set(options)
-    set(oneValueArgs)
-    set(multiValueArgs LINK_LIBS INCLUDE_DIRS)
-    cmake_parse_arguments(LOTUS_TEST "${options}" "${oneValueArgs}"
-        "${multiValueArgs}" ${ARGN})
-
-    if(IS_ABSOLUTE ${source_file})
-        set(source ${source_file})
+    cmake_parse_arguments(LOTUS_TEST "" "" "LINK_LIBS;INCLUDE_DIRS" ${ARGN})
+    if(IS_ABSOLUTE "${source_file}")
+        set(source "${source_file}")
     else()
-        set(source ${CMAKE_CURRENT_SOURCE_DIR}/${source_file})
+        set(source "${CMAKE_CURRENT_SOURCE_DIR}/${source_file}")
     endif()
-
     add_lotus_test_suite(${test_name}
         SOURCES ${source}
         LINK_LIBS ${LOTUS_TEST_LINK_LIBS}
         INCLUDE_DIRS ${LOTUS_TEST_INCLUDE_DIRS})
 endfunction()
 
-function(add_lotus_concurrency_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            Concurrency
-            CanaryParallel)
-endfunction()
-
 function(add_lotus_concurrency_test_suite test_name)
     add_lotus_test_suite(${test_name}
         SOURCES ${ARGN}
-        LINK_LIBS
-            Concurrency
-            CanaryParallel)
-endfunction()
-
-function(add_lotus_analysis_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            CanaryNullPointer
-            CanaryDyckAA)
-endfunction()
-
-function(add_lotus_debug_info_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            CanaryDebugInfo)
-endfunction()
-
-function(add_lotus_spectre_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            Spectre)
-endfunction()
-
-function(add_lotus_constant_time_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            ConstantTimeVerify)
-endfunction()
-
-function(add_lotus_crypto_test test_name source_file)
-    add_lotus_constant_time_test(${test_name} ${source_file})
-endfunction()
-
-function(add_lotus_checker_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            AE
-            CanaryAliasAnalysisWrapper)
-endfunction()
-
-function(add_lotus_controlflow_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            CanaryICFG)
-endfunction()
-
-function(add_lotus_fuzzing_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            CanaryFuzzing
-            CanaryReport)
-endfunction()
-
-function(add_lotus_ir_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            CanaryPDG
-            CanaryICFG
-            CanaryAliasAnalysisWrapper)
-endfunction()
-
-function(add_lotus_ir_test_suite test_name)
-    add_lotus_test_suite(${test_name}
-        SOURCES ${ARGN}
-        LINK_LIBS
-            CanaryPDG
-            CanaryICFG
-            CanaryAliasAnalysisWrapper)
-endfunction()
-
-function(add_lotus_svfg_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            CanaryICFG
-            SVFG
-            CanaryAliasAnalysisWrapper)
-endfunction()
-
-function(add_lotus_svfg_test_suite test_name)
-    add_lotus_test_suite(${test_name}
-        SOURCES ${ARGN}
-        LINK_LIBS
-            CanaryICFG
-            SVFG
-            CanaryAliasAnalysisWrapper)
-endfunction()
-
-function(add_lotus_gsa_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            CanaryGSA)
-endfunction()
-
-function(add_lotus_gsa_test_suite test_name)
-    add_lotus_test_suite(${test_name}
-        SOURCES ${ARGN}
-        LINK_LIBS CanaryGSA)
-endfunction()
-
-function(add_lotus_gvfg_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            CanaryGuardedValueFlow
-            ${Z3_LIBRARIES})
-endfunction()
-
-function(add_lotus_gvfg_test_suite test_name)
-    add_lotus_test_suite(${test_name}
-        SOURCES ${ARGN}
-        LINK_LIBS
-            CanaryGuardedValueFlow
-            ${Z3_LIBRARIES})
-endfunction()
-
-function(add_lotus_pointer_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            CanaryAliasAnalysisWrapper
-            LotusAA)
-endfunction()
-
-function(add_lotus_alloc_aa_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            CanaryAllocAA)
-endfunction()
-
-function(add_lotus_aser_pta_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            AserPTA)
-endfunction()
-
-function(add_lotus_dda_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            DDA)
-endfunction()
-
-function(add_lotus_dyck_aa_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            CanaryDyckAA)
-endfunction()
-
-function(add_lotus_sparrow_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            Andersen)
-endfunction()
-
-function(add_lotus_tpa_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            TPATransforms
-            FSCSPointerAnalysis)
-endfunction()
-
-function(add_lotus_underapprox_aa_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            CanaryUnderApproxAA)
-endfunction()
-
-function(add_lotus_dfpa_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            AserPTA
-            CanaryDFPA)
-endfunction()
-
-function(add_lotus_solver_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            SymAbs
-            ${Z3_LIBRARIES})
-endfunction()
-
-function(add_lotus_egraph_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            LotusEGraph)
-endfunction()
-
-function(add_lotus_typehierarchy_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            CanaryTypeHierarchy)
-endfunction()
-
-function(add_lotus_utils_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            CanaryADT
-            CanaryLLVMUtils
-            CanaryFormats
-            CanaryParallel)
-endfunction()
-
-function(add_lotus_verification_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            SifaAnalysis
-            CanaryAliasAnalysisWrapper
-            ${Z3_LIBRARIES})
-endfunction()
-
-function(add_lotus_failure_directed_trimming_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            FailureDirectedTrimming
-            CanaryAliasAnalysisWrapper
-            ${Z3_LIBRARIES})
-endfunction()
-
-function(add_lotus_symabs_verification_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            SifaAnalysis
-            SymAbsAIAnalysis
-            CanaryAliasAnalysisWrapper
-            ${Z3_LIBRARIES})
-endfunction()
-
-function(add_lotus_driver_verification_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            VerificationDriver)
-endfunction()
-
-function(add_lotus_ifdside_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            IFDS
-            CanaryAliasAnalysisWrapper)
-endfunction()
-
-function(add_lotus_ifdside_test_suite test_name)
-    add_lotus_test_suite(${test_name}
-        SOURCES ${ARGN}
-        LINK_LIBS
-            IFDS
-            CanaryAliasAnalysisWrapper)
-endfunction()
-
-function(add_lotus_mono_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            MONODataFlow
-            CanaryAliasAnalysisWrapper)
-endfunction()
-
-function(add_lotus_npa_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            NPADataFlow
-            CanaryAliasAnalysisWrapper
-            CanaryParallel)
-endfunction()
-
-function(add_lotus_apa_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            APADataFlow)
-endfunction()
-
-function(add_lotus_wpds_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            WPDSDataFlow
-            wpds++)
-endfunction()
-
-function(add_lotus_vasco_test test_name source_file)
-    add_lotus_targeted_test(${test_name} ${source_file}
-        LINK_LIBS
-            VASCODataFlow)
-endfunction()
-
-function(add_lotus_pdg_test test_name source_file)
-    if(IS_ABSOLUTE ${source_file})
-        set(source ${source_file})
-    else()
-        set(source ${CMAKE_CURRENT_SOURCE_DIR}/${source_file})
-    endif()
-
-    add_executable(${test_name} ${source})
-    set_target_properties(${test_name} PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${LOTUS_TEST_BIN_DIR}
-        CXX_STANDARD 17
-        CXX_STANDARD_REQUIRED ON
-        CXX_EXTENSIONS OFF
-    )
-    target_include_directories(${test_name} PRIVATE
-        ${LOTUS_UNIT_TEST_COMMON_INCLUDES})
-    target_link_libraries(${test_name}
-        lotus_test_utils
-        LLVMTransformUtils)
-
-    add_test(NAME ${test_name} COMMAND ${LOTUS_TEST_BIN_DIR}/${test_name})
-    set_tests_properties(${test_name} PROPERTIES
-        TIMEOUT ${LOTUS_UNIT_TEST_TIMEOUT}
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    )
+        LINK_LIBS Concurrency CanaryParallel)
 endfunction()

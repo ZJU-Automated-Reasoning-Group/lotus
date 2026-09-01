@@ -1,2 +1,3 @@
-add_lotus_gsa_test_suite(ir_gsa_tests
-  GSATest.cpp)
+add_lotus_test_suite(ir_gsa_tests
+  SOURCES GSATest.cpp
+  LINK_LIBS CanaryGSA)

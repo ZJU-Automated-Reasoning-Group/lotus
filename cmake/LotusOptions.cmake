@@ -1,6 +1,10 @@
 # Core build surfaces
 option(LOTUS_BUILD_EXAMPLES "Build examples" OFF)
 option(LOTUS_BUILD_TESTS "Build tests" OFF)
+option(LOTUS_ENABLE_COVERAGE
+       "Instrument Lotus and its tests for LLVM source coverage" OFF)
+set(LOTUS_COVERAGE_MINIMUM 0 CACHE STRING
+    "Minimum total line coverage percentage required by coverage_report")
 
 # Optional analysis and verification integrations.
 option(LOTUS_ENABLE_CLAM "Enable CLAM abstract interpretation framework" OFF)
@@ -67,6 +71,7 @@ function(lotus_print_build_summary)
   message(STATUS "  Binary dir: ${CMAKE_BINARY_DIR}")
   message(STATUS "  LLVM package: ${LLVM_PACKAGE_VERSION}")
   _lotus_summary_bool("Build tests" LOTUS_BUILD_TESTS)
+  _lotus_summary_bool("Coverage instrumentation" LOTUS_ENABLE_COVERAGE)
   _lotus_summary_bool("Build examples" LOTUS_BUILD_EXAMPLES)
   message(STATUS "  Optional tool families:")
   _lotus_summary_bool("CFL tools" LOTUS_ENABLE_CFL)

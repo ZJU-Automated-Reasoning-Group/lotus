@@ -1,7 +1,7 @@
 # Analysis Loop Unit Tests
 
 add_lotus_test_suite(loop_analysis_tests
-  DISCOVER_TESTS
+  TEST_KIND INTEGRATION
   SOURCES
     LoopAnalysisFoundationTest.cpp
     LoopDependenceGraphTest.cpp

@@ -79,6 +79,7 @@ endforeach()
 add_custom_target(type_hierarchy_ll_fixtures DEPENDS ${TYPE_HIERARCHY_LL_OUTPUTS})
 
 add_lotus_test_suite(type_hierarchy_tests
+  TEST_KIND INTEGRATION
   SOURCES
     DIBasedTypeHierarchyTest.cpp
     DIBasedTypeHierarchyTransitiveReachabilityTest.cpp

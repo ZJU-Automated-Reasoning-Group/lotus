@@ -116,3 +116,13 @@ if(TARGET lotus-cfl-alias)
             PROPERTIES PASS_REGULAR_EXPRESSION "annotation=pass")
     endforeach()
 endif()
+
+get_property(cfl_registered_tests DIRECTORY PROPERTY TESTS)
+foreach(cfl_registered_test IN LISTS cfl_registered_tests)
+    if(cfl_registered_test MATCHES "^classical_cfl_(cli|alias)_")
+        set_tests_properties(${cfl_registered_test} PROPERTIES
+            LABELS "lotus;integration;cfl;cli"
+            TIMEOUT ${LOTUS_UNIT_TEST_TIMEOUT}
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+    endif()
+endforeach()

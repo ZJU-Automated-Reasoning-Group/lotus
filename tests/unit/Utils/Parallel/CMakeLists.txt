@@ -21,12 +21,14 @@ add_test(NAME thread_pool_harness_serial_test
   COMMAND ${LOTUS_TEST_BIN_DIR}/thread_pool_harness_test -nworkers=0)
 set_tests_properties(thread_pool_harness_serial_test PROPERTIES
   TIMEOUT ${LOTUS_UNIT_TEST_TIMEOUT}
+  LABELS "lotus;component;utils;parallel"
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_test(NAME thread_pool_harness_parallel_test
   COMMAND ${LOTUS_TEST_BIN_DIR}/thread_pool_harness_test -nworkers=2)
 set_tests_properties(thread_pool_harness_parallel_test PROPERTIES
   TIMEOUT ${LOTUS_UNIT_TEST_TIMEOUT}
+  LABELS "lotus;component;utils;parallel"
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_executable(parallel_tabulation_harness_test ParallelTabulationHarnessTest.cpp)
@@ -46,12 +48,14 @@ add_test(NAME parallel_tabulation_harness_serial_test
   COMMAND ${LOTUS_TEST_BIN_DIR}/parallel_tabulation_harness_test -nworkers=0)
 set_tests_properties(parallel_tabulation_harness_serial_test PROPERTIES
   TIMEOUT ${LOTUS_UNIT_TEST_TIMEOUT}
+  LABELS "lotus;component;utils;parallel"
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_test(NAME parallel_tabulation_harness_parallel_test
   COMMAND ${LOTUS_TEST_BIN_DIR}/parallel_tabulation_harness_test -nworkers=2)
 set_tests_properties(parallel_tabulation_harness_parallel_test PROPERTIES
   TIMEOUT ${LOTUS_UNIT_TEST_TIMEOUT}
+  LABELS "lotus;component;utils;parallel"
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_executable(pipeline_scheduler_harness_test PipelineSchedulerHarnessTest.cpp)
@@ -68,4 +72,5 @@ add_test(NAME pipeline_scheduler_harness_parallel_test
   COMMAND ${LOTUS_TEST_BIN_DIR}/pipeline_scheduler_harness_test -nworkers=2)
 set_tests_properties(pipeline_scheduler_harness_parallel_test PROPERTIES
   TIMEOUT ${LOTUS_UNIT_TEST_TIMEOUT}
+  LABELS "lotus;component;utils;parallel"
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})

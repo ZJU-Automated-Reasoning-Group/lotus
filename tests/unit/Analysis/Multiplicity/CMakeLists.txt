@@ -1,1 +1,2 @@
-# Tests are grouped by tests/unit/Analysis/CMakeLists.txt.
+lotus_collect_test_sources(analysis_misc_tests
+  MultiplicityClassifierTest.cpp)

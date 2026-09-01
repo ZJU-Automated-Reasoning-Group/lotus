@@ -552,8 +552,10 @@ TEST_F(ConcurrencyFacadeTest, CountsCanonicalMPIRelationsAndDeduplicatesSendrecv
 TEST_F(ConcurrencyFacadeTest, SummarizesCUDAUnifiedMemoryAndHazards) {
   const char *source = R"(
     @global_arr = addrspace(1) global [64 x i32] zeroinitializer
+    %stream_t = type opaque
 
-    declare void @__set_CUDAConfig(i32, i32)
+    declare i64 @cudaLaunchKernel(i8*, i64, i64, i64, i64, i64,
+                                  i8**, i64, %stream_t*)
     declare i32 @cudaMallocManaged(i8**, i64, i32)
     declare i32 @cudaMallocHost(i8**, i64)
     declare i32 @cudaMemPrefetchAsync(i8*, i64, i32, i8*)
@@ -579,13 +581,19 @@ TEST_F(ConcurrencyFacadeTest, SummarizesCUDAUnifiedMemoryAndHazards) {
     entry:
       %managed = alloca i8*
       %host = alloca i8*
+      %s1 = inttoptr i64 10 to %stream_t*
+      %s2 = inttoptr i64 20 to %stream_t*
       %m = call i32 @cudaMallocManaged(i8** %managed, i64 64, i32 1)
       %managed_ptr = load i8*, i8** %managed
       %p = call i32 @cudaMemPrefetchAsync(i8* %managed_ptr, i64 64, i32 2, i8* null)
       %h = call i32 @cudaMallocHost(i8** %host, i64 32)
-      call void @__set_CUDAConfig(i32 1, i32 32)
+      %l0 = call i64 @cudaLaunchKernel(
+          i8* bitcast (void ()* @kernel_producer to i8*), i64 1, i64 32,
+          i64 1, i64 1, i64 1, i8** null, i64 0, %stream_t* %s1)
       call void @kernel_producer()
-      call void @__set_CUDAConfig(i32 1, i32 32)
+      %l1 = call i64 @cudaLaunchKernel(
+          i8* bitcast (void ()* @kernel_consumer to i8*), i64 1, i64 32,
+          i64 1, i64 1, i64 1, i8** null, i64 0, %stream_t* %s2)
       call void @kernel_consumer()
       %sum = add i32 %m, %p
       %sum2 = add i32 %sum, %h

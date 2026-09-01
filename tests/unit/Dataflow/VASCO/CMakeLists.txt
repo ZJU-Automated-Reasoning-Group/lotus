@@ -23,10 +23,12 @@ add_test(NAME vasco_parallel_harness_serial_test
   COMMAND ${LOTUS_TEST_BIN_DIR}/vasco_parallel_harness_test -nworkers=0)
 set_tests_properties(vasco_parallel_harness_serial_test PROPERTIES
   TIMEOUT ${LOTUS_UNIT_TEST_TIMEOUT}
+  LABELS "lotus;component;dataflow;parallel"
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_test(NAME vasco_parallel_harness_parallel_test
   COMMAND ${LOTUS_TEST_BIN_DIR}/vasco_parallel_harness_test -nworkers=2)
 set_tests_properties(vasco_parallel_harness_parallel_test PROPERTIES
   TIMEOUT ${LOTUS_UNIT_TEST_TIMEOUT}
+  LABELS "lotus;component;dataflow;parallel"
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})

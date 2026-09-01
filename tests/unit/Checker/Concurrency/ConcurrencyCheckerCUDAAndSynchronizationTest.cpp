@@ -162,8 +162,10 @@ TEST_F(ConcurrencyCheckerTest, CUDACheckerSuppressesOrderedInterKernelHazard) {
 TEST_F(ConcurrencyCheckerTest, CUDACheckerReportsUnorderedInterKernelHazard) {
   const char *source = R"(
     @global_arr = addrspace(1) global [64 x i32] zeroinitializer
+    %stream_t = type opaque
 
-    declare void @__set_CUDAConfig(i32, i32)
+    declare i64 @cudaLaunchKernel(i8*, i64, i64, i64, i64, i64,
+                                  i8**, i64, %stream_t*)
     declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 
     define void @kernel_producer() {
@@ -184,9 +186,15 @@ TEST_F(ConcurrencyCheckerTest, CUDACheckerReportsUnorderedInterKernelHazard) {
 
     define void @main() {
     entry:
-      call void @__set_CUDAConfig(i32 1, i32 32)
+      %s1 = inttoptr i64 10 to %stream_t*
+      %s2 = inttoptr i64 20 to %stream_t*
+      %l0 = call i64 @cudaLaunchKernel(
+          i8* bitcast (void ()* @kernel_producer to i8*), i64 1, i64 32,
+          i64 1, i64 1, i64 1, i8** null, i64 0, %stream_t* %s1)
       call void @kernel_producer()
-      call void @__set_CUDAConfig(i32 1, i32 32)
+      %l1 = call i64 @cudaLaunchKernel(
+          i8* bitcast (void ()* @kernel_consumer to i8*), i64 1, i64 32,
+          i64 1, i64 1, i64 1, i8** null, i64 0, %stream_t* %s2)
       call void @kernel_consumer()
       ret void
     }

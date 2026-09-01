@@ -11,4 +11,5 @@ add_lotus_concurrency_test_suite(concurrency_happens_before_tests
 
 add_lotus_concurrency_test_suite(concurrency_atomic_tests
   AtomicTest.cpp
+  AtomicNonConstantTest.cpp
   AtomicFenceAndReleaseSequenceTest.cpp)

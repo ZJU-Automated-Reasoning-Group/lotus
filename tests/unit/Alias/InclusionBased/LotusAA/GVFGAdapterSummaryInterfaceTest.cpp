@@ -454,7 +454,7 @@ TEST(GVFGAdapter, UsesSummaryReturnProducerForUnprovenancedSummaryValue) {
       hasChildKind(match.producer, GuardedValueFlowNode::Kind::CallSiteReturnSummary));
   EXPECT_FALSE(hasChildKind(match.producer, GuardedValueFlowNode::Kind::Unknown));
 }
-TEST(GVFGAdapter, SafeLinkUsesEffectiveChildAndDropsInvalidTypes) {
+TEST(GVFGAdapter, SafeLinkUsesEffectiveChildAndPreservesInvalidTypes) {
   const char *IR = R"(
     define void @test() {
     entry:
@@ -513,7 +513,13 @@ TEST(GVFGAdapter, SafeLinkUsesEffectiveChildAndDropsInvalidTypes) {
       entry, nullptr, ret);
   auto *bridge = LotusGuardedValueFlowAdapterPass::safeLink(graph, aggregate_parent,
                                                             scalar_child);
-  EXPECT_EQ(bridge, nullptr);
-  EXPECT_TRUE(aggregate_parent->children().empty());
-  EXPECT_TRUE(scalar_child->parents().empty());
+  ASSERT_NE(bridge, nullptr);
+  EXPECT_EQ(bridge->getKind(), GuardedValueFlowNode::Kind::Unknown);
+  EXPECT_EQ(bridge->getDescription(), "adapter.coercion");
+  ASSERT_EQ(aggregate_parent->children().size(), 1u);
+  EXPECT_EQ(aggregate_parent->children().front().target, bridge);
+  EXPECT_TRUE(bridge->containsParent(aggregate_parent));
+  ASSERT_EQ(bridge->children().size(), 1u);
+  EXPECT_EQ(bridge->children().front().target, scalar_child);
+  EXPECT_TRUE(scalar_child->containsParent(bridge));
 }

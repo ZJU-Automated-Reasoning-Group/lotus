@@ -1,19 +1,13 @@
-# Checker Unit Tests
+add_subdirectory(AE)
+add_subdirectory(Concurrency)
+add_subdirectory(Core)
+add_subdirectory(KINT)
+add_subdirectory(Pulse)
+add_subdirectory(Saber)
 
-add_lotus_test_suite(checker_tests
-  SOURCES
-    Pulse/PulseCheckerTest.cpp
-    Pulse/PulseFormulaTest.cpp
-    Concurrency/ConcurrencyCheckerTest.cpp
-    Concurrency/ConcurrencyCheckerCUDAAndSynchronizationTest.cpp
-    Concurrency/ConcurrencyCheckerOpenMPAndMPITest.cpp
-    AE/AECheckerTest.cpp
-    AE/AECheckerInterproceduralAndBugDetectionTest.cpp
-    KINT/KINTCheckerTest.cpp
-    Saber/SaberConditionAllocatorTest.cpp
-    Saber/SaberConditionAllocatorReportingTest.cpp
-    ReportFormattingTest.cpp
-    Core/CheckerCoreTest.cpp
+lotus_collect_test_sources(checker_tests ReportFormattingTest.cpp)
+
+add_lotus_collected_test_suite(checker_tests
   LINK_LIBS
     AE
     CanaryAliasAnalysisWrapper
@@ -22,4 +16,9 @@ add_lotus_test_suite(checker_tests
     CanaryKint
     Saber
     CheckerCore
+    CanaryReport
+    CanaryDebugInfo
+    CanaryFormats
+    CanaryLLVMUtils
+    ${Z3_LIBRARIES}
   COMPILE_DEFINITIONS USE_Z3)

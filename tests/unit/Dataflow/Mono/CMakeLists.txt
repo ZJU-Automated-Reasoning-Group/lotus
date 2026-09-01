@@ -1,8 +1,11 @@
 # Monotone DataFlow Unit Tests
 
-# Mono Test
-add_lotus_mono_test(mono_test MonoTest.cpp)
-target_sources(mono_test PRIVATE
-  MonoDomainTest.cpp
-  MonoSolverContextSensitivityTest.cpp
-  MonoSolverContextEdgeCasesTest.cpp)
+add_lotus_test_suite(mono_test
+  SOURCES
+    MonoTest.cpp
+    MonoDomainTest.cpp
+    MonoSolverContextSensitivityTest.cpp
+    MonoSolverContextEdgeCasesTest.cpp
+  LINK_LIBS
+    MONODataFlow
+    CanaryAliasAnalysisWrapper)

@@ -12,7 +12,7 @@ protected:
   using LlvmModuleTest::parseModule;
 };
 
-TEST_F(AtomicNonConstantTest, DynamicAtomicSync) {
+TEST_F(AtomicNonConstantTest, DynamicReleaseValueStaysWitnessSensitive) {
   const char *source = R"(
     @a = global i32 0, align 4
     @b = global i32 0, align 4
@@ -65,18 +65,18 @@ TEST_F(AtomicNonConstantTest, DynamicAtomicSync) {
   const Function *thread_a = module->getFunction("thread_a");
   const Function *thread_b = module->getFunction("thread_b");
   
-  Instruction *store_a1 = nullptr;
-  for (auto &I : thread_a->getEntryBlock()) {
+  const Instruction *store_a1 = nullptr;
+  for (const auto &I : thread_a->getEntryBlock()) {
     if (isa<StoreInst>(I) && !CppAtomics::isAtomic(&I)) {
       store_a1 = &I;
       break;
     }
   }
 
-  Instruction *store_a2 = nullptr;
-  for (auto &BB : *thread_b) {
+  const Instruction *store_a2 = nullptr;
+  for (const auto &BB : *thread_b) {
     if (BB.getName() == "safe") {
-      for (auto &I : BB) {
+      for (const auto &I : BB) {
         if (isa<StoreInst>(I) && !CppAtomics::isAtomic(&I)) {
           store_a2 = &I;
           break;
@@ -88,5 +88,7 @@ TEST_F(AtomicNonConstantTest, DynamicAtomicSync) {
   ASSERT_NE(store_a1, nullptr);
   ASSERT_NE(store_a2, nullptr);
 
-  EXPECT_TRUE(hb.happensBefore(store_a1, store_a2));
+  // The release writes a non-constant value, so the reader's non-zero branch
+  // does not prove that its acquire observed this particular release.
+  EXPECT_FALSE(hb.happensBefore(store_a1, store_a2));
 }

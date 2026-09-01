@@ -11,7 +11,7 @@
 
 namespace lotus::analysis {
 class SVFG;
-}
+} // namespace lotus::analysis
 
 namespace lotus::cfl::classical {
 

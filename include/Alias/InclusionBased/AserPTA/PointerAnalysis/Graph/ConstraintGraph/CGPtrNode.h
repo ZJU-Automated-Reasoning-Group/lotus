@@ -4,11 +4,12 @@
 #ifndef ASER_PTA_CGPTRNODE_H
 #define ASER_PTA_CGPTRNODE_H
 
+#include "Alias/InclusionBased/AserPTA/PointerAnalysis/Context/CtxTrait.h"
 #include "Alias/InclusionBased/AserPTA/PointerAnalysis/Graph/ConstraintGraph/CGNodeBase.h"
+#include "Alias/InclusionBased/AserPTA/PointerAnalysis/Program/Pointer.h"
 
 namespace aser {
 
-template <typename ctx> class Pointer;
 template <typename ctx> class CallGraphNode;
 template <typename ctx> class ConstraintGraph;
 

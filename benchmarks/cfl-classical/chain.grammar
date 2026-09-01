@@ -1,0 +1,8 @@
+Start:
+  S
+Terminal:
+  a
+Variables:
+  S
+Productions:
+  S -> S S | a | epsilon;

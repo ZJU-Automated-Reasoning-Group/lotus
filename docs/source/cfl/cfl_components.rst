@@ -13,8 +13,9 @@ Grammar-driven CFL reachability utilities, solver backends, and SVF adapters.
 **Features**:
 * Grammar parsing and CNF/STBDU normalization helpers
 * Labeled graph construction for text, DOT, PAG, and PEG-style encodings
-* Classical and set-constraint solvers for reachability closure
-* Adapters for alias and value-flow problems built on SVF structures
+* Baseline, sparse-bitvector POCR, and transitive-specialized hybrid solvers
+* Incremental solver sessions for dynamically discovered terminal edges
+* Adapters for Lotus AserPTA constraint graphs and Lotus SVFG value flow
 
 Interleaved-Dyck Core
 ---------------------

@@ -1,9 +1,13 @@
 #include "CFL/Classical/Graph.h"
 
 #include <fstream>
+#include <iterator>
 #include <regex>
 #include <stdexcept>
 #include <string>
+
+#include <llvm/Support/Error.h>
+#include <llvm/Support/JSON.h>
 
 namespace lotus::cfl::classical {
 namespace {
@@ -26,16 +30,57 @@ bool startsWith(const std::string &value, const std::string &prefix) {
 
 LabeledGraph LabeledGraph::parseFromFile(const std::string &path,
                                          GraphMode mode) {
+  return parseFromFile(path, GraphLoadOptions{mode, EdgeDirection::Plain});
+}
+
+LabeledGraph LabeledGraph::parseFromFile(const std::string &path,
+                                         const GraphLoadOptions &options) {
   LabeledGraph graph;
   const auto dot_pos = path.find_last_of('.');
   const auto suffix =
       dot_pos == std::string::npos ? std::string() : path.substr(dot_pos + 1);
   if (suffix == "txt") {
     graph.loadFromTextFile(path);
+  } else if (suffix == "json") {
+    graph.loadFromJsonFile(path);
   } else {
-    graph.loadFromDotFile(path, mode);
+    graph.loadFromDotFile(path, options.mode);
   }
-  return graph;
+  return graph.transformed(options.direction);
+}
+
+std::string LabeledGraph::complementLabel(const std::string &label) {
+  const auto attribute = label.find('_');
+  std::string base = label.substr(0, attribute);
+  const std::string suffix =
+      attribute == std::string::npos ? "" : label.substr(attribute);
+  constexpr const char *bar = "bar";
+  if (base.size() >= 3 && base.compare(base.size() - 3, 3, bar) == 0) {
+    base.erase(base.size() - 3);
+  } else {
+    base += bar;
+  }
+  return base + suffix;
+}
+
+LabeledGraph LabeledGraph::transformed(EdgeDirection direction) const {
+  if (direction == EdgeDirection::Plain) {
+    return *this;
+  }
+
+  LabeledGraph result;
+  for (const std::string &vertex : vertices_) {
+    result.addVertex(vertex);
+  }
+  for (const LabeledEdge &edge : edges()) {
+    if (direction == EdgeDirection::Reverse) {
+      result.addEdge(edge.target, edge.source, complementLabel(edge.label));
+      continue;
+    }
+    result.addEdge(edge.source, edge.target, edge.label);
+    result.addEdge(edge.target, edge.source, complementLabel(edge.label));
+  }
+  return result;
 }
 
 std::size_t LabeledGraph::addVertex(const std::string &name) {
@@ -159,11 +204,18 @@ void LabeledGraph::loadFromDotFile(const std::string &path, GraphMode mode) {
 
   const std::regex edge_pattern(
       R"(([A-Za-z0-9_]+)\s*->\s*([A-Za-z0-9_]+)\s*\[.*color=([A-Za-z]+)[^\]]*\])");
+  const std::regex labeled_edge_pattern(
+      R"(([A-Za-z0-9_]+)\s*->\s*([A-Za-z0-9_]+)\s*\[[^\]]*)"
+      R"(label\s*=\s*\"?([A-Za-z0-9_]+)\"?[^\]]*\])");
   const std::regex node_pattern(R"(^\s*([A-Za-z0-9_]+)\s*(\[.*\])?;?\s*$)");
 
   std::string line;
   while (std::getline(input, line)) {
     std::smatch match;
+    if (std::regex_search(line, match, labeled_edge_pattern)) {
+      addEdge(match[1].str(), match[2].str(), match[3].str());
+      continue;
+    }
     if (std::regex_search(line, match, edge_pattern)) {
       const auto source = match[1].str();
       const auto target = match[2].str();
@@ -171,6 +223,11 @@ void LabeledGraph::loadFromDotFile(const std::string &path, GraphMode mode) {
 
       addVertex(source);
       addVertex(target);
+
+      if (mode == GraphMode::Plain) {
+        addEdge(source, target, color);
+        continue;
+      }
 
       if (mode == GraphMode::Matrix) {
         if (color == "red") {
@@ -206,6 +263,43 @@ void LabeledGraph::loadFromDotFile(const std::string &path, GraphMode mode) {
         addVertex(node);
       }
     }
+  }
+}
+
+void LabeledGraph::loadFromJsonFile(const std::string &path) {
+  std::ifstream input(path);
+  if (!input) {
+    throw std::runtime_error("Failed to open JSON graph file: " + path);
+  }
+  const std::string text((std::istreambuf_iterator<char>(input)),
+                         std::istreambuf_iterator<char>());
+  auto parsed = llvm::json::parse(text);
+  if (!parsed) {
+    throw std::invalid_argument("Invalid JSON graph: " +
+                                llvm::toString(parsed.takeError()));
+  }
+
+  const llvm::json::Array *edges = parsed->getAsArray();
+  if (const auto *root = parsed->getAsObject()) {
+    edges = root->getArray("edges");
+  }
+  if (!edges) {
+    throw std::invalid_argument(
+        "JSON graph must be an edge array or contain an edges array");
+  }
+  for (const llvm::json::Value &value : *edges) {
+    const auto *object = value.getAsObject();
+    if (!object) {
+      throw std::invalid_argument("JSON graph edge must be an object");
+    }
+    const auto source = object->getString("source");
+    const auto target = object->getString("target");
+    const auto label = object->getString("label");
+    if (!source || !target || !label) {
+      throw std::invalid_argument(
+          "JSON graph edge requires string source, target, and label fields");
+    }
+    addEdge(source->str(), target->str(), label->str());
   }
 }
 

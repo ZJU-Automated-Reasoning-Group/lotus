@@ -6,6 +6,7 @@
 
 // represent pointers in programs
 #include <llvm/ADT/Hashing.h>
+#include <llvm/IR/Value.h>
 
 namespace aser {
 

@@ -72,6 +72,7 @@ semantics.
 
 | Tool | Module | Purpose |
 |---|---|---|
+| `lotus-cfl-classical` | Classical | Run a supplied grammar and text/DOT/JSON graph with the baseline, POCR, or hybrid backend |
 | `lotus-cfl-mcfl` | MCFL | Run the dimension-indexed `G_d` underapproximation hierarchy |
 | `lotus-cfl-interleaved-dyck-approximation` | InterleavedDyckApproximation | Report staged typed lower/upper bounds |
 | `lotus-cfl-unary-interleaved-dyck` | UnaryInterleavedDyck | Select `adaptive` or `fixed-counter` exact unary analysis |

@@ -1,0 +1,9 @@
+n0,n1,a
+n1,n2,a
+n2,n3,a
+n3,n4,a
+n4,n5,a
+n5,n6,a
+n6,n7,a
+n7,n8,a
+n8,n9,a

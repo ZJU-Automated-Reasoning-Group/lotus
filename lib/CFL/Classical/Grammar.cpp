@@ -6,6 +6,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 #include <utility>
 
 namespace lotus::cfl::classical {
@@ -39,6 +40,94 @@ std::vector<std::string> tokenize(const std::string &text) {
     tokens.push_back(token);
   }
   return tokens;
+}
+
+bool isEpsilon(const std::string &token) {
+  return token == "epsilon" || token == "e" || token == Grammar::kEpsilonSymbol;
+}
+
+std::optional<char> attributeVariable(const std::string &token) {
+  if (token.size() < 3 || token[token.size() - 2] != '_' ||
+      !std::islower(static_cast<unsigned char>(token.back()))) {
+    return std::nullopt;
+  }
+  return token.back();
+}
+
+std::vector<std::vector<std::string>>
+expandAttributes(const std::vector<std::string> &rule,
+                 const GrammarParseOptions &options) {
+  if (options.attributes.empty()) {
+    return {rule};
+  }
+
+  std::vector<char> variables;
+  for (const std::string &token : rule) {
+    const auto variable = attributeVariable(token);
+    if (variable && std::find(variables.begin(), variables.end(), *variable) ==
+                        variables.end()) {
+      variables.push_back(*variable);
+    }
+  }
+  if (variables.empty()) {
+    return {rule};
+  }
+
+  std::vector<std::vector<std::string>> expanded{rule};
+  for (char variable : variables) {
+    std::vector<std::vector<std::string>> next;
+    for (const auto &candidate : expanded) {
+      for (std::uint32_t attribute : options.attributes) {
+        auto instantiated = candidate;
+        for (std::string &token : instantiated) {
+          if (attributeVariable(token) == variable) {
+            token.replace(token.size() - 1, 1, std::to_string(attribute));
+          }
+        }
+        next.push_back(std::move(instantiated));
+      }
+    }
+    expanded = std::move(next);
+  }
+  return expanded;
+}
+
+void parseDeclarationSections(const std::string &text, std::string &start,
+                              std::unordered_set<std::string> &terminals,
+                              std::unordered_set<std::string> &variables) {
+  enum class Section { None, Start, Terminals, Variables };
+  Section section = Section::None;
+  std::stringstream stream(text.substr(0, text.find("Productions:")));
+  std::string line;
+  while (std::getline(stream, line)) {
+    line = trim(line);
+    if (line.empty()) {
+      continue;
+    }
+    if (line == "Start:") {
+      section = Section::Start;
+      continue;
+    }
+    if (line == "Terminal:" || line == "Terminals:") {
+      section = Section::Terminals;
+      continue;
+    }
+    if (line == "Variable:" || line == "Variables:" ||
+        line == "Nonterminals:") {
+      section = Section::Variables;
+      continue;
+    }
+
+    for (const std::string &token : tokenize(line)) {
+      if (section == Section::Start && start.empty()) {
+        start = token;
+      } else if (section == Section::Terminals) {
+        terminals.insert(token);
+      } else if (section == Section::Variables) {
+        variables.insert(token);
+      }
+    }
+  }
 }
 
 std::size_t findMatchingLeftParen(const std::vector<std::string> &rule,
@@ -76,6 +165,11 @@ std::string serializeRule(const std::vector<std::string> &rule) {
 } // namespace
 
 Grammar Grammar::parseFromFile(const std::string &path) {
+  return parseFromFile(path, {});
+}
+
+Grammar Grammar::parseFromFile(const std::string &path,
+                               const GrammarParseOptions &options) {
   std::ifstream input(path);
   if (!input) {
     throw std::runtime_error("Failed to open grammar file: " + path);
@@ -85,28 +179,37 @@ Grammar Grammar::parseFromFile(const std::string &path) {
   buffer << input.rdbuf();
 
   Grammar grammar;
-  grammar.loadFromText(buffer.str());
+  grammar.loadFromText(buffer.str(), options);
   grammar.buildIndices();
   return grammar;
 }
 
 Grammar Grammar::parseFromText(const std::string &text) {
+  return parseFromText(text, {});
+}
+
+Grammar Grammar::parseFromText(const std::string &text,
+                               const GrammarParseOptions &options) {
   Grammar grammar;
-  grammar.loadFromText(text);
+  grammar.loadFromText(text, options);
   grammar.buildIndices();
   return grammar;
 }
 
-void Grammar::loadFromText(const std::string &text) {
+void Grammar::loadFromText(const std::string &text,
+                           const GrammarParseOptions &options) {
   const auto productions_pos = text.find("Productions:");
   if (productions_pos == std::string::npos) {
     throw std::invalid_argument(
         "Grammar file is missing a Productions section");
   }
 
+  parseDeclarationSections(text, start_symbol_, terminals_, nonterminals_);
+
   const auto production_blob =
       text.substr(productions_pos + std::string("Productions:").size());
   const auto raw_rules = split(production_blob, ';');
+  std::string first_head;
   for (const auto &raw_rule : raw_rules) {
     const auto rule_text = trim(raw_rule);
     if (rule_text.empty()) {
@@ -119,14 +222,37 @@ void Grammar::loadFromText(const std::string &text) {
     }
 
     const auto head = trim(rule_text.substr(0, arrow_pos));
+    if (head.empty()) {
+      throw std::invalid_argument("Production has an empty head");
+    }
     const auto alternatives = split(rule_text.substr(arrow_pos + 2), '|');
     for (const auto &alternative : alternatives) {
-      productions_[head].push_back(tokenize(alternative));
+      auto rule = tokenize(alternative);
+      for (std::string &token : rule) {
+        if (isEpsilon(token)) {
+          token = kEpsilonSymbol;
+        }
+      }
+      std::vector<std::string> production{head};
+      production.insert(production.end(), rule.begin(), rule.end());
+      for (auto &expanded : expandAttributes(production, options)) {
+        const std::string expanded_head = expanded.front();
+        if (first_head.empty()) {
+          first_head = expanded_head;
+        }
+        nonterminals_.insert(expanded_head);
+        productions_[expanded_head].emplace_back(expanded.begin() + 1,
+                                                 expanded.end());
+      }
     }
+  }
+  if (start_symbol_.empty()) {
+    start_symbol_ = first_head;
   }
 
   std::unordered_map<std::string, std::string> replacement_cache;
   for (const auto &sign : {std::string("*"), std::string("?")}) {
+    ProductionMap pending_productions;
     for (auto &[head, rules] : productions_) {
       (void)head;
       for (auto &rule : rules) {
@@ -160,7 +286,7 @@ void Grammar::loadFromText(const std::string &text) {
             }
             expanded.insert(expanded.end(), repeated.begin(),
                             repeated.end() - 1);
-            productions_[nonterminal] = {{kEpsilonSymbol}, expanded};
+            pending_productions[nonterminal] = {{kEpsilonSymbol}, expanded};
           } else {
             nonterminal = it->second;
           }
@@ -171,6 +297,9 @@ void Grammar::loadFromText(const std::string &text) {
           i = start;
         }
       }
+    }
+    for (auto &[head, rules] : pending_productions) {
+      productions_[head] = std::move(rules);
     }
   }
 
@@ -206,6 +335,17 @@ void Grammar::loadFromText(const std::string &text) {
 
   productions_ = std::move(binary_productions);
 
+  for (const auto &[head, rules] : productions_) {
+    nonterminals_.insert(head);
+    for (const auto &rule : rules) {
+      for (const std::string &symbol : rule) {
+        if (symbol != kEpsilonSymbol && nonterminals_.count(symbol) == 0) {
+          terminals_.insert(symbol);
+        }
+      }
+    }
+  }
+
   nullable_symbols_.clear();
   for (const auto &[head, rules] : productions_) {
     for (const auto &rule : rules) {
@@ -236,6 +376,111 @@ void Grammar::buildIndices() {
       }
     }
   }
+
+  buildSymbolTable();
+}
+
+void Grammar::buildSymbolTable() {
+  symbol_names_.clear();
+  symbol_ids_.clear();
+  nullable_symbol_ids_.clear();
+  unary_by_rhs_id_.clear();
+  binary_by_first_id_.clear();
+  binary_by_second_id_.clear();
+  transitive_symbols_.clear();
+
+  auto intern = [&](const std::string &name) {
+    if (symbol_ids_.count(name) != 0) {
+      return;
+    }
+    const auto id = static_cast<SymbolId>(symbol_names_.size());
+    symbol_ids_.emplace(name, id);
+    symbol_names_.push_back(name);
+  };
+  for (const std::string &symbol : nonterminals_) {
+    intern(symbol);
+  }
+  for (const std::string &symbol : terminals_) {
+    intern(symbol);
+  }
+  if (!start_symbol_.empty()) {
+    intern(start_symbol_);
+    start_symbol_id_ = symbol_ids_.at(start_symbol_);
+  }
+
+  for (const std::string &symbol : nullable_symbols_) {
+    nullable_symbol_ids_.push_back(symbol_ids_.at(symbol));
+  }
+  for (const auto &[rhs, heads] : unary_by_rhs_) {
+    auto &compiled = unary_by_rhs_id_[symbol_ids_.at(rhs)];
+    for (const std::string &head : heads) {
+      compiled.push_back(symbol_ids_.at(head));
+    }
+  }
+  for (const auto &[first, rules] : binary_by_first_) {
+    auto &compiled = binary_by_first_id_[symbol_ids_.at(first)];
+    for (const BinaryRule &rule : rules) {
+      BinaryRuleId value{symbol_ids_.at(rule.lhs), symbol_ids_.at(rule.first),
+                         symbol_ids_.at(rule.second)};
+      compiled.push_back(value);
+      if (value.lhs == value.first && value.lhs == value.second) {
+        transitive_symbols_.insert(value.lhs);
+      }
+    }
+  }
+  for (const auto &[second, rules] : binary_by_second_) {
+    auto &compiled = binary_by_second_id_[symbol_ids_.at(second)];
+    for (const BinaryRule &rule : rules) {
+      compiled.push_back({symbol_ids_.at(rule.lhs), symbol_ids_.at(rule.first),
+                          symbol_ids_.at(rule.second)});
+    }
+  }
+}
+
+bool Grammar::isTerminal(const std::string &symbol) const {
+  return terminals_.count(symbol) != 0;
+}
+
+bool Grammar::isNonterminal(const std::string &symbol) const {
+  return nonterminals_.count(symbol) != 0;
+}
+
+bool Grammar::hasSymbol(const std::string &symbol) const {
+  return symbol_ids_.count(symbol) != 0;
+}
+
+SymbolId Grammar::symbolId(const std::string &symbol) const {
+  const auto it = symbol_ids_.find(symbol);
+  if (it == symbol_ids_.end()) {
+    throw std::out_of_range("Unknown grammar symbol: " + symbol);
+  }
+  return it->second;
+}
+
+const std::string &Grammar::symbolName(SymbolId symbol) const {
+  return symbol_names_.at(symbol);
+}
+
+std::vector<GrammarIssue> Grammar::validate() const {
+  std::vector<GrammarIssue> issues;
+  if (start_symbol_.empty()) {
+    issues.push_back(
+        {GrammarIssueSeverity::Error, "Grammar has no start symbol"});
+  } else if (!isNonterminal(start_symbol_)) {
+    issues.push_back({GrammarIssueSeverity::Error,
+                      "Start symbol is not a nonterminal: " + start_symbol_});
+  }
+  if (productions_.empty()) {
+    issues.push_back(
+        {GrammarIssueSeverity::Error, "Grammar has no productions"});
+  }
+  for (const std::string &terminal : terminals_) {
+    if (attributeVariable(terminal)) {
+      issues.push_back({GrammarIssueSeverity::Error,
+                        "Uninstantiated attributed symbol: " + terminal});
+    }
+  }
+  return issues;
 }
 
 } // namespace lotus::cfl::classical

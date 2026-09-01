@@ -1,0 +1,49 @@
+#pragma once
+
+#include "CFL/Classical/Solver.h"
+
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <unordered_map>
+#include <vector>
+
+namespace lotus::analysis {
+class SVFG;
+}
+
+namespace lotus::cfl::classical {
+
+LabeledGraph encodeSVFG(const lotus::analysis::SVFG &svfg);
+Grammar buildVfgGrammar(const lotus::analysis::SVFG &svfg);
+
+class ValueFlowClient {
+public:
+  ValueFlowClient(ValueFlowClient &&other) noexcept;
+  ValueFlowClient &operator=(ValueFlowClient &&other) noexcept;
+  ValueFlowClient(const ValueFlowClient &) = delete;
+  ValueFlowClient &operator=(const ValueFlowClient &) = delete;
+
+  static ValueFlowClient fromSVFG(const lotus::analysis::SVFG &svfg);
+
+  ReachabilityStats solve(SolverBackend backend = SolverBackend::Baseline);
+  bool hasFlow(std::uint32_t source_node, std::uint32_t target_node) const;
+  std::vector<std::uint32_t> reachableFrom(std::uint32_t source_node) const;
+
+  const LabeledGraph &graph() const { return graph_; }
+  const Grammar &grammar() const { return grammar_; }
+
+private:
+  ValueFlowClient(LabeledGraph graph, Grammar grammar,
+                  std::unordered_map<std::uint32_t, std::size_t> node_to_vertex)
+      : graph_(std::move(graph)), grammar_(std::move(grammar)),
+        node_to_vertex_(std::move(node_to_vertex)) {}
+
+  LabeledGraph graph_;
+  Grammar grammar_;
+  std::unordered_map<std::uint32_t, std::size_t> node_to_vertex_;
+  std::unique_ptr<SolverSession> session_;
+  std::optional<SolverBackend> backend_;
+};
+
+} // namespace lotus::cfl::classical

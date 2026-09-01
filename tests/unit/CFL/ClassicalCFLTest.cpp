@@ -1,8 +1,8 @@
-#include "CFL/Classical/CFLSolver.h"
 #include "CFL/Classical/CNF.h"
 #include "CFL/Classical/Grammar.h"
 #include "CFL/Classical/Graph.h"
 #include "CFL/Classical/SCSolver.h"
+#include "CFL/Classical/Solver.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -68,7 +68,7 @@ TEST(ClassicalGraphTest, ParsesDotGraphWithMatrixAndPagModes) {
                                 pag_graph.vertexId("NodeB"), "dbar"));
 }
 
-TEST(ClassicalCFLSolverTest, DerivesReachableLabels) {
+TEST(ClassicalSolverTest, DerivesReachableLabels) {
   auto graph = LabeledGraph{};
   graph.addEdge("n0", "n1", "a");
   graph.addEdge("n1", "n2", "b");
@@ -86,10 +86,12 @@ TEST(ClassicalCFLSolverTest, DerivesReachableLabels) {
                                                            "  S -> A B;\n");
 
   const auto grammar = Grammar::parseFromFile(grammar_path.string());
-  const CFLSolver solver;
-  const auto stats = solver.solve(graph, grammar);
+  SolverSession session(graph, grammar);
+  const auto stats = session.solve();
 
-  EXPECT_TRUE(graph.hasEdge(graph.vertexId("n0"), graph.vertexId("n2"), "S"));
+  EXPECT_TRUE(
+      session.contains(graph.vertexId("n0"), graph.vertexId("n2"), "S"));
+  EXPECT_FALSE(graph.hasEdge(graph.vertexId("n0"), graph.vertexId("n2"), "S"));
   EXPECT_GT(stats.classical_iterations, 0U);
 }
 

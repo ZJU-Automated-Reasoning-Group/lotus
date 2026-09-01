@@ -1,18 +1,11 @@
-#include "CFL/Classical/SVFPort.h"
+#include "CFL/Classical/Alias.h"
 
-#include "IR/SVFG/SVFGBase.h"
-#include "IR/SVFG/SVFGEdge.h"
-#include "IR/SVFG/SVFGNode.h"
-
-#include <algorithm>
 #include <set>
 #include <sstream>
 #include <stdexcept>
 
 namespace lotus::cfl::classical {
 namespace {
-
-std::string nodeName(std::size_t id) { return std::to_string(id); }
 
 std::string aliasForwardLabel(const AliasConstraintEdge &edge) {
   switch (edge.kind) {
@@ -159,6 +152,13 @@ std::string buildPagGrammarText(const AliasConstraintGraph &graph) {
   std::ostringstream grammar;
   grammar << "Start:\n"
           << "  V\n"
+          << "Terminal:\n"
+          << "  addr addrbar copy copybar store storebar load loadbar vgep "
+             "vgepbar";
+  for (std::uint32_t attr : attrs) {
+    grammar << " gep_" << attr << " gepbar_" << attr;
+  }
+  grammar << "\n"
           << "Productions:\n"
           << "  F -> <epsilon> | F copy | addr Memflow | F store V load | "
              "store Memflow load | F F;\n"
@@ -220,6 +220,13 @@ std::string buildPegGrammarText(const AliasConstraintGraph &graph) {
   std::ostringstream grammar;
   grammar << "Start:\n"
           << "  V\n"
+          << "Terminal:\n"
+          << "  addr addrbar copy copybar store storebar load loadbar vgep "
+             "vgepbar";
+  for (std::uint32_t attr : attrs) {
+    grammar << " gep_" << attr << " gepbar_" << attr;
+  }
+  grammar << "\n"
           << "Productions:\n"
           << "  F -> ( copy M ? ) *;\n"
           << "  Fbar -> ( M ? copybar ) *;\n"
@@ -241,47 +248,6 @@ std::vector<std::size_t> findAddrSources(const AliasConstraintGraph &graph,
   return sources;
 }
 
-std::string encodeCallLabel(const std::string &base, std::uint32_t id) {
-  std::string label = base;
-  label += '_';
-  label += std::to_string(id);
-  return label;
-}
-
-std::uint32_t
-assignCallSiteId(const lotus::analysis::SVFG &svfg,
-                 const lotus::analysis::SVFGEdge *edge,
-                 std::unordered_map<std::string, std::uint32_t> &fallback_ids,
-                 std::uint32_t &next_fallback_id) {
-  const llvm::CallBase *call_site = edge ? edge->getCallSite() : nullptr;
-  if (!call_site) {
-    return 0;
-  }
-
-  const llvm::Function *callee = nullptr;
-  if (edge->isCallEdge()) {
-    callee = edge->getDstNode() ? edge->getDstNode()->getFunction() : nullptr;
-  } else if (edge->isRetEdge()) {
-    callee = edge->getSrcNode() ? edge->getSrcNode()->getFunction() : nullptr;
-  }
-
-  if (callee) {
-    if (const std::uint32_t id = svfg.getCallSiteId(call_site, callee);
-        id != 0) {
-      return id;
-    }
-  }
-
-  std::string key = std::to_string(reinterpret_cast<std::uintptr_t>(call_site));
-  key.push_back(':');
-  key.append(callee ? callee->getName().str() : "unknown");
-  auto [it, inserted] = fallback_ids.emplace(key, next_fallback_id);
-  if (inserted) {
-    ++next_fallback_id;
-  }
-  return it->second;
-}
-
 } // namespace
 
 std::size_t AliasConstraintGraph::addNode(const std::string &name) {
@@ -295,7 +261,7 @@ void AliasConstraintGraph::addEdge(std::size_t source, std::size_t target,
   edges_.push_back({source, target, kind, attribute});
 }
 
-LabeledGraph encodeBigraph(const AliasConstraintGraph &graph) {
+LabeledGraph encodePagGraph(const AliasConstraintGraph &graph) {
   LabeledGraph encoded;
   for (const std::string &name : graph.nodeNames()) {
     encoded.addVertex(name);
@@ -309,7 +275,7 @@ LabeledGraph encodeBigraph(const AliasConstraintGraph &graph) {
   return encoded;
 }
 
-LabeledGraph encodeBiPEGGraph(const AliasConstraintGraph &graph) {
+LabeledGraph encodePegGraph(const AliasConstraintGraph &graph) {
   LabeledGraph encoded;
   for (const std::string &name : graph.nodeNames()) {
     encoded.addVertex(name);
@@ -380,24 +346,125 @@ Grammar buildPegGrammar(const AliasConstraintGraph &graph) {
 AliasClient AliasClient::fromConstraintGraph(const AliasConstraintGraph &graph,
                                              AliasEncodingMode mode) {
   if (mode == AliasEncodingMode::PEG) {
-    return AliasClient(encodeBiPEGGraph(graph), buildPegGrammar(graph));
+    return AliasClient(encodePegGraph(graph), buildPegGrammar(graph), mode);
   }
-  return AliasClient(encodeBigraph(graph), buildPagGrammar(graph));
+  return AliasClient(encodePagGraph(graph), buildPagGrammar(graph), mode);
 }
 
-ReachabilityStats AliasClient::solve() {
-  const CFLSolver solver;
-  return solver.solve(graph_, grammar_);
+AliasClient::AliasClient(AliasClient &&other) noexcept
+    : graph_(std::move(other.graph_)), grammar_(std::move(other.grammar_)),
+      mode_(other.mode_) {}
+
+AliasClient &AliasClient::operator=(AliasClient &&other) noexcept {
+  if (this == &other) {
+    return *this;
+  }
+  session_.reset();
+  backend_.reset();
+  graph_ = std::move(other.graph_);
+  grammar_ = std::move(other.grammar_);
+  mode_ = other.mode_;
+  return *this;
+}
+
+ReachabilityStats AliasClient::solve(SolverBackend backend) {
+  if (backend_ && *backend_ != backend) {
+    throw std::invalid_argument(
+        "Cannot change solver backend after an alias session has started");
+  }
+  if (!session_) {
+    session_ = std::make_unique<SolverSession>(graph_, grammar_, backend);
+    backend_ = backend;
+  }
+  return session_->solve();
+}
+
+ReachabilityStats AliasClient::solveToFixedPoint(
+    SolverBackend backend,
+    const std::function<bool(AliasClient &)> &discover_constraints,
+    std::size_t max_rounds) {
+  ReachabilityStats aggregate;
+  aggregate.solver_rounds = 0;
+  for (std::size_t round = 0; round < max_rounds; ++round) {
+    const ReachabilityStats current = solve(backend);
+    aggregate.classical_iterations += current.classical_iterations;
+    aggregate.added_edges += current.added_edges;
+    aggregate.input_edges = current.input_edges;
+    aggregate.relation_edges = current.relation_edges;
+    aggregate.solve_time_microseconds += current.solve_time_microseconds;
+    ++aggregate.solver_rounds;
+    if (!discover_constraints(*this)) {
+      return aggregate;
+    }
+  }
+  throw std::runtime_error(
+      "Alias constraint discovery did not stabilize within max_rounds");
+}
+
+std::size_t AliasClient::addNode(const std::string &name) {
+  if (session_) {
+    return session_->addNode(name);
+  }
+  return graph_.addVertex(name);
+}
+
+bool AliasClient::addConstraint(std::size_t source, std::size_t target,
+                                AliasConstraintEdgeKind kind,
+                                std::optional<std::uint32_t> attribute) {
+  if (source >= graph_.vertexCount() || target >= graph_.vertexCount()) {
+    throw std::out_of_range("Alias constraint endpoint is out of range");
+  }
+  if (mode_ == AliasEncodingMode::PEG &&
+      (kind == AliasConstraintEdgeKind::Load ||
+       kind == AliasConstraintEdgeKind::Store)) {
+    throw std::invalid_argument(
+        "Incremental PEG loads/stores require dereference-node rebuilding");
+  }
+  if (mode_ == AliasEncodingMode::PEG &&
+      kind == AliasConstraintEdgeKind::VariantGep) {
+    kind = AliasConstraintEdgeKind::Copy;
+  }
+  const AliasConstraintEdge edge{source, target, kind, attribute};
+  const std::string forward = aliasForwardLabel(edge);
+  const std::string reverse = aliasReverseLabel(edge);
+  if (!grammar_.isTerminal(forward) || !grammar_.isTerminal(reverse)) {
+    throw std::invalid_argument(
+        "Constraint attribute was not present when the grammar was built");
+  }
+
+  if (!session_) {
+    const bool first = graph_.addEdge(source, target, forward);
+    const bool second = graph_.addEdge(target, source, reverse);
+    return first || second;
+  }
+  const bool first = session_->addTerminalEdge(source, target, forward);
+  const bool second = session_->addTerminalEdge(target, source, reverse);
+  return first || second;
 }
 
 bool AliasClient::mayAlias(std::size_t lhs, std::size_t rhs) const {
-  return lhs < graph_.vertexCount() && rhs < graph_.vertexCount() &&
-         graph_.hasEdge(lhs, rhs, "V");
+  if (lhs >= graph_.vertexCount() || rhs >= graph_.vertexCount()) {
+    return false;
+  }
+  return session_ ? session_->contains(lhs, rhs, "V")
+                  : graph_.hasEdge(lhs, rhs, "V");
 }
 
 std::vector<std::size_t> AliasClient::pointsTo(std::size_t ptr) const {
   std::set<std::size_t> result;
-  for (const auto &[source, target] : graph_.edgesForLabel("V")) {
+  std::vector<std::pair<std::size_t, std::size_t>> value_pairs;
+  if (session_) {
+    const SymbolId value_symbol = grammar_.symbolId("V");
+    for (const RelationEdge &edge : session_->relation().edges()) {
+      if (edge.symbol == value_symbol) {
+        value_pairs.push_back({edge.source, edge.target});
+      }
+    }
+  } else {
+    value_pairs = graph_.edgesForLabelCopy("V");
+  }
+
+  for (const auto &[source, target] : value_pairs) {
     if (source != ptr) {
       continue;
     }
@@ -424,139 +491,6 @@ std::vector<std::size_t> AliasClient::pointsTo(std::size_t ptr) const {
   }
 
   return {result.begin(), result.end()};
-}
-
-LabeledGraph encodeSVFG(const lotus::analysis::SVFG &svfg) {
-  LabeledGraph encoded;
-  for (const auto &[node_id, _] : svfg) {
-    encoded.addVertex(nodeName(node_id));
-  }
-
-  std::unordered_map<std::string, std::uint32_t> fallback_ids;
-  std::uint32_t next_fallback_id = 1;
-
-  for (const auto &[_, node] : svfg) {
-    for (lotus::analysis::SVFGEdge *edge : node->getOutEdges()) {
-      if (!edge) {
-        continue;
-      }
-
-      const std::size_t source =
-          encoded.vertexId(nodeName(edge->getSrcNode()->getId()));
-      const std::size_t target =
-          encoded.vertexId(nodeName(edge->getDstNode()->getId()));
-
-      if (edge->isCallEdge()) {
-        const std::uint32_t id =
-            assignCallSiteId(svfg, edge, fallback_ids, next_fallback_id);
-        addBidirectionalEdge(encoded, source, target,
-                             encodeCallLabel("call", id),
-                             encodeCallLabel("callbar", id));
-        continue;
-      }
-
-      if (edge->isRetEdge()) {
-        const std::uint32_t id =
-            assignCallSiteId(svfg, edge, fallback_ids, next_fallback_id);
-        addBidirectionalEdge(encoded, source, target,
-                             encodeCallLabel("ret", id),
-                             encodeCallLabel("retbar", id));
-        continue;
-      }
-
-      if (lotus::analysis::isDirectVFGEdge(edge->getEdgeKind()) ||
-          lotus::analysis::isIndirectVFGEdge(edge->getEdgeKind()) ||
-          lotus::analysis::isThreadMHPVFGEdge(edge->getEdgeKind())) {
-        addBidirectionalEdge(encoded, source, target, "a", "abar");
-      }
-    }
-  }
-
-  return encoded;
-}
-
-Grammar buildVfgGrammar(const lotus::analysis::SVFG &svfg) {
-  std::set<std::uint32_t> callsite_ids;
-  std::unordered_map<std::string, std::uint32_t> fallback_ids;
-  std::uint32_t next_fallback_id = 1;
-
-  for (const auto &[_, node] : svfg) {
-    for (lotus::analysis::SVFGEdge *edge : node->getOutEdges()) {
-      if (!edge || (!edge->isCallEdge() && !edge->isRetEdge())) {
-        continue;
-      }
-      callsite_ids.insert(
-          assignCallSiteId(svfg, edge, fallback_ids, next_fallback_id));
-    }
-  }
-
-  std::vector<std::string> a_alternatives = {"A A", "a", "<epsilon>"};
-  std::vector<std::string> abar_alternatives = {"Abar Abar", "abar",
-                                                "<epsilon>"};
-
-  for (std::uint32_t id : callsite_ids) {
-    std::string a_alternative = encodeCallLabel("call", id);
-    a_alternative += " A ";
-    a_alternative += encodeCallLabel("ret", id);
-    a_alternatives.push_back(std::move(a_alternative));
-
-    std::string abar_alternative = encodeCallLabel("retbar", id);
-    abar_alternative += " Abar ";
-    abar_alternative += encodeCallLabel("callbar", id);
-    abar_alternatives.push_back(std::move(abar_alternative));
-  }
-
-  std::ostringstream grammar;
-  grammar << "Start:\n"
-          << "  A\n"
-          << "Productions:\n"
-          << "  A -> " << joinAlternatives(a_alternatives) << ";\n"
-          << "  Abar -> " << joinAlternatives(abar_alternatives) << ";\n";
-  return Grammar::parseFromText(grammar.str());
-}
-
-ValueFlowClient ValueFlowClient::fromSVFG(const lotus::analysis::SVFG &svfg) {
-  LabeledGraph graph = encodeSVFG(svfg);
-  Grammar grammar = buildVfgGrammar(svfg);
-  std::unordered_map<std::uint32_t, std::size_t> node_to_vertex;
-  for (const auto &[node_id, _] : svfg) {
-    node_to_vertex.emplace(node_id, graph.vertexId(nodeName(node_id)));
-  }
-  return ValueFlowClient(std::move(graph), std::move(grammar),
-                         std::move(node_to_vertex));
-}
-
-ReachabilityStats ValueFlowClient::solve() {
-  const CFLSolver solver;
-  return solver.solve(graph_, grammar_);
-}
-
-bool ValueFlowClient::hasFlow(std::uint32_t source_node,
-                              std::uint32_t target_node) const {
-  const auto source_it = node_to_vertex_.find(source_node);
-  const auto target_it = node_to_vertex_.find(target_node);
-  if (source_it == node_to_vertex_.end() ||
-      target_it == node_to_vertex_.end()) {
-    return false;
-  }
-  return graph_.hasEdge(source_it->second, target_it->second, "A");
-}
-
-std::vector<std::uint32_t>
-ValueFlowClient::reachableFrom(std::uint32_t source_node) const {
-  const auto source_it = node_to_vertex_.find(source_node);
-  if (source_it == node_to_vertex_.end()) {
-    return {};
-  }
-
-  std::vector<std::uint32_t> reachable;
-  for (const auto &[node_id, vertex_id] : node_to_vertex_) {
-    if (graph_.hasEdge(source_it->second, vertex_id, "A")) {
-      reachable.push_back(node_id);
-    }
-  }
-  std::sort(reachable.begin(), reachable.end());
-  return reachable;
 }
 
 } // namespace lotus::cfl::classical

@@ -1,4 +1,7 @@
-#include "CFL/Classical/SVFPort.h"
+#include "Alias/InclusionBased/AserPTA/PointerAnalysis/Context/NoCtx.h"
+#include "CFL/Classical/Alias.h"
+#include "CFL/Classical/AserConstraintAdapter.h"
+#include "CFL/Classical/SVFGAdapter.h"
 #include "IR/SVFG/SVFG.h"
 #include "IR/SVFG/SVFGNode.h"
 #include "TestUtils/LLVMHelpers.h"
@@ -11,7 +14,28 @@ using namespace lotus::unittest;
 
 namespace {
 
-TEST(ClassicalSVFPortTest,
+struct TestPointsToStorage {
+  static void onNewNodeCreation(aser::NodeID) {}
+  static bool insert(aser::NodeID, aser::NodeID) { return true; }
+};
+
+TEST(ClassicalAdaptersTest, AdaptsTheNativeAserConstraintGraph) {
+  aser::ConstraintGraph<aser::NoCtx> source;
+  auto *lhs =
+      source.addCGNode<aser::CGPtrNode<aser::NoCtx>, TestPointsToStorage>();
+  auto *rhs =
+      source.addCGNode<aser::CGPtrNode<aser::NoCtx>, TestPointsToStorage>();
+  ASSERT_TRUE(source.addConstraints(lhs, rhs, aser::Constraints::copy));
+
+  const AliasConstraintGraph adapted = encodeAserConstraintGraph(source);
+  ASSERT_EQ(adapted.nodeNames().size(), 2u);
+  ASSERT_EQ(adapted.edges().size(), 1u);
+  EXPECT_EQ(adapted.edges().front().kind, AliasConstraintEdgeKind::Copy);
+  EXPECT_EQ(adapted.edges().front().source, lhs->getNodeID());
+  EXPECT_EQ(adapted.edges().front().target, rhs->getNodeID());
+}
+
+TEST(ClassicalAdaptersTest,
      PagAliasClientEncodesBidirectionalEdgesAndAnswersQueries) {
   AliasConstraintGraph graph;
   const auto obj = graph.addNode("obj");
@@ -33,7 +57,30 @@ TEST(ClassicalSVFPortTest,
   EXPECT_GT(stats.added_edges, 0u);
 }
 
-TEST(ClassicalSVFPortTest,
+TEST(ClassicalAdaptersTest, AliasClientResumesAfterIncrementalConstraint) {
+  AliasConstraintGraph graph;
+  const auto object = graph.addNode("object");
+  const auto pointer = graph.addNode("pointer");
+  const auto alias = graph.addNode("alias");
+  graph.addEdge(object, pointer, AliasConstraintEdgeKind::Addr);
+
+  AliasClient client = AliasClient::fromConstraintGraph(graph);
+  bool discovered = false;
+  const auto stats =
+      client.solveToFixedPoint(SolverBackend::POCR, [&](AliasClient &current) {
+        if (discovered) {
+          return false;
+        }
+        EXPECT_FALSE(current.mayAlias(pointer, alias));
+        discovered = true;
+        return current.addConstraint(pointer, alias,
+                                     AliasConstraintEdgeKind::Copy);
+      });
+  EXPECT_TRUE(client.mayAlias(pointer, alias));
+  EXPECT_EQ(stats.solver_rounds, 2u);
+}
+
+TEST(ClassicalAdaptersTest,
      PegEncodingRewritesLoadsAndStoresThroughSyntheticDeref) {
   AliasConstraintGraph graph;
   const auto obj = graph.addNode("obj");
@@ -55,7 +102,7 @@ TEST(ClassicalSVFPortTest,
   EXPECT_EQ(pts.front(), obj);
 }
 
-TEST(ClassicalSVFPortTest, GrammarBuildersMaterializeObservedAttributes) {
+TEST(ClassicalAdaptersTest, GrammarBuildersMaterializeObservedAttributes) {
   AliasConstraintGraph graph;
   const auto base = graph.addNode("base");
   const auto field = graph.addNode("field");
@@ -68,7 +115,7 @@ TEST(ClassicalSVFPortTest, GrammarBuildersMaterializeObservedAttributes) {
   EXPECT_NE(peg.binaryByFirst().find("gepbar_3"), peg.binaryByFirst().end());
 }
 
-TEST(ClassicalSVFPortTest, ValueFlowClientEncodesSvfgCallsAndReachability) {
+TEST(ClassicalAdaptersTest, ValueFlowClientEncodesSvfgCallsAndReachability) {
   const char *source = R"(
     define i32 @callee(i32 %x) {
     entry:
@@ -139,6 +186,12 @@ TEST(ClassicalSVFPortTest, ValueFlowClientEncodesSvfgCallsAndReachability) {
   const auto reachable = client.reachableFrom(1);
   EXPECT_NE(std::find(reachable.begin(), reachable.end(), 4), reachable.end());
   EXPECT_GT(stats.added_edges, 0u);
+
+  for (SolverBackend backend : {SolverBackend::POCR, SolverBackend::Hybrid}) {
+    ValueFlowClient alternate = ValueFlowClient::fromSVFG(svfg);
+    alternate.solve(backend);
+    EXPECT_TRUE(alternate.hasFlow(1, 4)) << solverBackendName(backend);
+  }
 }
 
 } // namespace

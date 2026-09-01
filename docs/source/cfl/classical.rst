@@ -1,38 +1,92 @@
 Classical Grammar-Driven CFL Reachability
 ==========================================
 
-``include/CFL/Classical/`` and ``lib/CFL/Classical/`` provide a compact CFL
-reachability toolkit centered on explicit grammars, labeled graphs, and
-reusable solver front-ends.
+``CFL/Classical`` is the general grammar-driven part of Lotus's CFL
+subsystem. It is independent of the specialized interleaved-Dyck and MCFL
+solver representations.
 
-**Location**: ``include/CFL/Classical/``, ``lib/CFL/Classical/``
+Architecture
+------------
 
-**Main components**:
+``Grammar``
+   Parses declared start, terminal, and nonterminal symbols; normalizes
+   whitespace-delimited ``*`` and ``?`` EBNF; binarizes long productions; and
+   compiles string symbols to stable integer IDs. ``GrammarParseOptions``
+   instantiates correlated attributed symbols such as ``call_i``/``ret_i``.
 
-- ``Grammar`` parses grammars from text or files, tracks nullable symbols, and
-  builds unary and binary production indices for fast lookup.
-- ``CNFGrammar`` loads grammars and applies the STBDU normalization pipeline,
-  including start, terminal, binarization, epsilon-removal, and unit-production
-  transforms.
-- ``LabeledGraph`` stores the reachability instance, supports text and DOT
-  inputs, and exposes matrix/PAG-style loading modes plus label-indexed edge
-  queries.
-- ``CFLSolver`` computes classical CFL reachability closure and reports
-  iteration and edge-growth statistics.
-- ``SCSolver`` builds a set-constraint system over the same graph and grammar
-  inputs and returns constraint-system statistics.
-- ``SVFPort`` bridges the classical solvers to Lotus IR analyses by encoding
-  alias-constraint graphs and SVFG instances into labeled graphs and grammars.
+``LabeledGraph``
+   Stores the base problem boundary. Solver sessions keep derived facts in a
+   separate relation; only explicit incremental terminal additions modify the
+   graph. Text, DOT, and JSON readers are available. Plain, reverse, and
+   bidirectional transformations are explicit; the parser never silently
+   applies them.
 
-**Integration points**:
+``Relation``
+   Separates terminal and derived facts from the graph frontend. Sparse-set
+   and LLVM sparse-bitvector implementations provide indexed successor and
+   predecessor lookup.
 
-- ``AliasClient`` supports may-alias and points-to style queries from encoded
-  PAG or PEG constraint graphs.
-- ``ValueFlowClient`` answers reachability queries over encoded SVFG value-flow
-  graphs.
-- ``lib/CFL/Classical/CMakeLists.txt`` builds the
-  ``CanaryClassicalCFL`` library target.
-- ``tests/unit/CFL/ClassicalCFLTest.cpp`` covers grammar parsing, graph loading,
-  classical solving, set-constraint solving, and CNF normalization.
+``SolverSession``
+   Retains a relation and worklist across calls. ``addTerminalEdge`` followed
+   by ``solve`` supports clients that discover constraints incrementally.
 
-See also :doc:`cfl_components`.
+Solver backends
+---------------
+
+``Baseline``
+   Conventional indexed worklist saturation. This is the semantic reference
+   backend.
+
+``POCR``
+   Uses per-node, per-symbol sparse predecessor and successor bitvectors.
+
+``Hybrid``
+   Uses the POCR relation and recognizes every production ``X -> X X`` as a
+   transitive relation. It handles those rules with a specialized dynamic
+   transitive-closure step rather than depending on a hard-coded symbol name.
+
+All backends return exactly the same grammar-relative relation. Tests compare
+their complete triples, not only start-symbol answers.
+
+Adapters
+--------
+
+The core target ``CanaryClassicalCFL`` has no SVFG or pointer-analysis
+dependency. Adapter implementations are split by dependency:
+
+``CanaryClassicalCFLAlias``
+   PAG and PEG encodings, ``AliasClient``, and ``solveToFixedPoint`` for
+   alternating client-defined discovery with incremental saturation.
+
+``AserConstraintAdapter.h``
+   A header-only converter from Lotus's native AserPTA constraint graph to the
+   alias client input. It is separate from the generic core.
+
+``CanaryClassicalCFLSVFG``
+   ``SVFGAdapter`` and ``ValueFlowClient`` for call/return-matched value flow.
+
+Clients include ``Alias.h``, ``AserConstraintAdapter.h``, or
+``SVFGAdapter.h`` directly; there is no compatibility umbrella.
+
+Command line
+------------
+
+.. code-block:: console
+
+   cmake --build build --target lotus-cfl-classical
+   build/bin/lotus-cfl-classical \
+     --grammar grammar.txt --graph graph.txt --solver pocr --json-stats
+
+Use ``--graph-mode plain|matrix|pag-matrix`` and
+``--direction plain|reverse|bidirectional`` to state input semantics.
+``--attributes 1,2,3`` supplies the observed domain for attributed grammar
+variables. ``--dump-relation`` emits ``source,target,symbol`` triples.
+
+Input formats
+-------------
+
+Text graphs contain one ``source,target,label`` edge per line. Plain DOT uses
+``label=...`` edge attributes. JSON accepts an object containing edge objects
+with ``source``, ``target``, and ``label`` fields.
+
+See :doc:`svf_migration` for provenance and the capability migration record.

@@ -1,5 +1,7 @@
 # CFL tools umbrella
 
+add_subdirectory(classical)
+
 if(LOTUS_ENABLE_CSR)
     add_subdirectory(csr)
 endif()

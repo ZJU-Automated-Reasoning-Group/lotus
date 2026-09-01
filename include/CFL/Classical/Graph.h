@@ -10,8 +10,20 @@
 namespace lotus::cfl::classical {
 
 enum class GraphMode {
+  Plain,
   Matrix,
   PAGMatrix,
+};
+
+enum class EdgeDirection {
+  Plain,
+  Reverse,
+  Bidirectional,
+};
+
+struct GraphLoadOptions {
+  GraphMode mode = GraphMode::Plain;
+  EdgeDirection direction = EdgeDirection::Plain;
 };
 
 struct LabeledEdge {
@@ -24,6 +36,13 @@ class LabeledGraph {
 public:
   static LabeledGraph parseFromFile(const std::string &path,
                                     GraphMode mode = GraphMode::Matrix);
+  static LabeledGraph parseFromFile(const std::string &path,
+                                    const GraphLoadOptions &options);
+
+  /// Return a graph with an explicit direction transform. Reverse labels use
+  /// the conventional x/xbar and call_i/callbar_i pairing.
+  LabeledGraph transformed(EdgeDirection direction) const;
+  static std::string complementLabel(const std::string &label);
 
   std::size_t addVertex(const std::string &name);
   bool addEdge(const std::string &source, const std::string &target,
@@ -50,9 +69,25 @@ public:
   std::vector<std::size_t> predecessorsForLabel(std::size_t target,
                                                 const std::string &label) const;
 
+  template <typename NodeRange, typename EdgeRange, typename NodeName,
+            typename EdgeSource, typename EdgeTarget, typename EdgeLabel>
+  static LabeledGraph build(const NodeRange &nodes, const EdgeRange &edges,
+                            NodeName node_name, EdgeSource edge_source,
+                            EdgeTarget edge_target, EdgeLabel edge_label) {
+    LabeledGraph graph;
+    for (const auto &node : nodes) {
+      graph.addVertex(node_name(node));
+    }
+    for (const auto &edge : edges) {
+      graph.addEdge(edge_source(edge), edge_target(edge), edge_label(edge));
+    }
+    return graph;
+  }
+
 private:
   void loadFromTextFile(const std::string &path);
   void loadFromDotFile(const std::string &path, GraphMode mode);
+  void loadFromJsonFile(const std::string &path);
 
   std::vector<std::string> vertices_;
   std::unordered_map<std::string, std::size_t> vertex_ids_;

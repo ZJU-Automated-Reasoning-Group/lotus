@@ -6,6 +6,8 @@
 
 #include "Alias/InclusionBased/AserPTA/PointerAnalysis/Graph/GraphBase/GraphBase.h"
 
+#include <llvm/ADT/DenseSet.h>
+#include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/SparseBitVector.h>
 
 namespace aser {

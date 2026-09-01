@@ -6,9 +6,13 @@
 #include "IR/SVFG/SVFGNode.h"
 
 #include <algorithm>
+#include <functional>
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
+
+#include <llvm/IR/InstIterator.h>
 
 namespace lotus::cfl::classical {
 namespace {
@@ -26,61 +30,125 @@ std::string encodeCallLabel(const std::string &base, std::uint32_t id) {
   return base + '_' + std::to_string(id);
 }
 
-std::uint32_t registeredCallSiteId(const lotus::analysis::SVFG &svfg,
-                                   const lotus::analysis::SVFGEdge *edge) {
-  const llvm::CallBase *call_site = edge ? edge->getCallSite() : nullptr;
-  if (!call_site) {
-    return 0;
-  }
+struct CallSiteKey {
+  const llvm::CallBase *call_site = nullptr;
+  const llvm::Function *callee = nullptr;
 
+  bool operator==(const CallSiteKey &other) const {
+    return call_site == other.call_site && callee == other.callee;
+  }
+};
+
+struct CallSiteKeyHash {
+  std::size_t operator()(const CallSiteKey &key) const {
+    const std::size_t call = std::hash<const llvm::CallBase *>{}(key.call_site);
+    const std::size_t callee = std::hash<const llvm::Function *>{}(key.callee);
+    return call ^ (callee + (call << 6U) + (call >> 2U));
+  }
+};
+
+CallSiteKey callSiteKey(const lotus::analysis::SVFGEdge *edge) {
+  if (!edge || !edge->getCallSite()) {
+    throw std::invalid_argument("Call/return SVFG edge has no callsite");
+  }
   const llvm::Function *callee = nullptr;
   if (edge->isCallEdge()) {
     callee = edge->getDstNode() ? edge->getDstNode()->getFunction() : nullptr;
   } else if (edge->isRetEdge()) {
     callee = edge->getSrcNode() ? edge->getSrcNode()->getFunction() : nullptr;
   }
-  return callee ? svfg.getCallSiteId(call_site, callee) : 0;
+  return {edge->getCallSite(), callee};
 }
 
-std::uint32_t firstFallbackCallSiteId(const lotus::analysis::SVFG &svfg) {
-  std::uint32_t maximum = 0;
+std::size_t instructionOrdinal(const llvm::CallBase *call_site) {
+  const llvm::Function *function = call_site->getFunction();
+  if (!function) {
+    throw std::invalid_argument("SVFG callsite is detached from a function");
+  }
+  std::size_t ordinal = 0;
+  for (const llvm::Instruction &instruction : llvm::instructions(*function)) {
+    if (&instruction == call_site) {
+      return ordinal;
+    }
+    ++ordinal;
+  }
+  throw std::invalid_argument("SVFG callsite is absent from its function");
+}
+
+using CallSiteIds =
+    std::unordered_map<CallSiteKey, std::uint32_t, CallSiteKeyHash>;
+
+CallSiteIds buildCallSiteIds(const lotus::analysis::SVFG &svfg) {
+  std::vector<CallSiteKey> keys;
+  std::unordered_set<CallSiteKey, CallSiteKeyHash> seen;
   for (const auto &[_, node] : svfg) {
     for (const lotus::analysis::SVFGEdge *edge : node->getOutEdges()) {
-      maximum = std::max(maximum, registeredCallSiteId(svfg, edge));
+      if (!edge || (!edge->isCallEdge() && !edge->isRetEdge())) {
+        continue;
+      }
+      const CallSiteKey key = callSiteKey(edge);
+      if (seen.insert(key).second) {
+        keys.push_back(key);
+      }
     }
   }
-  return maximum + 1;
+
+  std::sort(keys.begin(), keys.end(),
+            [](const CallSiteKey &lhs, const CallSiteKey &rhs) {
+              const std::string lhs_caller =
+                  lhs.call_site->getFunction()->getName().str();
+              const std::string rhs_caller =
+                  rhs.call_site->getFunction()->getName().str();
+              if (lhs_caller != rhs_caller) {
+                return lhs_caller < rhs_caller;
+              }
+              const std::size_t lhs_ordinal = instructionOrdinal(lhs.call_site);
+              const std::size_t rhs_ordinal = instructionOrdinal(rhs.call_site);
+              if (lhs_ordinal != rhs_ordinal) {
+                return lhs_ordinal < rhs_ordinal;
+              }
+              const std::string lhs_callee =
+                  lhs.callee ? lhs.callee->getName().str() : std::string();
+              const std::string rhs_callee =
+                  rhs.callee ? rhs.callee->getName().str() : std::string();
+              return lhs_callee < rhs_callee;
+            });
+
+  CallSiteIds ids;
+  std::unordered_set<std::uint32_t> used_ids;
+  for (const CallSiteKey &key : keys) {
+    if (!key.callee) {
+      continue;
+    }
+    const std::uint32_t registered =
+        svfg.getCallSiteId(key.call_site, key.callee);
+    if (registered == 0) {
+      continue;
+    }
+    if (!used_ids.insert(registered).second) {
+      throw std::invalid_argument("SVFG callsite IDs are not unique");
+    }
+    ids.emplace(key, registered);
+  }
+
+  std::uint32_t next_id = 1;
+  for (const CallSiteKey &key : keys) {
+    if (ids.count(key) != 0) {
+      continue;
+    }
+    while (used_ids.count(next_id) != 0) {
+      ++next_id;
+    }
+    ids.emplace(key, next_id);
+    used_ids.insert(next_id);
+    ++next_id;
+  }
+  return ids;
 }
 
-std::uint32_t
-assignCallSiteId(const lotus::analysis::SVFG &svfg,
-                 const lotus::analysis::SVFGEdge *edge,
-                 std::unordered_map<std::string, std::uint32_t> &fallback_ids,
-                 std::uint32_t &next_fallback_id) {
-  const llvm::CallBase *call_site = edge ? edge->getCallSite() : nullptr;
-  if (!call_site) {
-    return 0;
-  }
-
-  const llvm::Function *callee = nullptr;
-  if (edge->isCallEdge()) {
-    callee = edge->getDstNode() ? edge->getDstNode()->getFunction() : nullptr;
-  } else if (edge->isRetEdge()) {
-    callee = edge->getSrcNode() ? edge->getSrcNode()->getFunction() : nullptr;
-  }
-
-  if (const std::uint32_t id = registeredCallSiteId(svfg, edge); id != 0) {
-    return id;
-  }
-
-  std::string key = std::to_string(reinterpret_cast<std::uintptr_t>(call_site));
-  key.push_back(':');
-  key.append(callee ? callee->getName().str() : "unknown");
-  auto [it, inserted] = fallback_ids.emplace(key, next_fallback_id);
-  if (inserted) {
-    ++next_fallback_id;
-  }
-  return it->second;
+std::uint32_t callSiteId(const CallSiteIds &ids,
+                         const lotus::analysis::SVFGEdge *edge) {
+  return ids.at(callSiteKey(edge));
 }
 
 } // namespace
@@ -90,9 +158,7 @@ LabeledGraph encodeSVFG(const lotus::analysis::SVFG &svfg) {
   for (const auto &[node_id, _] : svfg) {
     encoded.addVertex(nodeName(node_id));
   }
-
-  std::unordered_map<std::string, std::uint32_t> fallback_ids;
-  std::uint32_t next_fallback_id = firstFallbackCallSiteId(svfg);
+  const CallSiteIds callsite_ids = buildCallSiteIds(svfg);
 
   for (const auto &[_, node] : svfg) {
     for (lotus::analysis::SVFGEdge *edge : node->getOutEdges()) {
@@ -106,8 +172,7 @@ LabeledGraph encodeSVFG(const lotus::analysis::SVFG &svfg) {
           encoded.vertexId(nodeName(edge->getDstNode()->getId()));
 
       if (edge->isCallEdge()) {
-        const std::uint32_t id =
-            assignCallSiteId(svfg, edge, fallback_ids, next_fallback_id);
+        const std::uint32_t id = callSiteId(callsite_ids, edge);
         addBidirectionalEdge(encoded, source, target,
                              encodeCallLabel("call", id),
                              encodeCallLabel("callbar", id));
@@ -115,8 +180,7 @@ LabeledGraph encodeSVFG(const lotus::analysis::SVFG &svfg) {
       }
 
       if (edge->isRetEdge()) {
-        const std::uint32_t id =
-            assignCallSiteId(svfg, edge, fallback_ids, next_fallback_id);
+        const std::uint32_t id = callSiteId(callsite_ids, edge);
         addBidirectionalEdge(encoded, source, target,
                              encodeCallLabel("ret", id),
                              encodeCallLabel("retbar", id));
@@ -135,23 +199,30 @@ LabeledGraph encodeSVFG(const lotus::analysis::SVFG &svfg) {
 
 Grammar buildVfgGrammar(const lotus::analysis::SVFG &svfg) {
   std::set<std::uint32_t> callsite_ids;
-  std::unordered_map<std::string, std::uint32_t> fallback_ids;
-  std::uint32_t next_fallback_id = firstFallbackCallSiteId(svfg);
+  const CallSiteIds ids = buildCallSiteIds(svfg);
 
   for (const auto &[_, node] : svfg) {
     for (lotus::analysis::SVFGEdge *edge : node->getOutEdges()) {
       if (!edge || (!edge->isCallEdge() && !edge->isRetEdge())) {
         continue;
       }
-      callsite_ids.insert(
-          assignCallSiteId(svfg, edge, fallback_ids, next_fallback_id));
+      callsite_ids.insert(callSiteId(ids, edge));
     }
   }
 
   GrammarParseOptions options;
-  options.attributes.assign(callsite_ids.begin(), callsite_ids.end());
-  if (options.attributes.empty()) {
-    options.attributes.push_back(0);
+  options.variable_attributes['i'].assign(callsite_ids.begin(),
+                                          callsite_ids.end());
+  if (options.variable_attributes['i'].empty()) {
+    return Grammar::parseFromText("Start:\n"
+                                  "  A\n"
+                                  "Terminal:\n"
+                                  "  a abar\n"
+                                  "Variables:\n"
+                                  "  A Abar\n"
+                                  "Productions:\n"
+                                  "  A -> A A | a | epsilon;\n"
+                                  "  Abar -> Abar Abar | abar | epsilon;\n");
   }
   return Grammar::parseFromText(
       "Start:\n"
@@ -175,6 +246,13 @@ ValueFlowClient ValueFlowClient::fromSVFG(const lotus::analysis::SVFG &svfg) {
   }
   return ValueFlowClient(std::move(graph), std::move(grammar),
                          std::move(node_to_vertex));
+}
+
+ValueFlowClient
+ValueFlowClient::fromPreparedSVFG(lotus::analysis::SVFG &svfg,
+                                  const SVFGPreparationOptions &options) {
+  prepareSVFGForCFL(svfg, options);
+  return fromSVFG(svfg);
 }
 
 ValueFlowClient::ValueFlowClient(ValueFlowClient &&other) noexcept

@@ -1,5 +1,7 @@
 #include "CFL/Classical/Alias.h"
 
+#include <algorithm>
+#include <cctype>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -27,7 +29,7 @@ std::string aliasForwardLabel(const AliasConstraintEdge &edge) {
   }
   }
 
-  throw std::invalid_argument("Unsupported alias edge kind");
+  throw std::logic_error("Invalid alias edge kind value");
 }
 
 std::string aliasReverseLabel(const AliasConstraintEdge &edge) {
@@ -50,7 +52,7 @@ std::string aliasReverseLabel(const AliasConstraintEdge &edge) {
   }
   }
 
-  throw std::invalid_argument("Unsupported alias edge kind");
+  throw std::logic_error("Invalid alias edge kind value");
 }
 
 void addBidirectionalEdge(LabeledGraph &graph, std::size_t source,
@@ -230,6 +232,8 @@ std::string buildPegGrammarText(const AliasConstraintGraph &graph) {
           << "Productions:\n"
           << "  F -> ( copy M ? ) *;\n"
           << "  Fbar -> ( M ? copybar ) *;\n"
+          << "  copy -> vgep;\n"
+          << "  copybar -> vgepbar;\n"
           << "  M -> addr V addrbar;\n"
           << "  V -> " << joinAlternatives(v_alternatives) << ";\n"
           << "  ArrayPath -> gepbar_0 gepbar_0 | ArrayPath gepbar_0;\n"
@@ -258,6 +262,12 @@ std::size_t AliasConstraintGraph::addNode(const std::string &name) {
 void AliasConstraintGraph::addEdge(std::size_t source, std::size_t target,
                                    AliasConstraintEdgeKind kind,
                                    std::optional<std::uint32_t> attribute) {
+  if (source >= node_names_.size() || target >= node_names_.size()) {
+    throw std::out_of_range("Alias constraint endpoint is out of range");
+  }
+  if (kind == AliasConstraintEdgeKind::NormalGep && !attribute) {
+    throw std::invalid_argument("Normal GEP constraint requires an attribute");
+  }
   edges_.push_back({source, target, kind, attribute});
 }
 
@@ -322,12 +332,6 @@ LabeledGraph encodePegGraph(const AliasConstraintGraph &graph) {
       continue;
     }
 
-    if (edge.kind == AliasConstraintEdgeKind::VariantGep) {
-      addBidirectionalEdge(encoded, edge.source, edge.target, "copy",
-                           "copybar");
-      continue;
-    }
-
     addBidirectionalEdge(encoded, edge.source, edge.target,
                          aliasForwardLabel(edge), aliasReverseLabel(edge));
   }
@@ -351,9 +355,19 @@ AliasClient AliasClient::fromConstraintGraph(const AliasConstraintGraph &graph,
   return AliasClient(encodePagGraph(graph), buildPagGrammar(graph), mode);
 }
 
+AliasClient::AliasClient(LabeledGraph graph, Grammar grammar,
+                         AliasEncodingMode mode)
+    : graph_(std::move(graph)), grammar_(std::move(grammar)), mode_(mode),
+      next_synthetic_dereference_(graph_.vertexCount()) {
+  initializePegDereferences();
+  initializeGepAttributes();
+}
+
 AliasClient::AliasClient(AliasClient &&other) noexcept
     : graph_(std::move(other.graph_)), grammar_(std::move(other.grammar_)),
-      mode_(other.mode_) {}
+      mode_(other.mode_), peg_dereferences_(std::move(other.peg_dereferences_)),
+      next_synthetic_dereference_(other.next_synthetic_dereference_),
+      gep_attributes_(std::move(other.gep_attributes_)) {}
 
 AliasClient &AliasClient::operator=(AliasClient &&other) noexcept {
   if (this == &other) {
@@ -364,6 +378,9 @@ AliasClient &AliasClient::operator=(AliasClient &&other) noexcept {
   graph_ = std::move(other.graph_);
   grammar_ = std::move(other.grammar_);
   mode_ = other.mode_;
+  peg_dereferences_ = std::move(other.peg_dereferences_);
+  next_synthetic_dereference_ = other.next_synthetic_dereference_;
+  gep_attributes_ = std::move(other.gep_attributes_);
   return *this;
 }
 
@@ -387,11 +404,32 @@ ReachabilityStats AliasClient::solveToFixedPoint(
   aggregate.solver_rounds = 0;
   for (std::size_t round = 0; round < max_rounds; ++round) {
     const ReachabilityStats current = solve(backend);
+    aggregate.graph_nodes = current.graph_nodes;
+    aggregate.base_graph_edges = current.base_graph_edges;
+    aggregate.grammar_symbols = current.grammar_symbols;
+    aggregate.grammar_terminals = current.grammar_terminals;
+    aggregate.grammar_nonterminals = current.grammar_nonterminals;
+    aggregate.grammar_productions = current.grammar_productions;
+    aggregate.grammar_nullable_symbols = current.grammar_nullable_symbols;
+    aggregate.grammar_transitive_symbols = current.grammar_transitive_symbols;
     aggregate.classical_iterations += current.classical_iterations;
+    aggregate.processed_work_items += current.processed_work_items;
+    aggregate.duplicate_edges += current.duplicate_edges;
+    aggregate.peak_worklist_size =
+        std::max(aggregate.peak_worklist_size, current.peak_worklist_size);
     aggregate.added_edges += current.added_edges;
     aggregate.input_edges = current.input_edges;
     aggregate.relation_edges = current.relation_edges;
+    aggregate.start_symbol_edges = current.start_symbol_edges;
     aggregate.solve_time_microseconds += current.solve_time_microseconds;
+    aggregate.relation_memory_bytes = current.relation_memory_bytes;
+    aggregate.hybrid_forest_roots = current.hybrid_forest_roots;
+    aggregate.hybrid_forest_nodes = current.hybrid_forest_nodes;
+    aggregate.hybrid_forest_edges = current.hybrid_forest_edges;
+    aggregate.hybrid_arc_insertions = current.hybrid_arc_insertions;
+    aggregate.hybrid_meld_operations = current.hybrid_meld_operations;
+    aggregate.hybrid_duplicate_melds = current.hybrid_duplicate_melds;
+    aggregate.hybrid_forest_memory_bytes = current.hybrid_forest_memory_bytes;
     ++aggregate.solver_rounds;
     if (!discover_constraints(*this)) {
       return aggregate;
@@ -414,24 +452,54 @@ bool AliasClient::addConstraint(std::size_t source, std::size_t target,
   if (source >= graph_.vertexCount() || target >= graph_.vertexCount()) {
     throw std::out_of_range("Alias constraint endpoint is out of range");
   }
-  if (mode_ == AliasEncodingMode::PEG &&
-      (kind == AliasConstraintEdgeKind::Load ||
-       kind == AliasConstraintEdgeKind::Store)) {
-    throw std::invalid_argument(
-        "Incremental PEG loads/stores require dereference-node rebuilding");
+  if (kind == AliasConstraintEdgeKind::NormalGep && !attribute) {
+    throw std::invalid_argument("Normal GEP constraint requires an attribute");
   }
   if (mode_ == AliasEncodingMode::PEG &&
-      kind == AliasConstraintEdgeKind::VariantGep) {
-    kind = AliasConstraintEdgeKind::Copy;
+      kind == AliasConstraintEdgeKind::Store) {
+    bool changed = false;
+    for (std::size_t dereference : ensurePegDereferences(target)) {
+      changed =
+          addEncodedEdge(source, dereference, "copy", "copybar") || changed;
+    }
+    return changed;
+  }
+  if (mode_ == AliasEncodingMode::PEG &&
+      kind == AliasConstraintEdgeKind::Load) {
+    bool changed = false;
+    for (std::size_t dereference : ensurePegDereferences(source)) {
+      changed =
+          addEncodedEdge(dereference, target, "copy", "copybar") || changed;
+    }
+    return changed;
+  }
+  if (kind == AliasConstraintEdgeKind::NormalGep && attribute &&
+      !grammar_.isTerminal("gep_" + std::to_string(*attribute))) {
+    gep_attributes_.insert(*attribute);
+    rebuildGrammar();
   }
   const AliasConstraintEdge edge{source, target, kind, attribute};
   const std::string forward = aliasForwardLabel(edge);
   const std::string reverse = aliasReverseLabel(edge);
+  const bool changed = addEncodedEdge(source, target, forward, reverse);
+  if (mode_ == AliasEncodingMode::PEG &&
+      kind == AliasConstraintEdgeKind::Addr) {
+    auto &dereferences = peg_dereferences_[target];
+    if (std::find(dereferences.begin(), dereferences.end(), source) ==
+        dereferences.end()) {
+      dereferences.push_back(source);
+    }
+  }
+  return changed;
+}
+
+bool AliasClient::addEncodedEdge(std::size_t source, std::size_t target,
+                                 const std::string &forward,
+                                 const std::string &reverse) {
   if (!grammar_.isTerminal(forward) || !grammar_.isTerminal(reverse)) {
     throw std::invalid_argument(
         "Constraint attribute was not present when the grammar was built");
   }
-
   if (!session_) {
     const bool first = graph_.addEdge(source, target, forward);
     const bool second = graph_.addEdge(target, source, reverse);
@@ -440,6 +508,62 @@ bool AliasClient::addConstraint(std::size_t source, std::size_t target,
   const bool first = session_->addTerminalEdge(source, target, forward);
   const bool second = session_->addTerminalEdge(target, source, reverse);
   return first || second;
+}
+
+const std::vector<std::size_t> &
+AliasClient::ensurePegDereferences(std::size_t pointer) {
+  auto &dereferences = peg_dereferences_[pointer];
+  if (!dereferences.empty()) {
+    return dereferences;
+  }
+
+  const std::string name = "peg_deref_" + std::to_string(pointer) +
+                           "_incremental_" +
+                           std::to_string(next_synthetic_dereference_++);
+  const std::size_t dereference = addNode(name);
+  addEncodedEdge(dereference, pointer, "addr", "addrbar");
+  dereferences.push_back(dereference);
+  return dereferences;
+}
+
+void AliasClient::initializePegDereferences() {
+  peg_dereferences_.clear();
+  if (mode_ != AliasEncodingMode::PEG) {
+    return;
+  }
+  for (const auto &[source, target] : graph_.edgesForLabel("addr")) {
+    peg_dereferences_[target].push_back(source);
+  }
+}
+
+void AliasClient::initializeGepAttributes() {
+  gep_attributes_.clear();
+  gep_attributes_.insert(0);
+  for (const auto &[label, _] : graph_.symbolPairs()) {
+    if (label.rfind("gep_", 0) != 0 || label.size() <= 4) {
+      continue;
+    }
+    const std::string value = label.substr(4);
+    if (std::all_of(value.begin(), value.end(), [](unsigned char character) {
+          return std::isdigit(character) != 0;
+        })) {
+      gep_attributes_.insert(static_cast<std::uint32_t>(std::stoul(value)));
+    }
+  }
+}
+
+void AliasClient::rebuildGrammar() {
+  AliasConstraintGraph shape;
+  const std::size_t source = shape.addNode("grammar_source");
+  const std::size_t target = shape.addNode("grammar_target");
+  for (std::uint32_t attribute : gep_attributes_) {
+    shape.addEdge(source, target, AliasConstraintEdgeKind::NormalGep,
+                  attribute);
+  }
+  grammar_ = mode_ == AliasEncodingMode::PEG ? buildPegGrammar(shape)
+                                             : buildPagGrammar(shape);
+  session_.reset();
+  backend_.reset();
 }
 
 bool AliasClient::mayAlias(std::size_t lhs, std::size_t rhs) const {
@@ -451,6 +575,9 @@ bool AliasClient::mayAlias(std::size_t lhs, std::size_t rhs) const {
 }
 
 std::vector<std::size_t> AliasClient::pointsTo(std::size_t ptr) const {
+  if (ptr >= graph_.vertexCount()) {
+    return {};
+  }
   std::set<std::size_t> result;
   std::vector<std::pair<std::size_t, std::size_t>> value_pairs;
   if (session_) {

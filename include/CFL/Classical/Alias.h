@@ -7,7 +7,9 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace lotus::cfl::classical {
@@ -84,12 +86,21 @@ public:
   const Grammar &grammar() const { return grammar_; }
 
 private:
-  AliasClient(LabeledGraph graph, Grammar grammar, AliasEncodingMode mode)
-      : graph_(std::move(graph)), grammar_(std::move(grammar)), mode_(mode) {}
+  AliasClient(LabeledGraph graph, Grammar grammar, AliasEncodingMode mode);
+
+  bool addEncodedEdge(std::size_t source, std::size_t target,
+                      const std::string &forward, const std::string &reverse);
+  const std::vector<std::size_t> &ensurePegDereferences(std::size_t pointer);
+  void initializePegDereferences();
+  void initializeGepAttributes();
+  void rebuildGrammar();
 
   LabeledGraph graph_;
   Grammar grammar_;
   AliasEncodingMode mode_ = AliasEncodingMode::PAG;
+  std::unordered_map<std::size_t, std::vector<std::size_t>> peg_dereferences_;
+  std::size_t next_synthetic_dereference_ = 0;
+  std::set<std::uint32_t> gep_attributes_;
   std::unique_ptr<SolverSession> session_;
   std::optional<SolverBackend> backend_;
 };

@@ -53,3 +53,62 @@ foreach(classical_backend baseline pocr hybrid)
     set_tests_properties(classical_cfl_cli_${classical_backend} PROPERTIES
         PASS_REGULAR_EXPRESSION "\"relation_edges\":64")
 endforeach()
+
+add_test(NAME classical_cfl_cli_infers_attributes
+    COMMAND $<TARGET_FILE:lotus-cfl-classical>
+        --grammar ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/call.grammar
+        --graph ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/call.txt
+        --solver hybrid
+        --json-stats)
+set_tests_properties(classical_cfl_cli_infers_attributes PROPERTIES
+    PASS_REGULAR_EXPRESSION "\"relation_edges\":3")
+
+add_test(NAME classical_cfl_cli_hybrid_forest_stats
+    COMMAND $<TARGET_FILE:lotus-cfl-classical>
+        --grammar ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/chain.grammar
+        --graph ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/chain.txt
+        --solver hybrid
+        --json-stats)
+set_tests_properties(classical_cfl_cli_hybrid_forest_stats PROPERTIES
+    PASS_REGULAR_EXPRESSION "\"hybrid_nodes\":55")
+
+add_test(NAME classical_cfl_cli_validate_only
+    COMMAND $<TARGET_FILE:lotus-cfl-classical>
+        --grammar ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/call.grammar
+        --graph ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/call.txt
+        --validate-only)
+set_tests_properties(classical_cfl_cli_validate_only PROPERTIES
+    PASS_REGULAR_EXPRESSION "validation=ok")
+
+add_test(NAME classical_cfl_alias_indirect_call
+    COMMAND $<TARGET_FILE:lotus-cfl-alias>
+        --solver pocr
+        --encoding pag
+        --json-stats
+        ${CMAKE_SOURCE_DIR}/tests/regress/PTATestCases/funptr-simple.ll)
+set_tests_properties(classical_cfl_alias_indirect_call PROPERTIES
+    PASS_REGULAR_EXPRESSION "\"callgraph_rounds\":2")
+
+set(classical_alias_annotation_cases
+    funptr-simple
+    array-varIdx
+    struct-assignment-direct
+    heap-indirect
+    constraint-cycle-field
+    array-varIdx2
+    struct-nested-2-layers
+    field-ptr-arith-constIdx
+    ptr-dereference3
+    heap-linkedlist
+    global-initializer
+    struct-twoflds)
+foreach(alias_case IN LISTS classical_alias_annotation_cases)
+    add_test(NAME classical_cfl_alias_annotation_${alias_case}
+        COMMAND $<TARGET_FILE:lotus-cfl-alias>
+            --solver pocr
+            --encoding pag
+            --check-annotations
+            ${CMAKE_SOURCE_DIR}/tests/regress/PTATestCases/${alias_case}.ll)
+    set_tests_properties(classical_cfl_alias_annotation_${alias_case}
+        PROPERTIES PASS_REGULAR_EXPRESSION "annotation=pass")
+endforeach()

@@ -31,6 +31,7 @@ public:
                                            NodeId target) const = 0;
   virtual std::vector<RelationEdge> edges() const = 0;
   virtual std::size_t edgeCount() const = 0;
+  virtual std::size_t approximateMemoryBytes() const = 0;
 };
 
 enum class RelationBackend {

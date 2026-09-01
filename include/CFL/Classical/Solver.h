@@ -11,12 +11,32 @@
 namespace lotus::cfl::classical {
 
 struct ReachabilityStats {
+  std::size_t graph_nodes = 0;
+  std::size_t base_graph_edges = 0;
+  std::size_t grammar_symbols = 0;
+  std::size_t grammar_terminals = 0;
+  std::size_t grammar_nonterminals = 0;
+  std::size_t grammar_productions = 0;
+  std::size_t grammar_nullable_symbols = 0;
+  std::size_t grammar_transitive_symbols = 0;
   std::uint64_t classical_iterations = 0;
+  std::size_t processed_work_items = 0;
+  std::size_t duplicate_edges = 0;
+  std::size_t peak_worklist_size = 0;
   std::size_t added_edges = 0;
   std::size_t input_edges = 0;
   std::size_t relation_edges = 0;
+  std::size_t start_symbol_edges = 0;
   std::uint64_t solve_time_microseconds = 0;
+  std::size_t relation_memory_bytes = 0;
   std::size_t solver_rounds = 1;
+  std::size_t hybrid_forest_roots = 0;
+  std::size_t hybrid_forest_nodes = 0;
+  std::size_t hybrid_forest_edges = 0;
+  std::size_t hybrid_arc_insertions = 0;
+  std::size_t hybrid_meld_operations = 0;
+  std::size_t hybrid_duplicate_melds = 0;
+  std::size_t hybrid_forest_memory_bytes = 0;
 };
 
 enum class SolverBackend {

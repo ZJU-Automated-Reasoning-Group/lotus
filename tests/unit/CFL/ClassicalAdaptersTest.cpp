@@ -1,10 +1,14 @@
 #include "Alias/InclusionBased/AserPTA/PointerAnalysis/Context/NoCtx.h"
 #include "CFL/Classical/Alias.h"
 #include "CFL/Classical/AserConstraintAdapter.h"
+#include "CFL/Classical/LLVMAliasAnalysis.h"
 #include "CFL/Classical/SVFGAdapter.h"
 #include "IR/SVFG/SVFG.h"
 #include "IR/SVFG/SVFGNode.h"
 #include "TestUtils/LLVMHelpers.h"
+
+#include <algorithm>
+#include <optional>
 
 #include <gtest/gtest.h>
 
@@ -33,6 +37,78 @@ TEST(ClassicalAdaptersTest, AdaptsTheNativeAserConstraintGraph) {
   EXPECT_EQ(adapted.edges().front().kind, AliasConstraintEdgeKind::Copy);
   EXPECT_EQ(adapted.edges().front().source, lhs->getNodeID());
   EXPECT_EQ(adapted.edges().front().target, rhs->getNodeID());
+
+  AliasClient client = makeAliasClient(source);
+  EXPECT_TRUE(
+      client.graph().hasEdge(lhs->getNodeID(), rhs->getNodeID(), "copy"));
+
+  ASSERT_TRUE(source.addConstraints(lhs, rhs, aser::Constraints::offset));
+  const AliasConstraintGraph field_sensitive = encodeAserConstraintGraph(
+      source, [](const auto &, const auto &) -> std::optional<std::uint32_t> {
+        return 5;
+      });
+  EXPECT_TRUE(std::any_of(
+      field_sensitive.edges().begin(), field_sensitive.edges().end(),
+      [](const AliasConstraintEdge &edge) {
+        return edge.kind == AliasConstraintEdgeKind::NormalGep &&
+               edge.attribute == 5;
+      }));
+}
+
+TEST(ClassicalAdaptersTest, SynchronizesLiveAserConstraintGrowth) {
+  aser::ConstraintGraph<aser::NoCtx> source;
+  auto *first =
+      source.addCGNode<aser::CGPtrNode<aser::NoCtx>, TestPointsToStorage>();
+  auto *second =
+      source.addCGNode<aser::CGPtrNode<aser::NoCtx>, TestPointsToStorage>();
+  ASSERT_TRUE(source.addConstraints(first, second, aser::Constraints::copy));
+
+  AliasClient client = makeAliasClient(source);
+  AserAliasSynchronizer<aser::NoCtx> synchronizer(source, client);
+  bool extended = false;
+  aser::CGPtrNode<aser::NoCtx> *third = nullptr;
+  const auto stats =
+      client.solveToFixedPoint(SolverBackend::POCR, [&](AliasClient &) {
+        if (!extended) {
+          third = source.addCGNode<aser::CGPtrNode<aser::NoCtx>,
+                                   TestPointsToStorage>();
+          EXPECT_TRUE(
+              source.addConstraints(second, third, aser::Constraints::copy));
+          extended = true;
+        }
+        return synchronizer.synchronize();
+      });
+
+  ASSERT_NE(third, nullptr);
+  const std::size_t mapped_third = synchronizer.mappedNode(third->getNodeID());
+  EXPECT_TRUE(client.graph().hasEdge(
+      synchronizer.mappedNode(second->getNodeID()), mapped_third, "copy"));
+  EXPECT_EQ(stats.solver_rounds, 2u);
+}
+
+TEST(ClassicalAdaptersTest, AserSynchronizerMapsPastPegSyntheticNodes) {
+  aser::ConstraintGraph<aser::NoCtx> source;
+  auto *pointer =
+      source.addCGNode<aser::CGPtrNode<aser::NoCtx>, TestPointsToStorage>();
+  auto *value =
+      source.addCGNode<aser::CGPtrNode<aser::NoCtx>, TestPointsToStorage>();
+  auto *loaded =
+      source.addCGNode<aser::CGPtrNode<aser::NoCtx>, TestPointsToStorage>();
+  AliasClient client = makeAliasClient(source, AliasEncodingMode::PEG);
+  AserAliasSynchronizer<aser::NoCtx> synchronizer(source, client);
+
+  ASSERT_TRUE(source.addConstraints(value, pointer, aser::Constraints::store));
+  EXPECT_TRUE(synchronizer.synchronize());
+  ASSERT_EQ(client.graph().vertexCount(), 4u);
+
+  auto *late =
+      source.addCGNode<aser::CGPtrNode<aser::NoCtx>, TestPointsToStorage>();
+  ASSERT_TRUE(source.addConstraints(loaded, late, aser::Constraints::copy));
+  EXPECT_TRUE(synchronizer.synchronize());
+  EXPECT_EQ(late->getNodeID(), 3u);
+  EXPECT_EQ(synchronizer.mappedNode(late->getNodeID()), 4u);
+  EXPECT_TRUE(client.graph().hasEdge(
+      synchronizer.mappedNode(loaded->getNodeID()), 4u, "copy"));
 }
 
 TEST(ClassicalAdaptersTest,
@@ -102,6 +178,51 @@ TEST(ClassicalAdaptersTest,
   EXPECT_EQ(pts.front(), obj);
 }
 
+TEST(ClassicalAdaptersTest, IncrementalPegConvertsLoadsAndStores) {
+  AliasConstraintGraph graph;
+  const auto object = graph.addNode("object");
+  const auto pointer = graph.addNode("pointer");
+  const auto value = graph.addNode("value");
+  const auto loaded = graph.addNode("loaded");
+  graph.addEdge(object, pointer, AliasConstraintEdgeKind::Addr);
+
+  AliasClient client =
+      AliasClient::fromConstraintGraph(graph, AliasEncodingMode::PEG);
+  client.solve(SolverBackend::POCR);
+  EXPECT_TRUE(
+      client.addConstraint(value, pointer, AliasConstraintEdgeKind::Store));
+  EXPECT_TRUE(
+      client.addConstraint(pointer, loaded, AliasConstraintEdgeKind::Load));
+  client.solve(SolverBackend::POCR);
+
+  EXPECT_TRUE(client.graph().hasEdge(value, object, "copy"));
+  EXPECT_TRUE(client.graph().hasEdge(object, loaded, "copy"));
+  EXPECT_TRUE(client.mayAlias(value, loaded));
+}
+
+TEST(ClassicalAdaptersTest, IncrementalPegReusesSyntheticDereferenceNode) {
+  AliasConstraintGraph graph;
+  const auto pointer = graph.addNode("pointer");
+  const auto value = graph.addNode("value");
+  const auto loaded = graph.addNode("loaded");
+
+  AliasClient client =
+      AliasClient::fromConstraintGraph(graph, AliasEncodingMode::PEG);
+  client.solve(SolverBackend::Hybrid);
+  EXPECT_TRUE(
+      client.addConstraint(value, pointer, AliasConstraintEdgeKind::Store));
+  EXPECT_TRUE(
+      client.addConstraint(pointer, loaded, AliasConstraintEdgeKind::Load));
+  client.solve(SolverBackend::Hybrid);
+
+  ASSERT_EQ(client.graph().vertexCount(), 4u);
+  const std::size_t dereference = 3;
+  EXPECT_TRUE(client.graph().hasEdge(dereference, pointer, "addr"));
+  EXPECT_TRUE(client.graph().hasEdge(value, dereference, "copy"));
+  EXPECT_TRUE(client.graph().hasEdge(dereference, loaded, "copy"));
+  EXPECT_TRUE(client.mayAlias(value, loaded));
+}
+
 TEST(ClassicalAdaptersTest, GrammarBuildersMaterializeObservedAttributes) {
   AliasConstraintGraph graph;
   const auto base = graph.addNode("base");
@@ -113,6 +234,21 @@ TEST(ClassicalAdaptersTest, GrammarBuildersMaterializeObservedAttributes) {
 
   EXPECT_NE(pag.binaryByFirst().find("gepbar_3"), pag.binaryByFirst().end());
   EXPECT_NE(peg.binaryByFirst().find("gepbar_3"), peg.binaryByFirst().end());
+}
+
+TEST(ClassicalAdaptersTest, IncrementalGepExtendsAttributedGrammar) {
+  AliasConstraintGraph graph;
+  const auto base = graph.addNode("base");
+  const auto field = graph.addNode("field");
+  AliasClient client = AliasClient::fromConstraintGraph(graph);
+  client.solve(SolverBackend::POCR);
+
+  EXPECT_TRUE(
+      client.addConstraint(base, field, AliasConstraintEdgeKind::NormalGep, 9));
+  EXPECT_TRUE(client.grammar().isTerminal("gep_9"));
+  EXPECT_TRUE(client.grammar().isTerminal("gepbar_9"));
+  client.solve(SolverBackend::POCR);
+  EXPECT_TRUE(client.graph().hasEdge(base, field, "gep_9"));
 }
 
 TEST(ClassicalAdaptersTest, ValueFlowClientEncodesSvfgCallsAndReachability) {
@@ -192,6 +328,144 @@ TEST(ClassicalAdaptersTest, ValueFlowClientEncodesSvfgCallsAndReachability) {
     alternate.solve(backend);
     EXPECT_TRUE(alternate.hasFlow(1, 4)) << solverBackendName(backend);
   }
+}
+
+TEST(ClassicalAdaptersTest, SvfgCallsiteIdsFollowStableInstructionOrder) {
+  const char *source = R"(
+    define i32 @callee(i32 %x) {
+    entry:
+      ret i32 %x
+    }
+
+    define i32 @caller(i32 %x) {
+    entry:
+      %first = call i32 @callee(i32 %x)
+      %second = call i32 @callee(i32 %first)
+      ret i32 %second
+    }
+  )";
+  llvm::LLVMContext context;
+  auto module = parseModule(context, source);
+  ASSERT_NE(module, nullptr);
+  const auto *caller = module->getFunction("caller");
+  const auto *callee = module->getFunction("callee");
+  ASSERT_NE(caller, nullptr);
+  ASSERT_NE(callee, nullptr);
+
+  std::vector<const llvm::CallBase *> calls;
+  for (const llvm::Instruction &instruction : llvm::instructions(*caller)) {
+    if (const auto *call = llvm::dyn_cast<llvm::CallBase>(&instruction)) {
+      calls.push_back(call);
+    }
+  }
+  ASSERT_EQ(calls.size(), 2u);
+
+  SVFG svfg;
+  auto *first = new ActualParmSVFGNode(1, nullptr, calls[0], 0);
+  auto *second = new ActualParmSVFGNode(2, nullptr, calls[1], 0);
+  auto *formal = new FormalParmSVFGNode(3, nullptr, callee, 0);
+  svfg.addNode(first);
+  svfg.addNode(second);
+  svfg.addNode(formal);
+  svfg.addEdge(first, formal, SVFGEdgeK::CallInd, calls[0]);
+  svfg.addEdge(second, formal, SVFGEdgeK::CallInd, calls[1]);
+
+  const LabeledGraph encoded = encodeSVFG(svfg);
+  EXPECT_TRUE(
+      encoded.hasEdge(encoded.vertexId("1"), encoded.vertexId("3"), "call_1"));
+  EXPECT_TRUE(
+      encoded.hasEdge(encoded.vertexId("2"), encoded.vertexId("3"), "call_2"));
+  const Grammar grammar = buildVfgGrammar(svfg);
+  EXPECT_TRUE(grammar.isTerminal("call_1"));
+  EXPECT_TRUE(grammar.isTerminal("call_2"));
+}
+
+TEST(ClassicalAdaptersTest, SvfgPreparationPrunesStrongUpdateInputs) {
+  SVFG svfg;
+  auto *pointer = new CopySVFGNode(1, nullptr, nullptr);
+  auto *previous = new CopySVFGNode(2, nullptr, nullptr);
+  auto *store = new StoreSVFGNode(3, nullptr, nullptr, 1);
+  store->setMemoryDef(7, 1, {42});
+  svfg.addNode(pointer);
+  svfg.addNode(previous);
+  svfg.addNode(store);
+  svfg.addEdge(pointer, store, SVFGEdgeK::IntraStore);
+  svfg.addEdge(previous, store, SVFGEdgeK::IntraIndirect, nullptr, {42});
+  SVFG::ObjectInfo info;
+  info.isStack = true;
+  info.isSingleton = true;
+  svfg.setObjectInfo(42, info);
+
+  const SVFGPreparationStatistics stats = prepareSVFGForCFL(svfg);
+  EXPECT_EQ(stats.stores_examined, 1u);
+  EXPECT_EQ(stats.strong_update_stores, 1u);
+  EXPECT_EQ(stats.dereference_edges_removed, 1u);
+  EXPECT_EQ(stats.strong_update_edges_removed, 1u);
+  EXPECT_TRUE(store->getInEdges().empty());
+}
+
+TEST(ClassicalAdaptersTest, SvfgPreparationPreservesWeakUpdateFlow) {
+  SVFG svfg;
+  auto *previous = new CopySVFGNode(1, nullptr, nullptr);
+  auto *store = new StoreSVFGNode(2, nullptr, nullptr, 3);
+  store->setMemoryDef(7, 1, {42, 43});
+  svfg.addNode(previous);
+  svfg.addNode(store);
+  svfg.addEdge(previous, store, SVFGEdgeK::IntraIndirect, nullptr, {42});
+
+  const SVFGPreparationStatistics stats = prepareSVFGForCFL(svfg);
+  EXPECT_EQ(stats.strong_update_stores, 0u);
+  EXPECT_EQ(stats.strong_update_edges_removed, 0u);
+  EXPECT_EQ(store->getInEdges().size(), 1u);
+}
+
+TEST(ClassicalAdaptersTest, LlvmAliasAnalysisDrivesIndirectCallDiscovery) {
+  const char *source = R"(
+    define void @callee(i8* %p, i8* %q) {
+    entry:
+      ret void
+    }
+
+    define i32 @main() {
+    entry:
+      %x = alloca i8
+      %y = alloca i8
+      %fp = alloca void (i8*, i8*)*
+      store void (i8*, i8*)* @callee, void (i8*, i8*)** %fp
+      %target = load void (i8*, i8*)*, void (i8*, i8*)** %fp
+      call void %target(i8* %x, i8* %y)
+      ret i32 0
+    }
+  )";
+  llvm::LLVMContext context;
+  auto module = parseModule(context, source);
+  ASSERT_NE(module, nullptr);
+
+  LLVMAliasOptions options;
+  options.backend = SolverBackend::POCR;
+  LLVMCFLAliasAnalysis analysis(options);
+  const ReachabilityStats stats = analysis.analyze(*module);
+
+  const llvm::Value *x = nullptr;
+  const llvm::Value *y = nullptr;
+  const llvm::Value *target = nullptr;
+  for (const llvm::Instruction &instruction :
+       llvm::instructions(*module->getFunction("main"))) {
+    if (instruction.getName() == "x") {
+      x = &instruction;
+    } else if (instruction.getName() == "y") {
+      y = &instruction;
+    } else if (instruction.getName() == "target") {
+      target = &instruction;
+    }
+  }
+  ASSERT_NE(x, nullptr);
+  ASSERT_NE(y, nullptr);
+  ASSERT_NE(target, nullptr);
+  EXPECT_TRUE(analysis.nodeForValue(target).has_value());
+  EXPECT_TRUE(analysis.mayAlias(x, x));
+  EXPECT_FALSE(analysis.mayAlias(x, y));
+  EXPECT_GE(stats.solver_rounds, 2u);
 }
 
 } // namespace

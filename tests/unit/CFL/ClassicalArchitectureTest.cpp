@@ -1,3 +1,4 @@
+#include "CFL/Classical/HybridForest.h"
 #include "CFL/Classical/Solver.h"
 #include "CFL/Classical/Validation.h"
 
@@ -64,6 +65,67 @@ TEST(ClassicalArchitectureTest, CorrelatesAttributesAcrossProductionHeads) {
   EXPECT_NE(grammar.unaryByRhs().find("call_5"), grammar.unaryByRhs().end());
 }
 
+TEST(ClassicalArchitectureTest, IntersectsPerKindAttributeDomains) {
+  GrammarParseOptions options;
+  options.symbol_attributes["call"] = {1, 2};
+  options.symbol_attributes["ret"] = {2, 3};
+  const auto grammar =
+      Grammar::parseFromText("Productions:\n  S -> call_i ret_i;\n", options);
+
+  EXPECT_TRUE(grammar.hasSymbol("call_2"));
+  EXPECT_TRUE(grammar.hasSymbol("ret_2"));
+  EXPECT_TRUE(grammar.isTerminal("call_1"));
+  EXPECT_TRUE(grammar.isTerminal("ret_3"));
+  EXPECT_EQ(grammar.binaryByFirst().count("call_1"), 0u);
+  EXPECT_EQ(grammar.binaryBySecond().count("ret_3"), 0u);
+}
+
+TEST(ClassicalArchitectureTest, RejectsUnboundAttributeVariables) {
+  EXPECT_THROW(Grammar::parseFromText("Productions:\n  S -> call_i ret_i;\n"),
+               std::invalid_argument);
+}
+
+TEST(ClassicalArchitectureTest, InfersAttributeDomainsFromGraphLabels) {
+  LabeledGraph graph;
+  graph.addEdge("a", "b", "call_4");
+  graph.addEdge("b", "c", "ret_4");
+  graph.addEdge("c", "d", "call_9");
+  graph.addEdge("d", "e", "ret_9");
+  const auto grammar = Grammar::parseFromText(
+      "Productions:\n  S -> call_i ret_i;\n", inferGrammarAttributes(graph));
+
+  EXPECT_TRUE(grammar.hasSymbol("call_4"));
+  EXPECT_TRUE(grammar.hasSymbol("call_9"));
+  EXPECT_TRUE(grammar.hasSymbol("ret_4"));
+  EXPECT_TRUE(grammar.hasSymbol("ret_9"));
+}
+
+TEST(ClassicalArchitectureTest, HybridForestMaintainsIncrementalReachTrees) {
+  HybridReachabilityForest forest(5);
+  EXPECT_EQ(forest.addArc(0, 1).size(), 1u);
+  const auto through_two = forest.addArc(1, 2);
+  EXPECT_NE(std::find(through_two.begin(), through_two.end(),
+                      std::make_pair<std::size_t, std::size_t>(0, 2)),
+            through_two.end());
+
+  const auto prefixed = forest.addArc(3, 0);
+  EXPECT_NE(std::find(prefixed.begin(), prefixed.end(),
+                      std::make_pair<std::size_t, std::size_t>(3, 2)),
+            prefixed.end());
+
+  const auto cycle = forest.addArc(2, 0);
+  EXPECT_NE(std::find(cycle.begin(), cycle.end(),
+                      std::make_pair<std::size_t, std::size_t>(0, 0)),
+            cycle.end());
+  EXPECT_NE(std::find(cycle.begin(), cycle.end(),
+                      std::make_pair<std::size_t, std::size_t>(2, 1)),
+            cycle.end());
+  EXPECT_GT(forest.statistics().meld_operations, 0u);
+
+  forest.ensureNodeCount(6);
+  EXPECT_EQ(forest.addArc(5, 0).size(), 3u);
+}
+
 TEST(ClassicalArchitectureTest, AllSolverBackendsProduceTheSameClosure) {
   const auto grammar = Grammar::parseFromText(
       "Start:\n  S\nTerminal:\n  a\nVariables:\n  S\nProductions:\n"
@@ -77,6 +139,13 @@ TEST(ClassicalArchitectureTest, AllSolverBackendsProduceTheSameClosure) {
   EXPECT_EQ(solveWith(SolverBackend::POCR, graph, grammar), baseline);
   EXPECT_EQ(solveWith(SolverBackend::Hybrid, graph, grammar), baseline);
   EXPECT_TRUE(baseline.count({"S", 0, 3}) != 0);
+
+  LabeledGraph hybrid_graph = graph;
+  SolverSession hybrid(hybrid_graph, grammar, SolverBackend::Hybrid);
+  const ReachabilityStats hybrid_stats = hybrid.solve();
+  EXPECT_EQ(hybrid_stats.hybrid_forest_roots, graph.vertexCount());
+  EXPECT_GT(hybrid_stats.hybrid_forest_nodes, hybrid_stats.hybrid_forest_roots);
+  EXPECT_GT(hybrid_stats.hybrid_meld_operations, 0u);
 }
 
 TEST(ClassicalArchitectureTest, BackendsAgreeAcrossGeneratedSmallGraphs) {
@@ -107,6 +176,64 @@ TEST(ClassicalArchitectureTest, BackendsAgreeAcrossGeneratedSmallGraphs) {
     EXPECT_EQ(solveWith(SolverBackend::Hybrid, graph, grammar), baseline)
         << "seed=" << seed;
   }
+}
+
+TEST(ClassicalArchitectureTest, HybridForestDerivesNonNullableReflexiveCycles) {
+  const auto grammar = Grammar::parseFromText(
+      "Start:\n  S\nTerminal:\n  a\nVariables:\n  S\nProductions:\n"
+      "  S -> S S | a;\n");
+  LabeledGraph graph;
+  graph.addEdge("n0", "n1", "a");
+  graph.addEdge("n1", "n0", "a");
+
+  const auto baseline = solveWith(SolverBackend::Baseline, graph, grammar);
+  EXPECT_EQ(solveWith(SolverBackend::Hybrid, graph, grammar), baseline);
+  EXPECT_TRUE(baseline.count({"S", 0, 0}) != 0);
+  EXPECT_TRUE(baseline.count({"S", 1, 1}) != 0);
+}
+
+TEST(ClassicalArchitectureTest,
+     HybridForestMatchesBaselineOnGeneratedCyclicGraphs) {
+  const auto grammar = Grammar::parseFromText(
+      "Start:\n  S\nTerminal:\n  a\nVariables:\n  S\nProductions:\n"
+      "  S -> S S | a;\n");
+  for (std::size_t seed = 1; seed <= 32; ++seed) {
+    LabeledGraph graph;
+    for (std::size_t node = 0; node < 7; ++node) {
+      graph.addVertex("n" + std::to_string(node));
+    }
+    for (std::size_t source = 0; source < 7; ++source) {
+      for (std::size_t target = 0; target < 7; ++target) {
+        if ((source * 19 + target * 23 + seed * 29) % 9 == 0) {
+          graph.addEdge(source, target, "a");
+        }
+      }
+    }
+    EXPECT_EQ(solveWith(SolverBackend::Hybrid, graph, grammar),
+              solveWith(SolverBackend::Baseline, graph, grammar))
+        << "seed=" << seed;
+  }
+}
+
+TEST(ClassicalArchitectureTest, HybridUsesOneForestPerTransitiveSymbol) {
+  const auto grammar = Grammar::parseFromText(
+      "Start:\n  S\nTerminal:\n  a b\nVariables:\n  S A B\n"
+      "Productions:\n  A -> A A | a; B -> B B | b; S -> A B;\n");
+  LabeledGraph graph;
+  graph.addEdge("n0", "n1", "a");
+  graph.addEdge("n1", "n2", "a");
+  graph.addEdge("n2", "n3", "b");
+  graph.addEdge("n3", "n4", "b");
+
+  LabeledGraph baseline_graph = graph;
+  SolverSession baseline(baseline_graph, grammar, SolverBackend::Baseline);
+  baseline.solve();
+  SolverSession hybrid(graph, grammar, SolverBackend::Hybrid);
+  const ReachabilityStats stats = hybrid.solve();
+
+  EXPECT_TRUE(hybrid.contains(0, 4, "S"));
+  EXPECT_EQ(stats.hybrid_forest_roots, graph.vertexCount() * 2);
+  EXPECT_EQ(hybrid.relation().edgeCount(), baseline.relation().edgeCount());
 }
 
 TEST(ClassicalArchitectureTest, IncrementalSessionResumesToFixedPoint) {

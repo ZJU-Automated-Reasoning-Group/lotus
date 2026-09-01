@@ -534,6 +534,58 @@ public:
     */
   }
 
+  /// Resolve indirect calls with points-to facts supplied by an external
+  /// analysis. The provider receives an Aser pointer-node ID and returns Aser
+  /// object-node IDs. Newly resolved calls go through the normal CtxModule
+  /// callbacks, so actual/formal, return, heap, and newly reached function
+  /// constraints are constructed exactly as for the native Aser solver.
+  template <typename PointsToProvider>
+  bool resolveFunctionPointers(const std::vector<NodeID> &function_pointers,
+                               PointsToProvider points_to) {
+    bool changed = false;
+    for (NodeID id : function_pointers) {
+      CGNodeTy *base = (*consGraph)[id]->getSuperNode();
+      if (!base->isFunctionPtr()) {
+        continue;
+      }
+      auto *function_pointer = static_cast<PtrNode *>(base);
+      for (NodeID object_id : points_to(function_pointer->getNodeID())) {
+        if (object_id >= consGraph->getNodeNum()) {
+          continue;
+        }
+        auto *object_node = llvm::dyn_cast<ObjNode>((*consGraph)[object_id]);
+        if (!object_node || !object_node->getObject()->isFunction()) {
+          continue;
+        }
+        const auto *target = llvm::dyn_cast<llvm::Function>(
+            object_node->getObject()->getValue());
+        if (!target) {
+          continue;
+        }
+        for (CallGraphNode<ctx> *indirect_node :
+             function_pointer->getIndirectNodes()) {
+          const auto *callsite =
+              indirect_node->getTargetFunPtr()->getCallSite();
+          if (indirect_node->getTargetFunPtr()->isInterceptedCallSite()) {
+            if (!static_cast<SubClass &>(*this).isCompatible(callsite,
+                                                             target)) {
+              continue;
+            }
+          } else if (!isCompatibleCall(callsite, target)) {
+            continue;
+          }
+          if (!indirect_node->getTargetFunPtr()->resolvedTo(target)) {
+            continue;
+          }
+          module->resolveCallTo(indirect_node, target, beforeNewNode,
+                                onNewDirect, onNewInDirect, onNewEdge);
+          changed = true;
+        }
+      }
+    }
+    return changed;
+  }
+
   __attribute__((warn_unused_result)) inline const CallGraphNode<ctx> *
   getDirectNode(const ctx *C, const llvm::Function *F) const {
     return module->getDirectNode(C, F);

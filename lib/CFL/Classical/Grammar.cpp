@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <fstream>
+#include <iterator>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -54,13 +55,50 @@ std::optional<char> attributeVariable(const std::string &token) {
   return token.back();
 }
 
+std::vector<std::uint32_t> normalizedDomain(std::vector<std::uint32_t> domain) {
+  std::sort(domain.begin(), domain.end());
+  domain.erase(std::unique(domain.begin(), domain.end()), domain.end());
+  return domain;
+}
+
+std::vector<std::uint32_t> attributeDomain(const std::vector<std::string> &rule,
+                                           char variable,
+                                           const GrammarParseOptions &options) {
+  if (const auto it = options.variable_attributes.find(variable);
+      it != options.variable_attributes.end()) {
+    return normalizedDomain(it->second);
+  }
+
+  std::vector<std::vector<std::uint32_t>> observed_domains;
+  for (const std::string &token : rule) {
+    if (attributeVariable(token) != variable) {
+      continue;
+    }
+    const std::string kind = token.substr(0, token.size() - 2);
+    if (const auto it = options.symbol_attributes.find(kind);
+        it != options.symbol_attributes.end() && !it->second.empty()) {
+      observed_domains.push_back(normalizedDomain(it->second));
+    }
+  }
+
+  if (observed_domains.empty()) {
+    return normalizedDomain(options.attributes);
+  }
+
+  std::vector<std::uint32_t> domain = observed_domains.front();
+  for (std::size_t index = 1; index < observed_domains.size(); ++index) {
+    std::vector<std::uint32_t> intersection;
+    std::set_intersection(
+        domain.begin(), domain.end(), observed_domains[index].begin(),
+        observed_domains[index].end(), std::back_inserter(intersection));
+    domain = std::move(intersection);
+  }
+  return domain;
+}
+
 std::vector<std::vector<std::string>>
 expandAttributes(const std::vector<std::string> &rule,
                  const GrammarParseOptions &options) {
-  if (options.attributes.empty()) {
-    return {rule};
-  }
-
   std::vector<char> variables;
   for (const std::string &token : rule) {
     const auto variable = attributeVariable(token);
@@ -75,9 +113,17 @@ expandAttributes(const std::vector<std::string> &rule,
 
   std::vector<std::vector<std::string>> expanded{rule};
   for (char variable : variables) {
+    const std::vector<std::uint32_t> domain =
+        attributeDomain(rule, variable, options);
+    if (domain.empty()) {
+      throw std::invalid_argument(
+          std::string("No attribute domain for grammar variable '") + variable +
+          "'");
+    }
+
     std::vector<std::vector<std::string>> next;
     for (const auto &candidate : expanded) {
-      for (std::uint32_t attribute : options.attributes) {
+      for (std::uint32_t attribute : domain) {
         auto instantiated = candidate;
         for (std::string &token : instantiated) {
           if (attributeVariable(token) == variable) {
@@ -205,6 +251,11 @@ void Grammar::loadFromText(const std::string &text,
   }
 
   parseDeclarationSections(text, start_symbol_, terminals_, nonterminals_);
+  for (const auto &[kind, domain] : options.symbol_attributes) {
+    for (std::uint32_t attribute : normalizedDomain(domain)) {
+      terminals_.insert(kind + '_' + std::to_string(attribute));
+    }
+  }
 
   const auto production_blob =
       text.substr(productions_pos + std::string("Productions:").size());
@@ -459,6 +510,14 @@ SymbolId Grammar::symbolId(const std::string &symbol) const {
 
 const std::string &Grammar::symbolName(SymbolId symbol) const {
   return symbol_names_.at(symbol);
+}
+
+std::size_t Grammar::productionCount() const {
+  std::size_t count = 0;
+  for (const auto &[_, rules] : productions_) {
+    count += rules.size();
+  }
+  return count;
 }
 
 std::vector<GrammarIssue> Grammar::validate() const {

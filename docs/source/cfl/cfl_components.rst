@@ -6,7 +6,7 @@ Advanced CFL reachability algorithms and graph analysis frameworks.
 Classical CFL Reachability
 --------------------------
 
-Grammar-driven CFL reachability utilities, solver backends, and SVF adapters.
+Grammar-driven CFL reachability utilities and solver backends
 
 **Location**: ``include/CFL/Classical/``, ``lib/CFL/Classical/``
 
@@ -16,6 +16,8 @@ Grammar-driven CFL reachability utilities, solver backends, and SVF adapters.
 * Baseline, sparse-bitvector POCR, and transitive-specialized hybrid solvers
 * Incremental solver sessions for dynamically discovered terminal edges
 * Adapters for Lotus AserPTA constraint graphs and Lotus SVFG value flow
+* End-to-end LLVM bitcode alias analysis with CFL-driven indirect calls
+* Strong-update-aware CFL preparation for Lotus SVFGs
 
 Interleaved-Dyck Core
 ---------------------

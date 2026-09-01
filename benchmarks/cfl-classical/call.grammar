@@ -1,0 +1,8 @@
+Start:
+  S
+Terminal:
+  call ret
+Variables:
+  S
+Productions:
+  S -> call_i ret_i;

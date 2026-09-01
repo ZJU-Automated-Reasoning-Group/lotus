@@ -7,6 +7,8 @@
 
 namespace lotus::cfl::classical {
 
+GrammarParseOptions inferGrammarAttributes(const LabeledGraph &graph);
+
 std::vector<GrammarIssue> validateGraph(const LabeledGraph &graph,
                                         const Grammar &grammar,
                                         bool terminals_only = true);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CFL/Classical/SVFGPreparation.h"
 #include "CFL/Classical/Solver.h"
 
 #include <cstdint>
@@ -25,6 +26,9 @@ public:
   ValueFlowClient &operator=(const ValueFlowClient &) = delete;
 
   static ValueFlowClient fromSVFG(const lotus::analysis::SVFG &svfg);
+  static ValueFlowClient
+  fromPreparedSVFG(lotus::analysis::SVFG &svfg,
+                   const SVFGPreparationOptions &options = {});
 
   ReachabilityStats solve(SolverBackend backend = SolverBackend::Baseline);
   bool hasFlow(std::uint32_t source_node, std::uint32_t target_node) const;

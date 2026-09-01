@@ -24,8 +24,13 @@ struct BinaryRuleId {
 };
 
 struct GrammarParseOptions {
-  /// Values used to instantiate correlated symbols such as call_i/ret_i.
+  /// Global default domain used only when no variable or symbol-specific
+  /// domain is available.
   std::vector<std::uint32_t> attributes;
+  /// Explicit domain for a grammar variable such as i in call_i/ret_i.
+  std::unordered_map<char, std::vector<std::uint32_t>> variable_attributes;
+  /// Observed domain per symbol kind, e.g. call -> {1, 2}, gep -> {0, 4}.
+  std::unordered_map<std::string, std::vector<std::uint32_t>> symbol_attributes;
 };
 
 enum class GrammarIssueSeverity {
@@ -60,6 +65,7 @@ public:
   SymbolId symbolId(const std::string &symbol) const;
   const std::string &symbolName(SymbolId symbol) const;
   std::size_t symbolCount() const { return symbol_names_.size(); }
+  std::size_t productionCount() const;
   const std::unordered_set<std::string> &terminals() const {
     return terminals_;
   }

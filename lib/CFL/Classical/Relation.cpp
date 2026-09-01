@@ -60,6 +60,21 @@ public:
 
   std::size_t edgeCount() const override { return edge_count_; }
 
+  std::size_t approximateMemoryBytes() const override {
+    std::size_t bytes = sizeof(*this);
+    bytes +=
+        (successors_.capacity() + predecessors_.capacity()) * sizeof(SymbolMap);
+    for (const auto &nodes : {&successors_, &predecessors_}) {
+      for (const SymbolMap &map : *nodes) {
+        bytes += map.size() * sizeof(SymbolMap::value_type);
+        for (const auto &[_, values] : map) {
+          bytes += values.size() * sizeof(NodeId);
+        }
+      }
+    }
+    return bytes;
+  }
+
 private:
   using NodeSet = std::unordered_set<NodeId>;
   using SymbolMap = std::unordered_map<SymbolId, NodeSet>;
@@ -127,6 +142,21 @@ public:
   }
 
   std::size_t edgeCount() const override { return edge_count_; }
+
+  std::size_t approximateMemoryBytes() const override {
+    std::size_t bytes = sizeof(*this);
+    bytes +=
+        (successors_.capacity() + predecessors_.capacity()) * sizeof(SymbolMap);
+    for (const auto &nodes : {&successors_, &predecessors_}) {
+      for (const SymbolMap &map : *nodes) {
+        bytes += map.size() * sizeof(SymbolMap::value_type);
+        for (const auto &[_, values] : map) {
+          bytes += values.count() * sizeof(unsigned);
+        }
+      }
+    }
+    return bytes;
+  }
 
 private:
   using BitVector = llvm::SparseBitVector<>;

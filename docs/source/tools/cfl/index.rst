@@ -13,8 +13,29 @@ enables analysis of complex program properties using grammar-based constraints.
 
 **Location**: ``tools/cfl/``
 
-**Tools**: ``lotus-cfl-mcfl`` (MCFL reachability), CSR (indexed CFL
-reachability)
+**Tools**: ``lotus-cfl-classical``, ``lotus-cfl-alias``,
+``lotus-cfl-mcfl``, and CSR.
+
+Classical CFL and Alias Analysis
+--------------------------------
+
+``lotus-cfl-classical`` runs a supplied grammar over a text, DOT, or JSON
+graph with the baseline, POCR, or hybrid-forest backend.
+
+``lotus-cfl-alias`` consumes LLVM IR or bitcode. It uses Aser as the constraint
+frontend but drives points-to propagation and indirect-call discovery through
+the CFL relation. It supports PAG/PEG encodings, annotation validation,
+points-to printing, named alias queries, and JSON statistics.
+
+.. code-block:: bash
+
+   cmake --build build --target lotus-cfl-classical lotus-cfl-alias
+   build/bin/lotus-cfl-classical --grammar grammar.txt --graph graph.txt \
+     --solver hybrid --json-stats
+   build/bin/lotus-cfl-alias --encoding pag --solver pocr \
+     --check-annotations module.bc
+
+See :doc:`../../cfl/classical` for the complete option and API description.
 
 MCFL: Multiple Context-Free Language Reachability
 -------------------------------------------------

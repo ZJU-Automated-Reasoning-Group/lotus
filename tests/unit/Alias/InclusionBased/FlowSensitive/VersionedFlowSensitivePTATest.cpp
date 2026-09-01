@@ -572,6 +572,57 @@ TEST_F(VersionedFlowSensitivePTATest,
 }
 
 TEST_F(VersionedFlowSensitivePTATest,
+       VoidIndirectCallWithoutValueEdgesStillUpdatesCallGraph) {
+  auto module = parseModule(R"(
+    @function.pointer = global void ()* @target
+    define void @target() {
+    entry:
+      ret void
+    }
+    define i32 @main() {
+    entry:
+      %callee = load void ()*, void ()** @function.pointer
+      call void %callee()
+      ret i32 0
+    }
+  )");
+  ASSERT_NE(module, nullptr);
+
+  ICFG icfg;
+  ICFGBuilder icfgBuilder(&icfg);
+  icfgBuilder.build(module.get());
+  SVFGBuilderConfig graphConfig;
+  graphConfig.usePointerAnalysis = true;
+  graphConfig.buildMSSA = true;
+  graphConfig.resolveIndirectCalls = false;
+  SVFGBuilder builder(graphConfig);
+  std::unique_ptr<SVFG> graph(builder.build(&icfg));
+  ASSERT_NE(graph, nullptr);
+
+  const Function *mainFunction = module->getFunction("main");
+  const Function *targetFunction = module->getFunction("target");
+  const CallBase *indirectCall = nullptr;
+  for (const Instruction &instruction : instructions(mainFunction)) {
+    const auto *call = dyn_cast<CallBase>(&instruction);
+    if (call && !call->getCalledFunction())
+      indirectCall = call;
+  }
+  ASSERT_NE(indirectCall, nullptr);
+
+  VersionedFlowSensitivePTA::Config solverConfig;
+  solverConfig.connectIndirectCall = [&](const CallBase *callSite,
+                                         const Function *target) {
+    std::vector<SVFGEdge *> edges;
+    return builder.connectCallSiteToCalleeOnTheFly(graph.get(), callSite,
+                                                   target, edges);
+  };
+  VersionedFlowSensitivePTA solver(*graph, std::move(solverConfig));
+  const auto &stats = solver.solve();
+  EXPECT_NE(graph->getConnectedCallees(indirectCall).count(targetFunction), 0u);
+  EXPECT_GT(stats.indirectCallEdges, 0u);
+}
+
+TEST_F(VersionedFlowSensitivePTATest,
        MemcpyProducesNewDestinationVersionAndCopiesPointer) {
   auto module = parseModule(R"(
     %S = type { i8* }

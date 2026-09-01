@@ -505,6 +505,7 @@ void VersionedFlowSensitivePTA::buildVersionLabels() {
   initialVersion_.clear();
   versionMelds_.clear();
   equivalentObject_.clear();
+  stats_.equivalentObjects = 0;
   const PointsToSet objects = relevantObjects();
   std::map<std::vector<FootprintEntry>, ObjectID> footprintOwners;
   for (ObjectID object : objects) {
@@ -995,7 +996,14 @@ bool VersionedFlowSensitivePTA::resolveIndirectCalls(
           if (edge)
             oldEdges.insert(edge);
       const auto oldRecursiveFunctions = recursiveFunctions_;
-      if (config_.connectIndirectCall(callSite, target)) {
+      const bool wasConnected =
+          graph_->getConnectedCallees(callSite).count(target) != 0;
+      const bool callbackReportedChange =
+          config_.connectIndirectCall(callSite, target);
+      const bool newlyConnected =
+          !wasConnected &&
+          graph_->getConnectedCallees(callSite).count(target) != 0;
+      if (callbackReportedChange || newlyConnected) {
         ++stats_.indirectCallEdges;
         changed = true;
         std::vector<const SVFGEdge *> newEdges;

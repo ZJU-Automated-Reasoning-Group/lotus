@@ -41,6 +41,114 @@ TEST_F(VersionedFlowSensitivePTATest,
 }
 
 TEST_F(VersionedFlowSensitivePTATest,
+       IndirectFunctionEntryUsesDedicatedDeltaVersion) {
+  auto module = parseModule(R"(
+    define void @target(i8** %pointer) {
+    entry:
+      ret void
+    }
+    define i32 @main(void (i8**)* %function.pointer, i8** %pointer) {
+    entry:
+      call void %function.pointer(i8** %pointer)
+      ret i32 0
+    }
+  )");
+  ASSERT_NE(module, nullptr);
+  const Function *target = module->getFunction("target");
+  const CallBase *call = nullptr;
+  for (const Instruction &instruction :
+       instructions(module->getFunction("main")))
+    if (const auto *candidate = dyn_cast<CallBase>(&instruction))
+      call = candidate;
+  ASSERT_NE(target, nullptr);
+  ASSERT_NE(call, nullptr);
+
+  constexpr uint32_t object = 100;
+  SVFG graph;
+  auto *root = new DummySVFGNode(1, nullptr);
+  auto *formalIn =
+      new FormalInSVFGNode(2, nullptr, target, 1, PointsToSet{object}, 1);
+  graph.addNode(root);
+  graph.addNode(formalIn);
+  graph.setObjectDebug(object, "memory");
+  graph.addCalleeToIndCallSite(target, call);
+
+  VersionedFlowSensitivePTA solver(graph);
+  solver.solve();
+  const auto rootVersion = solver.getConsume(root->getId(), object);
+  const auto deltaVersion = solver.getConsume(formalIn->getId(), object);
+  EXPECT_NE(rootVersion, VersionedFlowSensitivePTA::InvalidVersion);
+  EXPECT_NE(deltaVersion, VersionedFlowSensitivePTA::InvalidVersion);
+  EXPECT_NE(rootVersion, deltaVersion);
+  EXPECT_EQ(deltaVersion, solver.getYield(formalIn->getId(), object));
+}
+
+TEST_F(VersionedFlowSensitivePTATest,
+       NewlyDiscoveredDeltaNodeForcesVersionRelabeling) {
+  auto module = parseModule(R"(
+    define void @target(i8** %pointer) {
+    entry:
+      ret void
+    }
+    define i32 @main(void (i8**)* %function.pointer, i8** %pointer) {
+    entry:
+      call void %function.pointer(i8** %pointer)
+      ret i32 0
+    }
+  )");
+  ASSERT_NE(module, nullptr);
+  const Function *target = module->getFunction("target");
+  const CallBase *call = nullptr;
+  for (const Instruction &instruction :
+       instructions(module->getFunction("main")))
+    if (const auto *candidate = dyn_cast<CallBase>(&instruction))
+      call = candidate;
+  ASSERT_NE(target, nullptr);
+  ASSERT_NE(call, nullptr);
+
+  constexpr uint32_t functionObject = 100;
+  constexpr uint32_t memoryObject = 200;
+  constexpr uint32_t functionPointerId = 42;
+  SVFG graph;
+  auto *address = new AddrSVFGNode(1, nullptr, target, functionObject);
+  address->setValueId(functionPointerId);
+  auto *source = new DummySVFGNode(2, nullptr);
+  auto *formalIn =
+      new FormalInSVFGNode(3, nullptr, target, 1, PointsToSet{memoryObject}, 1);
+  graph.addNode(address);
+  graph.addNode(source);
+  graph.addNode(formalIn);
+  graph.setObjectValue(functionObject, target);
+  SVFG::ObjectInfo functionInfo;
+  functionInfo.isFunction = true;
+  functionInfo.isConstant = true;
+  graph.setObjectInfo(functionObject, functionInfo);
+  graph.setObjectDebug(functionObject, "target");
+  graph.setObjectDebug(memoryObject, "memory");
+  graph.addIndCallSite(functionPointerId, call);
+
+  bool connected = false;
+  VersionedFlowSensitivePTA::Config config;
+  config.connectIndirectCall = [&](const CallBase *callSite,
+                                   const Function *callee) {
+    if (connected || callSite != call || callee != target)
+      return false;
+    connected = true;
+    graph.addCalleeToIndCallSite(target, call);
+    graph.addEdge(source, formalIn, SVFGEdgeK::IntraIndirect, call,
+                  PointsToSet{memoryObject});
+    return true;
+  };
+
+  VersionedFlowSensitivePTA solver(graph, std::move(config));
+  const auto &stats = solver.solve();
+  EXPECT_TRUE(connected);
+  EXPECT_GT(stats.relabelings, 1u);
+  EXPECT_NE(solver.getConsume(source->getId(), memoryObject),
+            solver.getConsume(formalIn->getId(), memoryObject));
+}
+
+TEST_F(VersionedFlowSensitivePTATest,
        StorePrelabelsProduceDistinctConsumeAndYieldVersions) {
   auto module = parseModule(R"(
     @slot = global i8* null
@@ -331,6 +439,60 @@ TEST_F(VersionedFlowSensitivePTATest,
   }
   EXPECT_TRUE(hasX);
   EXPECT_TRUE(hasY);
+}
+
+TEST_F(VersionedFlowSensitivePTATest,
+       MeldJoinWithTwoDefinitionsDoesNotRestoreInitializer) {
+  auto module = parseModule(R"(
+    @x = global i8 0
+    @y = global i8 0
+    @z = global i8 0
+    @slot = global i8* @x
+    define i8* @main(i1 %condition) {
+    entry:
+      br i1 %condition, label %left, label %right
+    left:
+      store i8* @y, i8** @slot
+      br label %join
+    right:
+      store i8* @z, i8** @slot
+      br label %join
+    join:
+      %result = load i8*, i8** @slot
+      ret i8* %result
+    }
+  )");
+  ASSERT_NE(module, nullptr);
+
+  ICFG icfg;
+  ICFGBuilder icfgBuilder(&icfg);
+  icfgBuilder.build(module.get());
+  SVFGBuilderConfig config;
+  config.usePointerAnalysis = true;
+  config.buildMSSA = true;
+  SVFGBuilder builder(config);
+  std::unique_ptr<SVFG> graph(builder.build(&icfg));
+  ASSERT_NE(graph, nullptr);
+
+  const LoadInst *load = nullptr;
+  for (const Instruction &instruction :
+       instructions(module->getFunction("main")))
+    if (const auto *candidate = dyn_cast<LoadInst>(&instruction))
+      load = candidate;
+  ASSERT_NE(load, nullptr);
+
+  VersionedFlowSensitivePTA solver(*graph);
+  solver.solve();
+  const auto result = solver.pointsTo(load);
+  ASSERT_TRUE(result.has_value());
+  auto pointsToGlobal = [&](StringRef name) {
+    return std::any_of(result->begin(), result->end(), [&](uint32_t object) {
+      return graph->getObjectValue(object) == module->getGlobalVariable(name);
+    });
+  };
+  EXPECT_FALSE(pointsToGlobal("x"));
+  EXPECT_TRUE(pointsToGlobal("y"));
+  EXPECT_TRUE(pointsToGlobal("z"));
 }
 
 TEST_F(VersionedFlowSensitivePTATest,

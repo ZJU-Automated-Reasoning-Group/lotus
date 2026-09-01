@@ -114,6 +114,21 @@ void VersionedFlowSensitivePTA::initializeRecursiveFunctions() {
   }
 }
 
+bool VersionedFlowSensitivePTA::functionHasKnownCaller(
+    const Function *function) const {
+  if (!function)
+    return false;
+  if (const LTCallGraph *callGraph = graph_->getRefinedCallGraph())
+    for (const auto &entry : *callGraph) {
+      if (!entry.second)
+        continue;
+      for (const auto &edge : *entry.second)
+        if (edge.second && edge.second->getFunction() == function)
+          return true;
+    }
+  return false;
+}
+
 VersionedFlowSensitivePTA::PointsToSet
 VersionedFlowSensitivePTA::expandIndirectObjects(
     const PointsToSet &objects) const {
@@ -202,10 +217,16 @@ bool VersionedFlowSensitivePTA::intrinsicMayDefine(
 }
 
 bool VersionedFlowSensitivePTA::memoryPhiNeedsInitial(
-    const MSSAPhiSVFGNode &phi) const {
-  for (auto operand = phi.opVerBegin(); operand != phi.opVerEnd(); ++operand)
-    if (operand->second.version == 0)
+    const MSSAPhiSVFGNode &phi, ObjectID object) const {
+  for (const SVFGEdge *edge : phi.getInEdges()) {
+    const SVFGNode *source = edge ? edge->getSrcNode() : nullptr;
+    if (isa_and_nonnull<EntryChiSVFGNode>(source))
       return true;
+    if (const auto *formalIn = dyn_cast_or_null<FormalInSVFGNode>(source))
+      if (!isDeltaNode(*source, object) &&
+          !functionHasKnownCaller(formalIn->getFunction()))
+        return true;
+  }
   const ICFGNode *icfgNode = phi.getICFGNode();
   const BasicBlock *block = icfgNode ? icfgNode->getBasicBlock() : nullptr;
   if (!block)
@@ -213,6 +234,27 @@ bool VersionedFlowSensitivePTA::memoryPhiNeedsInitial(
   const unsigned predecessorCount =
       static_cast<unsigned>(std::distance(pred_begin(block), pred_end(block)));
   return phi.getOpVerNum() < predecessorCount;
+}
+
+bool VersionedFlowSensitivePTA::isDeltaNode(const SVFGNode &node,
+                                            ObjectID object) const {
+  const auto *memoryNode = dyn_cast<MSSASVFGNode>(&node);
+  if (!memoryNode)
+    return false;
+  const PointsToSet regions =
+      expandIndirectObjects(memoryNode->getDefSVFVars());
+  const bool carriesObject =
+      regions.count(object) != 0 ||
+      std::any_of(regions.begin(), regions.end(), [&](ObjectID region) {
+        return graph_->isUnknownObject(region);
+      });
+  if (!carriesObject)
+    return false;
+  if (const Function *function = graph_->isFunEntrySVFGNode(&node))
+    return !graph_->getIndCallSitesInvokingCallee(function).empty();
+  if (const CallBase *callSite = graph_->isCallSiteRetSVFGNode(&node))
+    return !callSite->getCalledFunction();
+  return false;
 }
 
 VersionedFlowSensitivePTA::PointsToSet
@@ -288,7 +330,10 @@ void VersionedFlowSensitivePTA::labelObject(ObjectID object) {
     // dedicated value-flow node. Seed such PHIs with the initial token so the
     // meld version represents both the bypass and updated paths.
     const auto *memoryPhi = dyn_cast<MSSAPhiSVFGNode>(node);
-    if (!hasIncoming || (memoryPhi && memoryPhiNeedsInitial(*memoryPhi)))
+    if (isDeltaNode(*node, object))
+      consumedMeld[nodeID].insert(nodeID + 2);
+    else if (!hasIncoming ||
+             (memoryPhi && memoryPhiNeedsInitial(*memoryPhi, object)))
       consumedMeld[nodeID].insert(InitialMeldToken);
   }
 
@@ -319,6 +364,8 @@ void VersionedFlowSensitivePTA::labelObject(ObjectID object) {
         if (!edge || !inScope(edge->getDstNode()) ||
             !edgeCarriesObject(*edge, object))
           continue;
+        if (isDeltaNode(*edge->getDstNode(), object))
+          continue;
         MeldSet &destination = consumedMeld[edge->getDstNode()->getId()];
         const std::size_t oldSize = destination.size();
         destination.insert(yieldedMeld[nodeID].begin(),
@@ -338,7 +385,7 @@ void VersionedFlowSensitivePTA::labelObject(ObjectID object) {
       const Version consumed = internVersion(object, consumedMeld[nodeID]);
       consume_[nodeID][object] = consumed;
       const auto *memoryPhi = dyn_cast<MSSAPhiSVFGNode>(node);
-      if (memoryPhi && memoryPhiNeedsInitial(*memoryPhi) &&
+      if (memoryPhi && memoryPhiNeedsInitial(*memoryPhi, object) &&
           consumedMeld[nodeID].count(InitialMeldToken) != 0)
         addReliance(object, initialVersion_[object], consumed);
     }
@@ -383,8 +430,10 @@ VersionedFlowSensitivePTA::versionFootprint(ObjectID object) const {
     if (const auto *actualOut = dyn_cast<ActualOutSVFGNode>(node))
       if (intrinsicMayDefine(*actualOut, object))
         footprint.push_back({2, nodeID, nodeID});
+    if (isDeltaNode(*node, object))
+      footprint.push_back({5, nodeID, nodeID});
     if (const auto *memoryPhi = dyn_cast<MSSAPhiSVFGNode>(node);
-        memoryPhi && memoryPhiNeedsInitial(*memoryPhi))
+        memoryPhi && memoryPhiNeedsInitial(*memoryPhi, object))
       footprint.push_back({3, nodeID, nodeID});
     for (const SVFGEdge *edge : node->getOutEdges())
       if (edge && inScope(edge->getDstNode()) &&
@@ -897,6 +946,20 @@ void VersionedFlowSensitivePTA::updateConnectedNodes(
     if (wildcard)
       objects = relevantObjects();
     for (ObjectID object : objects) {
+      if (isDeltaNode(*edge->getDstNode(), object)) {
+        const Version deltaVersion =
+            getConsume(edge->getDstNode()->getId(), object);
+        const auto melds = versionMelds_.find(object);
+        const bool hasDedicatedVersion =
+            deltaVersion != InvalidVersion && melds != versionMelds_.end() &&
+            deltaVersion <= melds->second.size() &&
+            melds->second[deltaVersion - 1] ==
+                MeldSet{edge->getDstNode()->getId() + 2};
+        if (!hasDedicatedVersion) {
+          topologyChanged_ = true;
+          continue;
+        }
+      }
       const Version source = getYield(edge->getSrcNode()->getId(), object);
       const Version destination =
           getConsume(edge->getDstNode()->getId(), object);

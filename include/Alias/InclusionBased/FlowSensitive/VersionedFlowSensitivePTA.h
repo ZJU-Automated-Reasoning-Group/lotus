@@ -127,6 +127,7 @@ private:
 
   bool inScope(const lotus::analysis::SVFGNode *node) const;
   void initializeRecursiveFunctions();
+  bool functionHasKnownCaller(const llvm::Function *function) const;
   void buildVersionLabels();
   void labelObject(ObjectID object);
   std::vector<FootprintEntry> versionFootprint(ObjectID object) const;
@@ -139,7 +140,10 @@ private:
                       ObjectID object) const;
   bool intrinsicMayDefine(const lotus::analysis::ActualOutSVFGNode &actualOut,
                           ObjectID object) const;
-  bool memoryPhiNeedsInitial(const lotus::analysis::MSSAPhiSVFGNode &phi) const;
+  bool memoryPhiNeedsInitial(const lotus::analysis::MSSAPhiSVFGNode &phi,
+                             ObjectID object) const;
+  bool isDeltaNode(const lotus::analysis::SVFGNode &node,
+                   ObjectID object) const;
   PointsToSet objectsWithFields(const llvm::Value *pointer) const;
   Version internVersion(ObjectID object, const MeldSet &meld);
   bool addReliance(ObjectID object, Version source, Version destination);

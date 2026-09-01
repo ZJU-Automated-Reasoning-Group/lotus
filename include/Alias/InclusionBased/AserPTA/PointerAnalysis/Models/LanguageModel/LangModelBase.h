@@ -233,42 +233,41 @@ private:
                                   const llvm::Value *v,
                                   std::set<Pointer<ctx>> &result) {}
 
-  __attribute__((warn_unused_result))
-  static inline llvm::StringRef getEntryName(const LangModelTy *model) {
+  __attribute__((warn_unused_result)) static inline llvm::StringRef
+  getEntryName(const LangModelTy *model) {
     return model->getEntryName();
   }
 
-  __attribute__((warn_unused_result))
-  static inline const llvm::Module *getLLVMModule(const LangModelTy *model) {
+  __attribute__((warn_unused_result)) static inline const llvm::Module *
+  getLLVMModule(const LangModelTy *model) {
     return model->getLLVMModule();
   }
 
-  __attribute__((warn_unused_result))
-  static inline const CallGraphNode<ctx> *
+  __attribute__((warn_unused_result)) static inline const CallGraphNode<ctx> *
   getDirectNode(LangModelTy *model, const ctx *C, const llvm::Function *F) {
     return model->getDirectNode(C, F);
   }
 
-  __attribute__((warn_unused_result))
-  static inline const CallGraphNode<ctx> *
+  __attribute__((warn_unused_result)) static inline const CallGraphNode<ctx> *
   getDirectNodeOrNull(LangModelTy *model, const ctx *C,
                       const llvm::Function *F) {
     return model->getDirectNodeOrNull(C, F);
   }
 
-  __attribute__((warn_unused_result)) __attribute__((deprecated(
-      "use getInDirectCallSite(ctx, instruction) instead")))
-  static inline const CallGraphNode<ctx> *
+  __attribute__((warn_unused_result)) __attribute__((
+      deprecated("use getInDirectCallSite(ctx, instruction) "
+                 "instead"))) static inline const CallGraphNode<ctx> *
   getInDirectNode(LangModelTy *model, const ctx *C,
                   const llvm::Instruction *I) {
     return model->getInDirectNode(C, I);
   }
 
-  __attribute__((warn_unused_result))
-  static inline const InDirectCallSite<ctx> *
+  __attribute__((
+      warn_unused_result)) static inline const InDirectCallSite<ctx> *
   getInDirectCallSite(LangModelTy *model, const ctx *C,
                       const llvm::Instruction *I) {
-    return model->getInDirectNode(C, I)->getTargetFunPtr();
+    const CallGraphNode<ctx> *node = model->getInDirectNode(C, I);
+    return node ? node->getTargetFunPtr() : nullptr;
   }
 
   static inline NodeID getSuperNodeIDForValue(LangModelTy *model, const ctx *C,

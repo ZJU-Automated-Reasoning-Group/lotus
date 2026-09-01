@@ -10,6 +10,7 @@
 #include "Alias/InclusionBased/AserPTA/PointerAnalysis/Models/MemoryModel/FieldSensitive/FSMemModel.h"
 #include "Alias/InclusionBased/AserPTA/PointerAnalysis/PointerAnalysisPass.h"
 #include "Alias/InclusionBased/AserPTA/PointerAnalysis/Program/CallSite.h"
+#include "Alias/InclusionBased/AserPTA/PointerAnalysis/Program/CtxModule.h"
 #include "Alias/InclusionBased/AserPTA/PointerAnalysis/Solver/PartialUpdateSolver.h"
 #include "Alias/InclusionBased/AserPTA/PreProcessing/Passes/CanonicalizeGEPPass.h"
 #include "Alias/InclusionBased/AserPTA/PreProcessing/Passes/InsertGlobalCtorCallPass.h"
@@ -17,8 +18,8 @@
 #include "Alias/InclusionBased/AserPTA/PreProcessing/Passes/RemoveExceptionHandlerPass.h"
 #include "TestUtils/LLVMHelpers.h"
 
-#include <llvm/IR/Instructions.h>
 #include <gtest/gtest.h>
+#include <llvm/IR/Instructions.h>
 
 using namespace llvm;
 using namespace aser;
@@ -48,6 +49,50 @@ void addAserPTAPasses(llvm::legacy::PassManager &passes) {
 }
 
 } // namespace
+
+TEST(AserPTAInfrastructure, SymbolicConstantGepIndexHasElementStride) {
+  const char *ir = R"(
+    define i32* @index([4 x i32]* %array) {
+    entry:
+      %element = getelementptr [4 x i32], [4 x i32]* %array,
+                               i64 0, i64 undef
+      ret i32* %element
+    }
+  )";
+  LLVMContext context;
+  auto module = parseModule(context, ir, "AserPTATest");
+  ASSERT_NE(module, nullptr);
+  const GetElementPtrInst *gep = nullptr;
+  for (const Instruction &instruction :
+       instructions(module->getFunction("index")))
+    if (const auto *candidate = dyn_cast<GetElementPtrInst>(&instruction))
+      gep = candidate;
+  ASSERT_NE(gep, nullptr);
+  ASSERT_FALSE(gep->hasAllConstantIndices());
+  EXPECT_EQ(getGEPStepSize(gep, module->getDataLayout()), 4u);
+}
+
+TEST(AserPTAInfrastructure, MissingIndirectCallNodeReturnsNull) {
+  const char *ir = R"(
+    define i32 @main(void ()* %callee) {
+    entry:
+      call void %callee()
+      ret i32 0
+    }
+  )";
+  LLVMContext context;
+  auto module = parseModule(context, ir, "AserPTATest");
+  ASSERT_NE(module, nullptr);
+  const CallBase *call = nullptr;
+  for (const Instruction &instruction :
+       instructions(module->getFunction("main")))
+    if (const auto *candidate = dyn_cast<CallBase>(&instruction))
+      call = candidate;
+  ASSERT_NE(call, nullptr);
+
+  CtxModule<NoCtx> contextModule(module.get(), "main");
+  EXPECT_EQ(contextModule.getInDirectNode(nullptr, call), nullptr);
+}
 
 // ============================================================================
 // Field-Insensitive Tests

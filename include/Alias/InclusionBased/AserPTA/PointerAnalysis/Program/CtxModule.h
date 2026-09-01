@@ -371,23 +371,22 @@ public:
     }
   }
 
-  __attribute__((warn_unused_result))
-  inline llvm::StringRef getEntryName() const {
+  __attribute__((warn_unused_result)) inline llvm::StringRef
+  getEntryName() const {
     return this->entryName;
   }
 
-  __attribute__((warn_unused_result))
-  inline const llvm::Module *getLLVMModule() {
+  __attribute__((warn_unused_result)) inline const llvm::Module *
+  getLLVMModule() {
     return this->llvmModule;
   }
 
-  __attribute__((warn_unused_result))
-  inline const llvm::DataLayout &getDataLayout() {
+  __attribute__((warn_unused_result)) inline const llvm::DataLayout &
+  getDataLayout() {
     return this->llvmModule->getDataLayout();
   }
 
-  __attribute__((warn_unused_result))
-  inline const CallGraphTy *getCallGraph() {
+  __attribute__((warn_unused_result)) inline const CallGraphTy *getCallGraph() {
     return callGraph.get();
   }
 
@@ -412,7 +411,9 @@ public:
   __attribute__((warn_unused_result)) inline const CallGraphNode<ctx> *
   getInDirectNode(const ctx *C, const llvm::Instruction *I) {
     auto it = ctxFunPtrMap.find(std::make_pair(C, I));
-    assert(it != ctxFunPtrMap.end());
+    if (it == ctxFunPtrMap.end()) {
+      return nullptr;
+    }
 
     return it->second->getCallNode();
   }

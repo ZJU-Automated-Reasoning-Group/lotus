@@ -13,6 +13,7 @@
 #include "Alias/InclusionBased/AserPTA/PointerAnalysis/Models/MemoryModel/FieldSensitive/FSCanonicalizer.h"
 #include "Alias/InclusionBased/AserPTA/Util/Log.h"
 
+#include <Alias/InclusionBased/AserPTA/PointerAnalysis/Models/MemoryModel/FieldSensitive/Layout/ArrayLayout.h>
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/GetElementPtrTypeIterator.h>
@@ -22,7 +23,6 @@
 #include <llvm/IR/IntrinsicInst.h>
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/Operator.h>
-#include <Alias/InclusionBased/AserPTA/PointerAnalysis/Models/MemoryModel/FieldSensitive/Layout/ArrayLayout.h>
 
 using namespace aser;
 using namespace llvm;
@@ -136,26 +136,29 @@ size_t getGEPStepSize(const GetElementPtrInst *GEP, const DataLayout &DL) {
 
   for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP);
        GTI != GTE; GTI++) {
-    // Skip all constant indices (both zero and non-zero). We're looking for
-    // the first variable index to determine the step size.
+    // Only ConstantInt is a statically fixed GEP index. Other Constant
+    // subclasses (notably undef, poison, and constant expressions) make
+    // hasAllConstantIndices() false and must be treated as symbolic indices.
     // Examples:
     //   getelementptr [type], [type *] %obj, 0, %var
     //   getelementptr [type], [type *] %obj, 0, 1, %var
     //   getelementptr [type], [type *] %obj, %var
-    if (isa<Constant>(GTI.getOperand())) {
+    if (isa<ConstantInt>(GTI.getOperand())) {
       continue;
     }
 
     // Found the first variable index - return the step size for this indexed
     // type
-    assert(!isa<Constant>(GTI.getOperand()));
     return DL.getTypeAllocSize(GTI.getIndexedType());
   }
 
   // Should we show source location of the unexpected instruction to user?
   LOG_ERROR("Encountered unexpected Instruction");
   LOG_DEBUG("Encountered unexpected GEP Instruction. inst={}", *GEP);
-  llvm_unreachable("bad gep format");
+  // Be conservative in release and debug builds if LLVM introduces another
+  // index form inconsistent with hasAllConstantIndices(). A byte stride avoids
+  // crashing while keeping the field model over-approximating.
+  return 1;
 }
 
 bool isArrayExistAtOffset(const std::map<size_t, ArrayLayout *> &arrayMap,

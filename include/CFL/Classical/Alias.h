@@ -57,6 +57,7 @@ Grammar buildPegGrammar(const AliasConstraintGraph &graph);
 
 class AliasClient {
 public:
+  ~AliasClient();
   AliasClient(AliasClient &&other) noexcept;
   AliasClient &operator=(AliasClient &&other) noexcept;
   AliasClient(const AliasClient &) = delete;
@@ -82,8 +83,8 @@ public:
   bool mayAlias(std::size_t lhs, std::size_t rhs) const;
   std::vector<std::size_t> pointsTo(std::size_t ptr) const;
 
-  const LabeledGraph &graph() const { return graph_; }
-  const Grammar &grammar() const { return grammar_; }
+  const LabeledGraph &graph() const;
+  const Grammar &grammar() const;
 
 private:
   AliasClient(LabeledGraph graph, Grammar grammar, AliasEncodingMode mode);
@@ -95,8 +96,8 @@ private:
   void initializeGepAttributes();
   void rebuildGrammar();
 
-  LabeledGraph graph_;
-  Grammar grammar_;
+  struct State;
+  std::unique_ptr<State> state_;
   AliasEncodingMode mode_ = AliasEncodingMode::PAG;
   std::unordered_map<std::size_t, std::vector<std::size_t>> peg_dereferences_;
   std::size_t next_synthetic_dereference_ = 0;

@@ -328,7 +328,7 @@ void Grammar::loadFromText(const std::string &text,
           auto it = replacement_cache.find(repeated_key);
           std::string nonterminal;
           if (it == replacement_cache.end()) {
-            nonterminal = "X" + std::to_string(++next_nonterminal_id_);
+            nonterminal = freshNonterminal();
             replacement_cache.emplace(repeated_key, nonterminal);
 
             std::vector<std::string> expanded;
@@ -375,7 +375,7 @@ void Grammar::loadFromText(const std::string &text,
 
       std::string current_head = head;
       for (std::size_t i = 0; i + 2 < rule.size(); ++i) {
-        const auto fresh = "X" + std::to_string(++next_nonterminal_id_);
+        const auto fresh = freshNonterminal();
         binary_productions[current_head].push_back({rule[i], fresh});
         current_head = fresh;
       }
@@ -386,8 +386,13 @@ void Grammar::loadFromText(const std::string &text,
 
   productions_ = std::move(binary_productions);
 
-  for (const auto &[head, rules] : productions_) {
+  // Classify symbols in two passes. Production heads must all be known before
+  // any right-hand-side symbol is considered a terminal; otherwise unordered
+  // map iteration can classify a generated nonterminal as both kinds.
+  for (const auto &[head, _] : productions_) {
     nonterminals_.insert(head);
+  }
+  for (const auto &[_, rules] : productions_) {
     for (const auto &rule : rules) {
       for (const std::string &symbol : rule) {
         if (symbol != kEpsilonSymbol && nonterminals_.count(symbol) == 0) {
@@ -397,13 +402,57 @@ void Grammar::loadFromText(const std::string &text,
     }
   }
 
-  nullable_symbols_.clear();
-  for (const auto &[head, rules] : productions_) {
-    for (const auto &rule : rules) {
-      if (rule.size() == 1 && rule.front() == kEpsilonSymbol) {
-        nullable_symbols_.push_back(head);
-        break;
+  std::unordered_set<std::string> nullable;
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    for (const auto &[head, rules] : productions_) {
+      if (nullable.count(head) != 0) {
+        continue;
       }
+      for (const auto &rule : rules) {
+        const bool direct_epsilon =
+            rule.size() == 1 && rule.front() == kEpsilonSymbol;
+        const bool transitively_nullable =
+            !rule.empty() && std::all_of(rule.begin(), rule.end(),
+                                         [&](const std::string &symbol) {
+                                           return nullable.count(symbol) != 0;
+                                         });
+        if (direct_epsilon || transitively_nullable) {
+          nullable.insert(head);
+          changed = true;
+          break;
+        }
+      }
+    }
+  }
+  nullable_symbols_.assign(nullable.begin(), nullable.end());
+}
+
+std::string Grammar::freshNonterminal() {
+  while (true) {
+    const std::string candidate =
+        "__lotus_generated_" + std::to_string(++next_nonterminal_id_);
+    bool used = terminals_.count(candidate) != 0 ||
+                nonterminals_.count(candidate) != 0 ||
+                productions_.count(candidate) != 0;
+    if (!used) {
+      for (const auto &[_, rules] : productions_) {
+        for (const auto &rule : rules) {
+          if (std::find(rule.begin(), rule.end(), candidate) != rule.end()) {
+            used = true;
+            break;
+          }
+        }
+        if (used) {
+          break;
+        }
+      }
+    }
+    if (!used) {
+      nonterminals_.insert(candidate);
+      generated_nonterminals_.insert(candidate);
+      return candidate;
     }
   }
 }
@@ -496,6 +545,10 @@ bool Grammar::isNonterminal(const std::string &symbol) const {
   return nonterminals_.count(symbol) != 0;
 }
 
+bool Grammar::isGeneratedNonterminal(const std::string &symbol) const {
+  return generated_nonterminals_.count(symbol) != 0;
+}
+
 bool Grammar::hasSymbol(const std::string &symbol) const {
   return symbol_ids_.count(symbol) != 0;
 }
@@ -534,9 +587,47 @@ std::vector<GrammarIssue> Grammar::validate() const {
         {GrammarIssueSeverity::Error, "Grammar has no productions"});
   }
   for (const std::string &terminal : terminals_) {
+    if (nonterminals_.count(terminal) != 0) {
+      issues.push_back(
+          {GrammarIssueSeverity::Error,
+           "Symbol is both terminal and nonterminal: " + terminal});
+    }
+  }
+  for (const std::string &terminal : terminals_) {
     if (attributeVariable(terminal)) {
       issues.push_back({GrammarIssueSeverity::Error,
                         "Uninstantiated attributed symbol: " + terminal});
+    }
+  }
+  for (const auto &[head, rules] : productions_) {
+    if (!isNonterminal(head)) {
+      issues.push_back({GrammarIssueSeverity::Error,
+                        "Production head is not a nonterminal: " + head});
+    }
+    for (const auto &rule : rules) {
+      if (rule.empty()) {
+        issues.push_back({GrammarIssueSeverity::Error,
+                          "Production has an empty right-hand side: " + head});
+        continue;
+      }
+      if (rule.size() > 2) {
+        issues.push_back({GrammarIssueSeverity::Error,
+                          "Production was not binarized: " + head});
+      }
+      const bool has_epsilon =
+          std::find(rule.begin(), rule.end(), kEpsilonSymbol) != rule.end();
+      if (has_epsilon &&
+          !(rule.size() == 1 && rule.front() == kEpsilonSymbol)) {
+        issues.push_back(
+            {GrammarIssueSeverity::Error,
+             "Epsilon must appear alone in a production: " + head});
+      }
+      for (const std::string &symbol : rule) {
+        if (symbol != kEpsilonSymbol && !hasSymbol(symbol)) {
+          issues.push_back({GrammarIssueSeverity::Error,
+                            "Production uses an unknown symbol: " + symbol});
+        }
+      }
     }
   }
   return issues;

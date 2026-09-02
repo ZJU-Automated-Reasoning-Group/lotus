@@ -101,51 +101,59 @@ std::string buildPagGrammarText(const AliasConstraintGraph &graph) {
     gep += std::to_string(attr);
     std::string gepbar = "gepbar_";
     gepbar += std::to_string(attr);
+    const std::string grammar_gep =
+        attr == 0 ? gep : "Gep_" + std::to_string(attr);
+    const std::string grammar_gepbar =
+        attr == 0 ? gepbar : "Gepbar_" + std::to_string(attr);
 
-    std::string gep_v_alternative = gepbar;
+    std::string gep_v_alternative = grammar_gepbar;
     gep_v_alternative += " V ";
-    gep_v_alternative += gep;
+    gep_v_alternative += grammar_gep;
     v_alternatives.push_back(std::move(gep_v_alternative));
 
-    std::string gep_f_alternative = gepbar;
+    std::string gep_f_alternative = grammar_gepbar;
     gep_f_alternative += " F ";
-    gep_f_alternative += gep;
+    gep_f_alternative += grammar_gep;
     v_alternatives.push_back(std::move(gep_f_alternative));
 
-    std::string gep_fbar_alternative = gepbar;
+    std::string gep_fbar_alternative = grammar_gepbar;
     gep_fbar_alternative += " Fbar ";
-    gep_fbar_alternative += gep;
+    gep_fbar_alternative += grammar_gep;
     v_alternatives.push_back(std::move(gep_fbar_alternative));
 
-    std::string gep_memflow_alternative = gep;
+    std::string gep_memflow_alternative = grammar_gep;
     gep_memflow_alternative += " Memflow ";
-    gep_memflow_alternative += gepbar;
+    gep_memflow_alternative += grammar_gepbar;
     memflow_alternatives.push_back(std::move(gep_memflow_alternative));
 
-    std::string gepbar_memflow_alternative = gepbar;
+    std::string gepbar_memflow_alternative = grammar_gepbar;
     gepbar_memflow_alternative += " Memflow ";
-    gepbar_memflow_alternative += gep;
+    gepbar_memflow_alternative += grammar_gep;
     memflow_alternatives.push_back(std::move(gepbar_memflow_alternative));
 
-    std::string gep_memflowbar_alternative = gep;
+    std::string gep_memflowbar_alternative = grammar_gep;
     gep_memflowbar_alternative += " Memflowbar ";
-    gep_memflowbar_alternative += gepbar;
+    gep_memflowbar_alternative += grammar_gepbar;
     memflowbar_alternatives.push_back(std::move(gep_memflowbar_alternative));
 
-    std::string gepbar_memflowbar_alternative = gepbar;
+    std::string gepbar_memflowbar_alternative = grammar_gepbar;
     gepbar_memflowbar_alternative += " Memflowbar ";
-    gepbar_memflowbar_alternative += gep;
+    gepbar_memflowbar_alternative += grammar_gep;
     memflowbar_alternatives.push_back(std::move(gepbar_memflowbar_alternative));
 
     if (attr != 0) {
-      std::string gep_rule = gep;
-      gep_rule += " -> gep_0 F vgep | gep_0 F ";
+      std::string gep_rule = grammar_gep;
+      gep_rule += " -> ";
       gep_rule += gep;
+      gep_rule += " | gep_0 F vgep | gep_0 F ";
+      gep_rule += grammar_gep;
       gep_non_zero.push_back(std::move(gep_rule));
 
-      std::string gepbar_rule = gepbar;
+      std::string gepbar_rule = grammar_gepbar;
       gepbar_rule += " -> ";
       gepbar_rule += gepbar;
+      gepbar_rule += " | ";
+      gepbar_rule += grammar_gepbar;
       gepbar_rule += " Fbar gepbar_0 | vgepbar Fbar gepbar_0";
       gepbar_non_zero.push_back(std::move(gepbar_rule));
     }
@@ -162,13 +170,13 @@ std::string buildPagGrammarText(const AliasConstraintGraph &graph) {
   }
   grammar << "\n"
           << "Productions:\n"
-          << "  F -> <epsilon> | F copy | addr Memflow | F store V load | "
+          << "  F -> <epsilon> | F Copy | addr Memflow | F store V load | "
              "store Memflow load | F F;\n"
-          << "  Fbar -> <epsilon> | copybar Fbar | Memflowbar addrbar | "
+          << "  Fbar -> <epsilon> | Copybar Fbar | Memflowbar addrbar | "
              "loadbar V storebar Fbar | loadbar Memflowbar storebar;\n"
           << "  V -> " << joinAlternatives(v_alternatives) << ";\n"
-          << "  copy -> vgep;\n"
-          << "  copybar -> vgepbar;\n"
+          << "  Copy -> copy | vgep;\n"
+          << "  Copybar -> copybar | vgepbar;\n"
           << "  gepbarpath -> gepbar_0 gepbar_0 | gepbarpath gepbar_0;\n"
           << "  Memflow -> " << joinAlternatives(memflow_alternatives) << ";\n"
           << "  Memflowbar -> " << joinAlternatives(memflowbar_alternatives)
@@ -230,10 +238,10 @@ std::string buildPegGrammarText(const AliasConstraintGraph &graph) {
   }
   grammar << "\n"
           << "Productions:\n"
-          << "  F -> ( copy M ? ) *;\n"
-          << "  Fbar -> ( M ? copybar ) *;\n"
-          << "  copy -> vgep;\n"
-          << "  copybar -> vgepbar;\n"
+          << "  F -> ( Copy M ? ) *;\n"
+          << "  Fbar -> ( M ? Copybar ) *;\n"
+          << "  Copy -> copy | vgep;\n"
+          << "  Copybar -> copybar | vgepbar;\n"
           << "  M -> addr V addrbar;\n"
           << "  V -> " << joinAlternatives(v_alternatives) << ";\n"
           << "  ArrayPath -> gepbar_0 gepbar_0 | ArrayPath gepbar_0;\n"
@@ -253,6 +261,14 @@ std::vector<std::size_t> findAddrSources(const AliasConstraintGraph &graph,
 }
 
 } // namespace
+
+struct AliasClient::State {
+  State(LabeledGraph input_graph, Grammar input_grammar)
+      : graph(std::move(input_graph)), grammar(std::move(input_grammar)) {}
+
+  LabeledGraph graph;
+  Grammar grammar;
+};
 
 std::size_t AliasConstraintGraph::addNode(const std::string &name) {
   node_names_.push_back(name);
@@ -357,32 +373,40 @@ AliasClient AliasClient::fromConstraintGraph(const AliasConstraintGraph &graph,
 
 AliasClient::AliasClient(LabeledGraph graph, Grammar grammar,
                          AliasEncodingMode mode)
-    : graph_(std::move(graph)), grammar_(std::move(grammar)), mode_(mode),
-      next_synthetic_dereference_(graph_.vertexCount()) {
+    : state_(std::make_unique<State>(std::move(graph), std::move(grammar))),
+      mode_(mode), next_synthetic_dereference_(state_->graph.vertexCount()) {
   initializePegDereferences();
   initializeGepAttributes();
 }
 
+AliasClient::~AliasClient() = default;
+
 AliasClient::AliasClient(AliasClient &&other) noexcept
-    : graph_(std::move(other.graph_)), grammar_(std::move(other.grammar_)),
-      mode_(other.mode_), peg_dereferences_(std::move(other.peg_dereferences_)),
+    : state_(std::move(other.state_)), mode_(other.mode_),
+      peg_dereferences_(std::move(other.peg_dereferences_)),
       next_synthetic_dereference_(other.next_synthetic_dereference_),
-      gep_attributes_(std::move(other.gep_attributes_)) {}
+      gep_attributes_(std::move(other.gep_attributes_)),
+      session_(std::move(other.session_)), backend_(std::move(other.backend_)) {
+}
 
 AliasClient &AliasClient::operator=(AliasClient &&other) noexcept {
   if (this == &other) {
     return *this;
   }
   session_.reset();
-  backend_.reset();
-  graph_ = std::move(other.graph_);
-  grammar_ = std::move(other.grammar_);
+  state_ = std::move(other.state_);
   mode_ = other.mode_;
   peg_dereferences_ = std::move(other.peg_dereferences_);
   next_synthetic_dereference_ = other.next_synthetic_dereference_;
   gep_attributes_ = std::move(other.gep_attributes_);
+  session_ = std::move(other.session_);
+  backend_ = std::move(other.backend_);
   return *this;
 }
+
+const LabeledGraph &AliasClient::graph() const { return state_->graph; }
+
+const Grammar &AliasClient::grammar() const { return state_->grammar; }
 
 ReachabilityStats AliasClient::solve(SolverBackend backend) {
   if (backend_ && *backend_ != backend) {
@@ -390,7 +414,8 @@ ReachabilityStats AliasClient::solve(SolverBackend backend) {
         "Cannot change solver backend after an alias session has started");
   }
   if (!session_) {
-    session_ = std::make_unique<SolverSession>(graph_, grammar_, backend);
+    session_ = std::make_unique<SolverSession>(state_->graph, state_->grammar,
+                                               backend);
     backend_ = backend;
   }
   return session_->solve();
@@ -443,13 +468,14 @@ std::size_t AliasClient::addNode(const std::string &name) {
   if (session_) {
     return session_->addNode(name);
   }
-  return graph_.addVertex(name);
+  return state_->graph.addVertex(name);
 }
 
 bool AliasClient::addConstraint(std::size_t source, std::size_t target,
                                 AliasConstraintEdgeKind kind,
                                 std::optional<std::uint32_t> attribute) {
-  if (source >= graph_.vertexCount() || target >= graph_.vertexCount()) {
+  if (source >= state_->graph.vertexCount() ||
+      target >= state_->graph.vertexCount()) {
     throw std::out_of_range("Alias constraint endpoint is out of range");
   }
   if (kind == AliasConstraintEdgeKind::NormalGep && !attribute) {
@@ -474,7 +500,7 @@ bool AliasClient::addConstraint(std::size_t source, std::size_t target,
     return changed;
   }
   if (kind == AliasConstraintEdgeKind::NormalGep && attribute &&
-      !grammar_.isTerminal("gep_" + std::to_string(*attribute))) {
+      !state_->grammar.isTerminal("gep_" + std::to_string(*attribute))) {
     gep_attributes_.insert(*attribute);
     rebuildGrammar();
   }
@@ -496,13 +522,14 @@ bool AliasClient::addConstraint(std::size_t source, std::size_t target,
 bool AliasClient::addEncodedEdge(std::size_t source, std::size_t target,
                                  const std::string &forward,
                                  const std::string &reverse) {
-  if (!grammar_.isTerminal(forward) || !grammar_.isTerminal(reverse)) {
+  if (!state_->grammar.isTerminal(forward) ||
+      !state_->grammar.isTerminal(reverse)) {
     throw std::invalid_argument(
         "Constraint attribute was not present when the grammar was built");
   }
   if (!session_) {
-    const bool first = graph_.addEdge(source, target, forward);
-    const bool second = graph_.addEdge(target, source, reverse);
+    const bool first = state_->graph.addEdge(source, target, forward);
+    const bool second = state_->graph.addEdge(target, source, reverse);
     return first || second;
   }
   const bool first = session_->addTerminalEdge(source, target, forward);
@@ -531,7 +558,7 @@ void AliasClient::initializePegDereferences() {
   if (mode_ != AliasEncodingMode::PEG) {
     return;
   }
-  for (const auto &[source, target] : graph_.edgesForLabel("addr")) {
+  for (const auto &[source, target] : state_->graph.edgesForLabel("addr")) {
     peg_dereferences_[target].push_back(source);
   }
 }
@@ -539,7 +566,7 @@ void AliasClient::initializePegDereferences() {
 void AliasClient::initializeGepAttributes() {
   gep_attributes_.clear();
   gep_attributes_.insert(0);
-  for (const auto &[label, _] : graph_.symbolPairs()) {
+  for (const auto &[label, _] : state_->graph.symbolPairs()) {
     if (label.rfind("gep_", 0) != 0 || label.size() <= 4) {
       continue;
     }
@@ -553,6 +580,21 @@ void AliasClient::initializeGepAttributes() {
 }
 
 void AliasClient::rebuildGrammar() {
+  struct NamedFact {
+    std::string symbol;
+    std::size_t source;
+    std::size_t target;
+  };
+  std::vector<NamedFact> preserved_facts;
+  if (session_) {
+    for (const RelationEdge &edge : session_->relation().edges()) {
+      const std::string &symbol = state_->grammar.symbolName(edge.symbol);
+      if (!state_->grammar.isGeneratedNonterminal(symbol)) {
+        preserved_facts.push_back({symbol, edge.source, edge.target});
+      }
+    }
+  }
+
   AliasConstraintGraph shape;
   const std::size_t source = shape.addNode("grammar_source");
   const std::size_t target = shape.addNode("grammar_target");
@@ -560,53 +602,63 @@ void AliasClient::rebuildGrammar() {
     shape.addEdge(source, target, AliasConstraintEdgeKind::NormalGep,
                   attribute);
   }
-  grammar_ = mode_ == AliasEncodingMode::PEG ? buildPegGrammar(shape)
-                                             : buildPagGrammar(shape);
+  Grammar extended_grammar = mode_ == AliasEncodingMode::PEG
+                                 ? buildPegGrammar(shape)
+                                 : buildPagGrammar(shape);
+  const std::optional<SolverBackend> active_backend = backend_;
   session_.reset();
-  backend_.reset();
+  state_->grammar = std::move(extended_grammar);
+  if (active_backend) {
+    session_ = std::make_unique<SolverSession>(state_->graph, state_->grammar,
+                                               *active_backend);
+    for (const NamedFact &fact : preserved_facts) {
+      if (state_->grammar.hasSymbol(fact.symbol)) {
+        session_->addKnownRelationEdge(fact.source, fact.target, fact.symbol);
+      }
+    }
+  }
 }
 
 bool AliasClient::mayAlias(std::size_t lhs, std::size_t rhs) const {
-  if (lhs >= graph_.vertexCount() || rhs >= graph_.vertexCount()) {
+  if (lhs >= state_->graph.vertexCount() ||
+      rhs >= state_->graph.vertexCount()) {
     return false;
   }
   return session_ ? session_->contains(lhs, rhs, "V")
-                  : graph_.hasEdge(lhs, rhs, "V");
+                  : state_->graph.hasEdge(lhs, rhs, "V");
 }
 
 std::vector<std::size_t> AliasClient::pointsTo(std::size_t ptr) const {
-  if (ptr >= graph_.vertexCount()) {
+  if (ptr >= state_->graph.vertexCount()) {
     return {};
   }
   std::set<std::size_t> result;
-  std::vector<std::pair<std::size_t, std::size_t>> value_pairs;
+  std::vector<std::size_t> value_targets;
   if (session_) {
-    const SymbolId value_symbol = grammar_.symbolId("V");
-    for (const RelationEdge &edge : session_->relation().edges()) {
-      if (edge.symbol == value_symbol) {
-        value_pairs.push_back({edge.source, edge.target});
+    const SymbolId value_symbol = state_->grammar.symbolId("V");
+    value_targets = session_->relation().successors(value_symbol, ptr);
+  } else {
+    for (const auto &[source, target] : state_->graph.edgesForLabel("V")) {
+      if (source == ptr) {
+        value_targets.push_back(target);
       }
     }
-  } else {
-    value_pairs = graph_.edgesForLabelCopy("V");
   }
 
-  for (const auto &[source, target] : value_pairs) {
-    if (source != ptr) {
-      continue;
-    }
-
+  for (std::size_t target : value_targets) {
     bool added_precise_target = false;
-    for (std::size_t pred : graph_.predecessorsForLabel(target, "addr")) {
+    for (std::size_t pred :
+         state_->graph.predecessorsForLabel(target, "addr")) {
       result.insert(pred);
       added_precise_target = true;
     }
 
-    for (const auto &[label, _] : graph_.symbolPairs()) {
+    for (const auto &[label, _] : state_->graph.symbolPairs()) {
       if (label.rfind("gep_", 0) != 0) {
         continue;
       }
-      for (std::size_t pred : graph_.predecessorsForLabel(target, label)) {
+      for (std::size_t pred :
+           state_->graph.predecessorsForLabel(target, label)) {
         result.insert(pred);
         added_precise_target = true;
       }

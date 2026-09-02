@@ -61,6 +61,7 @@ public:
   SymbolId startSymbolId() const { return start_symbol_id_; }
   bool isTerminal(const std::string &symbol) const;
   bool isNonterminal(const std::string &symbol) const;
+  bool isGeneratedNonterminal(const std::string &symbol) const;
   bool hasSymbol(const std::string &symbol) const;
   SymbolId symbolId(const std::string &symbol) const;
   const std::string &symbolName(SymbolId symbol) const;
@@ -116,6 +117,7 @@ private:
                     const GrammarParseOptions &options);
   void buildIndices();
   void buildSymbolTable();
+  std::string freshNonterminal();
 
   ProductionMap productions_;
   std::vector<std::string> nullable_symbols_;
@@ -125,6 +127,7 @@ private:
   std::string start_symbol_;
   std::unordered_set<std::string> terminals_;
   std::unordered_set<std::string> nonterminals_;
+  std::unordered_set<std::string> generated_nonterminals_;
   std::vector<std::string> symbol_names_;
   std::unordered_map<std::string, SymbolId> symbol_ids_;
   SymbolId start_symbol_id_ = 0;

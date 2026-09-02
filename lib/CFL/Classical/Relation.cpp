@@ -26,6 +26,7 @@ public:
     }
     predecessors_.at(target)[symbol].insert(source);
     ++edge_count_;
+    ++symbol_edge_counts_[symbol];
     return true;
   }
 
@@ -58,7 +59,27 @@ public:
     return result;
   }
 
+  std::vector<RelationEdge> edges(SymbolId symbol) const override {
+    std::vector<RelationEdge> result;
+    result.reserve(edgeCount(symbol));
+    for (NodeId source = 0; source < successors_.size(); ++source) {
+      const auto it = successors_[source].find(symbol);
+      if (it == successors_[source].end()) {
+        continue;
+      }
+      for (NodeId target : it->second) {
+        result.push_back({symbol, source, target});
+      }
+    }
+    return result;
+  }
+
   std::size_t edgeCount() const override { return edge_count_; }
+
+  std::size_t edgeCount(SymbolId symbol) const override {
+    const auto it = symbol_edge_counts_.find(symbol);
+    return it == symbol_edge_counts_.end() ? 0 : it->second;
+  }
 
   std::size_t approximateMemoryBytes() const override {
     std::size_t bytes = sizeof(*this);
@@ -90,6 +111,7 @@ private:
   std::vector<SymbolMap> successors_;
   std::vector<SymbolMap> predecessors_;
   std::size_t edge_count_ = 0;
+  std::unordered_map<SymbolId, std::size_t> symbol_edge_counts_;
 };
 
 class SparseBitVectorRelation final : public Relation {
@@ -109,6 +131,7 @@ public:
     }
     predecessors_.at(target)[symbol].set(source);
     ++edge_count_;
+    ++symbol_edge_counts_[symbol];
     return true;
   }
 
@@ -141,7 +164,27 @@ public:
     return result;
   }
 
+  std::vector<RelationEdge> edges(SymbolId symbol) const override {
+    std::vector<RelationEdge> result;
+    result.reserve(edgeCount(symbol));
+    for (NodeId source = 0; source < successors_.size(); ++source) {
+      const auto it = successors_[source].find(symbol);
+      if (it == successors_[source].end()) {
+        continue;
+      }
+      for (unsigned target : it->second) {
+        result.push_back({symbol, source, target});
+      }
+    }
+    return result;
+  }
+
   std::size_t edgeCount() const override { return edge_count_; }
+
+  std::size_t edgeCount(SymbolId symbol) const override {
+    const auto it = symbol_edge_counts_.find(symbol);
+    return it == symbol_edge_counts_.end() ? 0 : it->second;
+  }
 
   std::size_t approximateMemoryBytes() const override {
     std::size_t bytes = sizeof(*this);
@@ -178,6 +221,7 @@ private:
   std::vector<SymbolMap> successors_;
   std::vector<SymbolMap> predecessors_;
   std::size_t edge_count_ = 0;
+  std::unordered_map<SymbolId, std::size_t> symbol_edge_counts_;
 };
 
 } // namespace

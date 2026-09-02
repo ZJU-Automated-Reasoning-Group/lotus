@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -32,11 +33,13 @@ public:
 private:
   static std::vector<std::string> cleanAlphabet(const std::string &expression);
   static std::vector<CNFRule> cleanProduction(const std::string &expression);
+  std::string freshVariable();
 
   std::vector<std::string> terminals_;
   std::vector<std::string> variables_;
   std::vector<CNFRule> productions_;
-  std::vector<std::string> variable_jar_;
+  std::string start_variable_;
+  std::size_t next_variable_id_ = 0;
 };
 
 } // namespace lotus::cfl::classical

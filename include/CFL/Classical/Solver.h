@@ -68,6 +68,13 @@ public:
   const Relation &relation() const;
 
 private:
+  friend class AliasClient;
+
+  /// Seed a previously derived fact while migrating to a monotonic grammar
+  /// extension. This does not mutate the input graph.
+  bool addKnownRelationEdge(std::size_t source, std::size_t target,
+                            const std::string &label);
+
   class Impl;
   std::unique_ptr<Impl> impl_;
 };

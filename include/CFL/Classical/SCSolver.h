@@ -5,10 +5,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <string>
-#include <tuple>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 namespace lotus::cfl::classical {
@@ -25,22 +21,22 @@ public:
   SCStatistics solve(const LabeledGraph &graph, const Grammar &grammar) const;
 
 private:
-  using ConstraintBucket =
-      std::unordered_map<std::string, std::unordered_set<std::string>>;
+  using VariableId = std::uint32_t;
 
-  struct ConstraintSystem {
-    ConstraintBucket con0;
-    ConstraintBucket con1;
-    ConstraintBucket pro;
-    std::unordered_set<std::string> set_variables;
+  struct Constraint {
+    VariableId lhs = 0;
+    SymbolId label = 0;
+    VariableId rhs = 0;
   };
 
-  using WorkItem =
-      std::tuple<std::string, std::string, std::string, std::string>;
+  struct ConstraintSystem {
+    std::vector<VariableId> seeds;
+    std::vector<std::vector<Constraint>> con1_by_lhs;
+    std::vector<std::vector<Constraint>> pro_by_dependency;
+  };
 
   ConstraintSystem buildConstraintSystem(const LabeledGraph &graph,
                                          const Grammar &grammar) const;
-  static std::vector<std::string> splitConstraint(const std::string &value);
 };
 
 } // namespace lotus::cfl::classical

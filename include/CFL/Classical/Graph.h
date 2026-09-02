@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -55,6 +56,8 @@ public:
   std::size_t vertexId(const std::string &name) const;
   const std::string &vertexName(std::size_t id) const;
   std::size_t vertexCount() const { return vertices_.size(); }
+  std::size_t edgeCount() const { return edge_count_; }
+  std::uint64_t mutationVersion() const { return mutation_version_; }
   const std::vector<std::string> &vertices() const { return vertices_; }
   std::vector<LabeledEdge> edges() const;
   const std::unordered_map<std::string,
@@ -96,6 +99,8 @@ private:
   std::unordered_map<std::string,
                      std::vector<std::pair<std::size_t, std::size_t>>>
       label_pairs_;
+  std::size_t edge_count_ = 0;
+  std::uint64_t mutation_version_ = 0;
 };
 
 } // namespace lotus::cfl::classical

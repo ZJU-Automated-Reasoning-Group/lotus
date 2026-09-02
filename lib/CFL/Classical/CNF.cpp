@@ -1,10 +1,13 @@
 #include "CFL/Classical/CNF.h"
 
 #include <algorithm>
+#include <deque>
 #include <fstream>
+#include <functional>
 #include <sstream>
 #include <stdexcept>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace lotus::cfl::classical {
 namespace {
@@ -43,15 +46,9 @@ void appendUnique(std::vector<CNFRule> &rules, const CNFRule &rule) {
   }
 }
 
-std::vector<std::string> buildVariableJar() {
-  std::vector<std::string> jar;
-  for (char ch = 'A'; ch <= 'Z'; ++ch) {
-    if (ch == 'V') {
-      continue;
-    }
-    jar.push_back(std::string(1, ch));
-  }
-  return jar;
+bool isEpsilon(const std::vector<std::string> &rhs) {
+  return rhs.size() == 1 && (rhs.front() == "e" || rhs.front() == "epsilon" ||
+                             rhs.front() == "<epsilon>");
 }
 
 } // namespace
@@ -75,7 +72,6 @@ CNFGrammar CNFGrammar::loadFromFile(const std::string &path) {
   }
 
   CNFGrammar grammar;
-  grammar.variable_jar_ = buildVariableJar();
   grammar.terminals_ = cleanAlphabet(
       content.substr(std::string("Terminals:\n").size(),
                      variables_pos - std::string("Terminals:\n").size()));
@@ -84,13 +80,10 @@ CNFGrammar CNFGrammar::loadFromFile(const std::string &path) {
       productions_pos - (variables_pos + std::string("Variables:\n").size())));
   grammar.productions_ = cleanProduction(
       content.substr(productions_pos + std::string("Productions:\n").size()));
-
-  for (const auto &variable : grammar.variables_) {
-    grammar.variable_jar_.erase(std::remove(grammar.variable_jar_.begin(),
-                                            grammar.variable_jar_.end(),
-                                            variable),
-                                grammar.variable_jar_.end());
+  if (grammar.variables_.empty()) {
+    throw std::invalid_argument("CNF grammar has no start variable");
   }
+  grammar.start_variable_ = grammar.variables_.front();
 
   return grammar;
 }
@@ -145,9 +138,27 @@ CNFGrammar::cleanProduction(const std::string &expression) {
 }
 
 void CNFGrammar::startTransform() {
-  variables_.push_back("S0");
+  const std::string original_start = start_variable_;
+  std::string new_start = "S0";
+  if (contains(variables_, new_start) || contains(terminals_, new_start)) {
+    new_start = freshVariable();
+  } else {
+    variables_.push_back(new_start);
+  }
+  start_variable_ = new_start;
   productions_.insert(productions_.begin(),
-                      CNFRule{"S0", {variables_.front()}});
+                      CNFRule{new_start, {original_start}});
+}
+
+std::string CNFGrammar::freshVariable() {
+  while (true) {
+    const std::string candidate =
+        "__cnf_" + std::to_string(++next_variable_id_);
+    if (!contains(variables_, candidate) && !contains(terminals_, candidate)) {
+      variables_.push_back(candidate);
+      return candidate;
+    }
+  }
 }
 
 void CNFGrammar::termTransform() {
@@ -176,13 +187,7 @@ void CNFGrammar::termTransform() {
 
       auto it = dictionary.find(symbol);
       if (it == dictionary.end()) {
-        if (variable_jar_.empty()) {
-          throw std::runtime_error("CNF variable jar exhausted");
-        }
-
-        const auto fresh = variable_jar_.back();
-        variable_jar_.pop_back();
-        variables_.push_back(fresh);
+        const auto fresh = freshVariable();
         rewritten.push_back({fresh, {symbol}});
         dictionary[symbol] = fresh;
         symbol = fresh;
@@ -206,110 +211,115 @@ void CNFGrammar::binTransform() {
       continue;
     }
 
-    if (variable_jar_.empty()) {
-      throw std::runtime_error("CNF variable jar exhausted");
+    std::vector<std::string> fresh;
+    fresh.reserve(size - 2);
+    for (std::size_t i = 0; i < size - 2; ++i) {
+      fresh.push_back(freshVariable());
     }
-
-    const auto base = variable_jar_.front();
-    variable_jar_.erase(variable_jar_.begin());
-    variables_.push_back(base + "1");
-    transformed.push_back({production.lhs, {production.rhs[0], base + "1"}});
+    transformed.push_back({production.lhs, {production.rhs[0], fresh[0]}});
 
     for (std::size_t i = 1; i < size - 2; ++i) {
-      const auto current = base + std::to_string(i);
-      const auto next = base + std::to_string(i + 1);
-      variables_.push_back(next);
-      transformed.push_back({current, {production.rhs[i], next}});
+      transformed.push_back({fresh[i - 1], {production.rhs[i], fresh[i]}});
     }
 
     transformed.push_back(
-        {base + std::to_string(size - 2),
-         {production.rhs[size - 2], production.rhs[size - 1]}});
+        {fresh.back(), {production.rhs[size - 2], production.rhs[size - 1]}});
   }
 
   productions_ = std::move(transformed);
 }
 
 void CNFGrammar::deleteEpsilonTransform() {
-  std::vector<std::string> outlaws;
-  std::vector<CNFRule> preserved;
-  for (const auto &production : productions_) {
-    if (production.rhs.size() == 1 && production.rhs.front() == "e") {
-      outlaws.push_back(production.lhs);
-    } else {
-      preserved.push_back(production);
+  std::unordered_set<std::string> nullable;
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    for (const CNFRule &production : productions_) {
+      if (nullable.count(production.lhs) != 0) {
+        continue;
+      }
+      const bool nullable_rhs =
+          isEpsilon(production.rhs) ||
+          (!production.rhs.empty() &&
+           std::all_of(production.rhs.begin(), production.rhs.end(),
+                       [&](const std::string &symbol) {
+                         return nullable.count(symbol) != 0;
+                       }));
+      if (nullable_rhs) {
+        nullable.insert(production.lhs);
+        changed = true;
+      }
     }
   }
 
-  std::vector<CNFRule> generated;
-  for (const auto &outlaw : outlaws) {
-    std::vector<CNFRule> candidates = preserved;
-    candidates.insert(candidates.end(), generated.begin(), generated.end());
-    for (const auto &production : candidates) {
-      std::vector<std::size_t> positions;
-      for (std::size_t i = 0; i < production.rhs.size(); ++i) {
-        if (production.rhs[i] == outlaw) {
-          positions.push_back(i);
-        }
-      }
+  std::vector<CNFRule> transformed;
+  for (const CNFRule &production : productions_) {
+    if (isEpsilon(production.rhs)) {
+      continue;
+    }
 
-      const std::size_t combinations = std::size_t{1} << positions.size();
-      for (std::size_t mask = 0; mask < combinations; ++mask) {
-        std::vector<std::string> rhs;
-        for (std::size_t i = 0; i < production.rhs.size(); ++i) {
-          auto it = std::find(positions.begin(), positions.end(), i);
-          if (it != positions.end()) {
-            const auto bit =
-                static_cast<std::size_t>(std::distance(positions.begin(), it));
-            if (((mask >> bit) & 1U) != 0U) {
-              continue;
-            }
-          }
-          rhs.push_back(production.rhs[i]);
-        }
+    std::vector<std::string> rhs;
+    std::function<void(std::size_t)> generate = [&](std::size_t index) {
+      if (index == production.rhs.size()) {
         if (!rhs.empty()) {
-          appendUnique(generated, {production.lhs, rhs});
+          appendUnique(transformed, {production.lhs, rhs});
+        } else if (production.lhs == start_variable_) {
+          appendUnique(transformed, {production.lhs, {"e"}});
         }
+        return;
       }
-    }
+      rhs.push_back(production.rhs[index]);
+      generate(index + 1);
+      rhs.pop_back();
+      if (nullable.count(production.rhs[index]) != 0) {
+        generate(index + 1);
+      }
+    };
+    generate(0);
   }
 
-  productions_ = generated;
-  for (const auto &production : preserved) {
-    appendUnique(productions_, production);
+  if (nullable.count(start_variable_) != 0) {
+    appendUnique(transformed, {start_variable_, {"e"}});
   }
+  productions_ = std::move(transformed);
 }
 
 void CNFGrammar::unitTransform() {
-  auto unit_routine = [&](const std::vector<CNFRule> &rules) {
-    std::vector<std::pair<std::string, std::string>> unit_rules;
-    std::vector<CNFRule> result;
-    for (const auto &rule : rules) {
-      if (rule.rhs.size() == 1 && contains(variables_, rule.lhs) &&
-          contains(variables_, rule.rhs.front())) {
-        unit_rules.push_back({rule.lhs, rule.rhs.front()});
-      } else {
-        result.push_back(rule);
-      }
+  std::unordered_map<std::string, std::vector<std::string>> unit_edges;
+  std::unordered_map<std::string, std::vector<CNFRule>> non_unit_by_lhs;
+  for (const CNFRule &rule : productions_) {
+    if (rule.rhs.size() == 1 && contains(variables_, rule.rhs.front())) {
+      unit_edges[rule.lhs].push_back(rule.rhs.front());
+    } else {
+      non_unit_by_lhs[rule.lhs].push_back(rule);
     }
+  }
 
-    for (const auto &[lhs, rhs] : unit_rules) {
-      for (const auto &rule : rules) {
-        if (rule.lhs == rhs && lhs != rule.lhs) {
-          result.push_back({lhs, rule.rhs});
+  std::vector<CNFRule> transformed;
+  for (const std::string &source : variables_) {
+    std::deque<std::string> worklist{source};
+    std::unordered_set<std::string> reachable{source};
+    while (!worklist.empty()) {
+      const std::string current = std::move(worklist.front());
+      worklist.pop_front();
+      if (const auto it = unit_edges.find(current); it != unit_edges.end()) {
+        for (const std::string &target : it->second) {
+          if (reachable.insert(target).second) {
+            worklist.push_back(target);
+          }
         }
       }
     }
-    return result;
-  };
-
-  auto result = unit_routine(productions_);
-  auto next = unit_routine(result);
-  for (int i = 0; i < 1000 && result != next; ++i) {
-    result = unit_routine(next);
-    next = unit_routine(result);
+    for (const std::string &target : reachable) {
+      if (const auto it = non_unit_by_lhs.find(target);
+          it != non_unit_by_lhs.end()) {
+        for (const CNFRule &rule : it->second) {
+          appendUnique(transformed, {source, rule.rhs});
+        }
+      }
+    }
   }
-  productions_ = std::move(next);
+  productions_ = std::move(transformed);
 }
 
 } // namespace lotus::cfl::classical

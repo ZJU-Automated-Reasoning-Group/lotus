@@ -232,8 +232,50 @@ TEST(ClassicalAdaptersTest, GrammarBuildersMaterializeObservedAttributes) {
   const auto pag = buildPagGrammar(graph);
   const auto peg = buildPegGrammar(graph);
 
-  EXPECT_NE(pag.binaryByFirst().find("gepbar_3"), pag.binaryByFirst().end());
+  EXPECT_NE(pag.binaryByFirst().find("Gepbar_3"), pag.binaryByFirst().end());
   EXPECT_NE(peg.binaryByFirst().find("gepbar_3"), peg.binaryByFirst().end());
+}
+
+TEST(ClassicalAdaptersTest, MovingAliasClientPreservesSolvedSession) {
+  AliasConstraintGraph graph;
+  const auto object = graph.addNode("object");
+  const auto pointer = graph.addNode("pointer");
+  const auto alias = graph.addNode("alias");
+  graph.addEdge(object, pointer, AliasConstraintEdgeKind::Addr);
+  graph.addEdge(pointer, alias, AliasConstraintEdgeKind::Copy);
+
+  AliasClient source = AliasClient::fromConstraintGraph(graph);
+  source.solve(SolverBackend::POCR);
+  AliasClient moved(std::move(source));
+  EXPECT_TRUE(moved.mayAlias(pointer, alias));
+  EXPECT_THROW(moved.solve(SolverBackend::Hybrid), std::invalid_argument);
+
+  AliasConstraintGraph empty_graph;
+  empty_graph.addNode("unused");
+  AliasClient assigned = AliasClient::fromConstraintGraph(empty_graph);
+  assigned = std::move(moved);
+  EXPECT_TRUE(assigned.mayAlias(pointer, alias));
+  EXPECT_NO_THROW(assigned.solve(SolverBackend::POCR));
+}
+
+TEST(ClassicalAdaptersTest, IncrementalGepPreservesExistingClosure) {
+  AliasConstraintGraph graph;
+  const auto object = graph.addNode("object");
+  const auto pointer = graph.addNode("pointer");
+  const auto alias = graph.addNode("alias");
+  const auto field = graph.addNode("field");
+  graph.addEdge(object, pointer, AliasConstraintEdgeKind::Addr);
+  graph.addEdge(pointer, alias, AliasConstraintEdgeKind::Copy);
+
+  AliasClient client = AliasClient::fromConstraintGraph(graph);
+  client.solve(SolverBackend::POCR);
+  ASSERT_TRUE(client.mayAlias(pointer, alias));
+  ASSERT_TRUE(client.addConstraint(alias, field,
+                                   AliasConstraintEdgeKind::NormalGep, 17));
+
+  EXPECT_TRUE(client.mayAlias(pointer, alias));
+  EXPECT_THROW(client.solve(SolverBackend::Hybrid), std::invalid_argument);
+  EXPECT_NO_THROW(client.solve(SolverBackend::POCR));
 }
 
 TEST(ClassicalAdaptersTest, IncrementalGepExtendsAttributedGrammar) {

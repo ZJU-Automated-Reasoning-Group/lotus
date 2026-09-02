@@ -93,6 +93,7 @@ std::size_t LabeledGraph::addVertex(const std::string &name) {
   vertices_.push_back(name);
   vertex_ids_.emplace(name, id);
   adjacency_.emplace_back();
+  ++mutation_version_;
   return id;
 }
 
@@ -110,6 +111,8 @@ bool LabeledGraph::addEdge(std::size_t source, std::size_t target,
   }
 
   label_pairs_[label].push_back({source, target});
+  ++edge_count_;
+  ++mutation_version_;
   return true;
 }
 

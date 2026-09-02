@@ -95,12 +95,31 @@ public:
     return result;
   }
 
+  std::vector<RelationEdge> edges(SymbolId symbol) const override {
+    if (const auto it = forests_.find(symbol); it != forests_.end()) {
+      std::vector<RelationEdge> result;
+      result.reserve(it->second->edgeCount());
+      for (const auto &[source, target] : it->second->edges()) {
+        result.push_back({symbol, source, target});
+      }
+      return result;
+    }
+    return base_->edges(symbol);
+  }
+
   std::size_t edgeCount() const override {
     std::size_t count = base_->edgeCount();
     for (const auto &[_, forest] : forests_) {
       count += forest->edgeCount();
     }
     return count;
+  }
+
+  std::size_t edgeCount(SymbolId symbol) const override {
+    if (const auto it = forests_.find(symbol); it != forests_.end()) {
+      return it->second->edgeCount();
+    }
+    return base_->edgeCount(symbol);
   }
 
   std::size_t approximateMemoryBytes() const override {
@@ -143,7 +162,8 @@ public:
                       : createRelation(backend == SolverBackend::Baseline
                                            ? RelationBackend::SparseSets
                                            : RelationBackend::SparseBitVectors,
-                                       graph.vertexCount())) {
+                                       graph.vertexCount())),
+        expected_graph_version_(graph.mutationVersion()) {
     for (const GrammarIssue &issue : grammar.validate()) {
       if (issue.severity == GrammarIssueSeverity::Error) {
         throw std::invalid_argument(issue.message);
@@ -165,11 +185,13 @@ public:
   }
 
   bool addTerminalEdge(NodeId source, NodeId target, const std::string &label) {
+    validateGraphVersion();
     if (!grammar_.isTerminal(label)) {
       throw std::invalid_argument("Incremental edge is not a terminal: " +
                                   label);
     }
     graph_.addEdge(source, target, label);
+    expected_graph_version_ = graph_.mutationVersion();
     const SymbolId symbol = grammar_.symbolId(label);
     const bool inserted = insertInputFact(symbol, source, target);
     input_edges_ += inserted ? 1 : 0;
@@ -177,18 +199,21 @@ public:
   }
 
   NodeId addNode(const std::string &name) {
+    validateGraphVersion();
     const NodeId node = graph_.addVertex(name);
+    expected_graph_version_ = graph_.mutationVersion();
     relation_->ensureNodeCount(graph_.vertexCount());
     return node;
   }
 
   ReachabilityStats solve() {
+    validateGraphVersion();
     const auto start = std::chrono::steady_clock::now();
     ReachabilityStats stats;
     stats.added_edges = pending_derived_edges_;
     pending_derived_edges_ = 0;
     stats.graph_nodes = graph_.vertexCount();
-    stats.base_graph_edges = graph_.edges().size();
+    stats.base_graph_edges = graph_.edgeCount();
     stats.grammar_symbols = grammar_.symbolCount();
     stats.grammar_terminals = grammar_.terminals().size();
     stats.grammar_nonterminals = grammar_.nonterminals().size();
@@ -247,11 +272,7 @@ public:
     }
 
     stats.relation_edges = relation_->edgeCount();
-    for (const RelationEdge &edge : relation_->edges()) {
-      if (edge.symbol == grammar_.startSymbolId()) {
-        ++stats.start_symbol_edges;
-      }
-    }
+    stats.start_symbol_edges = relation_->edgeCount(grammar_.startSymbolId());
     stats.relation_memory_bytes = relation_->approximateMemoryBytes();
     stats.peak_worklist_size = peak_worklist_size_;
     collectHybridStatistics(stats);
@@ -263,13 +284,34 @@ public:
   }
 
   bool contains(NodeId source, NodeId target, const std::string &label) const {
+    validateGraphVersion();
     return grammar_.hasSymbol(label) &&
            relation_->contains(grammar_.symbolId(label), source, target);
   }
 
-  const Relation &relation() const { return *relation_; }
+  const Relation &relation() const {
+    validateGraphVersion();
+    return *relation_;
+  }
+
+  bool addKnownRelationEdge(NodeId source, NodeId target,
+                            const std::string &label) {
+    validateGraphVersion();
+    if (!grammar_.hasSymbol(label)) {
+      throw std::invalid_argument("Unknown migrated relation symbol: " + label);
+    }
+    return insertInputFact(grammar_.symbolId(label), source, target);
+  }
 
 private:
+  void validateGraphVersion() const {
+    if (graph_.mutationVersion() != expected_graph_version_) {
+      throw std::logic_error(
+          "LabeledGraph was mutated outside its SolverSession; use "
+          "SolverSession::addNode or addTerminalEdge");
+    }
+  }
+
   void addDerived(SymbolId symbol, NodeId source, NodeId target,
                   ReachabilityStats &stats) {
     if (hybrid_relation_ && hybrid_relation_->isTransitive(symbol)) {
@@ -344,6 +386,7 @@ private:
   std::size_t peak_worklist_size_ = 0;
   std::size_t pending_derived_edges_ = 0;
   HybridRelation *hybrid_relation_ = nullptr;
+  std::uint64_t expected_graph_version_ = 0;
 };
 
 SolverSession::SolverSession(LabeledGraph &graph, const Grammar &grammar,
@@ -361,6 +404,11 @@ std::size_t SolverSession::addNode(const std::string &name) {
 bool SolverSession::addTerminalEdge(std::size_t source, std::size_t target,
                                     const std::string &label) {
   return impl_->addTerminalEdge(source, target, label);
+}
+
+bool SolverSession::addKnownRelationEdge(std::size_t source, std::size_t target,
+                                         const std::string &label) {
+  return impl_->addKnownRelationEdge(source, target, label);
 }
 
 ReachabilityStats SolverSession::solve() { return impl_->solve(); }

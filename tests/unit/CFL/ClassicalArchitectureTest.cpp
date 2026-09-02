@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <set>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -24,6 +25,75 @@ std::set<NamedEdge> solveWith(SolverBackend backend, LabeledGraph graph,
   std::set<NamedEdge> result;
   for (const RelationEdge &edge : session.relation().edges()) {
     result.emplace(grammar.symbolName(edge.symbol), edge.source, edge.target);
+  }
+  return result;
+}
+
+std::set<NamedEdge> solveReference(const LabeledGraph &graph,
+                                   const Grammar &grammar) {
+  const std::size_t node_count = graph.vertexCount();
+  std::vector<std::vector<std::vector<bool>>> relation(
+      grammar.symbolCount(),
+      std::vector<std::vector<bool>>(node_count,
+                                     std::vector<bool>(node_count, false)));
+  for (const LabeledEdge &edge : graph.edges()) {
+    relation[grammar.symbolId(edge.label)][edge.source][edge.target] = true;
+  }
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    for (const auto &[head, rules] : grammar.productions()) {
+      const SymbolId lhs = grammar.symbolId(head);
+      for (const auto &rule : rules) {
+        if (rule.size() == 1 && rule.front() == Grammar::kEpsilonSymbol) {
+          for (std::size_t node = 0; node < node_count; ++node) {
+            if (!relation[lhs][node][node]) {
+              relation[lhs][node][node] = true;
+              changed = true;
+            }
+          }
+        } else if (rule.size() == 1) {
+          const SymbolId rhs = grammar.symbolId(rule.front());
+          for (std::size_t source = 0; source < node_count; ++source) {
+            for (std::size_t target = 0; target < node_count; ++target) {
+              if (relation[rhs][source][target] &&
+                  !relation[lhs][source][target]) {
+                relation[lhs][source][target] = true;
+                changed = true;
+              }
+            }
+          }
+        } else if (rule.size() == 2) {
+          const SymbolId first = grammar.symbolId(rule[0]);
+          const SymbolId second = grammar.symbolId(rule[1]);
+          for (std::size_t source = 0; source < node_count; ++source) {
+            for (std::size_t middle = 0; middle < node_count; ++middle) {
+              if (!relation[first][source][middle]) {
+                continue;
+              }
+              for (std::size_t target = 0; target < node_count; ++target) {
+                if (relation[second][middle][target] &&
+                    !relation[lhs][source][target]) {
+                  relation[lhs][source][target] = true;
+                  changed = true;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  std::set<NamedEdge> result;
+  for (SymbolId symbol = 0; symbol < grammar.symbolCount(); ++symbol) {
+    for (std::size_t source = 0; source < node_count; ++source) {
+      for (std::size_t target = 0; target < node_count; ++target) {
+        if (relation[symbol][source][target]) {
+          result.emplace(grammar.symbolName(symbol), source, target);
+        }
+      }
+    }
   }
   return result;
 }
@@ -54,6 +124,32 @@ TEST(ClassicalArchitectureTest, PreservesStartAndInstantiatesAttributes) {
   EXPECT_TRUE(grammar.isTerminal("ret_7"));
   EXPECT_FALSE(grammar.hasSymbol("call_i"));
   EXPECT_TRUE(grammar.validate().empty());
+}
+
+TEST(ClassicalArchitectureTest,
+     GeneratedNonterminalsAreNeverClassifiedAsTerminals) {
+  const auto grammar =
+      Grammar::parseFromText("Start:\n  S\nTerminal:\n  a __lotus_generated_1\n"
+                             "Variables:\n  S\nProductions:\n"
+                             "  S -> ( a ? ) * a a a;\n");
+
+  for (const std::string &nonterminal : grammar.nonterminals()) {
+    EXPECT_FALSE(grammar.isTerminal(nonterminal)) << nonterminal;
+  }
+  EXPECT_TRUE(grammar.validate().empty());
+}
+
+TEST(ClassicalArchitectureTest, ValidationRejectsSymbolKindIntersection) {
+  const auto grammar =
+      Grammar::parseFromText("Start:\n  S\nTerminal:\n  S a\nVariables:\n  S\n"
+                             "Productions:\n  S -> a;\n");
+  const auto issues = grammar.validate();
+  EXPECT_TRUE(
+      std::any_of(issues.begin(), issues.end(), [](const GrammarIssue &issue) {
+        return issue.severity == GrammarIssueSeverity::Error &&
+               issue.message.find("both terminal and nonterminal") !=
+                   std::string::npos;
+      }));
 }
 
 TEST(ClassicalArchitectureTest, CorrelatesAttributesAcrossProductionHeads) {
@@ -178,6 +274,68 @@ TEST(ClassicalArchitectureTest, BackendsAgreeAcrossGeneratedSmallGraphs) {
   }
 }
 
+TEST(ClassicalArchitectureTest,
+     AllBackendsMatchCubicReferenceAcrossRandomProblems) {
+  for (std::uint64_t seed = 1; seed <= 1000; ++seed) {
+    std::uint64_t state = seed;
+    auto next = [&]() {
+      state = state * 6364136223846793005ULL + 1442695040888963407ULL;
+      return state;
+    };
+
+    std::ostringstream grammar_text;
+    grammar_text << "Start:\n  S\nTerminal:\n  a b c\nVariables:\n  S A B C\n"
+                    "Productions:\n  A -> a";
+    if ((next() & 1U) != 0) {
+      grammar_text << " | epsilon";
+    }
+    grammar_text << ";\n  B -> b";
+    if ((next() & 1U) != 0) {
+      grammar_text << " | A";
+    }
+    grammar_text << ";\n  C -> c";
+    if ((next() & 1U) != 0) {
+      grammar_text << " | A B";
+    }
+    grammar_text << ";\n  S -> A B";
+    if ((next() & 1U) != 0) {
+      grammar_text << " | B C";
+    }
+    if ((next() & 1U) != 0) {
+      grammar_text << " | C A";
+    }
+    if ((next() & 1U) != 0) {
+      grammar_text << " | S S";
+    }
+    if ((next() & 1U) != 0) {
+      grammar_text << " | epsilon";
+    }
+    grammar_text << ";\n";
+    const Grammar grammar = Grammar::parseFromText(grammar_text.str());
+
+    LabeledGraph graph;
+    for (std::size_t node = 0; node < 4; ++node) {
+      graph.addVertex("n" + std::to_string(node));
+    }
+    for (std::size_t source = 0; source < 4; ++source) {
+      for (std::size_t target = 0; target < 4; ++target) {
+        for (const std::string &label : {"a", "b", "c"}) {
+          if (next() % 7 == 0) {
+            graph.addEdge(source, target, label);
+          }
+        }
+      }
+    }
+
+    const auto reference = solveReference(graph, grammar);
+    for (SolverBackend backend : {SolverBackend::Baseline, SolverBackend::POCR,
+                                  SolverBackend::Hybrid}) {
+      EXPECT_EQ(solveWith(backend, graph, grammar), reference)
+          << "seed=" << seed << " backend=" << solverBackendName(backend);
+    }
+  }
+}
+
 TEST(ClassicalArchitectureTest, HybridForestDerivesNonNullableReflexiveCycles) {
   const auto grammar = Grammar::parseFromText(
       "Start:\n  S\nTerminal:\n  a\nVariables:\n  S\nProductions:\n"
@@ -270,6 +428,37 @@ TEST(ClassicalArchitectureTest, IncrementalSessionSupportsDiscoveredNodes) {
   const auto discovered = session.addNode("discovered");
   session.solve();
   EXPECT_TRUE(session.contains(discovered, discovered, "S"));
+}
+
+TEST(ClassicalArchitectureTest, DetectsGraphMutationOutsideSession) {
+  const auto grammar =
+      Grammar::parseFromText("Start:\n  S\nTerminal:\n  a\nVariables:\n  S\n"
+                             "Productions:\n  S -> a;\n");
+  LabeledGraph graph;
+  graph.addEdge("n0", "n1", "a");
+  graph.addVertex("n2");
+  SolverSession session(graph, grammar);
+  session.solve();
+
+  graph.addEdge(1, 2, "a");
+  EXPECT_THROW(session.solve(), std::logic_error);
+  EXPECT_THROW(session.contains(1, 2, "S"), std::logic_error);
+}
+
+TEST(ClassicalArchitectureTest, RelationSupportsPerSymbolQueriesAndCounts) {
+  const auto grammar =
+      Grammar::parseFromText("Start:\n  S\nTerminal:\n  a\nVariables:\n  S\n"
+                             "Productions:\n  S -> S S | a;\n");
+  LabeledGraph graph;
+  graph.addEdge("n0", "n1", "a");
+  graph.addEdge("n1", "n2", "a");
+  SolverSession session(graph, grammar, SolverBackend::Hybrid);
+  session.solve();
+
+  const SymbolId symbol = grammar.symbolId("S");
+  EXPECT_EQ(session.relation().edgeCount(symbol),
+            session.relation().edges(symbol).size());
+  EXPECT_EQ(session.relation().successors(symbol, 0).size(), 2u);
 }
 
 TEST(ClassicalArchitectureTest, DirectionTransformsAreExplicitAndAttributed) {

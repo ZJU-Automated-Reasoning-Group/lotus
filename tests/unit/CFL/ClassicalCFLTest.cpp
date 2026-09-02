@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 
 #include <gtest/gtest.h>
 
@@ -118,6 +119,23 @@ TEST(ClassicalSCSolverTest, ProducesConstraintStatistics) {
   EXPECT_GT(stats.classical_iterations, 0U);
 }
 
+TEST(ClassicalSCSolverTest, VisitsOnlyIndexedConstraintBuckets) {
+  LabeledGraph graph;
+  for (std::size_t node = 0; node < 128; ++node) {
+    graph.addVertex("n" + std::to_string(node));
+  }
+  for (std::size_t node = 0; node + 1 < 128; ++node) {
+    graph.addEdge(node, node + 1, "a");
+  }
+  const auto grammar =
+      Grammar::parseFromText("Start:\n  A\nTerminal:\n  a\nVariables:\n  A\n"
+                             "Productions:\n  A -> a;\n");
+
+  const SCStatistics stats = SCSolver().solve(graph, grammar);
+  EXPECT_LT(stats.classical_iterations, 1024u);
+  EXPECT_EQ(stats.grounded_variables, stats.set_variables);
+}
+
 TEST(ClassicalCNFTest, AppliesStbduPipeline) {
   const auto grammar_path =
       createTempFile("lotus_classical_cnf.txt", "Terminals:\n"
@@ -137,6 +155,68 @@ TEST(ClassicalCNFTest, AppliesStbduPipeline) {
   EXPECT_TRUE(
       std::all_of(grammar.productions().begin(), grammar.productions().end(),
                   [](const CNFRule &rule) { return !rule.rhs.empty(); }));
+}
+
+TEST(ClassicalCNFTest, PreservesNullableStartLanguage) {
+  const auto grammar_path =
+      createTempFile("lotus_classical_cnf_epsilon.txt",
+                     "Terminals:\n  a\nVariables:\n  S A B\nProductions:\n"
+                     "  S -> A B; A -> e; B -> e;\n");
+  const auto grammar = CNFGrammar::transformToSTBDU(grammar_path.string());
+
+  EXPECT_NE(std::find(grammar.productions().begin(),
+                      grammar.productions().end(), CNFRule{"S0", {"e"}}),
+            grammar.productions().end());
+}
+
+TEST(ClassicalCNFTest, EliminatesUnitChainsWithoutIterationLimit) {
+  constexpr std::size_t chain_length = 1100;
+  std::ostringstream text;
+  text << "Terminals:\n  a\nVariables:\n  ";
+  for (std::size_t i = 0; i <= chain_length; ++i) {
+    text << "A" << i << ' ';
+  }
+  text << "\nProductions:\n";
+  for (std::size_t i = 0; i < chain_length; ++i) {
+    text << "A" << i << " -> A" << i + 1 << ";\n";
+  }
+  text << "A" << chain_length << " -> a;\n";
+  const auto path =
+      createTempFile("lotus_classical_cnf_unit_chain.txt", text.str());
+
+  const auto grammar = CNFGrammar::transformToSTBDU(path.string());
+  EXPECT_NE(std::find(grammar.productions().begin(),
+                      grammar.productions().end(), CNFRule{"S0", {"a"}}),
+            grammar.productions().end());
+  EXPECT_TRUE(std::none_of(
+      grammar.productions().begin(), grammar.productions().end(),
+      [&](const CNFRule &rule) {
+        return rule.rhs.size() == 1 &&
+               std::find(grammar.variables().begin(), grammar.variables().end(),
+                         rule.rhs.front()) != grammar.variables().end();
+      }));
+}
+
+TEST(ClassicalCNFTest, FreshVariablesScaleBeyondAlphabetSizedGrammars) {
+  std::ostringstream text;
+  text << "Terminals:\n  ";
+  for (std::size_t i = 0; i < 40; ++i) {
+    text << "t" << i << ' ';
+  }
+  text << "\nVariables:\n  S\nProductions:\n  S -> ";
+  for (std::size_t i = 0; i < 40; ++i) {
+    text << "t" << i << ' ';
+  }
+  text << ";\n";
+  const auto path =
+      createTempFile("lotus_classical_cnf_large_fresh.txt", text.str());
+
+  const auto grammar = CNFGrammar::transformToSTBDU(path.string());
+  EXPECT_GT(grammar.variables().size(), 26u);
+  EXPECT_TRUE(std::all_of(grammar.productions().begin(),
+                          grammar.productions().end(), [](const CNFRule &rule) {
+                            return !rule.rhs.empty() && rule.rhs.size() <= 2;
+                          }));
 }
 
 } // namespace lotus::cfl::classical

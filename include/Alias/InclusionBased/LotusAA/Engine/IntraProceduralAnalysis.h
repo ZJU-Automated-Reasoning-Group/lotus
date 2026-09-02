@@ -60,6 +60,7 @@
 #include <list>
 #include <map>
 #include <set>
+#include <tuple>
 #include <unordered_map>
 
 #include <llvm/IR/Function.h>
@@ -88,6 +89,7 @@ public:
   static bool lotus_use_full_phi_cond;
   static bool lotus_enable_score_computation;
   static bool lotus_enable_summary_value;
+  static bool lotus_enable_must_kill;
   static int lotus_restrict_output_pts;
   static int lotus_memory_max_passing_func;
   static int lotus_restrict_right_value_count;
@@ -171,6 +173,12 @@ private:
   using func_arg_t = std::map<Value *, mem_value_t, llvm_cmp>;
   using cg_result_t = std::map<Function *, path_cond_t, llvm_cmp>;
 
+  struct MustKillForest {
+    LoadInst *anchor = nullptr;
+    std::set<Instruction *, llvm_cmp> stores;
+    std::set<Instruction *, llvm_cmp> roots;
+  };
+
   // Function interface
   std::map<Value *, AccessPath, llvm_cmp> inputs;
   std::map<Value *, int, llvm_cmp> inputs_func_level;
@@ -226,6 +234,16 @@ private:
 
   // Value sequence
   std::map<Value *, int, llvm_cmp> value_seq;
+
+  // Tuna-style staged strong-update state.  Forests are cached at loads and
+  // inherited from an immediate dominating must-alias load.
+  std::map<LoadInst *, MustKillForest, llvm_cmp> must_kill_forests;
+  std::map<std::pair<const Instruction *, const Instruction *>, bool>
+      reachability_cache;
+  std::map<std::tuple<const Instruction *, const Instruction *,
+                      const Instruction *>,
+           bool>
+      avoiding_reachability_cache;
 
   // Flags
   bool is_PTA_computed;
@@ -305,6 +323,15 @@ private:
 
   void resolveCallValue(Value *val, cg_result_t &target, path_cond_t pre_cond);
 
+  void collectPathSensitiveLoadValues(LoadInst *load, mem_value_t &result,
+                                      bool create_symbol);
+  MustKillForest &getOrCreateMustKillForest(LoadInst *load);
+  LoadInst *findImmediateMustAliasAnchor(LoadInst *load);
+  bool instructionReaches(const Instruction *source,
+                          const Instruction *target,
+                          const Instruction *avoiding = nullptr);
+  bool mustKill(StoreInst *killer, StoreInst *killed, LoadInst *load);
+
 public:
   using FuncArgBindingMap =
       std::map<Value *, std::map<Function *, func_arg_t, llvm_cmp>, llvm_cmp>;
@@ -315,6 +342,12 @@ public:
   using PseudoReturnOriginMap =
       std::map<Value *, std::pair<Instruction *, int>, llvm_cmp>;
   using CallResolutionMap = std::map<Value *, cg_result_t, llvm_cmp>;
+
+  struct StrongUpdateStats {
+    LoadInst *anchor = nullptr;
+    unsigned candidate_store_count = 0;
+    unsigned root_store_count = 0;
+  };
 
   IntraLotusAA(Function *F, LotusAA *lotus_aa);
   ~IntraLotusAA();
@@ -361,6 +394,7 @@ public:
     return summary_inputs;
   }
   void collectGuardedValueFlowLoadValues(LoadInst *load, mem_value_t &result);
+  StrongUpdateStats getStrongUpdateStats(LoadInst *load);
   void collectGuardedValueFlowCallsiteSummaryInputs(
       CallBase *call, std::vector<mem_value_t> &summary_values);
   int getPseudoInputIndex(Value *value) const {

@@ -66,13 +66,7 @@ PTGraph *IntraLotusAA::getPtGraph(Function *F) {
 
 void IntraLotusAA::collectGuardedValueFlowLoadValues(LoadInst *load,
                                                      mem_value_t &result) {
-  result.clear();
-  if (!load)
-    return;
-
-  loadPtrAt(load->getPointerOperand(), load, result, false, 0, 0,
-            func_obj ? func_obj->findLocator(0, false) : nullptr, true);
-  refineResult(result);
+  collectPathSensitiveLoadValues(load, result, false);
 }
 
 void IntraLotusAA::collectGuardedValueFlowCallsiteSummaryInputs(
@@ -189,6 +183,11 @@ void IntraLotusAA::clearGlobalCgResult() {
 }
 
 void IntraLotusAA::clearMemObjectResult() {
+  lotus_clear_hash(&guarded_points_to_signature_cache_);
+  lotus_clear_hash(&must_kill_forests);
+  lotus_clear_hash(&reachability_cache);
+  lotus_clear_hash(&avoiding_reachability_cache);
+
   for (auto &it : pt_results) {
     if (it.second != NullPTS)
       delete it.second;

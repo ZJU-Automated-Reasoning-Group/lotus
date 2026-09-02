@@ -109,23 +109,27 @@ private:
   std::vector<DerivedPtItem> derived_list;
   Value *ptr;
   bool is_optimized;
+  unsigned revision;
 
   friend class PTResultIterator;
 
 public:
-  PTResult(Value *ptr) : ptr(ptr), is_optimized(false) {}
+  PTResult(Value *ptr) : ptr(ptr), is_optimized(false), revision(0) {}
 
   Value *get_ptr() { return ptr; }
+  unsigned getRevision() const { return revision; }
 
   void add_target(path_cond_t cond, MemObject *obj, int64_t offset) {
     ObjectLocator *locator = obj->findLocator(offset, true);
     pt_list.push_back({cond, locator});
     is_optimized = false;
+    ++revision;
   }
 
   void add_derived_target(path_cond_t cond, PTResult *src_pts, int64_t offset) {
     derived_list.push_back({cond, src_pts, offset});
     is_optimized = false;
+    ++revision;
   }
 };
 
@@ -252,6 +256,15 @@ protected:
   std::map<std::pair<path_cond_t, path_cond_t>, path_cond_t> or_cond_cache_;
   bool control_dep_ready_;
 
+  struct GuardedPointsToSignature {
+    unsigned revision = 0;
+    size_t fingerprint = 0;
+    bool must_alias_eligible = false;
+    std::vector<std::pair<ObjectLocator *, path_cond_t>> entries;
+  };
+  std::map<std::pair<PTResult *, int64_t>, GuardedPointsToSignature>
+      guarded_points_to_signature_cache_;
+
   // Constants
   static const int VALUE_SEQ_UNDEF;
   static const int VALUE_SEQ_INFINITE;
@@ -275,12 +288,17 @@ protected:
                  int func_level = ObjectLocator::FUNC_LEVEL_UNDEFINED,
                  ObjectLocator *func_call_cache = nullptr,
                  bool is_include_func_summary = false,
-                 bool is_maintain_load_map = true);
+                 bool is_maintain_load_map = true,
+                 const std::set<Instruction *, llvm_cmp>
+                     *surviving_store_positions = nullptr);
   void loadPtrAtImpl(Value *ptr, Instruction *from_loc, mem_value_t &result,
                      bool create_symbol, int64_t query_offset, int func_level,
                      ObjectLocator *func_call_cache,
                      bool is_include_func_summary, bool is_maintain_load_map,
-                     std::set<std::tuple<Value *, Instruction *, int64_t>> &visited);
+                     std::set<std::tuple<Value *, Instruction *, int64_t>>
+                         &visited,
+                     const std::set<Instruction *, llvm_cmp>
+                         *surviving_store_positions);
 
   void trackPtrRightValue(Value *ptr, mem_value_t &res);
   void trackPtrRightValueUnderCondition(Value *ptr, mem_value_t &res,
@@ -296,6 +314,8 @@ protected:
   path_cond_t internCond(std::unique_ptr<PathCond> cond);
   path_cond_t importPathCond(path_cond_t cond, Value *callsite,
                              Function *callee);
+  const GuardedPointsToSignature &
+  getGuardedPointsToSignature(PTResult *points_to, int64_t offset);
 
   virtual int getSequenceNum(Value *val) = 0;
   virtual int getInlineApDepth() = 0;
@@ -314,6 +334,19 @@ public:
                    Instruction *loc2, int64_t offset1 = 0,
                    int64_t offset2 = 0);
   bool isSameValue(LoadInst *l1, LoadInst *l2);
+
+  /// Return the path condition under which two pointer values may designate
+  /// the same concrete location.  Conditions for every shared guarded
+  /// points-to target are combined directly, as in Tuna's aliasCond.
+  path_cond_t getAliasCondition(Value *ptr1, Value *ptr2,
+                                int64_t offset1 = 0, int64_t offset2 = 0);
+
+  /// Conservatively prove that two pointers have syntactically equivalent
+  /// guarded points-to sets.  A compact fingerprint rejects the common
+  /// non-alias case; exact comparison on a hash match keeps the proof sound
+  /// even in the presence of hash collisions.
+  bool areMustAliases(Value *ptr1, Value *ptr2, int64_t offset1 = 0,
+                      int64_t offset2 = 0);
 
   const std::set<LoadInst *, llvm_cmp> &
   getAllLoadWithSameValue(LoadInst *load_inst);

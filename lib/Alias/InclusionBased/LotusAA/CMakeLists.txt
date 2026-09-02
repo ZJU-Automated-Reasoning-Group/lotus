@@ -15,6 +15,7 @@ set(LOTUSAA_ENGINE_SOURCES
   
   # Transfer functions for different constructs
   Engine/TransferFunctions/PointerInstructions.cpp
+  Engine/TransferFunctions/StrongUpdates.cpp
   Engine/TransferFunctions/BasicOps.cpp
   Engine/TransferFunctions/CallHandling.cpp
   Engine/TransferFunctions/SummaryBuilder.cpp

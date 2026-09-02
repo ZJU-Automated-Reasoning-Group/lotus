@@ -333,7 +333,9 @@ Argument *ObjectLocator::getValues(Instruction *from_loc, path_cond_t pre_cond,
                                    int function_level,
                                    bool enable_strong_update,
                                    ObjectLocator *func_call_cache,
-                                   bool is_include_func_summary) {
+                                   bool is_include_func_summary,
+                                   const std::set<Instruction *, llvm_cmp>
+                                       *surviving_store_positions) {
   if (!pre_cond)
     pre_cond = getPTG()->getEmptyCond();
 
@@ -472,13 +474,6 @@ Argument *ObjectLocator::getValues(Instruction *from_loc, path_cond_t pre_cond,
         if (lotus_memory_max_bb_depth != -1 &&
             bb_tracked > lotus_memory_max_bb_depth)
           return nullptr;
-
-        if (lotus_memory_max_bb_load != -1 &&
-            end_pos > lotus_memory_max_bb_load)
-          return nullptr;
-
-        if (lotus_memory_max_load != -1 && value_loaded > lotus_memory_max_load)
-          return nullptr;
       }
 
       if (bb == startBB) {
@@ -506,14 +501,38 @@ Argument *ObjectLocator::getValues(Instruction *from_loc, path_cond_t pre_cond,
         }
       }
 
+      if (enable_strong_update && lotus_memory_max_bb_load != -1) {
+        int surviving_values = 0;
+        for (int i = 0; i < end_pos; ++i) {
+          Instruction *position = lv_list->at(i)->getPos();
+          if (!surviving_store_positions ||
+              !isa_and_nonnull<StoreInst>(position) ||
+              surviving_store_positions->count(position)) {
+            ++surviving_values;
+          }
+        }
+        if (surviving_values > lotus_memory_max_bb_load)
+          return nullptr;
+      }
+
       // Collect values from this BB
       for (int i = end_pos - 1; i >= 0; --i) {
         LocValue *curr_lv = lv_list->at(i);
+        Instruction *pos = curr_lv->getPos();
+        if (surviving_store_positions && isa_and_nonnull<StoreInst>(pos) &&
+            !surviving_store_positions->count(pos)) {
+          continue;
+        }
+
+        if (enable_strong_update && lotus_memory_max_load != -1 &&
+            value_loaded > lotus_memory_max_load) {
+          return nullptr;
+        }
+
         path_cond_t cond = curr_lv->getCond();
         path_cond_t mem_val_cond =
             getPTG()->findOrCreateAndRegion(curr_anti_cond, cond);
         Value *val = curr_lv->getVal();
-        Instruction *pos = curr_lv->getPos();
         path_cond_t final_cond =
             getPTG()->findOrCreateAndRegion(pre_cond, mem_val_cond);
 

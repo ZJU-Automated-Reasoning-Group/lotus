@@ -452,19 +452,22 @@ void PTGraph::loadPtrAt(Value *ptr, Instruction *from_loc, mem_value_t &result,
                         bool create_symbol, int64_t query_offset,
                         int func_level, ObjectLocator *func_call_cache,
                         bool is_include_func_summary,
-                        bool is_maintain_load_map) {
+                        bool is_maintain_load_map,
+                        const std::set<Instruction *, llvm_cmp>
+                            *surviving_store_positions) {
   // Use visited set to prevent infinite recursion
   std::set<std::tuple<Value *, Instruction *, int64_t>> visited;
   loadPtrAtImpl(ptr, from_loc, result, create_symbol, query_offset, func_level,
                 func_call_cache, is_include_func_summary, is_maintain_load_map,
-                visited);
+                visited, surviving_store_positions);
 }
 
 void PTGraph::loadPtrAtImpl(
     Value *ptr, Instruction *from_loc, mem_value_t &result, bool create_symbol,
     int64_t query_offset, int func_level, ObjectLocator *func_call_cache,
     bool is_include_func_summary, bool is_maintain_load_map,
-    std::set<std::tuple<Value *, Instruction *, int64_t>> &visited) {
+    std::set<std::tuple<Value *, Instruction *, int64_t>> &visited,
+    const std::set<Instruction *, llvm_cmp> *surviving_store_positions) {
   // Defensive: callers should pass real IR values/locations, but fuzzing and
   // summary edges can route nullptrs here. Avoid null-deref inside type queries
   // and ObjectLocator::getValues() (which requires a non-null Instruction*).
@@ -519,7 +522,7 @@ void PTGraph::loadPtrAtImpl(
     if (from_loc) {
       loc->getValues(from_loc, point_to_item.second, tmp_result, value_type,
                      func_level, true, func_call_cache,
-                     is_include_func_summary);
+                     is_include_func_summary, surviving_store_positions);
     } else {
       // No program point: fall back to the coarse per-object stored-value cache
       // at this offset. This is conservative and avoids requiring dominance
@@ -650,6 +653,114 @@ bool PTGraph::isSameValue(Value *ptr1, Instruction *pos1, Value *ptr2,
       return false;
   }
 
+  return true;
+}
+
+const PTGraph::GuardedPointsToSignature &
+PTGraph::getGuardedPointsToSignature(PTResult *points_to, int64_t offset) {
+  auto key = std::make_pair(points_to, offset);
+  auto cached = guarded_points_to_signature_cache_.find(key);
+  if (cached != guarded_points_to_signature_cache_.end() &&
+      cached->second.revision == points_to->getRevision()) {
+    return cached->second;
+  }
+
+  GuardedPointsToSignature signature;
+  signature.revision = points_to->getRevision();
+  signature.must_alias_eligible = true;
+  std::map<ObjectLocator *, path_cond_t, obj_loc_cmp> adjusted;
+  PTResultIterator iterator(points_to, this);
+  for (const auto &item : iterator) {
+    ObjectLocator *locator = item.first ? item.first->offsetBy(offset) : nullptr;
+    if (!locator || !locator->getObj()->isValid() ||
+        isUnknownOffset(locator->getOffset())) {
+      signature.must_alias_eligible = false;
+      continue;
+    }
+    auto inserted = adjusted.emplace(locator, item.second);
+    if (!inserted.second) {
+      inserted.first->second =
+          findOrCreateOrRegion(inserted.first->second, item.second);
+    }
+  }
+  if (adjusted.empty())
+    signature.must_alias_eligible = false;
+
+  size_t fingerprint = adjusted.size();
+  for (const auto &item : adjusted) {
+    signature.entries.push_back(item);
+    const size_t locator_hash = std::hash<const void *>()(item.first);
+    const size_t condition_hash = std::hash<const void *>()(item.second);
+    fingerprint ^=
+        locator_hash + 0x9e3779b9U + (fingerprint << 6) + (fingerprint >> 2);
+    fingerprint ^=
+        condition_hash + 0x9e3779b9U + (fingerprint << 6) + (fingerprint >> 2);
+  }
+  signature.fingerprint = fingerprint;
+
+  if (cached == guarded_points_to_signature_cache_.end()) {
+    return guarded_points_to_signature_cache_
+        .emplace(key, std::move(signature))
+        .first->second;
+  }
+  cached->second = std::move(signature);
+  return cached->second;
+}
+
+path_cond_t PTGraph::getAliasCondition(Value *ptr1, Value *ptr2,
+                                       int64_t offset1, int64_t offset2) {
+  PTResult *ptr1_pts = findPTResult(ptr1, false);
+  PTResult *ptr2_pts = findPTResult(ptr2, false);
+  if (!ptr1_pts || !ptr2_pts)
+    return getFalseCond();
+
+  const auto &lhs = getGuardedPointsToSignature(ptr1_pts, offset1);
+  const auto &rhs = getGuardedPointsToSignature(ptr2_pts, offset2);
+  auto lhs_item = lhs.entries.begin();
+  auto rhs_item = rhs.entries.begin();
+  obj_loc_cmp compare;
+  path_cond_t result = getFalseCond();
+  while (lhs_item != lhs.entries.end() && rhs_item != rhs.entries.end()) {
+    if (compare(lhs_item->first, rhs_item->first)) {
+      ++lhs_item;
+      continue;
+    }
+    if (compare(rhs_item->first, lhs_item->first)) {
+      ++rhs_item;
+      continue;
+    }
+
+    path_cond_t overlap =
+        findOrCreateAndRegion(lhs_item->second, rhs_item->second);
+    if (isSatisfiable(overlap))
+      result = findOrCreateOrRegion(result, overlap);
+    ++lhs_item;
+    ++rhs_item;
+  }
+  return result;
+}
+
+bool PTGraph::areMustAliases(Value *ptr1, Value *ptr2, int64_t offset1,
+                             int64_t offset2) {
+  PTResult *ptr1_pts = findPTResult(ptr1, false);
+  PTResult *ptr2_pts = findPTResult(ptr2, false);
+  if (!ptr1_pts || !ptr2_pts)
+    return false;
+
+  const auto &lhs = getGuardedPointsToSignature(ptr1_pts, offset1);
+  const auto &rhs = getGuardedPointsToSignature(ptr2_pts, offset2);
+  if (!lhs.must_alias_eligible || !rhs.must_alias_eligible ||
+      lhs.fingerprint != rhs.fingerprint ||
+      lhs.entries.size() != rhs.entries.size()) {
+    return false;
+  }
+
+  // Confirm a hash match structurally so collisions cannot manufacture a
+  // must-alias proof.
+  for (size_t index = 0; index < lhs.entries.size(); ++index) {
+    if (lhs.entries[index] != rhs.entries[index])
+      return false;
+  }
   return true;
 }
 

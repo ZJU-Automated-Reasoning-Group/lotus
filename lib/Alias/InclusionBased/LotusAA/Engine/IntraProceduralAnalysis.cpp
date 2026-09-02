@@ -113,6 +113,7 @@ int IntraLotusAAConfig::lotus_restrict_ap_level = 2;
 bool IntraLotusAAConfig::lotus_use_full_phi_cond = false;
 bool IntraLotusAAConfig::lotus_enable_score_computation = false;
 bool IntraLotusAAConfig::lotus_enable_summary_value = false;
+bool IntraLotusAAConfig::lotus_enable_must_kill = true;
 int IntraLotusAAConfig::lotus_restrict_output_pts = 10;
 int IntraLotusAAConfig::lotus_memory_max_passing_func = 50;
 int IntraLotusAAConfig::lotus_restrict_right_value_count = 100;
@@ -169,6 +170,11 @@ static cl::opt<bool>
                                   cl::desc("Emit summary-value memory effects"),
                                   cl::init(false), cl::Hidden);
 
+static cl::opt<bool> lotus_enable_must_kill_cl(
+    "lotus-enable-must-kill",
+    cl::desc("Use Tuna-style must-kill forests for load-store matching"),
+    cl::init(true), cl::Hidden);
+
 static cl::opt<int> lotus_restrict_output_pts_cl(
     "lotus-restrict-output-pts",
     cl::desc("Restrict pseudo output points-to entries"), cl::init(10),
@@ -211,6 +217,8 @@ void IntraLotusAAConfig::setParam() {
     lotus_enable_score_computation = lotus_enable_score_computation_cl;
   if (lotus_enable_summary_value_cl.getNumOccurrences() > 0)
     lotus_enable_summary_value = lotus_enable_summary_value_cl;
+  if (lotus_enable_must_kill_cl.getNumOccurrences() > 0)
+    lotus_enable_must_kill = lotus_enable_must_kill_cl;
   if (lotus_restrict_output_pts_cl.getNumOccurrences() > 0)
     lotus_restrict_output_pts = lotus_restrict_output_pts_cl;
   if (lotus_memory_max_passing_func_cl.getNumOccurrences() > 0)
@@ -319,7 +327,7 @@ void IntraLotusAA::computePTA() {
         else {
           mem_value_t tmp;
           processBasePointer(load->getPointerOperand());
-          loadPtrAt(load->getPointerOperand(), load, tmp, true);
+          collectPathSensitiveLoadValues(load, tmp, true);
         }
         break;
       }

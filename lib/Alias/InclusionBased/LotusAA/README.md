@@ -9,6 +9,8 @@ LotusAA is the **native alias analysis framework** of Lotus. It provides a modul
 - **Field-sensitivity**: Tracks memory objects at the field/element level
 - **On-the-fly call graph construction**: Alternates between pointer analysis and call graph refinement
 - **Points-to graph representation**: Nodes represent memory objects and SSA values; edges represent points-to, load, store, and field relations
+- **Staged strong updates**: Tuna-style must-kill forests prune overwritten
+  stores before guarded heap histories are expanded
 
 ## Architecture
 
@@ -65,6 +67,30 @@ lotus-alias-lotus-aa [options] <input bitcode file>
 - `lotus_restrict_cg_size`: Max indirect call targets (default: 5)
 - `lotus_restrict_inline_size`: Max summary size (default: 100)
 - `lotus_restrict_ap_level`: Max access path depth (default: 2)
+- `lotus-enable-must-kill`: Enable incremental must-kill load/store matching
+  (default: true)
+
+## Path-Sensitive Strong Updates
+
+LotusAA implements the staged load/store matching algorithm from *Efficient
+Strong Updates for Path Sensitive Data Dependence Analysis* (Guo and Zhang,
+ICSE 2026):
+
+1. `getAliasCondition` directly intersects guarded points-to targets to obtain
+   the may-alias condition of a load/store pair.
+2. `areMustAliases` fingerprints canonical guarded points-to sets and confirms
+   hash matches structurally, avoiding collision-based unsoundness.
+3. Each load reuses the kill forest of its immediate dominating must-alias
+   load (its anchor) and considers only stores between the anchor and itself.
+4. A store kills an older store when their pointers must alias and removing
+   the newer store disconnects every older-store-to-load CFG path.
+5. Only forest roots are expanded by the existing guarded heap walker. This
+   retains LotusAA's summary, undef, and confidence handling while avoiding
+   conditions for stores already proven dead.
+
+The optimization follows LotusAA's existing treatment of cyclic CFG regions:
+only instructions numbered by the framework's acyclic topological traversal
+participate in a must-kill forest.
 
 ## Analysis Characteristics
 

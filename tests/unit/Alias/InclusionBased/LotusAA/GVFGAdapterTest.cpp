@@ -1,5 +1,7 @@
 #include "GVFGAdapterTestSupport.h"
 
+#include <llvm/IR/ValueSymbolTable.h>
+
 TEST(GVFGAdapter, MaterializesPseudoCallInterfaceNodes) {
   const char *IR = R"(
     define i32* @load_arg(i32** %p) {
@@ -206,6 +208,163 @@ TEST(GVFGAdapter, EquivalentLoadsKeepDistinctLoadMemoryNodes) {
   EXPECT_NE(first_mem, second_mem);
   EXPECT_EQ(first_mem->getMatchingRegions().size(), second_mem->getMatchingRegions().size());
 }
+
+TEST(GVFGAdapter, MustKillForestsPruneStoresAndReuseDominatingLoadAnchor) {
+  // This is the running shape from the Tuna paper: p and n have identical
+  // guarded points-to sets, and the q3 store is mandatory for x2 but optional
+  // for x3.  q0 first kills the two branch stores; the cached forest at x1 is
+  // then incrementally updated for x2 and x3.
+  const char *IR = R"(
+    define i32* @test(i1 %c1, i1 %c2, i1 %c3,
+                      i32* %q0, i32* %q1, i32* %q2, i32* %q3) {
+    entry:
+      %m = alloca i32**
+      %o4 = alloca i32*
+      %o6 = alloca i32*
+      %p = select i1 %c1, i32** %o4, i32** %o6
+      %opposite = select i1 %c1, i32** %o6, i32** %o4
+      store i32** %p, i32*** %m
+      br i1 %c2, label %left, label %right
+    left:
+      store i32* %q1, i32** %p
+      br label %merge
+    right:
+      store i32* %q2, i32** %p
+      br label %merge
+    merge:
+      %n = load i32**, i32*** %m
+      store i32* %q0, i32** %p
+      %x1 = load i32*, i32** %p
+      br i1 %c3, label %update, label %exit
+    update:
+      store i32* %q3, i32** %n
+      %x2 = load i32*, i32** %p
+      br label %exit
+    exit:
+      %x3 = load i32*, i32** %p
+      ret i32* %x3
+    }
+  )";
+
+  LLVMContext Ctx;
+  auto M = parseAssembly(Ctx, IR);
+  ASSERT_NE(M, nullptr);
+
+  auto result = runPipeline(*M);
+  Function *F = M->getFunction("test");
+  ASSERT_NE(F, nullptr);
+  auto *pta = result.lotus->getPtGraph(F);
+  ASSERT_NE(pta, nullptr);
+
+  auto *p = F->getValueSymbolTable()->lookup("p");
+  auto *n = F->getValueSymbolTable()->lookup("n");
+  auto *opposite = F->getValueSymbolTable()->lookup("opposite");
+  auto *x1 = dyn_cast_or_null<LoadInst>(F->getValueSymbolTable()->lookup("x1"));
+  auto *x2 = dyn_cast_or_null<LoadInst>(F->getValueSymbolTable()->lookup("x2"));
+  auto *x3 = dyn_cast_or_null<LoadInst>(F->getValueSymbolTable()->lookup("x3"));
+  ASSERT_NE(p, nullptr);
+  ASSERT_NE(n, nullptr);
+  ASSERT_NE(opposite, nullptr);
+  ASSERT_NE(x1, nullptr);
+  ASSERT_NE(x2, nullptr);
+  ASSERT_NE(x3, nullptr);
+
+  EXPECT_TRUE(pta->areMustAliases(p, n));
+  EXPECT_FALSE(pta->areMustAliases(p, opposite));
+
+  auto x1_stats = pta->getStrongUpdateStats(x1);
+  auto x2_stats = pta->getStrongUpdateStats(x2);
+  auto x3_stats = pta->getStrongUpdateStats(x3);
+  EXPECT_EQ(x1_stats.anchor, nullptr);
+  EXPECT_EQ(x1_stats.candidate_store_count, 3u);
+  EXPECT_EQ(x1_stats.root_store_count, 1u);
+  EXPECT_EQ(x2_stats.anchor, x1);
+  EXPECT_EQ(x2_stats.candidate_store_count, 4u);
+  EXPECT_EQ(x2_stats.root_store_count, 1u);
+  EXPECT_EQ(x3_stats.anchor, x1);
+  EXPECT_EQ(x3_stats.candidate_store_count, 4u);
+  EXPECT_EQ(x3_stats.root_store_count, 2u);
+
+  GuardedValueFlowGraph &graph = result.builder->getGraph(*F);
+  auto *x1_memory = graph.findLoadMemoryNode(x1);
+  auto *x2_memory = graph.findLoadMemoryNode(x2);
+  auto *x3_memory = graph.findLoadMemoryNode(x3);
+  ASSERT_NE(x1_memory, nullptr);
+  ASSERT_NE(x2_memory, nullptr);
+  ASSERT_NE(x3_memory, nullptr);
+  EXPECT_EQ(x1_memory->getMatchingRegions().size(), 1u);
+  EXPECT_EQ(x2_memory->getMatchingRegions().size(), 1u);
+  EXPECT_EQ(x3_memory->getMatchingRegions().size(), 2u);
+
+  bool saw_c3 = false;
+  bool saw_not_c3 = false;
+  for (const auto &match : x3_memory->getMatchingRegions()) {
+    ASSERT_EQ(match.provenance.getKind(),
+              ConditionRef::Kind::SemanticPathCond);
+    path_cond_t condition = match.provenance.getPathCond();
+    if (condition) {
+      const auto &summary = condition->getConstraintSummary();
+      for (const auto &cube : summary.cubes) {
+        for (const auto &literal : cube.positive_literals)
+          saw_c3 |= literal.value == F->getArg(2);
+        for (const auto &literal : cube.negative_literals)
+          saw_not_c3 |= literal.value == F->getArg(2);
+      }
+    }
+  }
+  EXPECT_TRUE(saw_c3);
+  EXPECT_TRUE(saw_not_c3);
+}
+
+TEST(GVFGAdapter, MustKillPruningRunsBeforePerBlockValueLimit) {
+  const char *IR = R"(
+    define i32* @test(i1 %cond, i32* %q0, i32* %q1, i32* %q2, i32* %q3,
+                      i32* %q4, i32* %q5, i32* %q6, i32* %q7) {
+    entry:
+      %left = alloca i32*
+      %right = alloca i32*
+      %p = select i1 %cond, i32** %left, i32** %right
+      store i32* %q0, i32** %p
+      store i32* %q1, i32** %p
+      store i32* %q2, i32** %p
+      store i32* %q3, i32** %p
+      store i32* %q4, i32** %p
+      store i32* %q5, i32** %p
+      store i32* %q6, i32** %p
+      store i32* %q7, i32** %p
+      %result = load i32*, i32** %p
+      ret i32* %result
+    }
+  )";
+
+  LLVMContext Ctx;
+  auto M = parseAssembly(Ctx, IR);
+  ASSERT_NE(M, nullptr);
+
+  auto result = runPipeline(*M);
+  Function *F = M->getFunction("test");
+  ASSERT_NE(F, nullptr);
+  auto *load = dyn_cast_or_null<LoadInst>(
+      F->getValueSymbolTable()->lookup("result"));
+  ASSERT_NE(load, nullptr);
+  auto *pta = result.lotus->getPtGraph(F);
+  ASSERT_NE(pta, nullptr);
+
+  auto stats = pta->getStrongUpdateStats(load);
+  EXPECT_EQ(stats.candidate_store_count, 8u);
+  EXPECT_EQ(stats.root_store_count, 1u);
+
+  auto *load_memory = result.builder->getGraph(*F).findLoadMemoryNode(load);
+  ASSERT_NE(load_memory, nullptr);
+  ASSERT_EQ(load_memory->getMatchingRegions().size(), 1u);
+  auto *producer = load_memory->getMatchingRegions().front().producer;
+  ASSERT_NE(producer, nullptr);
+  auto *last_store =
+      dyn_cast_or_null<StoreInst>(producer->getDebugInstruction());
+  ASSERT_NE(last_store, nullptr);
+  EXPECT_EQ(last_store->getValueOperand(), F->getArg(8));
+}
+
 TEST(GVFGAdapter, NonPointerLoadsAlsoReceiveMatchedStoreMemoryNodes) {
   const char *IR = R"(
     define i32 @test(i1 %cond, i32* %p) {

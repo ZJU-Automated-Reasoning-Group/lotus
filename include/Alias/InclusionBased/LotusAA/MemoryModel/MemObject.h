@@ -283,7 +283,9 @@ public:
                       int function_level = FUNC_LEVEL_UNDEFINED,
                       bool enable_strong_update = true,
                       ObjectLocator *func_call_cache = nullptr,
-                      bool is_include_func_summary = false);
+                      bool is_include_func_summary = false,
+                      const std::set<Instruction *, llvm_cmp>
+                          *surviving_store_positions = nullptr);
 
   Value *getInitializerForGlobalValue();
   LocValue *getVersion(Instruction *pos_inst);

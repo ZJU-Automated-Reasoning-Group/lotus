@@ -436,7 +436,7 @@ void IntraLotusAA::processLoad(LoadInst *load_inst) {
     return;
 
   mem_value_t result;
-  loadPtrAt(load_ptr, load_inst, result, true);
+  collectPathSensitiveLoadValues(load_inst, result, true);
 
   PTResult *load_pts = findPTResult(load_inst, true);
 

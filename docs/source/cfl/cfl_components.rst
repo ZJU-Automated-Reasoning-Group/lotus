@@ -17,6 +17,7 @@ Grammar-driven CFL reachability utilities and solver backends
 * Incremental solver sessions for dynamically discovered terminal edges
 * Adapters for Lotus AserPTA constraint graphs and Lotus SVFG value flow
 * End-to-end LLVM bitcode alias analysis with CFL-driven indirect calls
+* End-to-end context-sensitive LLVM value-flow analysis over Lotus SVFGs
 * Strong-update-aware CFL preparation for Lotus SVFGs
 
 Interleaved-Dyck Core

@@ -20,6 +20,7 @@ Grammar buildVfgGrammar(const lotus::analysis::SVFG &svfg);
 
 class ValueFlowClient {
 public:
+  ~ValueFlowClient();
   ValueFlowClient(ValueFlowClient &&other) noexcept;
   ValueFlowClient &operator=(ValueFlowClient &&other) noexcept;
   ValueFlowClient(const ValueFlowClient &) = delete;
@@ -34,17 +35,16 @@ public:
   bool hasFlow(std::uint32_t source_node, std::uint32_t target_node) const;
   std::vector<std::uint32_t> reachableFrom(std::uint32_t source_node) const;
 
-  const LabeledGraph &graph() const { return graph_; }
-  const Grammar &grammar() const { return grammar_; }
+  const LabeledGraph &graph() const;
+  const Grammar &grammar() const;
 
 private:
-  ValueFlowClient(LabeledGraph graph, Grammar grammar,
-                  std::unordered_map<std::uint32_t, std::size_t> node_to_vertex)
-      : graph_(std::move(graph)), grammar_(std::move(grammar)),
-        node_to_vertex_(std::move(node_to_vertex)) {}
+  ValueFlowClient(
+      LabeledGraph graph, Grammar grammar,
+      std::unordered_map<std::uint32_t, std::size_t> node_to_vertex);
 
-  LabeledGraph graph_;
-  Grammar grammar_;
+  struct State;
+  std::unique_ptr<State> state_;
   std::unordered_map<std::uint32_t, std::size_t> node_to_vertex_;
   std::unique_ptr<SolverSession> session_;
   std::optional<SolverBackend> backend_;

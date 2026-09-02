@@ -81,18 +81,28 @@ Adapter implementations are split by dependency:
    ``memcpy`` operations receive explicit constraints when the Aser frontend
    does not emit them.
 
+``ValueFlowClient`` / ``lotus-cfl-vf``
+   Implement SVF's second classical-CFL client, ``CFLVF``. The driver builds
+   Lotus's AserPTA-backed SVFG and MemorySSA, removes dereference inputs and
+   stale strong-update flow, encodes intraprocedural edges as ``a`` and
+   call/return edges as matched ``call_i``/``ret_i`` terminals, and solves
+   context-sensitive value-flow reachability with any classical backend.
+
 
 Command line
 ------------
 
 .. code-block:: console
 
-   cmake --build build --target lotus-cfl-classical
+   cmake --build build --target lotus-cfl-classical lotus-cfl-alias lotus-cfl-vf
    build/bin/lotus-cfl-classical \
      --grammar grammar.txt --graph graph.txt --solver pocr --json-stats
 
    build/bin/lotus-cfl-alias --solver pocr --encoding pag \
      --check-annotations module.bc
+
+   build/bin/lotus-cfl-vf --solver hybrid \
+     --query main::source,main::sink module.bc
 
 Use ``--graph-mode plain|matrix|pag-matrix`` and
 ``--direction plain|reverse|bidirectional`` to state input semantics.

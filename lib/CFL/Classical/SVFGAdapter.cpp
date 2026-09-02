@@ -153,6 +153,14 @@ std::uint32_t callSiteId(const CallSiteIds &ids,
 
 } // namespace
 
+struct ValueFlowClient::State {
+  State(LabeledGraph input_graph, Grammar input_grammar)
+      : graph(std::move(input_graph)), grammar(std::move(input_grammar)) {}
+
+  LabeledGraph graph;
+  Grammar grammar;
+};
+
 LabeledGraph encodeSVFG(const lotus::analysis::SVFG &svfg) {
   LabeledGraph encoded;
   for (const auto &[node_id, _] : svfg) {
@@ -255,19 +263,29 @@ ValueFlowClient::fromPreparedSVFG(lotus::analysis::SVFG &svfg,
   return fromSVFG(svfg);
 }
 
+ValueFlowClient::ValueFlowClient(
+    LabeledGraph graph, Grammar grammar,
+    std::unordered_map<std::uint32_t, std::size_t> node_to_vertex)
+    : state_(std::make_unique<State>(std::move(graph), std::move(grammar))),
+      node_to_vertex_(std::move(node_to_vertex)) {}
+
+ValueFlowClient::~ValueFlowClient() = default;
+
 ValueFlowClient::ValueFlowClient(ValueFlowClient &&other) noexcept
-    : graph_(std::move(other.graph_)), grammar_(std::move(other.grammar_)),
-      node_to_vertex_(std::move(other.node_to_vertex_)) {}
+    : state_(std::move(other.state_)),
+      node_to_vertex_(std::move(other.node_to_vertex_)),
+      session_(std::move(other.session_)), backend_(std::move(other.backend_)) {
+}
 
 ValueFlowClient &ValueFlowClient::operator=(ValueFlowClient &&other) noexcept {
   if (this == &other) {
     return *this;
   }
   session_.reset();
-  backend_.reset();
-  graph_ = std::move(other.graph_);
-  grammar_ = std::move(other.grammar_);
+  state_ = std::move(other.state_);
   node_to_vertex_ = std::move(other.node_to_vertex_);
+  session_ = std::move(other.session_);
+  backend_ = std::move(other.backend_);
   return *this;
 }
 
@@ -277,7 +295,8 @@ ReachabilityStats ValueFlowClient::solve(SolverBackend backend) {
         "Cannot change solver backend after a value-flow session has started");
   }
   if (!session_) {
-    session_ = std::make_unique<SolverSession>(graph_, grammar_, backend);
+    session_ = std::make_unique<SolverSession>(state_->graph, state_->grammar,
+                                               backend);
     backend_ = backend;
   }
   return session_->solve();
@@ -293,7 +312,7 @@ bool ValueFlowClient::hasFlow(std::uint32_t source_node,
   }
   return session_
              ? session_->contains(source_it->second, target_it->second, "A")
-             : graph_.hasEdge(source_it->second, target_it->second, "A");
+             : state_->graph.hasEdge(source_it->second, target_it->second, "A");
 }
 
 std::vector<std::uint32_t>
@@ -306,12 +325,16 @@ ValueFlowClient::reachableFrom(std::uint32_t source_node) const {
   std::vector<std::uint32_t> reachable;
   for (const auto &[node_id, vertex_id] : node_to_vertex_) {
     if (session_ ? session_->contains(source_it->second, vertex_id, "A")
-                 : graph_.hasEdge(source_it->second, vertex_id, "A")) {
+                 : state_->graph.hasEdge(source_it->second, vertex_id, "A")) {
       reachable.push_back(node_id);
     }
   }
   std::sort(reachable.begin(), reachable.end());
   return reachable;
 }
+
+const LabeledGraph &ValueFlowClient::graph() const { return state_->graph; }
+
+const Grammar &ValueFlowClient::grammar() const { return state_->grammar; }
 
 } // namespace lotus::cfl::classical

@@ -74,6 +74,7 @@ semantics.
 |---|---|---|
 | `lotus-cfl-classical` | Classical | Run a supplied grammar and text/DOT/JSON graph with the baseline, POCR, or hybrid backend |
 | `lotus-cfl-alias` | Classical | Run CFL-driven alias and indirect-call analysis directly on LLVM IR/bitcode |
+| `lotus-cfl-vf` | Classical | Run context-sensitive CFL value-flow analysis over Lotus's SVFG |
 | `lotus-cfl-mcfl` | MCFL | Run the dimension-indexed `G_d` underapproximation hierarchy |
 | `lotus-cfl-interleaved-dyck-approximation` | InterleavedDyckApproximation | Report staged typed lower/upper bounds |
 | `lotus-cfl-unary-interleaved-dyck` | UnaryInterleavedDyck | Select `adaptive` or `fixed-counter` exact unary analysis |

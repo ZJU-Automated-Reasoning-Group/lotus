@@ -7,3 +7,10 @@ target_link_libraries(lotus-cfl-alias PRIVATE
     LLVMIRReader
     LLVMAsmParser
 )
+
+add_executable(lotus-cfl-vf lotus-cfl-vf.cpp)
+target_link_libraries(lotus-cfl-vf PRIVATE
+    CanaryClassicalCFLSVFG
+    LLVMIRReader
+    LLVMAsmParser
+)

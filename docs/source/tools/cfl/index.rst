@@ -13,7 +13,7 @@ enables analysis of complex program properties using grammar-based constraints.
 
 **Location**: ``tools/cfl/``
 
-**Tools**: ``lotus-cfl-classical``, ``lotus-cfl-alias``,
+**Tools**: ``lotus-cfl-classical``, ``lotus-cfl-alias``, ``lotus-cfl-vf``,
 ``lotus-cfl-mcfl``, and CSR.
 
 Classical CFL and Alias Analysis
@@ -27,13 +27,20 @@ frontend but drives points-to propagation and indirect-call discovery through
 the CFL relation. It supports PAG/PEG encodings, annotation validation,
 points-to printing, named alias queries, and JSON statistics.
 
+``lotus-cfl-vf`` is the value-flow counterpart. It builds a sparse value-flow
+graph from LLVM IR, applies the CFL-specific strong-update preparation, and
+answers context-sensitive pointer value-flow queries with matched call/return
+labels.
+
 .. code-block:: bash
 
-   cmake --build build --target lotus-cfl-classical lotus-cfl-alias
+   cmake --build build --target lotus-cfl-classical lotus-cfl-alias lotus-cfl-vf
    build/bin/lotus-cfl-classical --grammar grammar.txt --graph graph.txt \
      --solver hybrid --json-stats
    build/bin/lotus-cfl-alias --encoding pag --solver pocr \
      --check-annotations module.bc
+   build/bin/lotus-cfl-vf --solver hybrid \
+     --query main::source,main::sink module.bc
 
 See :doc:`../../cfl/classical` for the complete option and API description.
 

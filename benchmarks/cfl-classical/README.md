@@ -24,6 +24,10 @@ RSS, backend, and the complete grammar.
 `call.grammar` and `call.txt` exercise automatic, per-kind inference of the
 correlated `i` domain. No `--attributes` option is needed.
 
+`value-flow.ll` exercises the second SVF-style CFL client through a matched
+interprocedural pointer flow. It is used to check that baseline, POCR, and
+hybrid all answer `main::seed -> main::result`.
+
 ## External SVF comparison
 
 Use `scripts/cfl/compare_svf_cfl.py` with an independently built SVF oracle.

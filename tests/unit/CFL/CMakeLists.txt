@@ -117,9 +117,22 @@ if(TARGET lotus-cfl-alias)
     endforeach()
 endif()
 
+if(TARGET lotus-cfl-vf)
+    foreach(classical_backend baseline pocr hybrid)
+        add_test(NAME classical_cfl_vf_${classical_backend}
+            COMMAND $<TARGET_FILE:lotus-cfl-vf>
+                --solver ${classical_backend}
+                --query main::seed,main::result
+                --json-stats
+                ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/value-flow.ll)
+        set_tests_properties(classical_cfl_vf_${classical_backend} PROPERTIES
+            PASS_REGULAR_EXPRESSION "flow=yes")
+    endforeach()
+endif()
+
 get_property(cfl_registered_tests DIRECTORY PROPERTY TESTS)
 foreach(cfl_registered_test IN LISTS cfl_registered_tests)
-    if(cfl_registered_test MATCHES "^classical_cfl_(cli|alias)_")
+    if(cfl_registered_test MATCHES "^classical_cfl_(cli|alias|vf)_")
         set_tests_properties(${cfl_registered_test} PROPERTIES
             LABELS "lotus;integration;cfl;cli"
             TIMEOUT ${LOTUS_UNIT_TEST_TIMEOUT}

@@ -422,6 +422,28 @@ TEST(ClassicalAdaptersTest, SvfgCallsiteIdsFollowStableInstructionOrder) {
   EXPECT_TRUE(grammar.isTerminal("call_2"));
 }
 
+TEST(ClassicalAdaptersTest, MovingValueFlowClientPreservesSolvedSession) {
+  SVFG svfg;
+  auto *source = new CopySVFGNode(1, nullptr, nullptr);
+  auto *target = new CopySVFGNode(2, nullptr, nullptr);
+  svfg.addNode(source);
+  svfg.addNode(target);
+  svfg.addEdge(source, target, SVFGEdgeK::IntraCopy);
+
+  ValueFlowClient original = ValueFlowClient::fromSVFG(svfg);
+  original.solve(SolverBackend::POCR);
+  ValueFlowClient moved(std::move(original));
+  EXPECT_TRUE(moved.hasFlow(1, 2));
+  EXPECT_THROW(moved.solve(SolverBackend::Hybrid), std::invalid_argument);
+
+  SVFG empty_svfg;
+  empty_svfg.addNode(new CopySVFGNode(3, nullptr, nullptr));
+  ValueFlowClient assigned = ValueFlowClient::fromSVFG(empty_svfg);
+  assigned = std::move(moved);
+  EXPECT_TRUE(assigned.hasFlow(1, 2));
+  EXPECT_NO_THROW(assigned.solve(SolverBackend::POCR));
+}
+
 TEST(ClassicalAdaptersTest, SvfgPreparationPrunesStrongUpdateInputs) {
   SVFG svfg;
   auto *pointer = new CopySVFGNode(1, nullptr, nullptr);

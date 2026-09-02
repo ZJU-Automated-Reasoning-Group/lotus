@@ -1,4 +1,4 @@
-#include "CFL/Classical/Relation.h"
+#include "CFL/Classical/Core/Relation.h"
 
 #include <map>
 #include <unordered_map>
@@ -36,14 +36,16 @@ public:
     return it != by_symbol.end() && it->second.count(target) != 0;
   }
 
-  std::vector<NodeId> successors(SymbolId symbol,
-                                 NodeId source) const override {
-    return lookup(successors_.at(source), symbol);
+  void
+  forEachSuccessor(SymbolId symbol, NodeId source,
+                   llvm::function_ref<void(NodeId)> visitor) const override {
+    visit(successors_.at(source), symbol, visitor);
   }
 
-  std::vector<NodeId> predecessors(SymbolId symbol,
-                                   NodeId target) const override {
-    return lookup(predecessors_.at(target), symbol);
+  void
+  forEachPredecessor(SymbolId symbol, NodeId target,
+                     llvm::function_ref<void(NodeId)> visitor) const override {
+    visit(predecessors_.at(target), symbol, visitor);
   }
 
   std::vector<RelationEdge> edges() const override {
@@ -100,12 +102,15 @@ private:
   using NodeSet = std::unordered_set<NodeId>;
   using SymbolMap = std::unordered_map<SymbolId, NodeSet>;
 
-  static std::vector<NodeId> lookup(const SymbolMap &map, SymbolId symbol) {
+  static void visit(const SymbolMap &map, SymbolId symbol,
+                    llvm::function_ref<void(NodeId)> visitor) {
     const auto it = map.find(symbol);
     if (it == map.end()) {
-      return {};
+      return;
     }
-    return {it->second.begin(), it->second.end()};
+    for (NodeId node : it->second) {
+      visitor(node);
+    }
   }
 
   std::vector<SymbolMap> successors_;
@@ -141,14 +146,16 @@ public:
     return it != by_symbol.end() && it->second.test(target);
   }
 
-  std::vector<NodeId> successors(SymbolId symbol,
-                                 NodeId source) const override {
-    return lookup(successors_.at(source), symbol);
+  void
+  forEachSuccessor(SymbolId symbol, NodeId source,
+                   llvm::function_ref<void(NodeId)> visitor) const override {
+    visit(successors_.at(source), symbol, visitor);
   }
 
-  std::vector<NodeId> predecessors(SymbolId symbol,
-                                   NodeId target) const override {
-    return lookup(predecessors_.at(target), symbol);
+  void
+  forEachPredecessor(SymbolId symbol, NodeId target,
+                     llvm::function_ref<void(NodeId)> visitor) const override {
+    visit(predecessors_.at(target), symbol, visitor);
   }
 
   std::vector<RelationEdge> edges() const override {
@@ -205,17 +212,15 @@ private:
   using BitVector = llvm::SparseBitVector<>;
   using SymbolMap = std::map<SymbolId, BitVector>;
 
-  static std::vector<NodeId> lookup(const SymbolMap &map, SymbolId symbol) {
+  static void visit(const SymbolMap &map, SymbolId symbol,
+                    llvm::function_ref<void(NodeId)> visitor) {
     const auto it = map.find(symbol);
     if (it == map.end()) {
-      return {};
+      return;
     }
-    std::vector<NodeId> result;
-    result.reserve(it->second.count());
     for (unsigned node : it->second) {
-      result.push_back(node);
+      visitor(node);
     }
-    return result;
   }
 
   std::vector<SymbolMap> successors_;

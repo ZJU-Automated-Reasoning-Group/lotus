@@ -1,5 +1,5 @@
-#include "CFL/Classical/Solver.h"
-#include "CFL/Classical/Validation.h"
+#include "CFL/Classical/Core/Validation.h"
+#include "CFL/Classical/Solvers/Reachability.h"
 
 #include <algorithm>
 #include <chrono>
@@ -19,7 +19,7 @@ namespace {
 struct Options {
   std::string grammar;
   std::string graph;
-  SolverBackend backend = SolverBackend::Baseline;
+  SolverBackend backend = SolverBackend::SparseSet;
   GraphLoadOptions graph_options;
   GrammarParseOptions grammar_options;
   bool dump_relation = false;
@@ -33,12 +33,12 @@ struct Options {
 void usage(std::ostream &stream) {
   stream << "Usage: lotus-cfl-classical --grammar FILE --graph FILE [options]\n"
             "Options:\n"
-            "  --solver baseline|pocr|hybrid\n"
+            "  --solver sparse-set|sparse-bitvector|transitive-closure\n"
             "  --graph-mode plain|matrix|pag-matrix\n"
             "  --direction plain|reverse|bidirectional\n"
-            "  --attributes N,N,...              Global attribute domain\n"
             "  --attribute-domain var:i=N,N,...  Variable-specific domain\n"
             "  --attribute-domain kind:call=N,N  Symbol-kind domain\n"
+            "  --max-attribute-expansions N      Expansion safety limit\n"
             "  --dump-relation\n"
             "  --relation-output FILE\n"
             "  --start-only\n"
@@ -52,7 +52,11 @@ std::vector<std::uint32_t> parseAttributes(const std::string &value) {
   std::stringstream stream(value);
   std::string token;
   while (std::getline(stream, token, ',')) {
-    result.push_back(static_cast<std::uint32_t>(std::stoul(token)));
+    const auto attribute = parseAttributeValue(token);
+    if (!attribute) {
+      throw std::invalid_argument("Invalid attribute: " + token);
+    }
+    result.push_back(*attribute);
   }
   return result;
 }
@@ -80,15 +84,13 @@ void parseAttributeDomain(const std::string &spec,
 
 GrammarParseOptions mergeGrammarOptions(GrammarParseOptions inferred,
                                         const GrammarParseOptions &explicit_) {
-  if (!explicit_.attributes.empty()) {
-    inferred.attributes = explicit_.attributes;
-  }
   for (const auto &[variable, domain] : explicit_.variable_attributes) {
     inferred.variable_attributes[variable] = domain;
   }
   for (const auto &[kind, domain] : explicit_.symbol_attributes) {
     inferred.symbol_attributes[kind] = domain;
   }
+  inferred.max_attribute_expansions = explicit_.max_attribute_expansions;
   return inferred;
 }
 
@@ -120,12 +122,12 @@ Options parseOptions(int argc, char **argv) {
       options.graph = value();
     } else if (argument == "--solver") {
       const std::string selected = value();
-      if (selected == "baseline") {
-        options.backend = SolverBackend::Baseline;
-      } else if (selected == "pocr") {
-        options.backend = SolverBackend::POCR;
-      } else if (selected == "hybrid") {
-        options.backend = SolverBackend::Hybrid;
+      if (selected == "sparse-set") {
+        options.backend = SolverBackend::SparseSet;
+      } else if (selected == "sparse-bitvector") {
+        options.backend = SolverBackend::SparseBitVector;
+      } else if (selected == "transitive-closure") {
+        options.backend = SolverBackend::TransitiveClosure;
       } else {
         throw std::invalid_argument("Unknown solver: " + selected);
       }
@@ -151,10 +153,10 @@ Options parseOptions(int argc, char **argv) {
       } else {
         throw std::invalid_argument("Unknown direction: " + selected);
       }
-    } else if (argument == "--attributes") {
-      options.grammar_options.attributes = parseAttributes(value());
     } else if (argument == "--attribute-domain") {
       parseAttributeDomain(value(), options.grammar_options);
+    } else if (argument == "--max-attribute-expansions") {
+      options.grammar_options.max_attribute_expansions = std::stoull(value());
     } else if (argument == "--dump-relation") {
       options.dump_relation = true;
     } else if (argument == "--relation-output") {
@@ -273,13 +275,14 @@ int main(int argc, char **argv) {
           << ",\"duplicates\":" << stats.duplicate_edges
           << ",\"peak_worklist\":" << stats.peak_worklist_size
           << ",\"relation_bytes_estimate\":" << stats.relation_memory_bytes
-          << ",\"hybrid_roots\":" << stats.hybrid_forest_roots
-          << ",\"hybrid_nodes\":" << stats.hybrid_forest_nodes
-          << ",\"hybrid_edges\":" << stats.hybrid_forest_edges
-          << ",\"hybrid_arcs\":" << stats.hybrid_arc_insertions
-          << ",\"hybrid_melds\":" << stats.hybrid_meld_operations
-          << ",\"hybrid_duplicate_melds\":" << stats.hybrid_duplicate_melds
-          << ",\"hybrid_bytes_estimate\":" << stats.hybrid_forest_memory_bytes
+          << ",\"transitive_instances\":" << stats.transitive_closure_instances
+          << ",\"transitive_edges\":" << stats.transitive_relation_edges
+          << ",\"transitive_arcs\":" << stats.transitive_arc_insertions
+          << ",\"transitive_propagated_pairs\":"
+          << stats.transitive_propagated_pairs
+          << ",\"transitive_duplicate_pairs\":"
+          << stats.transitive_duplicate_pairs
+          << ",\"transitive_bytes_estimate\":" << stats.transitive_memory_bytes
           << ",\"graph_load_us\":" << graph_load_us
           << ",\"grammar_load_us\":" << grammar_load_us
           << ",\"solve_us\":" << stats.solve_time_microseconds
@@ -300,10 +303,11 @@ int main(int argc, char **argv) {
                    << " duplicates=" << stats.duplicate_edges
                    << " peak_worklist=" << stats.peak_worklist_size
                    << " relation_bytes_estimate=" << stats.relation_memory_bytes
-                   << " hybrid_nodes=" << stats.hybrid_forest_nodes
-                   << " hybrid_melds=" << stats.hybrid_meld_operations
-                   << " hybrid_bytes_estimate="
-                   << stats.hybrid_forest_memory_bytes
+                   << " transitive_instances="
+                   << stats.transitive_closure_instances
+                   << " transitive_pairs=" << stats.transitive_propagated_pairs
+                   << " transitive_bytes_estimate="
+                   << stats.transitive_memory_bytes
                    << " graph_load_us=" << graph_load_us
                    << " grammar_load_us=" << grammar_load_us
                    << " solve_us=" << stats.solve_time_microseconds

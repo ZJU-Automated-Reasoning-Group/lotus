@@ -1,4 +1,4 @@
-#include "CFL/Classical/SVFGAdapter.h"
+#include "CFL/Classical/Clients/ValueFlow/ValueFlowClient.h"
 #include "IR/ICFG/ICFGBuilder.h"
 #include "IR/SVFG/SVFG.h"
 #include "IR/SVFG/SVFGBuilder.h"
@@ -23,7 +23,7 @@ namespace {
 
 struct Options {
   std::string input;
-  SolverBackend backend = SolverBackend::Baseline;
+  SolverBackend backend = SolverBackend::SparseSet;
   bool prepare_svfg = true;
   bool json_stats = false;
   std::string dump_svfg;
@@ -34,7 +34,7 @@ struct Options {
 void usage(std::ostream &stream) {
   stream << "Usage: lotus-cfl-vf [options] INPUT.{ll,bc}\n"
             "Options:\n"
-            "  --solver baseline|pocr|hybrid\n"
+            "  --solver sparse-set|sparse-bitvector|transitive-closure\n"
             "  --query SOURCE,TARGET       Query named LLVM values\n"
             "                              (use FUNCTION::VALUE for locals)\n"
             "  --dump-svfg FILE            Write the prepared SVFG as DOT\n"
@@ -56,12 +56,12 @@ Options parseOptions(int argc, char **argv) {
 
     if (argument == "--solver") {
       const std::string selected = value();
-      if (selected == "baseline") {
-        options.backend = SolverBackend::Baseline;
-      } else if (selected == "pocr") {
-        options.backend = SolverBackend::POCR;
-      } else if (selected == "hybrid") {
-        options.backend = SolverBackend::Hybrid;
+      if (selected == "sparse-set") {
+        options.backend = SolverBackend::SparseSet;
+      } else if (selected == "sparse-bitvector") {
+        options.backend = SolverBackend::SparseBitVector;
+      } else if (selected == "transitive-closure") {
+        options.backend = SolverBackend::TransitiveClosure;
       } else {
         throw std::invalid_argument("Unknown solver: " + selected);
       }

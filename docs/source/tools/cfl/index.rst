@@ -20,7 +20,7 @@ Classical CFL and Alias Analysis
 --------------------------------
 
 ``lotus-cfl-classical`` runs a supplied grammar over a text, DOT, or JSON
-graph with the baseline, POCR, or hybrid-forest backend.
+graph with the sparse-set, sparse-bitvector, or transitive-closure backend.
 
 ``lotus-cfl-alias`` consumes LLVM IR or bitcode. It uses Aser as the constraint
 frontend but drives points-to propagation and indirect-call discovery through
@@ -36,10 +36,10 @@ labels.
 
    cmake --build build --target lotus-cfl-classical lotus-cfl-alias lotus-cfl-vf
    build/bin/lotus-cfl-classical --grammar grammar.txt --graph graph.txt \
-     --solver hybrid --json-stats
-   build/bin/lotus-cfl-alias --encoding pag --solver pocr \
+     --solver transitive-closure --json-stats
+   build/bin/lotus-cfl-alias --encoding pag --solver sparse-bitvector \
      --check-annotations module.bc
-   build/bin/lotus-cfl-vf --solver hybrid \
+   build/bin/lotus-cfl-vf --solver transitive-closure \
      --query main::source,main::sink module.bc
 
 See :doc:`../../cfl/classical` for the complete option and API description.

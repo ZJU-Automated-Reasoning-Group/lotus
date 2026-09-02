@@ -1,13 +1,11 @@
-#include "CFL/Classical/CNF.h"
-#include "CFL/Classical/Grammar.h"
-#include "CFL/Classical/Graph.h"
-#include "CFL/Classical/SCSolver.h"
-#include "CFL/Classical/Solver.h"
+#include "CFL/Classical/Core/Grammar.h"
+#include "CFL/Classical/Core/Graph.h"
+#include "CFL/Classical/Solvers/ConstraintGrounding.h"
+#include "CFL/Classical/Solvers/Reachability.h"
 
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
-#include <sstream>
 
 #include <gtest/gtest.h>
 
@@ -69,6 +67,16 @@ TEST(ClassicalGraphTest, ParsesDotGraphWithMatrixAndPagModes) {
                                 pag_graph.vertexId("NodeB"), "dbar"));
 }
 
+TEST(ClassicalGraphTest, RejectsInvalidEndpointsWithoutMutation) {
+  LabeledGraph graph;
+  graph.addVertex("only");
+  const std::uint64_t version = graph.mutationVersion();
+
+  EXPECT_THROW(graph.addEdge(0, 100000, "a"), std::out_of_range);
+  EXPECT_EQ(graph.edgeCount(), 0u);
+  EXPECT_EQ(graph.mutationVersion(), version);
+}
+
 TEST(ClassicalSolverTest, DerivesReachableLabels) {
   auto graph = LabeledGraph{};
   graph.addEdge("n0", "n1", "a");
@@ -96,7 +104,7 @@ TEST(ClassicalSolverTest, DerivesReachableLabels) {
   EXPECT_GT(stats.classical_iterations, 0U);
 }
 
-TEST(ClassicalSCSolverTest, ProducesConstraintStatistics) {
+TEST(ClassicalConstraintGroundingTest, ProducesConstraintStatistics) {
   auto graph = LabeledGraph{};
   graph.addEdge("n0", "n1", "a");
 
@@ -111,15 +119,15 @@ TEST(ClassicalSCSolverTest, ProducesConstraintStatistics) {
                                                        "  A -> a;\n");
 
   const auto grammar = Grammar::parseFromFile(grammar_path.string());
-  const SCSolver solver;
-  const auto stats = solver.solve(graph, grammar);
+  const ConstraintGroundingSolver solver;
+  const auto stats = solver.ground(graph, grammar);
 
   EXPECT_GT(stats.constraint_variables, 0U);
   EXPECT_GT(stats.set_variables, 0U);
-  EXPECT_GT(stats.classical_iterations, 0U);
+  EXPECT_GT(stats.processed_constraints, 0U);
 }
 
-TEST(ClassicalSCSolverTest, VisitsOnlyIndexedConstraintBuckets) {
+TEST(ClassicalConstraintGroundingTest, VisitsOnlyIndexedConstraintBuckets) {
   LabeledGraph graph;
   for (std::size_t node = 0; node < 128; ++node) {
     graph.addVertex("n" + std::to_string(node));
@@ -131,92 +139,45 @@ TEST(ClassicalSCSolverTest, VisitsOnlyIndexedConstraintBuckets) {
       Grammar::parseFromText("Start:\n  A\nTerminal:\n  a\nVariables:\n  A\n"
                              "Productions:\n  A -> a;\n");
 
-  const SCStatistics stats = SCSolver().solve(graph, grammar);
-  EXPECT_LT(stats.classical_iterations, 1024u);
+  const ConstraintGroundingStatistics stats =
+      ConstraintGroundingSolver().ground(graph, grammar);
+  EXPECT_LT(stats.processed_constraints, 1024u);
   EXPECT_EQ(stats.grounded_variables, stats.set_variables);
 }
 
-TEST(ClassicalCNFTest, AppliesStbduPipeline) {
-  const auto grammar_path =
-      createTempFile("lotus_classical_cnf.txt", "Terminals:\n"
-                                                "  a b\n"
-                                                "Variables:\n"
-                                                "  S A\n"
-                                                "Productions:\n"
-                                                "  S -> A b a;\n"
-                                                "  A -> a | e;\n");
+TEST(ClassicalGrammarTest, TerminalUseNeverReusesAProducingNonterminal) {
+  const auto grammar = Grammar::parseFromText(
+      "Start:\n  S\nTerminal:\n  a b c\nVariables:\n  S A C\n"
+      "Productions:\n  S -> a C; A -> a | b; C -> c;\n");
 
-  const auto grammar = CNFGrammar::transformToSTBDU(grammar_path.string());
+  LabeledGraph accepted;
+  accepted.addEdge("n0", "n1", "a");
+  accepted.addEdge("n1", "n2", "c");
+  SolverSession accepted_session(accepted, grammar);
+  accepted_session.solve();
+  EXPECT_TRUE(accepted_session.contains(0, 2, "S"));
 
-  EXPECT_FALSE(grammar.productions().empty());
-  EXPECT_TRUE(
-      std::any_of(grammar.productions().begin(), grammar.productions().end(),
-                  [](const CNFRule &rule) { return rule.lhs == "S0"; }));
-  EXPECT_TRUE(
-      std::all_of(grammar.productions().begin(), grammar.productions().end(),
-                  [](const CNFRule &rule) { return !rule.rhs.empty(); }));
+  LabeledGraph rejected;
+  rejected.addEdge("n0", "n1", "b");
+  rejected.addEdge("n1", "n2", "c");
+  SolverSession rejected_session(rejected, grammar);
+  rejected_session.solve();
+  EXPECT_FALSE(rejected_session.contains(0, 2, "S"));
 }
 
-TEST(ClassicalCNFTest, PreservesNullableStartLanguage) {
-  const auto grammar_path =
-      createTempFile("lotus_classical_cnf_epsilon.txt",
-                     "Terminals:\n  a\nVariables:\n  S A B\nProductions:\n"
-                     "  S -> A B; A -> e; B -> e;\n");
-  const auto grammar = CNFGrammar::transformToSTBDU(grammar_path.string());
+TEST(ClassicalGrammarTest, SingleLetterETerminalIsNotEpsilon) {
+  const auto grammar =
+      Grammar::parseFromText("Start:\n  S\nTerminal:\n  e\nVariables:\n  S\n"
+                             "Productions:\n  S -> e;\n");
+  EXPECT_TRUE(grammar.isTerminal("e"));
+  EXPECT_TRUE(grammar.nullableSymbols().empty());
 
-  EXPECT_NE(std::find(grammar.productions().begin(),
-                      grammar.productions().end(), CNFRule{"S0", {"e"}}),
-            grammar.productions().end());
-}
-
-TEST(ClassicalCNFTest, EliminatesUnitChainsWithoutIterationLimit) {
-  constexpr std::size_t chain_length = 1100;
-  std::ostringstream text;
-  text << "Terminals:\n  a\nVariables:\n  ";
-  for (std::size_t i = 0; i <= chain_length; ++i) {
-    text << "A" << i << ' ';
-  }
-  text << "\nProductions:\n";
-  for (std::size_t i = 0; i < chain_length; ++i) {
-    text << "A" << i << " -> A" << i + 1 << ";\n";
-  }
-  text << "A" << chain_length << " -> a;\n";
-  const auto path =
-      createTempFile("lotus_classical_cnf_unit_chain.txt", text.str());
-
-  const auto grammar = CNFGrammar::transformToSTBDU(path.string());
-  EXPECT_NE(std::find(grammar.productions().begin(),
-                      grammar.productions().end(), CNFRule{"S0", {"a"}}),
-            grammar.productions().end());
-  EXPECT_TRUE(std::none_of(
-      grammar.productions().begin(), grammar.productions().end(),
-      [&](const CNFRule &rule) {
-        return rule.rhs.size() == 1 &&
-               std::find(grammar.variables().begin(), grammar.variables().end(),
-                         rule.rhs.front()) != grammar.variables().end();
-      }));
-}
-
-TEST(ClassicalCNFTest, FreshVariablesScaleBeyondAlphabetSizedGrammars) {
-  std::ostringstream text;
-  text << "Terminals:\n  ";
-  for (std::size_t i = 0; i < 40; ++i) {
-    text << "t" << i << ' ';
-  }
-  text << "\nVariables:\n  S\nProductions:\n  S -> ";
-  for (std::size_t i = 0; i < 40; ++i) {
-    text << "t" << i << ' ';
-  }
-  text << ";\n";
-  const auto path =
-      createTempFile("lotus_classical_cnf_large_fresh.txt", text.str());
-
-  const auto grammar = CNFGrammar::transformToSTBDU(path.string());
-  EXPECT_GT(grammar.variables().size(), 26u);
-  EXPECT_TRUE(std::all_of(grammar.productions().begin(),
-                          grammar.productions().end(), [](const CNFRule &rule) {
-                            return !rule.rhs.empty() && rule.rhs.size() <= 2;
-                          }));
+  LabeledGraph graph;
+  graph.addEdge("n0", "n1", "e");
+  SolverSession session(graph, grammar);
+  session.solve();
+  EXPECT_TRUE(session.contains(0, 1, "S"));
+  EXPECT_FALSE(session.contains(0, 0, "S"));
 }
 
 } // namespace lotus::cfl::classical

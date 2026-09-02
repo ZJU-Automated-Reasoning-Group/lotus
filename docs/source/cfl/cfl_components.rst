@@ -8,12 +8,14 @@ Classical CFL Reachability
 
 Grammar-driven CFL reachability utilities and solver backends
 
-**Location**: ``include/CFL/Classical/``, ``lib/CFL/Classical/``
+**Location**: ``include/CFL/Classical/``, ``lib/CFL/Classical/``. Both trees
+use ``Core/``, ``Solvers/``, ``Clients/Alias/``, and
+``Clients/ValueFlow/`` subdirectories.
 
 **Features**:
-* Grammar parsing and CNF/STBDU normalization helpers
+* One canonical grammar parser with EBNF expansion and binary normalization
 * Labeled graph construction for text, DOT, PAG, and PEG-style encodings
-* Baseline, sparse-bitvector POCR, and transitive-specialized hybrid solvers
+* Sparse-set, sparse-bitvector, and transitive-specialized closure backends
 * Incremental solver sessions for dynamically discovered terminal edges
 * Adapters for Lotus AserPTA constraint graphs and Lotus SVFG value flow
 * End-to-end LLVM bitcode alias analysis with CFL-driven indirect calls

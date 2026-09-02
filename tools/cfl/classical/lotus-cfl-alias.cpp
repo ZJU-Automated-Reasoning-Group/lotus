@@ -1,4 +1,4 @@
-#include "CFL/Classical/LLVMAliasAnalysis.h"
+#include "CFL/Classical/Clients/Alias/LLVMAliasAnalysis.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -30,7 +30,7 @@ struct Options {
 void usage(std::ostream &stream) {
   stream << "Usage: lotus-cfl-alias [options] INPUT.{ll,bc}\n"
             "Options:\n"
-            "  --solver baseline|pocr|hybrid\n"
+            "  --solver sparse-set|sparse-bitvector|transitive-closure\n"
             "  --encoding pag|peg\n"
             "  --entry FUNCTION\n"
             "  --max-callgraph-rounds N\n"
@@ -52,12 +52,12 @@ Options parseOptions(int argc, char **argv) {
     };
     if (argument == "--solver") {
       const std::string selected = value();
-      if (selected == "baseline") {
-        options.analysis.backend = SolverBackend::Baseline;
-      } else if (selected == "pocr") {
-        options.analysis.backend = SolverBackend::POCR;
-      } else if (selected == "hybrid") {
-        options.analysis.backend = SolverBackend::Hybrid;
+      if (selected == "sparse-set") {
+        options.analysis.backend = SolverBackend::SparseSet;
+      } else if (selected == "sparse-bitvector") {
+        options.analysis.backend = SolverBackend::SparseBitVector;
+      } else if (selected == "transitive-closure") {
+        options.analysis.backend = SolverBackend::TransitiveClosure;
       } else {
         throw std::invalid_argument("Unknown solver: " + selected);
       }

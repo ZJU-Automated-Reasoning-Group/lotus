@@ -1,4 +1,4 @@
-#include "CFL/Classical/Graph.h"
+#include "CFL/Classical/Core/Graph.h"
 
 #include <fstream>
 #include <iterator>
@@ -24,6 +24,22 @@ std::string trim(const std::string &text) {
 
 bool startsWith(const std::string &value, const std::string &prefix) {
   return value.rfind(prefix, 0) == 0;
+}
+
+std::string decodeDotIdentifier(std::string value) {
+  value = trim(value);
+  if (value.size() < 2 || value.front() != '"' || value.back() != '"') {
+    return value;
+  }
+  std::string decoded;
+  decoded.reserve(value.size() - 2);
+  for (std::size_t index = 1; index + 1 < value.size(); ++index) {
+    if (value[index] == '\\' && index + 2 < value.size()) {
+      ++index;
+    }
+    decoded.push_back(value[index]);
+  }
+  return decoded;
 }
 
 } // namespace
@@ -93,6 +109,7 @@ std::size_t LabeledGraph::addVertex(const std::string &name) {
   vertices_.push_back(name);
   vertex_ids_.emplace(name, id);
   adjacency_.emplace_back();
+  reverse_adjacency_by_target_.emplace_back();
   ++mutation_version_;
   return id;
 }
@@ -104,6 +121,9 @@ bool LabeledGraph::addEdge(const std::string &source, const std::string &target,
 
 bool LabeledGraph::addEdge(std::size_t source, std::size_t target,
                            const std::string &label) {
+  if (source >= vertexCount() || target >= vertexCount()) {
+    throw std::out_of_range("Graph edge endpoint is out of range");
+  }
   auto &labels = adjacency_.at(source)[target];
   const auto [_, inserted] = labels.insert(label);
   if (!inserted) {
@@ -111,6 +131,8 @@ bool LabeledGraph::addEdge(std::size_t source, std::size_t target,
   }
 
   label_pairs_[label].push_back({source, target});
+  reverse_label_adjacency_[label][target].insert(source);
+  reverse_adjacency_by_target_[target][label].insert(source);
   ++edge_count_;
   ++mutation_version_;
   return true;
@@ -159,20 +181,6 @@ LabeledGraph::edgesForLabelCopy(const std::string &label) const {
   return edgesForLabel(label);
 }
 
-std::vector<std::size_t>
-LabeledGraph::predecessorsForLabel(std::size_t target,
-                                   const std::string &label) const {
-  std::vector<std::size_t> predecessors;
-  if (const auto it = label_pairs_.find(label); it != label_pairs_.end()) {
-    for (const auto &[source, dst] : it->second) {
-      if (dst == target) {
-        predecessors.push_back(source);
-      }
-    }
-  }
-  return predecessors;
-}
-
 void LabeledGraph::loadFromTextFile(const std::string &path) {
   std::ifstream input(path);
   if (!input) {
@@ -205,24 +213,29 @@ void LabeledGraph::loadFromDotFile(const std::string &path, GraphMode mode) {
     throw std::runtime_error("Failed to open DOT graph file: " + path);
   }
 
-  const std::regex edge_pattern(
-      R"(([A-Za-z0-9_]+)\s*->\s*([A-Za-z0-9_]+)\s*\[.*color=([A-Za-z]+)[^\]]*\])");
+  const std::string identifier = R"(("(?:\\.|[^"])*"|[A-Za-z0-9_.:-]+))";
+  const std::regex edge_pattern(identifier + R"(\s*->\s*)" + identifier +
+                                R"(\s*\[[^\]]*color\s*=\s*)" + identifier +
+                                R"([^\]]*\])");
   const std::regex labeled_edge_pattern(
-      R"(([A-Za-z0-9_]+)\s*->\s*([A-Za-z0-9_]+)\s*\[[^\]]*)"
-      R"(label\s*=\s*\"?([A-Za-z0-9_]+)\"?[^\]]*\])");
-  const std::regex node_pattern(R"(^\s*([A-Za-z0-9_]+)\s*(\[.*\])?;?\s*$)");
+      identifier + R"(\s*->\s*)" + identifier + R"(\s*\[[^\]]*label\s*=\s*)" +
+      identifier + R"([^\]]*\])");
+  const std::regex node_pattern("^\\s*" + identifier +
+                                R"(\s*(?:\[.*\])?;?\s*$)");
 
   std::string line;
   while (std::getline(input, line)) {
     std::smatch match;
     if (std::regex_search(line, match, labeled_edge_pattern)) {
-      addEdge(match[1].str(), match[2].str(), match[3].str());
+      addEdge(decodeDotIdentifier(match[1].str()),
+              decodeDotIdentifier(match[2].str()),
+              decodeDotIdentifier(match[3].str()));
       continue;
     }
     if (std::regex_search(line, match, edge_pattern)) {
-      const auto source = match[1].str();
-      const auto target = match[2].str();
-      const auto color = match[3].str();
+      const auto source = decodeDotIdentifier(match[1].str());
+      const auto target = decodeDotIdentifier(match[2].str());
+      const auto color = decodeDotIdentifier(match[3].str());
 
       addVertex(source);
       addVertex(target);
@@ -261,7 +274,7 @@ void LabeledGraph::loadFromDotFile(const std::string &path, GraphMode mode) {
     }
 
     if (std::regex_match(line, match, node_pattern)) {
-      const auto node = trim(match[1].str());
+      const auto node = decodeDotIdentifier(match[1].str());
       if (!node.empty() && node != "digraph" && node != "{") {
         addVertex(node);
       }
@@ -283,10 +296,39 @@ void LabeledGraph::loadFromJsonFile(const std::string &path) {
   }
 
   const llvm::json::Array *edges = parsed->getAsArray();
+  bool has_node_section = false;
   if (const auto *root = parsed->getAsObject()) {
+    const llvm::json::Array *nodes = root->getArray("nodes");
+    if (!nodes) {
+      nodes = root->getArray("vertices");
+    }
+    if (nodes) {
+      has_node_section = true;
+      for (const llvm::json::Value &value : *nodes) {
+        if (const auto name = value.getAsString()) {
+          addVertex(name->str());
+          continue;
+        }
+        const auto *object = value.getAsObject();
+        if (!object) {
+          throw std::invalid_argument(
+              "JSON graph node must be a string or contain id/name");
+        }
+        const auto name = object->getString("id");
+        const auto fallback = object->getString("name");
+        if (!name && !fallback) {
+          throw std::invalid_argument(
+              "JSON graph node must be a string or contain id/name");
+        }
+        addVertex((name ? *name : *fallback).str());
+      }
+    }
     edges = root->getArray("edges");
   }
   if (!edges) {
+    if (has_node_section) {
+      return;
+    }
     throw std::invalid_argument(
         "JSON graph must be an edge array or contain an edges array");
   }

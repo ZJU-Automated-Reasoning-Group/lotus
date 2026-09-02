@@ -5,4 +5,4 @@ Terminal:
 Variables:
   S
 Productions:
-  S -> S S | a | epsilon;
+  S -> S S | a | <epsilon>;

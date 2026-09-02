@@ -44,7 +44,7 @@ add_lotus_targeted_test(ClassicalAdaptersTest ClassicalAdaptersTest.cpp
         CanaryClassicalCFLSVFG)
 
 if(TARGET lotus-cfl-classical)
-    foreach(classical_backend baseline pocr hybrid)
+    foreach(classical_backend sparse-set sparse-bitvector transitive-closure)
         add_test(NAME classical_cfl_cli_${classical_backend}
             COMMAND $<TARGET_FILE:lotus-cfl-classical>
                 --grammar ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/chain.grammar
@@ -59,19 +59,19 @@ if(TARGET lotus-cfl-classical)
         COMMAND $<TARGET_FILE:lotus-cfl-classical>
             --grammar ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/call.grammar
             --graph ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/call.txt
-            --solver hybrid
+            --solver transitive-closure
             --json-stats)
     set_tests_properties(classical_cfl_cli_infers_attributes PROPERTIES
         PASS_REGULAR_EXPRESSION "\"relation_edges\":3")
 
-    add_test(NAME classical_cfl_cli_hybrid_forest_stats
+    add_test(NAME classical_cfl_cli_transitive_stats
         COMMAND $<TARGET_FILE:lotus-cfl-classical>
             --grammar ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/chain.grammar
             --graph ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/chain.txt
-            --solver hybrid
+            --solver transitive-closure
             --json-stats)
-    set_tests_properties(classical_cfl_cli_hybrid_forest_stats PROPERTIES
-        PASS_REGULAR_EXPRESSION "\"hybrid_nodes\":55")
+    set_tests_properties(classical_cfl_cli_transitive_stats PROPERTIES
+        PASS_REGULAR_EXPRESSION "\"transitive_instances\":1")
 
     add_test(NAME classical_cfl_cli_validate_only
         COMMAND $<TARGET_FILE:lotus-cfl-classical>
@@ -85,7 +85,7 @@ endif()
 if(TARGET lotus-cfl-alias)
     add_test(NAME classical_cfl_alias_indirect_call
         COMMAND $<TARGET_FILE:lotus-cfl-alias>
-            --solver pocr
+            --solver sparse-bitvector
             --encoding pag
             --json-stats
             ${CMAKE_SOURCE_DIR}/tests/regress/PTATestCases/funptr-simple.ll)
@@ -108,7 +108,7 @@ if(TARGET lotus-cfl-alias)
     foreach(alias_case IN LISTS classical_alias_annotation_cases)
         add_test(NAME classical_cfl_alias_annotation_${alias_case}
             COMMAND $<TARGET_FILE:lotus-cfl-alias>
-                --solver pocr
+                --solver sparse-bitvector
                 --encoding pag
                 --check-annotations
                 ${CMAKE_SOURCE_DIR}/tests/regress/PTATestCases/${alias_case}.ll)
@@ -118,7 +118,7 @@ if(TARGET lotus-cfl-alias)
 endif()
 
 if(TARGET lotus-cfl-vf)
-    foreach(classical_backend baseline pocr hybrid)
+    foreach(classical_backend sparse-set sparse-bitvector transitive-closure)
         add_test(NAME classical_cfl_vf_${classical_backend}
             COMMAND $<TARGET_FILE:lotus-cfl-vf>
                 --solver ${classical_backend}

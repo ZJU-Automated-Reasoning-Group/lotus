@@ -1,4 +1,6 @@
-#include "CFL/Classical/Alias.h"
+#include "CFL/Classical/Clients/Alias/Alias.h"
+
+#include "CFL/Classical/Core/Validation.h"
 
 #include <algorithm>
 #include <cctype>
@@ -448,13 +450,13 @@ ReachabilityStats AliasClient::solveToFixedPoint(
     aggregate.start_symbol_edges = current.start_symbol_edges;
     aggregate.solve_time_microseconds += current.solve_time_microseconds;
     aggregate.relation_memory_bytes = current.relation_memory_bytes;
-    aggregate.hybrid_forest_roots = current.hybrid_forest_roots;
-    aggregate.hybrid_forest_nodes = current.hybrid_forest_nodes;
-    aggregate.hybrid_forest_edges = current.hybrid_forest_edges;
-    aggregate.hybrid_arc_insertions = current.hybrid_arc_insertions;
-    aggregate.hybrid_meld_operations = current.hybrid_meld_operations;
-    aggregate.hybrid_duplicate_melds = current.hybrid_duplicate_melds;
-    aggregate.hybrid_forest_memory_bytes = current.hybrid_forest_memory_bytes;
+    aggregate.transitive_closure_instances =
+        current.transitive_closure_instances;
+    aggregate.transitive_relation_edges = current.transitive_relation_edges;
+    aggregate.transitive_arc_insertions = current.transitive_arc_insertions;
+    aggregate.transitive_propagated_pairs = current.transitive_propagated_pairs;
+    aggregate.transitive_duplicate_pairs = current.transitive_duplicate_pairs;
+    aggregate.transitive_memory_bytes = current.transitive_memory_bytes;
     ++aggregate.solver_rounds;
     if (!discover_constraints(*this)) {
       return aggregate;
@@ -570,11 +572,9 @@ void AliasClient::initializeGepAttributes() {
     if (label.rfind("gep_", 0) != 0 || label.size() <= 4) {
       continue;
     }
-    const std::string value = label.substr(4);
-    if (std::all_of(value.begin(), value.end(), [](unsigned char character) {
-          return std::isdigit(character) != 0;
-        })) {
-      gep_attributes_.insert(static_cast<std::uint32_t>(std::stoul(value)));
+    if (const auto attribute =
+            parseAttributeValue(std::string_view(label).substr(4))) {
+      gep_attributes_.insert(*attribute);
     }
   }
 }
@@ -620,54 +620,40 @@ void AliasClient::rebuildGrammar() {
 }
 
 bool AliasClient::mayAlias(std::size_t lhs, std::size_t rhs) const {
+  if (!session_) {
+    throw std::logic_error("solve() has not been called");
+  }
   if (lhs >= state_->graph.vertexCount() ||
       rhs >= state_->graph.vertexCount()) {
     return false;
   }
-  return session_ ? session_->contains(lhs, rhs, "V")
-                  : state_->graph.hasEdge(lhs, rhs, "V");
+  return session_->contains(lhs, rhs, "V");
 }
 
 std::vector<std::size_t> AliasClient::pointsTo(std::size_t ptr) const {
+  if (!session_) {
+    throw std::logic_error("solve() has not been called");
+  }
   if (ptr >= state_->graph.vertexCount()) {
     return {};
   }
   std::set<std::size_t> result;
-  std::vector<std::size_t> value_targets;
-  if (session_) {
-    const SymbolId value_symbol = state_->grammar.symbolId("V");
-    value_targets = session_->relation().successors(value_symbol, ptr);
-  } else {
-    for (const auto &[source, target] : state_->graph.edgesForLabel("V")) {
-      if (source == ptr) {
-        value_targets.push_back(target);
-      }
-    }
-  }
+  const SymbolId value_symbol = state_->grammar.symbolId("V");
+  session_->relation().forEachSuccessor(
+      value_symbol, ptr, [&](std::size_t target) {
+        bool added_precise_target = false;
+        state_->graph.forEachIncomingEdge(
+            target, [&](const std::string &label, std::size_t pred) {
+              if (label == "addr" || label.rfind("gep_", 0) == 0) {
+                result.insert(pred);
+                added_precise_target = true;
+              }
+            });
 
-  for (std::size_t target : value_targets) {
-    bool added_precise_target = false;
-    for (std::size_t pred :
-         state_->graph.predecessorsForLabel(target, "addr")) {
-      result.insert(pred);
-      added_precise_target = true;
-    }
-
-    for (const auto &[label, _] : state_->graph.symbolPairs()) {
-      if (label.rfind("gep_", 0) != 0) {
-        continue;
-      }
-      for (std::size_t pred :
-           state_->graph.predecessorsForLabel(target, label)) {
-        result.insert(pred);
-        added_precise_target = true;
-      }
-    }
-
-    if (!added_precise_target) {
-      result.insert(target);
-    }
-  }
+        if (!added_precise_target) {
+          result.insert(target);
+        }
+      });
 
   return {result.begin(), result.end()};
 }

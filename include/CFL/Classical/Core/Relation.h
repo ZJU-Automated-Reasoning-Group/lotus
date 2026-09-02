@@ -5,6 +5,8 @@
 #include <memory>
 #include <vector>
 
+#include <llvm/ADT/STLFunctionalExtras.h>
+
 namespace lotus::cfl::classical {
 
 using NodeId = std::size_t;
@@ -25,10 +27,12 @@ public:
   virtual bool add(SymbolId symbol, NodeId source, NodeId target) = 0;
   virtual bool contains(SymbolId symbol, NodeId source,
                         NodeId target) const = 0;
-  virtual std::vector<NodeId> successors(SymbolId symbol,
-                                         NodeId source) const = 0;
-  virtual std::vector<NodeId> predecessors(SymbolId symbol,
-                                           NodeId target) const = 0;
+  virtual void
+  forEachSuccessor(SymbolId symbol, NodeId source,
+                   llvm::function_ref<void(NodeId)> visitor) const = 0;
+  virtual void
+  forEachPredecessor(SymbolId symbol, NodeId target,
+                     llvm::function_ref<void(NodeId)> visitor) const = 0;
   virtual std::vector<RelationEdge> edges() const = 0;
   virtual std::vector<RelationEdge> edges(SymbolId symbol) const = 0;
   virtual std::size_t edgeCount() const = 0;

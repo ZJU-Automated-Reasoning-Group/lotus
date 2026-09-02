@@ -1,6 +1,6 @@
-#include "CFL/Classical/HybridForest.h"
-#include "CFL/Classical/Solver.h"
-#include "CFL/Classical/Validation.h"
+#include "CFL/Classical/Core/Validation.h"
+#include "CFL/Classical/Solvers/Reachability.h"
+#include "CFL/Classical/Solvers/TransitiveClosure.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -107,6 +107,8 @@ std::filesystem::path writeTemp(const std::string &name,
 }
 
 TEST(ClassicalArchitectureTest, PreservesStartAndInstantiatesAttributes) {
+  GrammarParseOptions options;
+  options.variable_attributes['i'] = {3, 7};
   const auto grammar =
       Grammar::parseFromText("Start:\n"
                              "  S\n"
@@ -115,8 +117,8 @@ TEST(ClassicalArchitectureTest, PreservesStartAndInstantiatesAttributes) {
                              "Variables:\n"
                              "  S\n"
                              "Productions:\n"
-                             "  S -> call_i S ret_i | epsilon;\n",
-                             GrammarParseOptions{{3, 7}});
+                             "  S -> call_i S ret_i | <epsilon>;\n",
+                             options);
 
   EXPECT_EQ(grammar.startSymbol(), "S");
   EXPECT_TRUE(grammar.isNonterminal("S"));
@@ -153,8 +155,10 @@ TEST(ClassicalArchitectureTest, ValidationRejectsSymbolKindIntersection) {
 }
 
 TEST(ClassicalArchitectureTest, CorrelatesAttributesAcrossProductionHeads) {
-  const auto grammar = Grammar::parseFromText(
-      "Productions:\n  Edge_i -> call_i;\n", GrammarParseOptions{{2, 5}});
+  GrammarParseOptions options;
+  options.variable_attributes['i'] = {2, 5};
+  const auto grammar =
+      Grammar::parseFromText("Productions:\n  Edge_i -> call_i;\n", options);
   EXPECT_TRUE(grammar.isNonterminal("Edge_2"));
   EXPECT_TRUE(grammar.isNonterminal("Edge_5"));
   EXPECT_NE(grammar.unaryByRhs().find("call_2"), grammar.unaryByRhs().end());
@@ -181,6 +185,17 @@ TEST(ClassicalArchitectureTest, RejectsUnboundAttributeVariables) {
                std::invalid_argument);
 }
 
+TEST(ClassicalArchitectureTest, RejectsExplosiveAttributeExpansion) {
+  GrammarParseOptions options;
+  options.variable_attributes['i'] = {1, 2, 3};
+  options.variable_attributes['j'] = {4, 5, 6};
+  options.max_attribute_expansions = 8;
+  EXPECT_THROW(
+      Grammar::parseFromText(
+          "Productions:\n  S -> call_i ret_i load_j store_j;\n", options),
+      std::length_error);
+}
+
 TEST(ClassicalArchitectureTest, InfersAttributeDomainsFromGraphLabels) {
   LabeledGraph graph;
   graph.addEdge("a", "b", "call_4");
@@ -196,58 +211,69 @@ TEST(ClassicalArchitectureTest, InfersAttributeDomainsFromGraphLabels) {
   EXPECT_TRUE(grammar.hasSymbol("ret_9"));
 }
 
-TEST(ClassicalArchitectureTest, HybridForestMaintainsIncrementalReachTrees) {
-  HybridReachabilityForest forest(5);
-  EXPECT_EQ(forest.addArc(0, 1).size(), 1u);
-  const auto through_two = forest.addArc(1, 2);
+TEST(ClassicalArchitectureTest, RejectsOutOfRangeGraphAttributes) {
+  LabeledGraph graph;
+  graph.addEdge("a", "b", "call_4294967296");
+  EXPECT_THROW(inferGrammarAttributes(graph), std::invalid_argument);
+}
+
+TEST(ClassicalArchitectureTest,
+     SparseBitvectorsMaintainIncrementalTransitiveClosure) {
+  IncrementalTransitiveClosure closure(5);
+  EXPECT_EQ(closure.addArc(0, 1).size(), 1u);
+  const auto through_two = closure.addArc(1, 2);
   EXPECT_NE(std::find(through_two.begin(), through_two.end(),
                       std::make_pair<std::size_t, std::size_t>(0, 2)),
             through_two.end());
 
-  const auto prefixed = forest.addArc(3, 0);
+  const auto prefixed = closure.addArc(3, 0);
   EXPECT_NE(std::find(prefixed.begin(), prefixed.end(),
                       std::make_pair<std::size_t, std::size_t>(3, 2)),
             prefixed.end());
 
-  const auto cycle = forest.addArc(2, 0);
+  const auto cycle = closure.addArc(2, 0);
   EXPECT_NE(std::find(cycle.begin(), cycle.end(),
                       std::make_pair<std::size_t, std::size_t>(0, 0)),
             cycle.end());
   EXPECT_NE(std::find(cycle.begin(), cycle.end(),
                       std::make_pair<std::size_t, std::size_t>(2, 1)),
             cycle.end());
-  EXPECT_GT(forest.statistics().meld_operations, 0u);
+  EXPECT_TRUE(closure.hasPath(0, 0));
+  EXPECT_GT(closure.statistics().propagated_pairs, 0u);
 
-  forest.ensureNodeCount(6);
-  EXPECT_EQ(forest.addArc(5, 0).size(), 3u);
+  closure.ensureNodeCount(6);
+  EXPECT_EQ(closure.addArc(5, 0).size(), 3u);
 }
 
 TEST(ClassicalArchitectureTest, AllSolverBackendsProduceTheSameClosure) {
   const auto grammar = Grammar::parseFromText(
       "Start:\n  S\nTerminal:\n  a\nVariables:\n  S\nProductions:\n"
-      "  S -> S S | a | epsilon;\n");
+      "  S -> S S | a | <epsilon>;\n");
   LabeledGraph graph;
   graph.addEdge("n0", "n1", "a");
   graph.addEdge("n1", "n2", "a");
   graph.addEdge("n2", "n3", "a");
 
-  const auto baseline = solveWith(SolverBackend::Baseline, graph, grammar);
-  EXPECT_EQ(solveWith(SolverBackend::POCR, graph, grammar), baseline);
-  EXPECT_EQ(solveWith(SolverBackend::Hybrid, graph, grammar), baseline);
+  const auto baseline = solveWith(SolverBackend::SparseSet, graph, grammar);
+  EXPECT_EQ(solveWith(SolverBackend::SparseBitVector, graph, grammar),
+            baseline);
+  EXPECT_EQ(solveWith(SolverBackend::TransitiveClosure, graph, grammar),
+            baseline);
   EXPECT_TRUE(baseline.count({"S", 0, 3}) != 0);
 
-  LabeledGraph hybrid_graph = graph;
-  SolverSession hybrid(hybrid_graph, grammar, SolverBackend::Hybrid);
-  const ReachabilityStats hybrid_stats = hybrid.solve();
-  EXPECT_EQ(hybrid_stats.hybrid_forest_roots, graph.vertexCount());
-  EXPECT_GT(hybrid_stats.hybrid_forest_nodes, hybrid_stats.hybrid_forest_roots);
-  EXPECT_GT(hybrid_stats.hybrid_meld_operations, 0u);
+  LabeledGraph transitive_graph = graph;
+  SolverSession transitive(transitive_graph, grammar,
+                           SolverBackend::TransitiveClosure);
+  const ReachabilityStats transitive_stats = transitive.solve();
+  EXPECT_EQ(transitive_stats.transitive_closure_instances, 1u);
+  EXPECT_GT(transitive_stats.transitive_relation_edges, graph.edgeCount());
+  EXPECT_GT(transitive_stats.transitive_propagated_pairs, 0u);
 }
 
 TEST(ClassicalArchitectureTest, BackendsAgreeAcrossGeneratedSmallGraphs) {
   const auto grammar = Grammar::parseFromText(
       "Start:\n  S\nTerminal:\n  a b\nVariables:\n  S A B\n"
-      "Productions:\n  A -> a; B -> b; S -> S S | A B | epsilon;\n");
+      "Productions:\n  A -> a; B -> b; S -> S S | A B | <epsilon>;\n");
 
   for (std::size_t seed = 1; seed <= 24; ++seed) {
     LabeledGraph graph;
@@ -266,10 +292,12 @@ TEST(ClassicalArchitectureTest, BackendsAgreeAcrossGeneratedSmallGraphs) {
       }
     }
 
-    const auto baseline = solveWith(SolverBackend::Baseline, graph, grammar);
-    EXPECT_EQ(solveWith(SolverBackend::POCR, graph, grammar), baseline)
+    const auto baseline = solveWith(SolverBackend::SparseSet, graph, grammar);
+    EXPECT_EQ(solveWith(SolverBackend::SparseBitVector, graph, grammar),
+              baseline)
         << "seed=" << seed;
-    EXPECT_EQ(solveWith(SolverBackend::Hybrid, graph, grammar), baseline)
+    EXPECT_EQ(solveWith(SolverBackend::TransitiveClosure, graph, grammar),
+              baseline)
         << "seed=" << seed;
   }
 }
@@ -287,7 +315,7 @@ TEST(ClassicalArchitectureTest,
     grammar_text << "Start:\n  S\nTerminal:\n  a b c\nVariables:\n  S A B C\n"
                     "Productions:\n  A -> a";
     if ((next() & 1U) != 0) {
-      grammar_text << " | epsilon";
+      grammar_text << " | <epsilon>";
     }
     grammar_text << ";\n  B -> b";
     if ((next() & 1U) != 0) {
@@ -308,7 +336,7 @@ TEST(ClassicalArchitectureTest,
       grammar_text << " | S S";
     }
     if ((next() & 1U) != 0) {
-      grammar_text << " | epsilon";
+      grammar_text << " | <epsilon>";
     }
     grammar_text << ";\n";
     const Grammar grammar = Grammar::parseFromText(grammar_text.str());
@@ -328,15 +356,17 @@ TEST(ClassicalArchitectureTest,
     }
 
     const auto reference = solveReference(graph, grammar);
-    for (SolverBackend backend : {SolverBackend::Baseline, SolverBackend::POCR,
-                                  SolverBackend::Hybrid}) {
+    for (SolverBackend backend :
+         {SolverBackend::SparseSet, SolverBackend::SparseBitVector,
+          SolverBackend::TransitiveClosure}) {
       EXPECT_EQ(solveWith(backend, graph, grammar), reference)
           << "seed=" << seed << " backend=" << solverBackendName(backend);
     }
   }
 }
 
-TEST(ClassicalArchitectureTest, HybridForestDerivesNonNullableReflexiveCycles) {
+TEST(ClassicalArchitectureTest,
+     TransitiveClosureDerivesNonNullableReflexiveCycles) {
   const auto grammar = Grammar::parseFromText(
       "Start:\n  S\nTerminal:\n  a\nVariables:\n  S\nProductions:\n"
       "  S -> S S | a;\n");
@@ -344,14 +374,15 @@ TEST(ClassicalArchitectureTest, HybridForestDerivesNonNullableReflexiveCycles) {
   graph.addEdge("n0", "n1", "a");
   graph.addEdge("n1", "n0", "a");
 
-  const auto baseline = solveWith(SolverBackend::Baseline, graph, grammar);
-  EXPECT_EQ(solveWith(SolverBackend::Hybrid, graph, grammar), baseline);
+  const auto baseline = solveWith(SolverBackend::SparseSet, graph, grammar);
+  EXPECT_EQ(solveWith(SolverBackend::TransitiveClosure, graph, grammar),
+            baseline);
   EXPECT_TRUE(baseline.count({"S", 0, 0}) != 0);
   EXPECT_TRUE(baseline.count({"S", 1, 1}) != 0);
 }
 
 TEST(ClassicalArchitectureTest,
-     HybridForestMatchesBaselineOnGeneratedCyclicGraphs) {
+     TransitiveClosureMatchesSparseSetOnGeneratedCyclicGraphs) {
   const auto grammar = Grammar::parseFromText(
       "Start:\n  S\nTerminal:\n  a\nVariables:\n  S\nProductions:\n"
       "  S -> S S | a;\n");
@@ -367,13 +398,13 @@ TEST(ClassicalArchitectureTest,
         }
       }
     }
-    EXPECT_EQ(solveWith(SolverBackend::Hybrid, graph, grammar),
-              solveWith(SolverBackend::Baseline, graph, grammar))
+    EXPECT_EQ(solveWith(SolverBackend::TransitiveClosure, graph, grammar),
+              solveWith(SolverBackend::SparseSet, graph, grammar))
         << "seed=" << seed;
   }
 }
 
-TEST(ClassicalArchitectureTest, HybridUsesOneForestPerTransitiveSymbol) {
+TEST(ClassicalArchitectureTest, UsesOneClosurePerTransitiveGrammarSymbol) {
   const auto grammar = Grammar::parseFromText(
       "Start:\n  S\nTerminal:\n  a b\nVariables:\n  S A B\n"
       "Productions:\n  A -> A A | a; B -> B B | b; S -> A B;\n");
@@ -384,14 +415,14 @@ TEST(ClassicalArchitectureTest, HybridUsesOneForestPerTransitiveSymbol) {
   graph.addEdge("n3", "n4", "b");
 
   LabeledGraph baseline_graph = graph;
-  SolverSession baseline(baseline_graph, grammar, SolverBackend::Baseline);
+  SolverSession baseline(baseline_graph, grammar, SolverBackend::SparseSet);
   baseline.solve();
-  SolverSession hybrid(graph, grammar, SolverBackend::Hybrid);
-  const ReachabilityStats stats = hybrid.solve();
+  SolverSession transitive(graph, grammar, SolverBackend::TransitiveClosure);
+  const ReachabilityStats stats = transitive.solve();
 
-  EXPECT_TRUE(hybrid.contains(0, 4, "S"));
-  EXPECT_EQ(stats.hybrid_forest_roots, graph.vertexCount() * 2);
-  EXPECT_EQ(hybrid.relation().edgeCount(), baseline.relation().edgeCount());
+  EXPECT_TRUE(transitive.contains(0, 4, "S"));
+  EXPECT_EQ(stats.transitive_closure_instances, 2u);
+  EXPECT_EQ(transitive.relation().edgeCount(), baseline.relation().edgeCount());
 }
 
 TEST(ClassicalArchitectureTest, IncrementalSessionResumesToFixedPoint) {
@@ -404,7 +435,7 @@ TEST(ClassicalArchitectureTest, IncrementalSessionResumesToFixedPoint) {
   const auto n2 = graph.addVertex("n2");
   graph.addEdge(n0, n1, "a");
 
-  SolverSession session(graph, grammar, SolverBackend::POCR);
+  SolverSession session(graph, grammar, SolverBackend::SparseBitVector);
   session.solve();
   EXPECT_FALSE(session.contains(n0, n2, "S"));
   EXPECT_FALSE(graph.hasEdge(n0, n2, "S"));
@@ -419,10 +450,10 @@ TEST(ClassicalArchitectureTest, IncrementalSessionResumesToFixedPoint) {
 TEST(ClassicalArchitectureTest, IncrementalSessionSupportsDiscoveredNodes) {
   const auto grammar = Grammar::parseFromText(
       "Start:\n  S\nTerminal:\n  a\nVariables:\n  S\nProductions:\n"
-      "  S -> a | epsilon;\n");
+      "  S -> a | <epsilon>;\n");
   LabeledGraph graph;
   graph.addVertex("existing");
-  SolverSession session(graph, grammar, SolverBackend::POCR);
+  SolverSession session(graph, grammar, SolverBackend::SparseBitVector);
   session.solve();
 
   const auto discovered = session.addNode("discovered");
@@ -452,13 +483,16 @@ TEST(ClassicalArchitectureTest, RelationSupportsPerSymbolQueriesAndCounts) {
   LabeledGraph graph;
   graph.addEdge("n0", "n1", "a");
   graph.addEdge("n1", "n2", "a");
-  SolverSession session(graph, grammar, SolverBackend::Hybrid);
+  SolverSession session(graph, grammar, SolverBackend::TransitiveClosure);
   session.solve();
 
   const SymbolId symbol = grammar.symbolId("S");
   EXPECT_EQ(session.relation().edgeCount(symbol),
             session.relation().edges(symbol).size());
-  EXPECT_EQ(session.relation().successors(symbol, 0).size(), 2u);
+  std::size_t successor_count = 0;
+  session.relation().forEachSuccessor(symbol, 0,
+                                      [&](NodeId) { ++successor_count; });
+  EXPECT_EQ(successor_count, 2u);
 }
 
 TEST(ClassicalArchitectureTest, DirectionTransformsAreExplicitAndAttributed) {
@@ -506,6 +540,36 @@ TEST(ClassicalArchitectureTest, LoadsJsonGraphAndValidatesLabels) {
       std::any_of(issues.begin(), issues.end(), [](const GrammarIssue &issue) {
         return issue.severity == GrammarIssueSeverity::Error;
       }));
+}
+
+TEST(ClassicalArchitectureTest,
+     JsonAndDotInputsPreserveIsolatedAndQuotedVertices) {
+  const auto json_path =
+      writeTemp("lotus_classical_isolated.json",
+                R"({"nodes":["isolated",{"id":"connected node"}],"edges":[]})");
+  const LabeledGraph json = LabeledGraph::parseFromFile(
+      json_path.string(),
+      GraphLoadOptions{GraphMode::Plain, EdgeDirection::Plain});
+  EXPECT_EQ(json.vertexCount(), 2u);
+  EXPECT_EQ(json.vertexName(0), "isolated");
+  const auto nullable = Grammar::parseFromText(
+      "Start:\n  S\nVariables:\n  S\nProductions:\n  S -> <epsilon>;\n");
+  LabeledGraph nullable_graph = json;
+  SolverSession nullable_session(nullable_graph, nullable);
+  nullable_session.solve();
+  EXPECT_TRUE(nullable_session.contains(0, 0, "S"));
+  EXPECT_TRUE(nullable_session.contains(1, 1, "S"));
+
+  const auto dot_path =
+      writeTemp("lotus_classical_quoted.dot",
+                "digraph G {\n  \"isolated node\";\n  \"source.node\" -> "
+                "\"target-node\" [label=\"edge.label\"];\n}\n");
+  const LabeledGraph dot = LabeledGraph::parseFromFile(
+      dot_path.string(),
+      GraphLoadOptions{GraphMode::Plain, EdgeDirection::Plain});
+  EXPECT_EQ(dot.vertexCount(), 3u);
+  EXPECT_TRUE(dot.hasEdge(dot.vertexId("source.node"),
+                          dot.vertexId("target-node"), "edge.label"));
 }
 
 } // namespace

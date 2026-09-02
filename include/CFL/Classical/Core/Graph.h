@@ -69,8 +69,31 @@ public:
   edgesForLabel(const std::string &label) const;
   std::vector<std::pair<std::size_t, std::size_t>>
   edgesForLabelCopy(const std::string &label) const;
-  std::vector<std::size_t> predecessorsForLabel(std::size_t target,
-                                                const std::string &label) const;
+  template <typename Visitor>
+  void forEachPredecessorForLabel(const std::string &label, std::size_t target,
+                                  Visitor &&visitor) const {
+    const auto label_it = reverse_label_adjacency_.find(label);
+    if (label_it == reverse_label_adjacency_.end()) {
+      return;
+    }
+    const auto target_it = label_it->second.find(target);
+    if (target_it == label_it->second.end()) {
+      return;
+    }
+    for (std::size_t source : target_it->second) {
+      visitor(source);
+    }
+  }
+
+  template <typename Visitor>
+  void forEachIncomingEdge(std::size_t target, Visitor &&visitor) const {
+    for (const auto &[label, sources] :
+         reverse_adjacency_by_target_.at(target)) {
+      for (std::size_t source : sources) {
+        visitor(label, source);
+      }
+    }
+  }
 
   template <typename NodeRange, typename EdgeRange, typename NodeName,
             typename EdgeSource, typename EdgeTarget, typename EdgeLabel>
@@ -99,6 +122,12 @@ private:
   std::unordered_map<std::string,
                      std::vector<std::pair<std::size_t, std::size_t>>>
       label_pairs_;
+  std::unordered_map<
+      std::string,
+      std::unordered_map<std::size_t, std::unordered_set<std::size_t>>>
+      reverse_label_adjacency_;
+  std::vector<std::unordered_map<std::string, std::unordered_set<std::size_t>>>
+      reverse_adjacency_by_target_;
   std::size_t edge_count_ = 0;
   std::uint64_t mutation_version_ = 0;
 };

@@ -1,6 +1,6 @@
-#include "CFL/Classical/Solver.h"
+#include "CFL/Classical/Solvers/Reachability.h"
 
-#include "CFL/Classical/HybridForest.h"
+#include "CFL/Classical/Solvers/TransitiveClosure.h"
 
 #include <algorithm>
 #include <chrono>
@@ -21,26 +21,26 @@ struct WorkItem {
   RelationEdge edge;
 };
 
-class HybridRelation final : public Relation {
+class TransitiveRelation final : public Relation {
 public:
-  HybridRelation(const std::unordered_set<SymbolId> &transitive_symbols,
-                 std::size_t node_count)
+  TransitiveRelation(const std::unordered_set<SymbolId> &transitive_symbols,
+                     std::size_t node_count)
       : base_(createRelation(RelationBackend::SparseBitVectors, node_count)) {
     for (SymbolId symbol : transitive_symbols) {
-      forests_.emplace(symbol,
-                       std::make_unique<HybridReachabilityForest>(node_count));
+      closures_.emplace(
+          symbol, std::make_unique<IncrementalTransitiveClosure>(node_count));
     }
   }
 
   void ensureNodeCount(std::size_t node_count) override {
     base_->ensureNodeCount(node_count);
-    for (auto &[_, forest] : forests_) {
-      forest->ensureNodeCount(node_count);
+    for (auto &[_, closure] : closures_) {
+      closure->ensureNodeCount(node_count);
     }
   }
 
   bool add(SymbolId symbol, NodeId source, NodeId target) override {
-    if (auto it = forests_.find(symbol); it != forests_.end()) {
+    if (auto it = closures_.find(symbol); it != closures_.end()) {
       const bool existed = it->second->hasPath(source, target);
       it->second->addArc(source, target);
       return !existed;
@@ -50,45 +50,49 @@ public:
 
   std::vector<std::pair<NodeId, NodeId>>
   addTransitiveArc(SymbolId symbol, NodeId source, NodeId target) {
-    const auto it = forests_.find(symbol);
-    if (it == forests_.end()) {
-      throw std::logic_error("Symbol has no hybrid reachability forest");
+    const auto it = closures_.find(symbol);
+    if (it == closures_.end()) {
+      throw std::logic_error("Symbol has no incremental transitive closure");
     }
     return it->second->addArc(source, target);
   }
 
   bool isTransitive(SymbolId symbol) const {
-    return forests_.count(symbol) != 0;
+    return closures_.count(symbol) != 0;
   }
 
   bool contains(SymbolId symbol, NodeId source, NodeId target) const override {
-    if (const auto it = forests_.find(symbol); it != forests_.end()) {
+    if (const auto it = closures_.find(symbol); it != closures_.end()) {
       return it->second->hasPath(source, target);
     }
     return base_->contains(symbol, source, target);
   }
 
-  std::vector<NodeId> successors(SymbolId symbol,
-                                 NodeId source) const override {
-    if (const auto it = forests_.find(symbol); it != forests_.end()) {
-      return it->second->successors(source);
+  void
+  forEachSuccessor(SymbolId symbol, NodeId source,
+                   llvm::function_ref<void(NodeId)> visitor) const override {
+    if (const auto it = closures_.find(symbol); it != closures_.end()) {
+      it->second->forEachSuccessor(source, visitor);
+      return;
     }
-    return base_->successors(symbol, source);
+    base_->forEachSuccessor(symbol, source, visitor);
   }
 
-  std::vector<NodeId> predecessors(SymbolId symbol,
-                                   NodeId target) const override {
-    if (const auto it = forests_.find(symbol); it != forests_.end()) {
-      return it->second->predecessors(target);
+  void
+  forEachPredecessor(SymbolId symbol, NodeId target,
+                     llvm::function_ref<void(NodeId)> visitor) const override {
+    if (const auto it = closures_.find(symbol); it != closures_.end()) {
+      it->second->forEachPredecessor(target, visitor);
+      return;
     }
-    return base_->predecessors(symbol, target);
+    base_->forEachPredecessor(symbol, target, visitor);
   }
 
   std::vector<RelationEdge> edges() const override {
     std::vector<RelationEdge> result = base_->edges();
     result.reserve(edgeCount());
-    for (const auto &[symbol, forest] : forests_) {
-      for (const auto &[source, target] : forest->edges()) {
+    for (const auto &[symbol, closure] : closures_) {
+      for (const auto &[source, target] : closure->edges()) {
         result.push_back({symbol, source, target});
       }
     }
@@ -96,7 +100,7 @@ public:
   }
 
   std::vector<RelationEdge> edges(SymbolId symbol) const override {
-    if (const auto it = forests_.find(symbol); it != forests_.end()) {
+    if (const auto it = closures_.find(symbol); it != closures_.end()) {
       std::vector<RelationEdge> result;
       result.reserve(it->second->edgeCount());
       for (const auto &[source, target] : it->second->edges()) {
@@ -109,14 +113,14 @@ public:
 
   std::size_t edgeCount() const override {
     std::size_t count = base_->edgeCount();
-    for (const auto &[_, forest] : forests_) {
-      count += forest->edgeCount();
+    for (const auto &[_, closure] : closures_) {
+      count += closure->edgeCount();
     }
     return count;
   }
 
   std::size_t edgeCount(SymbolId symbol) const override {
-    if (const auto it = forests_.find(symbol); it != forests_.end()) {
+    if (const auto it = closures_.find(symbol); it != closures_.end()) {
       return it->second->edgeCount();
     }
     return base_->edgeCount(symbol);
@@ -124,30 +128,30 @@ public:
 
   std::size_t approximateMemoryBytes() const override {
     std::size_t bytes = sizeof(*this) + base_->approximateMemoryBytes();
-    for (const auto &[_, forest] : forests_) {
-      bytes += forest->approximateMemoryBytes();
+    for (const auto &[_, closure] : closures_) {
+      bytes += closure->approximateMemoryBytes();
     }
     return bytes;
   }
 
-  const auto &forests() const { return forests_; }
+  const auto &closures() const { return closures_; }
 
 private:
   std::unique_ptr<Relation> base_;
-  std::unordered_map<SymbolId, std::unique_ptr<HybridReachabilityForest>>
-      forests_;
+  std::unordered_map<SymbolId, std::unique_ptr<IncrementalTransitiveClosure>>
+      closures_;
 };
 
 } // namespace
 
 const char *solverBackendName(SolverBackend backend) {
   switch (backend) {
-  case SolverBackend::Baseline:
-    return "baseline";
-  case SolverBackend::POCR:
-    return "pocr";
-  case SolverBackend::Hybrid:
-    return "hybrid";
+  case SolverBackend::SparseSet:
+    return "sparse-set";
+  case SolverBackend::SparseBitVector:
+    return "sparse-bitvector";
+  case SolverBackend::TransitiveClosure:
+    return "transitive-closure";
   }
   return "unknown";
 }
@@ -156,10 +160,10 @@ class SolverSession::Impl {
 public:
   Impl(LabeledGraph &graph, const Grammar &grammar, SolverBackend backend)
       : graph_(graph), grammar_(grammar), backend_(backend),
-        relation_(backend == SolverBackend::Hybrid
-                      ? std::unique_ptr<Relation>(new HybridRelation(
+        relation_(backend == SolverBackend::TransitiveClosure
+                      ? std::unique_ptr<Relation>(new TransitiveRelation(
                             grammar.transitiveSymbols(), graph.vertexCount()))
-                      : createRelation(backend == SolverBackend::Baseline
+                      : createRelation(backend == SolverBackend::SparseSet
                                            ? RelationBackend::SparseSets
                                            : RelationBackend::SparseBitVectors,
                                        graph.vertexCount())),
@@ -170,7 +174,7 @@ public:
       }
     }
 
-    hybrid_relation_ = dynamic_cast<HybridRelation *>(relation_.get());
+    transitive_relation_ = dynamic_cast<TransitiveRelation *>(relation_.get());
 
     for (const LabeledEdge &edge : graph.edges()) {
       if (!grammar.hasSymbol(edge.label)) {
@@ -245,11 +249,15 @@ public:
       if (const auto it = grammar_.binaryByFirstId().find(selected.symbol);
           it != grammar_.binaryByFirstId().end()) {
         for (const BinaryRuleId &rule : it->second) {
-          if (backend_ == SolverBackend::Hybrid && isTransitiveRule(rule)) {
+          if (backend_ == SolverBackend::TransitiveClosure &&
+              isTransitiveRule(rule)) {
             continue;
           }
-          for (NodeId target :
-               relation_->successors(rule.second, selected.target)) {
+          join_candidates_.clear();
+          relation_->forEachSuccessor(
+              rule.second, selected.target,
+              [&](NodeId target) { join_candidates_.push_back(target); });
+          for (NodeId target : join_candidates_) {
             ++stats.classical_iterations;
             addDerived(rule.lhs, selected.source, target, stats);
           }
@@ -259,11 +267,15 @@ public:
       if (const auto it = grammar_.binaryBySecondId().find(selected.symbol);
           it != grammar_.binaryBySecondId().end()) {
         for (const BinaryRuleId &rule : it->second) {
-          if (backend_ == SolverBackend::Hybrid && isTransitiveRule(rule)) {
+          if (backend_ == SolverBackend::TransitiveClosure &&
+              isTransitiveRule(rule)) {
             continue;
           }
-          for (NodeId source :
-               relation_->predecessors(rule.first, selected.source)) {
+          join_candidates_.clear();
+          relation_->forEachPredecessor(
+              rule.first, selected.source,
+              [&](NodeId source) { join_candidates_.push_back(source); });
+          for (NodeId source : join_candidates_) {
             ++stats.classical_iterations;
             addDerived(rule.lhs, source, selected.target, stats);
           }
@@ -275,7 +287,7 @@ public:
     stats.start_symbol_edges = relation_->edgeCount(grammar_.startSymbolId());
     stats.relation_memory_bytes = relation_->approximateMemoryBytes();
     stats.peak_worklist_size = peak_worklist_size_;
-    collectHybridStatistics(stats);
+    collectTransitiveStatistics(stats);
     stats.solve_time_microseconds =
         std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::steady_clock::now() - start)
@@ -314,9 +326,9 @@ private:
 
   void addDerived(SymbolId symbol, NodeId source, NodeId target,
                   ReachabilityStats &stats) {
-    if (hybrid_relation_ && hybrid_relation_->isTransitive(symbol)) {
+    if (transitive_relation_ && transitive_relation_->isTransitive(symbol)) {
       const auto discovered =
-          hybrid_relation_->addTransitiveArc(symbol, source, target);
+          transitive_relation_->addTransitiveArc(symbol, source, target);
       if (discovered.empty()) {
         ++stats.duplicate_edges;
         return;
@@ -336,27 +348,26 @@ private:
     ++stats.added_edges;
   }
 
-  void collectHybridStatistics(ReachabilityStats &stats) const {
-    if (!hybrid_relation_) {
+  void collectTransitiveStatistics(ReachabilityStats &stats) const {
+    if (!transitive_relation_) {
       return;
     }
-    for (const auto &[_, forest] : hybrid_relation_->forests()) {
-      const HybridForestStatistics &forest_stats = forest->statistics();
-      stats.hybrid_forest_roots += forest_stats.roots;
-      stats.hybrid_forest_nodes += forest_stats.tree_nodes;
-      stats.hybrid_forest_edges += forest_stats.tree_edges;
-      stats.hybrid_arc_insertions += forest_stats.arc_insertions;
-      stats.hybrid_meld_operations += forest_stats.meld_operations;
-      stats.hybrid_duplicate_melds += forest_stats.duplicate_melds;
-      stats.hybrid_forest_memory_bytes += forest->approximateMemoryBytes();
+    for (const auto &[_, closure] : transitive_relation_->closures()) {
+      const TransitiveClosureStatistics &closure_stats = closure->statistics();
+      ++stats.transitive_closure_instances;
+      stats.transitive_relation_edges += closure_stats.relation_edges;
+      stats.transitive_arc_insertions += closure_stats.arc_insertions;
+      stats.transitive_propagated_pairs += closure_stats.propagated_pairs;
+      stats.transitive_duplicate_pairs += closure_stats.duplicate_pairs;
+      stats.transitive_memory_bytes += closure->approximateMemoryBytes();
     }
   }
 
   bool insertInputFact(SymbolId symbol, NodeId source, NodeId target) {
-    if (hybrid_relation_ && hybrid_relation_->isTransitive(symbol)) {
+    if (transitive_relation_ && transitive_relation_->isTransitive(symbol)) {
       const bool existed = relation_->contains(symbol, source, target);
       const auto discovered =
-          hybrid_relation_->addTransitiveArc(symbol, source, target);
+          transitive_relation_->addTransitiveArc(symbol, source, target);
       for (const auto &[new_source, new_target] : discovered) {
         pushWorkItem({symbol, new_source, new_target});
       }
@@ -382,10 +393,11 @@ private:
   SolverBackend backend_;
   std::unique_ptr<Relation> relation_;
   std::vector<WorkItem> worklist_;
+  std::vector<NodeId> join_candidates_;
   std::size_t input_edges_ = 0;
   std::size_t peak_worklist_size_ = 0;
   std::size_t pending_derived_edges_ = 0;
-  HybridRelation *hybrid_relation_ = nullptr;
+  TransitiveRelation *transitive_relation_ = nullptr;
   std::uint64_t expected_graph_version_ = 0;
 };
 

@@ -1,11 +1,11 @@
-#include "CFL/Classical/LLVMAliasAnalysis.h"
+#include "CFL/Classical/Clients/Alias/LLVMAliasAnalysis.h"
 
 #include "Alias/InclusionBased/AserPTA/PointerAnalysis/Context/NoCtx.h"
 #include "Alias/InclusionBased/AserPTA/PointerAnalysis/Models/LanguageModel/DefaultLangModel/DefaultLangModel.h"
 #include "Alias/InclusionBased/AserPTA/PointerAnalysis/Models/MemoryModel/FieldSensitive/FSMemModel.h"
 #include "Alias/InclusionBased/AserPTA/PointerAnalysis/Solver/PointsTo/BitVectorPTS.h"
 #include "Alias/InclusionBased/AserPTA/PointerAnalysis/Solver/SolverBase.h"
-#include "CFL/Classical/AserConstraintAdapter.h"
+#include "CFL/Classical/Clients/Alias/AserConstraintAdapter.h"
 
 #include <algorithm>
 #include <limits>
@@ -133,7 +133,10 @@ public:
   bool mayAlias(const llvm::Value *lhs, const llvm::Value *rhs) const {
     const auto lhs_node = nodeForValue(lhs);
     const auto rhs_node = nodeForValue(rhs);
-    return lhs_node && rhs_node && client_->mayAlias(*lhs_node, *rhs_node);
+    if (!lhs_node || !rhs_node) {
+      return true;
+    }
+    return client_->mayAlias(*lhs_node, *rhs_node);
   }
 
   std::vector<const llvm::Value *> pointsTo(const llvm::Value *pointer) const {

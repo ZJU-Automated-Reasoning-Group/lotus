@@ -1,4 +1,4 @@
-#include "CFL/Classical/Grammar.h"
+#include "CFL/Classical/Core/Grammar.h"
 
 #include <algorithm>
 #include <cctype>
@@ -44,7 +44,7 @@ std::vector<std::string> tokenize(const std::string &text) {
 }
 
 bool isEpsilon(const std::string &token) {
-  return token == "epsilon" || token == "e" || token == Grammar::kEpsilonSymbol;
+  return token == Grammar::kEpsilonSymbol;
 }
 
 std::optional<char> attributeVariable(const std::string &token) {
@@ -82,7 +82,7 @@ std::vector<std::uint32_t> attributeDomain(const std::vector<std::string> &rule,
   }
 
   if (observed_domains.empty()) {
-    return normalizedDomain(options.attributes);
+    return {};
   }
 
   std::vector<std::uint32_t> domain = observed_domains.front();
@@ -119,6 +119,11 @@ expandAttributes(const std::vector<std::string> &rule,
       throw std::invalid_argument(
           std::string("No attribute domain for grammar variable '") + variable +
           "'");
+    }
+    if (domain.size() > options.max_attribute_expansions ||
+        expanded.size() > options.max_attribute_expansions / domain.size()) {
+      throw std::length_error(
+          "Attributed grammar expansion exceeds configured limit");
     }
 
     std::vector<std::vector<std::string>> next;

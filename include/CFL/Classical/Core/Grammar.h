@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CFL/Classical/Relation.h"
+#include "CFL/Classical/Core/Relation.h"
 
 #include <cstdint>
 #include <optional>
@@ -24,13 +24,13 @@ struct BinaryRuleId {
 };
 
 struct GrammarParseOptions {
-  /// Global default domain used only when no variable or symbol-specific
-  /// domain is available.
-  std::vector<std::uint32_t> attributes;
-  /// Explicit domain for a grammar variable such as i in call_i/ret_i.
+  /// Observed domain for a grammar variable such as i in call_i/ret_i.
   std::unordered_map<char, std::vector<std::uint32_t>> variable_attributes;
   /// Observed domain per symbol kind, e.g. call -> {1, 2}, gep -> {0, 4}.
   std::unordered_map<std::string, std::vector<std::uint32_t>> symbol_attributes;
+  /// Hard limit preventing accidental Cartesian-product explosions when a
+  /// rule contains multiple independent attribute variables.
+  std::size_t max_attribute_expansions = 100000;
 };
 
 enum class GrammarIssueSeverity {

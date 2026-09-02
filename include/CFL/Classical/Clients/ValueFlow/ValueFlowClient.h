@@ -1,7 +1,7 @@
 #pragma once
 
-#include "CFL/Classical/SVFGPreparation.h"
-#include "CFL/Classical/Solver.h"
+#include "CFL/Classical/Clients/ValueFlow/SVFGPreparation.h"
+#include "CFL/Classical/Solvers/Reachability.h"
 
 #include <cstdint>
 #include <memory>
@@ -18,6 +18,9 @@ namespace lotus::cfl::classical {
 LabeledGraph encodeSVFG(const lotus::analysis::SVFG &svfg);
 Grammar buildVfgGrammar(const lotus::analysis::SVFG &svfg);
 
+/// Context-sensitive may-reach value-flow facade. Direct, indirect-memory,
+/// and may-happen-in-parallel input edges remain distinguishable in the
+/// encoded graph, while the derived A relation is their sound union.
 class ValueFlowClient {
 public:
   ~ValueFlowClient();
@@ -31,7 +34,7 @@ public:
   fromPreparedSVFG(lotus::analysis::SVFG &svfg,
                    const SVFGPreparationOptions &options = {});
 
-  ReachabilityStats solve(SolverBackend backend = SolverBackend::Baseline);
+  ReachabilityStats solve(SolverBackend backend = SolverBackend::SparseSet);
   bool hasFlow(std::uint32_t source_node, std::uint32_t target_node) const;
   std::vector<std::uint32_t> reachableFrom(std::uint32_t source_node) const;
 

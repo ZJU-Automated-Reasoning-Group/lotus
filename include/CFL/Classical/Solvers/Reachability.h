@@ -1,7 +1,7 @@
 #pragma once
 
-#include "CFL/Classical/Grammar.h"
-#include "CFL/Classical/Graph.h"
+#include "CFL/Classical/Core/Grammar.h"
+#include "CFL/Classical/Core/Graph.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -30,19 +30,18 @@ struct ReachabilityStats {
   std::uint64_t solve_time_microseconds = 0;
   std::size_t relation_memory_bytes = 0;
   std::size_t solver_rounds = 1;
-  std::size_t hybrid_forest_roots = 0;
-  std::size_t hybrid_forest_nodes = 0;
-  std::size_t hybrid_forest_edges = 0;
-  std::size_t hybrid_arc_insertions = 0;
-  std::size_t hybrid_meld_operations = 0;
-  std::size_t hybrid_duplicate_melds = 0;
-  std::size_t hybrid_forest_memory_bytes = 0;
+  std::size_t transitive_closure_instances = 0;
+  std::size_t transitive_relation_edges = 0;
+  std::size_t transitive_arc_insertions = 0;
+  std::size_t transitive_propagated_pairs = 0;
+  std::size_t transitive_duplicate_pairs = 0;
+  std::size_t transitive_memory_bytes = 0;
 };
 
 enum class SolverBackend {
-  Baseline,
-  POCR,
-  Hybrid,
+  SparseSet,
+  SparseBitVector,
+  TransitiveClosure,
 };
 
 const char *solverBackendName(SolverBackend backend);
@@ -52,7 +51,7 @@ const char *solverBackendName(SolverBackend backend);
 class SolverSession {
 public:
   SolverSession(LabeledGraph &graph, const Grammar &grammar,
-                SolverBackend backend = SolverBackend::Baseline);
+                SolverBackend backend = SolverBackend::SparseSet);
   ~SolverSession();
   SolverSession(SolverSession &&) noexcept;
   SolverSession &operator=(SolverSession &&) noexcept;

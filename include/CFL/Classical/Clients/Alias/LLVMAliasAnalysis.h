@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CFL/Classical/Alias.h"
+#include "CFL/Classical/Clients/Alias/Alias.h"
 
 #include <cstddef>
 #include <memory>
@@ -17,7 +17,7 @@ namespace lotus::cfl::classical {
 
 struct LLVMAliasOptions {
   AliasEncodingMode encoding = AliasEncodingMode::PAG;
-  SolverBackend backend = SolverBackend::POCR;
+  SolverBackend backend = SolverBackend::SparseBitVector;
   std::string entry = "main";
   std::size_t max_callgraph_rounds = 64;
 };

@@ -4,7 +4,7 @@
 backend and compare `relation_edges` and dumped triples:
 
 ```bash
-for solver in baseline pocr hybrid; do
+for solver in sparse-set sparse-bitvector transitive-closure; do
   build/bin/lotus-cfl-classical \
     --grammar benchmarks/cfl-classical/chain.grammar \
     --graph benchmarks/cfl-classical/chain.txt \
@@ -14,19 +14,19 @@ done
 
 For reproducible artifacts, use `--relation-output relation.csv`,
 `--stats-output stats.json`, `--json-stats`, and optionally `--start-only`.
-Hybrid statistics include forest roots, copied tree nodes/edges, meld counts,
-and estimated forest memory.
+Transitive-closure statistics include specialized relation edges, propagated
+pairs, duplicates, and estimated sparse-bitvector memory.
 
 The fixture is intentionally small enough for unit and sanitizer runs. Larger
 performance experiments should record compiler mode, node/edge counts, peak
 RSS, backend, and the complete grammar.
 
 `call.grammar` and `call.txt` exercise automatic, per-kind inference of the
-correlated `i` domain. No `--attributes` option is needed.
+correlated `i` domain.
 
 `value-flow.ll` exercises the second SVF-style CFL client through a matched
-interprocedural pointer flow. It is used to check that baseline, POCR, and
-hybrid all answer `main::seed -> main::result`.
+interprocedural pointer flow. It is used to check that all three
+storage/specialization backends answer `main::seed -> main::result`.
 
 ## External SVF comparison
 

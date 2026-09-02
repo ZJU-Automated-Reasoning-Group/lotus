@@ -1,10 +1,34 @@
-#include "CFL/Classical/Validation.h"
+#include "CFL/Classical/Core/Validation.h"
 
 #include <algorithm>
 #include <cctype>
+#include <charconv>
+#include <limits>
+#include <stdexcept>
 #include <unordered_set>
 
 namespace lotus::cfl::classical {
+
+std::optional<std::uint32_t> parseAttributeValue(std::string_view value) {
+  if (value.empty() ||
+      !std::all_of(value.begin(), value.end(), [](unsigned char character) {
+        return std::isdigit(character) != 0;
+      })) {
+    return std::nullopt;
+  }
+  std::uint64_t parsed = 0;
+  const auto [end, error] =
+      std::from_chars(value.data(), value.data() + value.size(), parsed);
+  if (error == std::errc::result_out_of_range ||
+      parsed > std::numeric_limits<std::uint32_t>::max()) {
+    throw std::invalid_argument("Attribute exceeds uint32_t range: " +
+                                std::string(value));
+  }
+  if (error != std::errc{} || end != value.data() + value.size()) {
+    return std::nullopt;
+  }
+  return static_cast<std::uint32_t>(parsed);
+}
 
 GrammarParseOptions inferGrammarAttributes(const LabeledGraph &graph) {
   GrammarParseOptions options;
@@ -13,15 +37,12 @@ GrammarParseOptions inferGrammarAttributes(const LabeledGraph &graph) {
     if (separator == std::string::npos || separator + 1 == label.size()) {
       continue;
     }
-    const std::string value = label.substr(separator + 1);
-    if (!std::all_of(value.begin(), value.end(), [](unsigned char character) {
-          return std::isdigit(character) != 0;
-        })) {
+    const auto attribute =
+        parseAttributeValue(std::string_view(label).substr(separator + 1));
+    if (!attribute) {
       continue;
     }
-    const std::uint32_t attribute =
-        static_cast<std::uint32_t>(std::stoul(value));
-    options.symbol_attributes[label.substr(0, separator)].push_back(attribute);
+    options.symbol_attributes[label.substr(0, separator)].push_back(*attribute);
   }
 
   for (auto &[_, domain] : options.symbol_attributes) {

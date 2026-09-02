@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CFL/Classical/Solver.h"
+#include "CFL/Classical/Solvers/Reachability.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -67,7 +67,7 @@ public:
   fromConstraintGraph(const AliasConstraintGraph &graph,
                       AliasEncodingMode mode = AliasEncodingMode::PAG);
 
-  ReachabilityStats solve(SolverBackend backend = SolverBackend::Baseline);
+  ReachabilityStats solve(SolverBackend backend = SolverBackend::SparseSet);
   /// Alternate solving with a client-supplied discovery policy. The callback
   /// may add nodes and constraints and returns true when it changed the input.
   ReachabilityStats solveToFixedPoint(

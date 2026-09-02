@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Alias/InclusionBased/AserPTA/PointerAnalysis/Graph/ConstraintGraph/ConstraintGraph.h"
-#include "CFL/Classical/Alias.h"
+#include "CFL/Classical/Clients/Alias/Alias.h"
 
 #include <functional>
 #include <stdexcept>

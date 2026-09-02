@@ -1,12 +1,11 @@
 add_library(CanaryClassicalCFL STATIC
-    CNF.cpp
-    Grammar.cpp
-    Graph.cpp
-    Relation.cpp
-    HybridForest.cpp
-    Validation.cpp
-    Solver.cpp
-    SCSolver.cpp
+    Core/Grammar.cpp
+    Core/Graph.cpp
+    Core/Relation.cpp
+    Core/Validation.cpp
+    Solvers/Reachability.cpp
+    Solvers/TransitiveClosure.cpp
+    Solvers/ConstraintGrounding.cpp
 )
 
 target_link_libraries(CanaryClassicalCFL PUBLIC
@@ -14,8 +13,8 @@ target_link_libraries(CanaryClassicalCFL PUBLIC
 )
 
 add_library(CanaryClassicalCFLAlias STATIC
-    Alias.cpp
-    LLVMAliasAnalysis.cpp
+    Clients/Alias/Alias.cpp
+    Clients/Alias/LLVMAliasAnalysis.cpp
 )
 
 target_link_libraries(CanaryClassicalCFLAlias PUBLIC
@@ -25,8 +24,8 @@ target_link_libraries(CanaryClassicalCFLAlias PUBLIC
 )
 
 add_library(CanaryClassicalCFLSVFG STATIC
-    SVFGAdapter.cpp
-    SVFGPreparation.cpp
+    Clients/ValueFlow/ValueFlowClient.cpp
+    Clients/ValueFlow/SVFGPreparation.cpp
 )
 
 target_link_libraries(CanaryClassicalCFLSVFG PUBLIC

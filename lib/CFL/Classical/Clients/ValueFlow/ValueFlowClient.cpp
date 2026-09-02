@@ -1,4 +1,4 @@
-#include "CFL/Classical/SVFGAdapter.h"
+#include "CFL/Classical/Clients/ValueFlow/ValueFlowClient.h"
 
 #include "IR/SVFG/SVFG.h"
 #include "IR/SVFG/SVFGBase.h"
@@ -195,10 +195,13 @@ LabeledGraph encodeSVFG(const lotus::analysis::SVFG &svfg) {
         continue;
       }
 
-      if (lotus::analysis::isDirectVFGEdge(edge->getEdgeKind()) ||
-          lotus::analysis::isIndirectVFGEdge(edge->getEdgeKind()) ||
-          lotus::analysis::isThreadMHPVFGEdge(edge->getEdgeKind())) {
-        addBidirectionalEdge(encoded, source, target, "a", "abar");
+      if (lotus::analysis::isThreadMHPVFGEdge(edge->getEdgeKind())) {
+        addBidirectionalEdge(encoded, source, target, "thread", "threadbar");
+      } else if (lotus::analysis::isIndirectVFGEdge(edge->getEdgeKind())) {
+        addBidirectionalEdge(encoded, source, target, "indirect",
+                             "indirectbar");
+      } else if (lotus::analysis::isDirectVFGEdge(edge->getEdgeKind())) {
+        addBidirectionalEdge(encoded, source, target, "direct", "directbar");
       }
     }
   }
@@ -225,23 +228,29 @@ Grammar buildVfgGrammar(const lotus::analysis::SVFG &svfg) {
     return Grammar::parseFromText("Start:\n"
                                   "  A\n"
                                   "Terminal:\n"
-                                  "  a abar\n"
+                                  "  direct directbar indirect indirectbar "
+                                  "thread threadbar\n"
                                   "Variables:\n"
                                   "  A Abar\n"
                                   "Productions:\n"
-                                  "  A -> A A | a | epsilon;\n"
-                                  "  Abar -> Abar Abar | abar | epsilon;\n");
+                                  "  A -> A A | direct | indirect | thread | "
+                                  "<epsilon>;\n"
+                                  "  Abar -> Abar Abar | directbar | "
+                                  "indirectbar | threadbar | <epsilon>;\n");
   }
   return Grammar::parseFromText(
       "Start:\n"
       "  A\n"
       "Terminal:\n"
-      "  a abar call ret callbar retbar\n"
+      "  direct directbar indirect indirectbar thread threadbar call ret "
+      "callbar retbar\n"
       "Variables:\n"
       "  A Abar\n"
       "Productions:\n"
-      "  A -> A A | a | call_i A ret_i | epsilon;\n"
-      "  Abar -> Abar Abar | abar | retbar_i Abar callbar_i | epsilon;\n",
+      "  A -> A A | direct | indirect | thread | call_i A ret_i | "
+      "<epsilon>;\n"
+      "  Abar -> Abar Abar | directbar | indirectbar | threadbar | "
+      "retbar_i Abar callbar_i | <epsilon>;\n",
       options);
 }
 
@@ -304,19 +313,23 @@ ReachabilityStats ValueFlowClient::solve(SolverBackend backend) {
 
 bool ValueFlowClient::hasFlow(std::uint32_t source_node,
                               std::uint32_t target_node) const {
+  if (!session_) {
+    throw std::logic_error("solve() has not been called");
+  }
   const auto source_it = node_to_vertex_.find(source_node);
   const auto target_it = node_to_vertex_.find(target_node);
   if (source_it == node_to_vertex_.end() ||
       target_it == node_to_vertex_.end()) {
     return false;
   }
-  return session_
-             ? session_->contains(source_it->second, target_it->second, "A")
-             : state_->graph.hasEdge(source_it->second, target_it->second, "A");
+  return session_->contains(source_it->second, target_it->second, "A");
 }
 
 std::vector<std::uint32_t>
 ValueFlowClient::reachableFrom(std::uint32_t source_node) const {
+  if (!session_) {
+    throw std::logic_error("solve() has not been called");
+  }
   const auto source_it = node_to_vertex_.find(source_node);
   if (source_it == node_to_vertex_.end()) {
     return {};
@@ -324,8 +337,7 @@ ValueFlowClient::reachableFrom(std::uint32_t source_node) const {
 
   std::vector<std::uint32_t> reachable;
   for (const auto &[node_id, vertex_id] : node_to_vertex_) {
-    if (session_ ? session_->contains(source_it->second, vertex_id, "A")
-                 : state_->graph.hasEdge(source_it->second, vertex_id, "A")) {
+    if (session_->contains(source_it->second, vertex_id, "A")) {
       reachable.push_back(node_id);
     }
   }

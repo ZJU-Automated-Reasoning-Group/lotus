@@ -1,7 +1,7 @@
 #pragma once
 
-#include "CFL/Classical/Grammar.h"
-#include "CFL/Classical/Graph.h"
+#include "CFL/Classical/Core/Grammar.h"
+#include "CFL/Classical/Core/Graph.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -9,23 +9,27 @@
 
 namespace lotus::cfl::classical {
 
-struct SCStatistics {
-  std::uint64_t classical_iterations = 0;
+struct ConstraintGroundingStatistics {
+  std::uint64_t processed_constraints = 0;
   std::size_t constraint_variables = 0;
   std::size_t set_variables = 0;
   std::size_t grounded_variables = 0;
 };
 
-class SCSolver {
+/// Structural set-constraint grounding analysis. This is not a CFL
+/// reachability backend and does not produce a node-pair relation. Production
+/// shapes generate dependencies; terminal identities are validated at
+/// construction but are not matched during grounding.
+class ConstraintGroundingSolver {
 public:
-  SCStatistics solve(const LabeledGraph &graph, const Grammar &grammar) const;
+  ConstraintGroundingStatistics ground(const LabeledGraph &graph,
+                                       const Grammar &grammar) const;
 
 private:
   using VariableId = std::uint32_t;
 
   struct Constraint {
     VariableId lhs = 0;
-    SymbolId label = 0;
     VariableId rhs = 0;
   };
 

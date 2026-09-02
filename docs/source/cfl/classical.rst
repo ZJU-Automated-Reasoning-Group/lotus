@@ -8,25 +8,47 @@ solver representations.
 Architecture
 ------------
 
+The public and implementation trees mirror the same responsibility-based
+layout:
+
+``Core/``
+   Canonical grammar, labeled graph, relation storage, and validation.
+
+``Solvers/``
+   Worklist reachability, specialized transitive closure, and the separate
+   constraint-grounding analysis.
+
+``Clients/Alias/``
+   PAG/PEG encoding, Aser synchronization, and the LLVM alias facade.
+
+``Clients/ValueFlow/``
+   SVFG preparation, encoding, and context-sensitive value-flow queries.
+
 ``Grammar``
    Parses declared start, terminal, and nonterminal symbols; normalizes
    whitespace-delimited ``*`` and ``?`` EBNF; binarizes long productions; and
    compiles string symbols to stable integer IDs. ``GrammarParseOptions``
    instantiates correlated attributed symbols such as ``call_i``/``ret_i``
    using variable-specific or per-symbol domains. Graph labels provide domains
-   automatically when the command-line driver is used.
+   automatically when the command-line driver is used. Only ``<epsilon>`` is
+   reserved for epsilon; ``e`` and ``epsilon`` are ordinary terminals. A
+   configurable expansion limit rejects independent attribute domains whose
+   Cartesian product would grow unexpectedly large. The former independent
+   ``CNFGrammar`` parser/transformer has been removed; this is the only grammar
+   normalization implementation.
 
 ``LabeledGraph``
    Stores the base problem boundary. Solver sessions keep derived facts in a
    separate relation; only explicit incremental terminal additions modify the
-   graph. Text, DOT, and JSON readers are available. Plain, reverse, and
-   bidirectional transformations are explicit; the parser never silently
-   applies them.
+   graph. Text, DOT, and JSON readers are available; DOT accepts quoted IDs and
+   JSON has an explicit ``nodes``/``vertices`` section for isolated vertices.
+   Plain, reverse, and bidirectional transformations are explicit. Forward and
+   reverse label indices support direct incoming-edge queries.
 
 ``Relation``
    Separates terminal and derived facts from the graph frontend. Sparse-set
-   and LLVM sparse-bitvector implementations provide indexed successor and
-   predecessor lookup.
+   and LLVM sparse-bitvector implementations provide visitor-based indexed
+   successor and predecessor lookup without materializing vectors in joins.
 
 ``SolverSession``
    Retains a relation and worklist across calls. ``addTerminalEdge`` followed
@@ -35,25 +57,24 @@ Architecture
 Solver backends
 ---------------
 
-``Baseline``
-   Conventional indexed worklist saturation. This is the semantic reference
-   backend.
+``SparseSet``
+   Conventional indexed worklist saturation with hash-set relations.
 
-``POCR``
-   Uses per-node, per-symbol sparse predecessor and successor bitvectors.
+``SparseBitVector``
+   The same worklist algorithm with per-node, per-symbol LLVM sparse
+   bitvectors. This is a storage choice, not the POCR algorithm.
 
-``Hybrid``
-   Uses the POCR relation plus a per-symbol reachability forest for every
-   production ``X -> X X``. Every root owns a tree containing each reachable
-   node at most once; inserting ``u -> v`` melds ``v``'s tree into all trees
-   containing ``u``. Cycles, dynamic nodes, and multiple transitive symbols
-   are supported without a hard-coded nonterminal name.
-   Forests are authoritative storage for transitive facts; the bitvector
-   relation stores only non-transitive symbols, while a composite relation view
-   supplies uniform joins and queries without duplicating transitive closure.
+``TransitiveClosure``
+   Uses sparse bitvectors generally and a dedicated incremental forward/reverse
+   bitvector closure for every production ``X -> X X``. Inserting ``u -> v``
+   crosses predecessors of ``u`` with successors of ``v``. It does not retain
+   copied reachability trees or a second hash-set closure.
 
 All backends return exactly the same grammar-relative relation. Tests compare
 their complete triples, not only start-symbol answers.
+
+``ConstraintGroundingSolver`` is separate: it computes structural set-variable
+grounding statistics and does not expose a CFL node-pair relation.
 
 Adapters
 --------
@@ -79,14 +100,21 @@ Adapter implementations are split by dependency:
    Aser callbacks then create actual/formal, return, heap, and newly reached
    function constraints. Constant global initializers and pointer-bearing
    ``memcpy`` operations receive explicit constraints when the Aser frontend
-   does not emit them.
+   does not emit them. An unmapped LLVM pointer is conservatively reported as
+   may-alias; it is never converted into a no-alias result.
 
 ``ValueFlowClient`` / ``lotus-cfl-vf``
    Implement SVF's second classical-CFL client, ``CFLVF``. The driver builds
    Lotus's AserPTA-backed SVFG and MemorySSA, removes dereference inputs and
-   stale strong-update flow, encodes intraprocedural edges as ``a`` and
+   stale strong-update flow, keeps ``direct``, ``indirect``, and ``thread``
+   terminals distinct, and encodes
    call/return edges as matched ``call_i``/``ret_i`` terminals, and solves
-   context-sensitive value-flow reachability with any classical backend.
+   context-sensitive value-flow reachability with any classical backend. The
+   derived ``A`` relation is the sound union of those edge categories, not a
+   path-feasibility or memory-object proof.
+
+Alias and value-flow relation queries require ``solve()`` first and throw a
+``logic_error`` when called on an unsolved client.
 
 
 Command line
@@ -96,12 +124,12 @@ Command line
 
    cmake --build build --target lotus-cfl-classical lotus-cfl-alias lotus-cfl-vf
    build/bin/lotus-cfl-classical \
-     --grammar grammar.txt --graph graph.txt --solver pocr --json-stats
+     --grammar grammar.txt --graph graph.txt --solver sparse-bitvector --json-stats
 
-   build/bin/lotus-cfl-alias --solver pocr --encoding pag \
+   build/bin/lotus-cfl-alias --solver sparse-bitvector --encoding pag \
      --check-annotations module.bc
 
-   build/bin/lotus-cfl-vf --solver hybrid \
+   build/bin/lotus-cfl-vf --solver transitive-closure \
      --query main::source,main::sink module.bc
 
 Use ``--graph-mode plain|matrix|pag-matrix`` and
@@ -111,11 +139,12 @@ override a variable (``var:i=1,2``) or symbol kind (``kind:call=1,2``).
 ``--relation-output``, ``--stats-output``, ``--start-only``, and
 ``--validate-only`` support reproducible batch workflows. JSON statistics
 include grammar/graph sizes, worklist behavior, approximate relation memory,
-timings, and hybrid-forest structure.
+timings, and transitive-closure propagation statistics.
 
 Input formats
 -------------
 
-Text graphs contain one ``source,target,label`` edge per line. Plain DOT uses
-``label=...`` edge attributes. JSON accepts an object containing edge objects
-with ``source``, ``target``, and ``label`` fields.
+Text graphs contain one ``source,target,label`` edge per line. The line-oriented
+DOT subset accepts ``label=...`` edge attributes and quoted IDs; it is not a
+general DOT language parser. JSON accepts ``nodes`` (strings or objects with
+``id``/``name``) and ``edges`` containing ``source``, ``target``, and ``label``.

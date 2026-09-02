@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <set>
 #include <sstream>
 #include <string>
@@ -461,6 +462,35 @@ TEST(ClassicalArchitectureTest, IncrementalSessionSupportsDiscoveredNodes) {
   EXPECT_TRUE(session.contains(discovered, discovered, "S"));
 }
 
+TEST(ClassicalArchitectureTest, RepeatedSolveDoesNotReseedNullableFacts) {
+  const auto grammar =
+      Grammar::parseFromText("Start:\n  S\nTerminal:\n  a\nVariables:\n  S\n"
+                             "Productions:\n  S -> a | <epsilon>;\n");
+  for (SolverBackend backend :
+       {SolverBackend::SparseSet, SolverBackend::SparseBitVector,
+        SolverBackend::TransitiveClosure}) {
+    LabeledGraph graph;
+    graph.addVertex("n0");
+    SolverSession session(graph, grammar, backend);
+    session.solve();
+
+    const ReachabilityStats unchanged = session.solve();
+    EXPECT_EQ(unchanged.added_edges, 0u) << solverBackendName(backend);
+    EXPECT_EQ(unchanged.duplicate_edges, 0u) << solverBackendName(backend);
+    EXPECT_EQ(unchanged.processed_work_items, 0u) << solverBackendName(backend);
+    EXPECT_EQ(unchanged.peak_worklist_size, 0u) << solverBackendName(backend);
+    EXPECT_EQ(unchanged.transitive_arc_insertions, 0u)
+        << solverBackendName(backend);
+    EXPECT_EQ(unchanged.transitive_propagated_pairs, 0u)
+        << solverBackendName(backend);
+
+    const NodeId added = session.addNode("n1");
+    const ReachabilityStats incremental = session.solve();
+    EXPECT_TRUE(session.contains(added, added, "S"));
+    EXPECT_GT(incremental.added_edges, 0u) << solverBackendName(backend);
+  }
+}
+
 TEST(ClassicalArchitectureTest, DetectsGraphMutationOutsideSession) {
   const auto grammar =
       Grammar::parseFromText("Start:\n  S\nTerminal:\n  a\nVariables:\n  S\n"
@@ -493,6 +523,16 @@ TEST(ClassicalArchitectureTest, RelationSupportsPerSymbolQueriesAndCounts) {
   session.relation().forEachSuccessor(symbol, 0,
                                       [&](NodeId) { ++successor_count; });
   EXPECT_EQ(successor_count, 2u);
+}
+
+TEST(ClassicalArchitectureTest, SparseBitVectorRejectsUnrepresentableNodes) {
+  if constexpr (sizeof(std::size_t) > sizeof(unsigned)) {
+    const std::size_t too_many_nodes =
+        static_cast<std::size_t>(std::numeric_limits<unsigned>::max()) + 1;
+    EXPECT_THROW(
+        createRelation(RelationBackend::SparseBitVectors, too_many_nodes),
+        std::overflow_error);
+  }
 }
 
 TEST(ClassicalArchitectureTest, DirectionTransformsAreExplicitAndAttributed) {

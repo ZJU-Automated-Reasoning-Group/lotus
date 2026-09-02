@@ -37,7 +37,8 @@ public:
   virtual std::vector<RelationEdge> edges(SymbolId symbol) const = 0;
   virtual std::size_t edgeCount() const = 0;
   virtual std::size_t edgeCount(SymbolId symbol) const = 0;
-  virtual std::size_t approximateMemoryBytes() const = 0;
+  /// Estimated container payload only; excludes allocator and node overhead.
+  virtual std::size_t estimatedPayloadBytes() const = 0;
 };
 
 enum class RelationBackend {

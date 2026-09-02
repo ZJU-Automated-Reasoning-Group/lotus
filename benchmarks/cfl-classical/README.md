@@ -15,7 +15,9 @@ done
 For reproducible artifacts, use `--relation-output relation.csv`,
 `--stats-output stats.json`, `--json-stats`, and optionally `--start-only`.
 Transitive-closure statistics include specialized relation edges, propagated
-pairs, duplicates, and estimated sparse-bitvector memory.
+pairs, duplicates, and estimated container payload. Payload estimates exclude
+allocator/container-node overhead; use RSS or allocator instrumentation for
+memory comparisons.
 
 The fixture is intentionally small enough for unit and sanitizer runs. Larger
 performance experiments should record compiler mode, node/edge counts, peak

@@ -225,6 +225,69 @@ TEST(ClassicalAdaptersTest, IncrementalPegReusesSyntheticDereferenceNode) {
   EXPECT_TRUE(client.mayAlias(value, loaded));
 }
 
+TEST(ClassicalAdaptersTest, PegResultsAreIndependentOfConstraintOrder) {
+  constexpr std::size_t object = 0;
+  constexpr std::size_t pointer = 1;
+  constexpr std::size_t value = 2;
+  constexpr std::size_t loaded = 3;
+
+  auto makeEmptyGraph = [] {
+    AliasConstraintGraph graph;
+    graph.addNode("object");
+    graph.addNode("pointer");
+    graph.addNode("value");
+    graph.addNode("loaded");
+    return graph;
+  };
+  auto projectedPointsTo = [](const AliasClient &client) {
+    std::set<std::size_t> projected;
+    for (std::size_t node : client.pointsTo(loaded)) {
+      if (node <= loaded) {
+        projected.insert(node);
+      }
+    }
+    return projected;
+  };
+
+  for (SolverBackend backend :
+       {SolverBackend::SparseSet, SolverBackend::SparseBitVector,
+        SolverBackend::TransitiveClosure}) {
+    AliasConstraintGraph batch_graph = makeEmptyGraph();
+    batch_graph.addEdge(object, pointer, AliasConstraintEdgeKind::Addr);
+    batch_graph.addEdge(value, pointer, AliasConstraintEdgeKind::Store);
+    batch_graph.addEdge(pointer, loaded, AliasConstraintEdgeKind::Load);
+    AliasClient batch =
+        AliasClient::fromConstraintGraph(batch_graph, AliasEncodingMode::PEG);
+    batch.solve(backend);
+
+    AliasClient store_first = AliasClient::fromConstraintGraph(
+        makeEmptyGraph(), AliasEncodingMode::PEG);
+    store_first.solve(backend);
+    store_first.addConstraint(value, pointer, AliasConstraintEdgeKind::Store);
+    store_first.addConstraint(pointer, loaded, AliasConstraintEdgeKind::Load);
+    store_first.addConstraint(object, pointer, AliasConstraintEdgeKind::Addr);
+    store_first.solve(backend);
+
+    AliasClient load_first = AliasClient::fromConstraintGraph(
+        makeEmptyGraph(), AliasEncodingMode::PEG);
+    load_first.solve(backend);
+    load_first.addConstraint(pointer, loaded, AliasConstraintEdgeKind::Load);
+    load_first.addConstraint(object, pointer, AliasConstraintEdgeKind::Addr);
+    load_first.addConstraint(value, pointer, AliasConstraintEdgeKind::Store);
+    load_first.solve(backend);
+
+    EXPECT_EQ(store_first.mayAlias(value, loaded),
+              batch.mayAlias(value, loaded))
+        << solverBackendName(backend);
+    EXPECT_EQ(load_first.mayAlias(value, loaded), batch.mayAlias(value, loaded))
+        << solverBackendName(backend);
+    EXPECT_EQ(projectedPointsTo(store_first), projectedPointsTo(batch))
+        << solverBackendName(backend);
+    EXPECT_EQ(projectedPointsTo(load_first), projectedPointsTo(batch))
+        << solverBackendName(backend);
+  }
+}
+
 TEST(ClassicalAdaptersTest, GrammarBuildersMaterializeObservedAttributes) {
   AliasConstraintGraph graph;
   const auto base = graph.addNode("base");
@@ -463,6 +526,17 @@ TEST(ClassicalAdaptersTest, MovingValueFlowClientPreservesSolvedSession) {
   EXPECT_NO_THROW(assigned.solve(SolverBackend::SparseBitVector));
 }
 
+TEST(ClassicalAdaptersTest, ValueFlowEncodingRejectsUnsupportedEdges) {
+  SVFG svfg;
+  auto *source = new CopySVFGNode(1, nullptr, nullptr);
+  auto *target = new CopySVFGNode(2, nullptr, nullptr);
+  svfg.addNode(source);
+  svfg.addNode(target);
+  svfg.addEdge(source, target, SVFGEdgeK::Variant);
+
+  EXPECT_THROW(encodeSVFG(svfg), std::invalid_argument);
+}
+
 TEST(ClassicalAdaptersTest, SvfgPreparationPrunesStrongUpdateInputs) {
   SVFG svfg;
   auto *pointer = new CopySVFGNode(1, nullptr, nullptr);
@@ -475,8 +549,7 @@ TEST(ClassicalAdaptersTest, SvfgPreparationPrunesStrongUpdateInputs) {
   svfg.addEdge(pointer, store, SVFGEdgeK::IntraStore);
   svfg.addEdge(previous, store, SVFGEdgeK::IntraIndirect, nullptr, {42});
   SVFG::ObjectInfo info;
-  info.isStack = true;
-  info.isSingleton = true;
+  info.isGlobal = true;
   svfg.setObjectInfo(42, info);
 
   const SVFGPreparationStatistics stats = prepareSVFGForCFL(svfg);
@@ -485,6 +558,7 @@ TEST(ClassicalAdaptersTest, SvfgPreparationPrunesStrongUpdateInputs) {
   EXPECT_EQ(stats.dereference_edges_removed, 1u);
   EXPECT_EQ(stats.strong_update_edges_removed, 1u);
   EXPECT_TRUE(store->getInEdges().empty());
+  EXPECT_NO_THROW(encodeSVFG(svfg));
 }
 
 TEST(ClassicalAdaptersTest, SvfgPreparationPreservesWeakUpdateFlow) {
@@ -495,6 +569,100 @@ TEST(ClassicalAdaptersTest, SvfgPreparationPreservesWeakUpdateFlow) {
   svfg.addNode(previous);
   svfg.addNode(store);
   svfg.addEdge(previous, store, SVFGEdgeK::IntraIndirect, nullptr, {42});
+
+  const SVFGPreparationStatistics stats = prepareSVFGForCFL(svfg);
+  EXPECT_EQ(stats.strong_update_stores, 0u);
+  EXPECT_EQ(stats.strong_update_edges_removed, 0u);
+  EXPECT_EQ(store->getInEdges().size(), 1u);
+}
+
+TEST(ClassicalAdaptersTest, SvfgPreparationPrunesNonRecursiveLocalStore) {
+  const char *source = R"(
+    define void @worker() {
+    entry:
+      %slot = alloca i8*
+      store i8* null, i8** %slot
+      ret void
+    }
+  )";
+  llvm::LLVMContext context;
+  auto module = parseModule(context, source);
+  ASSERT_NE(module, nullptr);
+  const auto *worker = module->getFunction("worker");
+  ASSERT_NE(worker, nullptr);
+
+  const llvm::AllocaInst *allocation = nullptr;
+  const llvm::StoreInst *store_instruction = nullptr;
+  for (const llvm::Instruction &instruction : llvm::instructions(*worker)) {
+    allocation = allocation ? allocation
+                            : llvm::dyn_cast<llvm::AllocaInst>(&instruction);
+    store_instruction = store_instruction
+                            ? store_instruction
+                            : llvm::dyn_cast<llvm::StoreInst>(&instruction);
+  }
+  ASSERT_NE(allocation, nullptr);
+  ASSERT_NE(store_instruction, nullptr);
+
+  SVFG svfg;
+  svfg.initializeRefinedCallGraph(*module);
+  auto *previous = new CopySVFGNode(1, nullptr, nullptr);
+  auto *store = new StoreSVFGNode(2, nullptr, store_instruction, 3);
+  store->setMemoryDef(7, 1, {42});
+  svfg.addNode(previous);
+  svfg.addNode(store);
+  svfg.addEdge(previous, store, SVFGEdgeK::IntraIndirect, nullptr, {42});
+  SVFG::ObjectInfo info;
+  info.isStack = true;
+  svfg.setObjectInfo(42, info);
+  svfg.setObjectValue(42, allocation);
+
+  const SVFGPreparationStatistics stats = prepareSVFGForCFL(svfg);
+  EXPECT_EQ(stats.strong_update_stores, 1u);
+  EXPECT_EQ(stats.strong_update_edges_removed, 1u);
+  EXPECT_TRUE(store->getInEdges().empty());
+}
+
+TEST(ClassicalAdaptersTest, SvfgPreparationPreservesRecursiveLocalStore) {
+  const char *source = R"(
+    define void @recursive() {
+    entry:
+      %slot = alloca i8*
+      store i8* null, i8** %slot
+      call void @recursive()
+      ret void
+    }
+  )";
+  llvm::LLVMContext context;
+  auto module = parseModule(context, source);
+  ASSERT_NE(module, nullptr);
+  const auto *recursive = module->getFunction("recursive");
+  ASSERT_NE(recursive, nullptr);
+
+  const llvm::AllocaInst *allocation = nullptr;
+  const llvm::StoreInst *store_instruction = nullptr;
+  for (const llvm::Instruction &instruction : llvm::instructions(*recursive)) {
+    allocation = allocation ? allocation
+                            : llvm::dyn_cast<llvm::AllocaInst>(&instruction);
+    store_instruction = store_instruction
+                            ? store_instruction
+                            : llvm::dyn_cast<llvm::StoreInst>(&instruction);
+  }
+  ASSERT_NE(allocation, nullptr);
+  ASSERT_NE(store_instruction, nullptr);
+
+  SVFG svfg;
+  svfg.initializeRefinedCallGraph(*module);
+  auto *previous = new CopySVFGNode(1, nullptr, nullptr);
+  auto *store = new StoreSVFGNode(2, nullptr, store_instruction, 3);
+  store->setMemoryDef(7, 1, {42});
+  svfg.addNode(previous);
+  svfg.addNode(store);
+  svfg.addEdge(previous, store, SVFGEdgeK::IntraIndirect, nullptr, {42});
+  SVFG::ObjectInfo info;
+  info.isStack = true;
+  info.isSingleton = true;
+  svfg.setObjectInfo(42, info);
+  svfg.setObjectValue(42, allocation);
 
   const SVFGPreparationStatistics stats = prepareSVFGForCFL(svfg);
   EXPECT_EQ(stats.strong_update_stores, 0u);

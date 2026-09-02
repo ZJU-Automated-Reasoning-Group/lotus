@@ -84,7 +84,7 @@ public:
 
   std::size_t edgeCount() const { return edge_count_; }
 
-  std::size_t approximateMemoryBytes() const {
+  std::size_t estimatedPayloadBytes() const {
     std::size_t bytes = sizeof(*this);
     bytes +=
         (successors_.capacity() + predecessors_.capacity()) * sizeof(BitVector);
@@ -156,8 +156,8 @@ std::size_t IncrementalTransitiveClosure::edgeCount() const {
   return impl_->edgeCount();
 }
 
-std::size_t IncrementalTransitiveClosure::approximateMemoryBytes() const {
-  return impl_->approximateMemoryBytes();
+std::size_t IncrementalTransitiveClosure::estimatedPayloadBytes() const {
+  return impl_->estimatedPayloadBytes();
 }
 
 const TransitiveClosureStatistics &

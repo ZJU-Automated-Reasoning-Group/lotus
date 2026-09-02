@@ -49,6 +49,7 @@ private:
   struct State;
   std::unique_ptr<State> state_;
   std::unordered_map<std::uint32_t, std::size_t> node_to_vertex_;
+  std::vector<std::optional<std::uint32_t>> vertex_to_node_;
   std::unique_ptr<SolverSession> session_;
   std::optional<SolverBackend> backend_;
 };

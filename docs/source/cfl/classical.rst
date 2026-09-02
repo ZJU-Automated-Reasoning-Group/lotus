@@ -53,6 +53,7 @@ layout:
 ``SolverSession``
    Retains a relation and worklist across calls. ``addTerminalEdge`` followed
    by ``solve`` supports clients that discover constraints incrementally.
+   Nullable self-facts are seeded only for newly added nodes.
 
 Solver backends
 ---------------
@@ -116,6 +117,11 @@ Adapter implementations are split by dependency:
 Alias and value-flow relation queries require ``solve()`` first and throw a
 ``logic_error`` when called on an unsolved client.
 
+``ReachabilityStats`` separates session snapshots (graph/relation sizes and
+payload estimates) from work performed by the current ``solve()`` call
+(iterations, duplicates, peak worklist, timing, and transitive propagation).
+``solveToFixedPoint`` sums per-call work and retains the final snapshots.
+
 
 Command line
 ------------
@@ -138,8 +144,9 @@ Attributed domains are inferred from graph labels. ``--attribute-domain`` can
 override a variable (``var:i=1,2``) or symbol kind (``kind:call=1,2``).
 ``--relation-output``, ``--stats-output``, ``--start-only``, and
 ``--validate-only`` support reproducible batch workflows. JSON statistics
-include grammar/graph sizes, worklist behavior, approximate relation memory,
-timings, and transitive-closure propagation statistics.
+include grammar/graph sizes, worklist behavior, estimated container payload,
+timings, and transitive-closure propagation statistics. Payload estimates are
+not RSS or allocator measurements and must not be used as real memory totals.
 
 Input formats
 -------------

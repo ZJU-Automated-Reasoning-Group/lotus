@@ -42,7 +42,7 @@ public:
                           llvm::function_ref<void(NodeId)> visitor) const;
   std::vector<std::pair<NodeId, NodeId>> edges() const;
   std::size_t edgeCount() const;
-  std::size_t approximateMemoryBytes() const;
+  std::size_t estimatedPayloadBytes() const;
   const TransitiveClosureStatistics &statistics() const;
 
 private:

@@ -10,6 +10,8 @@ namespace lotus::cfl::classical {
 
 struct SVFGPreparationOptions {
   bool remove_dereference_direct_edges = true;
+  /// Remove stale incoming memory flow at strong-update stores. Stack objects
+  /// owned by recursive functions remain weak updates, matching SVF.
   bool prune_strong_update_inputs = true;
 };
 

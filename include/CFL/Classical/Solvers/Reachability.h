@@ -11,6 +11,7 @@
 namespace lotus::cfl::classical {
 
 struct ReachabilityStats {
+  // Session snapshots after this solve.
   std::size_t graph_nodes = 0;
   std::size_t base_graph_edges = 0;
   std::size_t grammar_symbols = 0;
@@ -19,28 +20,36 @@ struct ReachabilityStats {
   std::size_t grammar_productions = 0;
   std::size_t grammar_nullable_symbols = 0;
   std::size_t grammar_transitive_symbols = 0;
+  std::size_t input_edges = 0;
+  std::size_t relation_edges = 0;
+  std::size_t start_symbol_edges = 0;
+  std::size_t relation_payload_bytes_estimate = 0;
+  std::size_t transitive_closure_instances = 0;
+  std::size_t transitive_relation_edges = 0;
+  std::size_t transitive_payload_bytes_estimate = 0;
+
+  // Work performed by this solve call only.
   std::uint64_t classical_iterations = 0;
   std::size_t processed_work_items = 0;
   std::size_t duplicate_edges = 0;
   std::size_t peak_worklist_size = 0;
   std::size_t added_edges = 0;
-  std::size_t input_edges = 0;
-  std::size_t relation_edges = 0;
-  std::size_t start_symbol_edges = 0;
   std::uint64_t solve_time_microseconds = 0;
-  std::size_t relation_memory_bytes = 0;
-  std::size_t solver_rounds = 1;
-  std::size_t transitive_closure_instances = 0;
-  std::size_t transitive_relation_edges = 0;
   std::size_t transitive_arc_insertions = 0;
   std::size_t transitive_propagated_pairs = 0;
   std::size_t transitive_duplicate_pairs = 0;
-  std::size_t transitive_memory_bytes = 0;
+
+  // Aggregates report how many solve calls they combine.
+  std::size_t solver_rounds = 1;
 };
 
 enum class SolverBackend {
+  /// Classical worklist with hash-set relations.
   SparseSet,
+  /// Same classical worklist with LLVM sparse-bitvector relations.
   SparseBitVector,
+  /// Classical worklist plus dedicated incremental closure only for symbols
+  /// having a literal production A -> A A.
   TransitiveClosure,
 };
 

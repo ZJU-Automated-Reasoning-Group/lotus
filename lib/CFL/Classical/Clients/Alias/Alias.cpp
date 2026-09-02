@@ -449,14 +449,17 @@ ReachabilityStats AliasClient::solveToFixedPoint(
     aggregate.relation_edges = current.relation_edges;
     aggregate.start_symbol_edges = current.start_symbol_edges;
     aggregate.solve_time_microseconds += current.solve_time_microseconds;
-    aggregate.relation_memory_bytes = current.relation_memory_bytes;
+    aggregate.relation_payload_bytes_estimate =
+        current.relation_payload_bytes_estimate;
     aggregate.transitive_closure_instances =
         current.transitive_closure_instances;
     aggregate.transitive_relation_edges = current.transitive_relation_edges;
-    aggregate.transitive_arc_insertions = current.transitive_arc_insertions;
-    aggregate.transitive_propagated_pairs = current.transitive_propagated_pairs;
-    aggregate.transitive_duplicate_pairs = current.transitive_duplicate_pairs;
-    aggregate.transitive_memory_bytes = current.transitive_memory_bytes;
+    aggregate.transitive_arc_insertions += current.transitive_arc_insertions;
+    aggregate.transitive_propagated_pairs +=
+        current.transitive_propagated_pairs;
+    aggregate.transitive_duplicate_pairs += current.transitive_duplicate_pairs;
+    aggregate.transitive_payload_bytes_estimate =
+        current.transitive_payload_bytes_estimate;
     ++aggregate.solver_rounds;
     if (!discover_constraints(*this)) {
       return aggregate;

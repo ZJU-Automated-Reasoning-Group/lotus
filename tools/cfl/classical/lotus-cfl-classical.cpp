@@ -256,38 +256,42 @@ int main(int argc, char **argv) {
     std::ofstream stats_file;
     std::ostream &stats_output = *openOutput(options.stats_output, stats_file);
     if (options.json_stats) {
-      stats_output
-          << "{\"solver\":\"" << solverBackendName(options.backend)
-          << "\",\"nodes\":" << graph.vertexCount()
-          << ",\"base_edges\":" << stats.base_graph_edges
-          << ",\"grammar_symbols\":" << stats.grammar_symbols
-          << ",\"grammar_terminals\":" << stats.grammar_terminals
-          << ",\"grammar_nonterminals\":" << stats.grammar_nonterminals
-          << ",\"grammar_productions\":" << stats.grammar_productions
-          << ",\"grammar_nullable\":" << stats.grammar_nullable_symbols
-          << ",\"grammar_transitive\":" << stats.grammar_transitive_symbols
-          << ",\"input_edges\":" << stats.input_edges
-          << ",\"derived_edges\":" << stats.added_edges
-          << ",\"relation_edges\":" << stats.relation_edges
-          << ",\"start_edges\":" << stats.start_symbol_edges
-          << ",\"checks\":" << stats.classical_iterations
-          << ",\"processed_items\":" << stats.processed_work_items
-          << ",\"duplicates\":" << stats.duplicate_edges
-          << ",\"peak_worklist\":" << stats.peak_worklist_size
-          << ",\"relation_bytes_estimate\":" << stats.relation_memory_bytes
-          << ",\"transitive_instances\":" << stats.transitive_closure_instances
-          << ",\"transitive_edges\":" << stats.transitive_relation_edges
-          << ",\"transitive_arcs\":" << stats.transitive_arc_insertions
-          << ",\"transitive_propagated_pairs\":"
-          << stats.transitive_propagated_pairs
-          << ",\"transitive_duplicate_pairs\":"
-          << stats.transitive_duplicate_pairs
-          << ",\"transitive_bytes_estimate\":" << stats.transitive_memory_bytes
-          << ",\"graph_load_us\":" << graph_load_us
-          << ",\"grammar_load_us\":" << grammar_load_us
-          << ",\"solve_us\":" << stats.solve_time_microseconds
-          << ",\"total_us\":" << total_us
-          << ",\"rounds\":" << stats.solver_rounds << "}\n";
+      stats_output << "{\"solver\":\"" << solverBackendName(options.backend)
+                   << "\",\"nodes\":" << graph.vertexCount()
+                   << ",\"base_edges\":" << stats.base_graph_edges
+                   << ",\"grammar_symbols\":" << stats.grammar_symbols
+                   << ",\"grammar_terminals\":" << stats.grammar_terminals
+                   << ",\"grammar_nonterminals\":" << stats.grammar_nonterminals
+                   << ",\"grammar_productions\":" << stats.grammar_productions
+                   << ",\"grammar_nullable\":" << stats.grammar_nullable_symbols
+                   << ",\"grammar_transitive\":"
+                   << stats.grammar_transitive_symbols
+                   << ",\"input_edges\":" << stats.input_edges
+                   << ",\"derived_edges\":" << stats.added_edges
+                   << ",\"relation_edges\":" << stats.relation_edges
+                   << ",\"start_edges\":" << stats.start_symbol_edges
+                   << ",\"checks\":" << stats.classical_iterations
+                   << ",\"processed_items\":" << stats.processed_work_items
+                   << ",\"duplicates\":" << stats.duplicate_edges
+                   << ",\"peak_worklist\":" << stats.peak_worklist_size
+                   << ",\"relation_payload_bytes_estimate\":"
+                   << stats.relation_payload_bytes_estimate
+                   << ",\"transitive_instances\":"
+                   << stats.transitive_closure_instances
+                   << ",\"transitive_edges\":"
+                   << stats.transitive_relation_edges
+                   << ",\"transitive_arcs\":" << stats.transitive_arc_insertions
+                   << ",\"transitive_propagated_pairs\":"
+                   << stats.transitive_propagated_pairs
+                   << ",\"transitive_duplicate_pairs\":"
+                   << stats.transitive_duplicate_pairs
+                   << ",\"transitive_payload_bytes_estimate\":"
+                   << stats.transitive_payload_bytes_estimate
+                   << ",\"graph_load_us\":" << graph_load_us
+                   << ",\"grammar_load_us\":" << grammar_load_us
+                   << ",\"solve_us\":" << stats.solve_time_microseconds
+                   << ",\"total_us\":" << total_us
+                   << ",\"rounds\":" << stats.solver_rounds << "}\n";
     } else {
       stats_output << "solver=" << solverBackendName(options.backend)
                    << " nodes=" << graph.vertexCount()
@@ -302,12 +306,13 @@ int main(int argc, char **argv) {
                    << " processed_items=" << stats.processed_work_items
                    << " duplicates=" << stats.duplicate_edges
                    << " peak_worklist=" << stats.peak_worklist_size
-                   << " relation_bytes_estimate=" << stats.relation_memory_bytes
+                   << " relation_payload_bytes_estimate="
+                   << stats.relation_payload_bytes_estimate
                    << " transitive_instances="
                    << stats.transitive_closure_instances
                    << " transitive_pairs=" << stats.transitive_propagated_pairs
-                   << " transitive_bytes_estimate="
-                   << stats.transitive_memory_bytes
+                   << " transitive_payload_bytes_estimate="
+                   << stats.transitive_payload_bytes_estimate
                    << " graph_load_us=" << graph_load_us
                    << " grammar_load_us=" << grammar_load_us
                    << " solve_us=" << stats.solve_time_microseconds

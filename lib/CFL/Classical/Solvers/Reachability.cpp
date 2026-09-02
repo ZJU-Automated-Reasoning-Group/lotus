@@ -126,10 +126,10 @@ public:
     return base_->edgeCount(symbol);
   }
 
-  std::size_t approximateMemoryBytes() const override {
-    std::size_t bytes = sizeof(*this) + base_->approximateMemoryBytes();
+  std::size_t estimatedPayloadBytes() const override {
+    std::size_t bytes = sizeof(*this) + base_->estimatedPayloadBytes();
     for (const auto &[_, closure] : closures_) {
-      bytes += closure->approximateMemoryBytes();
+      bytes += closure->estimatedPayloadBytes();
     }
     return bytes;
   }
@@ -213,6 +213,7 @@ public:
   ReachabilityStats solve() {
     validateGraphVersion();
     const auto start = std::chrono::steady_clock::now();
+    const TransitiveCounters transitive_before = transitiveCounters();
     ReachabilityStats stats;
     stats.added_edges = pending_derived_edges_;
     pending_derived_edges_ = 0;
@@ -227,10 +228,12 @@ public:
     stats.input_edges = input_edges_;
 
     for (SymbolId symbol : grammar_.nullableSymbolIds()) {
-      for (NodeId node = 0; node < graph_.vertexCount(); ++node) {
+      for (NodeId node = nullable_seeded_nodes_; node < graph_.vertexCount();
+           ++node) {
         addDerived(symbol, node, node, stats);
       }
     }
+    nullable_seeded_nodes_ = graph_.vertexCount();
 
     while (!worklist_.empty()) {
       const WorkItem item = worklist_.back();
@@ -285,9 +288,10 @@ public:
 
     stats.relation_edges = relation_->edgeCount();
     stats.start_symbol_edges = relation_->edgeCount(grammar_.startSymbolId());
-    stats.relation_memory_bytes = relation_->approximateMemoryBytes();
-    stats.peak_worklist_size = peak_worklist_size_;
-    collectTransitiveStatistics(stats);
+    stats.relation_payload_bytes_estimate = relation_->estimatedPayloadBytes();
+    stats.peak_worklist_size = current_peak_worklist_size_;
+    current_peak_worklist_size_ = worklist_.size();
+    collectTransitiveStatistics(stats, transitive_before);
     stats.solve_time_microseconds =
         std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::steady_clock::now() - start)
@@ -316,6 +320,12 @@ public:
   }
 
 private:
+  struct TransitiveCounters {
+    std::size_t arc_insertions = 0;
+    std::size_t propagated_pairs = 0;
+    std::size_t duplicate_pairs = 0;
+  };
+
   void validateGraphVersion() const {
     if (graph_.mutationVersion() != expected_graph_version_) {
       throw std::logic_error(
@@ -348,19 +358,42 @@ private:
     ++stats.added_edges;
   }
 
-  void collectTransitiveStatistics(ReachabilityStats &stats) const {
+  TransitiveCounters transitiveCounters() const {
+    TransitiveCounters counters;
+    if (!transitive_relation_) {
+      return counters;
+    }
+    for (const auto &[_, closure] : transitive_relation_->closures()) {
+      const TransitiveClosureStatistics &closure_stats = closure->statistics();
+      counters.arc_insertions += closure_stats.arc_insertions;
+      counters.propagated_pairs += closure_stats.propagated_pairs;
+      counters.duplicate_pairs += closure_stats.duplicate_pairs;
+    }
+    return counters;
+  }
+
+  void collectTransitiveStatistics(ReachabilityStats &stats,
+                                   const TransitiveCounters &before) const {
     if (!transitive_relation_) {
       return;
     }
+    TransitiveCounters after;
     for (const auto &[_, closure] : transitive_relation_->closures()) {
       const TransitiveClosureStatistics &closure_stats = closure->statistics();
       ++stats.transitive_closure_instances;
       stats.transitive_relation_edges += closure_stats.relation_edges;
-      stats.transitive_arc_insertions += closure_stats.arc_insertions;
-      stats.transitive_propagated_pairs += closure_stats.propagated_pairs;
-      stats.transitive_duplicate_pairs += closure_stats.duplicate_pairs;
-      stats.transitive_memory_bytes += closure->approximateMemoryBytes();
+      after.arc_insertions += closure_stats.arc_insertions;
+      after.propagated_pairs += closure_stats.propagated_pairs;
+      after.duplicate_pairs += closure_stats.duplicate_pairs;
+      stats.transitive_payload_bytes_estimate +=
+          closure->estimatedPayloadBytes();
     }
+    stats.transitive_arc_insertions =
+        after.arc_insertions - before.arc_insertions;
+    stats.transitive_propagated_pairs =
+        after.propagated_pairs - before.propagated_pairs;
+    stats.transitive_duplicate_pairs =
+        after.duplicate_pairs - before.duplicate_pairs;
   }
 
   bool insertInputFact(SymbolId symbol, NodeId source, NodeId target) {
@@ -385,7 +418,8 @@ private:
 
   void pushWorkItem(const RelationEdge &edge) {
     worklist_.push_back({edge});
-    peak_worklist_size_ = std::max(peak_worklist_size_, worklist_.size());
+    current_peak_worklist_size_ =
+        std::max(current_peak_worklist_size_, worklist_.size());
   }
 
   LabeledGraph &graph_;
@@ -395,8 +429,9 @@ private:
   std::vector<WorkItem> worklist_;
   std::vector<NodeId> join_candidates_;
   std::size_t input_edges_ = 0;
-  std::size_t peak_worklist_size_ = 0;
+  std::size_t current_peak_worklist_size_ = 0;
   std::size_t pending_derived_edges_ = 0;
+  std::size_t nullable_seeded_nodes_ = 0;
   TransitiveRelation *transitive_relation_ = nullptr;
   std::uint64_t expected_graph_version_ = 0;
 };

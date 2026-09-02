@@ -202,6 +202,10 @@ LabeledGraph encodeSVFG(const lotus::analysis::SVFG &svfg) {
                              "indirectbar");
       } else if (lotus::analysis::isDirectVFGEdge(edge->getEdgeKind())) {
         addBidirectionalEdge(encoded, source, target, "direct", "directbar");
+      } else {
+        throw std::invalid_argument(
+            "Unsupported SVFG edge in CFL value-flow encoding: " +
+            edge->toString());
       }
     }
   }
@@ -276,13 +280,19 @@ ValueFlowClient::ValueFlowClient(
     LabeledGraph graph, Grammar grammar,
     std::unordered_map<std::uint32_t, std::size_t> node_to_vertex)
     : state_(std::make_unique<State>(std::move(graph), std::move(grammar))),
-      node_to_vertex_(std::move(node_to_vertex)) {}
+      node_to_vertex_(std::move(node_to_vertex)),
+      vertex_to_node_(state_->graph.vertexCount()) {
+  for (const auto &[node, vertex] : node_to_vertex_) {
+    vertex_to_node_.at(vertex) = node;
+  }
+}
 
 ValueFlowClient::~ValueFlowClient() = default;
 
 ValueFlowClient::ValueFlowClient(ValueFlowClient &&other) noexcept
     : state_(std::move(other.state_)),
       node_to_vertex_(std::move(other.node_to_vertex_)),
+      vertex_to_node_(std::move(other.vertex_to_node_)),
       session_(std::move(other.session_)), backend_(std::move(other.backend_)) {
 }
 
@@ -293,6 +303,7 @@ ValueFlowClient &ValueFlowClient::operator=(ValueFlowClient &&other) noexcept {
   session_.reset();
   state_ = std::move(other.state_);
   node_to_vertex_ = std::move(other.node_to_vertex_);
+  vertex_to_node_ = std::move(other.vertex_to_node_);
   session_ = std::move(other.session_);
   backend_ = std::move(other.backend_);
   return *this;
@@ -336,11 +347,16 @@ ValueFlowClient::reachableFrom(std::uint32_t source_node) const {
   }
 
   std::vector<std::uint32_t> reachable;
-  for (const auto &[node_id, vertex_id] : node_to_vertex_) {
-    if (session_->contains(source_it->second, vertex_id, "A")) {
-      reachable.push_back(node_id);
-    }
-  }
+  const SymbolId flow_symbol = state_->grammar.symbolId("A");
+  session_->relation().forEachSuccessor(
+      flow_symbol, source_it->second, [&](NodeId vertex) {
+        if (vertex >= vertex_to_node_.size()) {
+          return;
+        }
+        if (const auto node = vertex_to_node_[vertex]) {
+          reachable.push_back(*node);
+        }
+      });
   std::sort(reachable.begin(), reachable.end());
   return reachable;
 }

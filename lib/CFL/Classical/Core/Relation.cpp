@@ -1,6 +1,8 @@
 #include "CFL/Classical/Core/Relation.h"
 
+#include <limits>
 #include <map>
+#include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -83,7 +85,7 @@ public:
     return it == symbol_edge_counts_.end() ? 0 : it->second;
   }
 
-  std::size_t approximateMemoryBytes() const override {
+  std::size_t estimatedPayloadBytes() const override {
     std::size_t bytes = sizeof(*this);
     bytes +=
         (successors_.capacity() + predecessors_.capacity()) * sizeof(SymbolMap);
@@ -121,10 +123,15 @@ private:
 
 class SparseBitVectorRelation final : public Relation {
 public:
-  explicit SparseBitVectorRelation(std::size_t node_count)
-      : successors_(node_count), predecessors_(node_count) {}
+  explicit SparseBitVectorRelation(std::size_t node_count) {
+    ensureNodeCount(node_count);
+  }
 
   void ensureNodeCount(std::size_t node_count) override {
+    if (node_count > std::numeric_limits<unsigned>::max()) {
+      throw std::overflow_error(
+          "SparseBitVector relation node count exceeds unsigned range");
+    }
     successors_.resize(node_count);
     predecessors_.resize(node_count);
   }
@@ -193,7 +200,7 @@ public:
     return it == symbol_edge_counts_.end() ? 0 : it->second;
   }
 
-  std::size_t approximateMemoryBytes() const override {
+  std::size_t estimatedPayloadBytes() const override {
     std::size_t bytes = sizeof(*this);
     bytes +=
         (successors_.capacity() + predecessors_.capacity()) * sizeof(SymbolMap);

@@ -50,12 +50,12 @@ install(TARGETS lotus-check
 
 if(LOTUS_BUILD_TESTS)
   set(CHECKER_CLI_TEST_SCRIPT
-      ${PROJECT_SOURCE_DIR}/tests/regress/checker_cli/verify_cli.cmake)
-  set(CHECKER_CLI_MINIMAL ${PROJECT_SOURCE_DIR}/tests/regress/checker_cli/minimal.ll)
-  set(CHECKER_CLI_TAINT ${PROJECT_SOURCE_DIR}/tests/regress/checker_cli/taint.ll)
+      ${PROJECT_SOURCE_DIR}/tests/regress/Checker/CLI/verify_cli.cmake)
+  set(CHECKER_CLI_MINIMAL ${PROJECT_SOURCE_DIR}/tests/regress/Checker/CLI/minimal.ll)
+  set(CHECKER_CLI_TAINT ${PROJECT_SOURCE_DIR}/tests/regress/Checker/CLI/taint.ll)
   set(CHECKER_CLI_TAINT_INVOKE
-      ${PROJECT_SOURCE_DIR}/tests/regress/checker_cli/taint_invoke.ll)
-  set(CHECKER_CLI_AE_LEAK ${PROJECT_SOURCE_DIR}/tests/regress/checker_cli/ae_leak.ll)
+      ${PROJECT_SOURCE_DIR}/tests/regress/Checker/CLI/taint_invoke.ll)
+  set(CHECKER_CLI_AE_LEAK ${PROJECT_SOURCE_DIR}/tests/regress/Checker/CLI/ae_leak.ll)
 
   function(add_checker_cli_test test_name expected_result expected_output)
     set(args ${ARGN})
@@ -127,7 +127,7 @@ if(LOTUS_BUILD_TESTS)
   add_checker_cli_test(checker_cli_taint_micro_bench_evaluates 0
                        "TP: 1  FP: 0  FN: 0"
                        --engine=taint --taint.micro-bench
-                       --taint.expected-flows=${PROJECT_SOURCE_DIR}/tests/regress/checker_cli/taint.expected
+                       --taint.expected-flows=${PROJECT_SOURCE_DIR}/tests/regress/Checker/CLI/taint.expected
                        ${CHECKER_CLI_TAINT})
   add_checker_cli_test(checker_cli_taint_trims_function_lists 0
                        "\\[source\\] source"
@@ -146,7 +146,7 @@ if(LOTUS_BUILD_TESTS)
       checker_cli_taint_ignores_operand_bundle 1 "via arg0" "arg1"
       --engine=taint --taint.sources=source --taint.sinks=sink
       --fail-on-findings
-      ${PROJECT_SOURCE_DIR}/tests/regress/checker_cli/taint_operand_bundle.ll)
+      ${PROJECT_SOURCE_DIR}/tests/regress/Checker/CLI/taint_operand_bundle.ll)
   add_checker_cli_test(checker_cli_taint_honors_min_score 0
                        "No findings"
                        --engine=taint --taint.sources=source --taint.sinks=sink

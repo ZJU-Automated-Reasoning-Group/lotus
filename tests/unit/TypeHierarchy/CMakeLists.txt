@@ -1,7 +1,7 @@
 # CMakeLists.txt for TypeHierarchy unit tests
 
 set(TYPE_HIERARCHY_SRC_DIR
-    ${CMAKE_SOURCE_DIR}/tests/regress/llvm_test_code/type_hierarchies)
+    ${CMAKE_SOURCE_DIR}/tests/regress/Legacy/LLVM/type_hierarchies)
 set(TYPE_HIERARCHY_LL_DIR
     ${CMAKE_BINARY_DIR}/tests/unit/type_hierarchy_ll)
 

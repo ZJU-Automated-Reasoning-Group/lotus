@@ -53,14 +53,14 @@ The reference artifact did not include a license file in the supplied source
 tree. This port is therefore an independent C++ reimplementation based on the
 published algorithm and observable artifact behavior, rather than a verbatim
 copy of its Go/Python sources. Its DOT benchmark inputs are stored under
-`benchmarks/interleaved-dyck-approximation/` with provenance noted there.
+`benchmarks/real-world/CFL/InterleavedDyck/` with provenance noted there.
 
 ## Command line
 
 ```sh
 cmake --build build --target lotus-cfl-interleaved-dyck-approximation
 build/bin/lotus-cfl-interleaved-dyck-approximation \
-  --parity-groups 2 benchmarks/interleaved-dyck-approximation/taint/faketaobao.dot
+  --parity-groups 2 benchmarks/real-world/CFL/InterleavedDyck/taint/faketaobao.dot
 ```
 
 Use `--value-flow` for value-flow preprocessing, `--no-on-demand` to stop at

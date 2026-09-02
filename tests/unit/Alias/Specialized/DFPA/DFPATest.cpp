@@ -391,7 +391,7 @@ TEST(DFPA, DemandRefinesDirectCallerBinding) {
 TEST(DFPA, RegressFunptrSimpleSmoke) {
   LLVMContext Ctx;
   auto M = loadModule(std::string(CMAKE_SOURCE_DIR) +
-                          "/tests/regress/PTATestCases/funptr-simple.ll",
+                          "/tests/regress/Alias/PTA/funptr-simple.ll",
                       Ctx, "DFPATest");
   ASSERT_NE(M, nullptr);
 
@@ -402,7 +402,7 @@ TEST(DFPA, RegressFunptrSimpleSmoke) {
 TEST(DFPA, RegressFunptrStructSmoke) {
   LLVMContext Ctx;
   auto M = loadModule(std::string(CMAKE_SOURCE_DIR) +
-                          "/tests/regress/PTATestCases/funptr-struct.ll",
+                          "/tests/regress/Alias/PTA/funptr-struct.ll",
                       Ctx, "DFPATest");
   ASSERT_NE(M, nullptr);
 
@@ -413,7 +413,7 @@ TEST(DFPA, RegressFunptrStructSmoke) {
 TEST(DFPA, RegressGlobalInitializerSmoke) {
   LLVMContext Ctx;
   auto M = loadModule(std::string(CMAKE_SOURCE_DIR) +
-                          "/tests/regress/PTATestCases/global-initializer.ll",
+                          "/tests/regress/Alias/PTA/global-initializer.ll",
                       Ctx, "DFPATest");
   ASSERT_NE(M, nullptr);
 
@@ -424,7 +424,7 @@ TEST(DFPA, RegressGlobalInitializerSmoke) {
 TEST(DFPA, RegressFunptrNestedCallSmoke) {
   LLVMContext Ctx;
   auto M = loadModule(std::string(CMAKE_SOURCE_DIR) +
-                          "/tests/regress/PTATestCases/funptr-nested-call.ll",
+                          "/tests/regress/Alias/PTA/funptr-nested-call.ll",
                       Ctx, "DFPATest");
   ASSERT_NE(M, nullptr);
 

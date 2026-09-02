@@ -1,7 +1,11 @@
-# Interleaved-Dyck approximation datasets
+# Interleaved-Dyck reachability dataset
 
-The `taint/` and `valueflow/` directories are the datasets
-used by **A Better Approximation for Interleaved Dyck Reachability** by Giovanna Kobus Conrado and Andreas Pavlogiannis.
+The `taint/` and `valueflow/` directories are the datasets used by **A Better
+Approximation for Interleaved Dyck Reachability** by Giovanna Kobus Conrado and
+Andreas Pavlogiannis. In Lotus they are shared evaluation inputs for Classical
+CFG projections/relaxations, the Interleaved-Dyck approximation, MCFL, and
+explicitly transformed unary solvers. `InterleavedDyck` names the formal
+workload, not a single Lotus implementation.
 
 Each input is a DOT graph whose edges use these labels:
 

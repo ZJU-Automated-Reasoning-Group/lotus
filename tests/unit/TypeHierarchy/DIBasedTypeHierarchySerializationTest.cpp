@@ -101,7 +101,7 @@ void compareResults(const DIBasedTypeHierarchy &Orig,
 class TypeHierarchySerialization
     : public ::testing::TestWithParam<std::string_view> {
 protected:
-  static constexpr auto PathToLlFiles = "regress/PTATestCases/";
+  static constexpr auto PathToLlFiles = "regress/Alias/PTA/";
   const std::vector<std::string> EntryPoints = {"main"};
 
 }; // Test Fixture

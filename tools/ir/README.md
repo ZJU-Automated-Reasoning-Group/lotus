@@ -68,7 +68,7 @@ build/bin/lotus-ir-control-dependence test.bc \
   --algorithm=compact-closure --seed-index=3 --format=json
 
 # Reproducible multi-input evaluation (use the Release driver).
-scripts/evaluate_control_dependence.py benchmarks/spec2006 \
+scripts/evaluate_control_dependence.py benchmarks/real-world/SPEC2006 \
   --tool build-release/bin/lotus-ir-control-dependence \
   --experiments ntscd,dod-preprocess,dod-enumerate,combined \
   --warmup 3 --repeat 20 --output-dir results/control-dependence

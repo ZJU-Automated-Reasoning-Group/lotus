@@ -105,7 +105,7 @@ the selected algorithm and exactness guarantee.
 ## Benchmark use
 
 The algorithms can parse the datasets under
-`benchmarks/interleaved-dyck-approximation`, but that published corpus is
+`benchmarks/real-world/CFL/InterleavedDyck`, but that published corpus is
 directed. The default policy therefore rejects it. Experiments may explicitly
 use `--bidirect` as a sound overapproximation, but must report that graph
 transformation, or use a genuinely bidirected corpus for exact comparisons.

@@ -94,8 +94,8 @@ protected:
 
   std::string benchmarkPath() {
     std::vector<std::string> search_paths;
-    search_paths.push_back("../benchmarks/spec2006/998.specrand.bc");
-    search_paths.push_back("benchmarks/spec2006/998.specrand.bc");
+    search_paths.push_back("../benchmarks/real-world/SPEC2006/998.specrand.bc");
+    search_paths.push_back("benchmarks/real-world/SPEC2006/998.specrand.bc");
 
     for (size_t i = 0; i < search_paths.size(); ++i) {
       struct stat st;

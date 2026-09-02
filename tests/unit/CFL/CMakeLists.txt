@@ -30,13 +30,13 @@ add_lotus_targeted_test(interleaved_dyck_comparison_test
         CanaryMCFL
         CanaryUnaryInterleavedDyck)
 target_compile_definitions(interleaved_dyck_comparison_test PRIVATE
-    INTERLEAVED_DYCK_BENCHMARK_DIR="${CMAKE_SOURCE_DIR}/benchmarks/interleaved-dyck-approximation/taint")
+    INTERLEAVED_DYCK_DATASET_DIR="${CMAKE_SOURCE_DIR}/benchmarks/real-world/CFL/InterleavedDyck/taint")
 
 add_lotus_targeted_test(mcfl_test MCFLTest.cpp
     LINK_LIBS
         CanaryMCFL)
 target_compile_definitions(mcfl_test PRIVATE
-    MCFL_BENCHMARK_DIR="${CMAKE_SOURCE_DIR}/benchmarks/interleaved-dyck-approximation/taint")
+    MCFL_DATASET_DIR="${CMAKE_SOURCE_DIR}/benchmarks/real-world/CFL/InterleavedDyck/taint")
 
 add_lotus_targeted_test(ClassicalAdaptersTest ClassicalAdaptersTest.cpp
     LINK_LIBS
@@ -47,8 +47,8 @@ if(TARGET lotus-cfl-classical)
     foreach(classical_backend sparse-set sparse-bitvector transitive-closure)
         add_test(NAME classical_cfl_cli_${classical_backend}
             COMMAND $<TARGET_FILE:lotus-cfl-classical>
-                --grammar ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/chain.grammar
-                --graph ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/chain.txt
+                --grammar ${CMAKE_SOURCE_DIR}/tests/regress/CFL/Classical/chain.grammar
+                --graph ${CMAKE_SOURCE_DIR}/tests/regress/CFL/Classical/chain.txt
                 --solver ${classical_backend}
                 --json-stats)
         set_tests_properties(classical_cfl_cli_${classical_backend} PROPERTIES
@@ -57,8 +57,8 @@ if(TARGET lotus-cfl-classical)
 
     add_test(NAME classical_cfl_cli_infers_attributes
         COMMAND $<TARGET_FILE:lotus-cfl-classical>
-            --grammar ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/call.grammar
-            --graph ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/call.txt
+            --grammar ${CMAKE_SOURCE_DIR}/tests/regress/CFL/Classical/call.grammar
+            --graph ${CMAKE_SOURCE_DIR}/tests/regress/CFL/Classical/call.txt
             --solver transitive-closure
             --json-stats)
     set_tests_properties(classical_cfl_cli_infers_attributes PROPERTIES
@@ -66,8 +66,8 @@ if(TARGET lotus-cfl-classical)
 
     add_test(NAME classical_cfl_cli_transitive_stats
         COMMAND $<TARGET_FILE:lotus-cfl-classical>
-            --grammar ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/chain.grammar
-            --graph ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/chain.txt
+            --grammar ${CMAKE_SOURCE_DIR}/tests/regress/CFL/Classical/chain.grammar
+            --graph ${CMAKE_SOURCE_DIR}/tests/regress/CFL/Classical/chain.txt
             --solver transitive-closure
             --json-stats)
     set_tests_properties(classical_cfl_cli_transitive_stats PROPERTIES
@@ -75,8 +75,8 @@ if(TARGET lotus-cfl-classical)
 
     add_test(NAME classical_cfl_cli_validate_only
         COMMAND $<TARGET_FILE:lotus-cfl-classical>
-            --grammar ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/call.grammar
-            --graph ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/call.txt
+            --grammar ${CMAKE_SOURCE_DIR}/tests/regress/CFL/Classical/call.grammar
+            --graph ${CMAKE_SOURCE_DIR}/tests/regress/CFL/Classical/call.txt
             --validate-only)
     set_tests_properties(classical_cfl_cli_validate_only PROPERTIES
         PASS_REGULAR_EXPRESSION "validation=ok")
@@ -88,7 +88,7 @@ if(TARGET lotus-cfl-alias)
             --solver sparse-bitvector
             --encoding pag
             --json-stats
-            ${CMAKE_SOURCE_DIR}/tests/regress/PTATestCases/funptr-simple.ll)
+            ${CMAKE_SOURCE_DIR}/tests/regress/Alias/PTA/funptr-simple.ll)
     set_tests_properties(classical_cfl_alias_indirect_call PROPERTIES
         PASS_REGULAR_EXPRESSION "\"callgraph_rounds\":2")
 
@@ -111,7 +111,7 @@ if(TARGET lotus-cfl-alias)
                 --solver sparse-bitvector
                 --encoding pag
                 --check-annotations
-                ${CMAKE_SOURCE_DIR}/tests/regress/PTATestCases/${alias_case}.ll)
+                ${CMAKE_SOURCE_DIR}/tests/regress/Alias/PTA/${alias_case}.ll)
         set_tests_properties(classical_cfl_alias_annotation_${alias_case}
             PROPERTIES PASS_REGULAR_EXPRESSION "annotation=pass")
     endforeach()
@@ -124,7 +124,7 @@ if(TARGET lotus-cfl-vf)
                 --solver ${classical_backend}
                 --query main::seed,main::result
                 --json-stats
-                ${CMAKE_SOURCE_DIR}/benchmarks/cfl-classical/value-flow.ll)
+                ${CMAKE_SOURCE_DIR}/tests/regress/CFL/Classical/value-flow.ll)
         set_tests_properties(classical_cfl_vf_${classical_backend} PROPERTIES
             PASS_REGULAR_EXPRESSION "flow=yes")
     endforeach()

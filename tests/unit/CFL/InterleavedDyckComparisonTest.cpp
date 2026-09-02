@@ -13,7 +13,7 @@ namespace {
 
 TEST(InterleavedDyckComparisonTest, LoadsOneBenchmarkForAllApplicableSolvers) {
   const interleaved_dyck::Graph graph = interleaved_dyck::Graph::parseDotFile(
-      std::string(INTERLEAVED_DYCK_BENCHMARK_DIR) + "/faketaobao.dot");
+      std::string(INTERLEAVED_DYCK_DATASET_DIR) + "/faketaobao.dot");
 
   const auto approximation = interleaved_dyck_approximation::Solver{}.analyze(
       graph, interleaved_dyck_approximation::BenchmarkKind::Taint);

@@ -24,10 +24,10 @@ Template File: sources-sinks-01.tmpl.c
 #pragma comment(lib, "ws2_32") /* include ws2_32.lib when linking */
 #define CLOSE_SOCKET closesocket
 #else
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1

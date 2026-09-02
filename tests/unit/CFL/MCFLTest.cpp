@@ -326,7 +326,7 @@ TEST(MCFLInterleavedSolverTest,
 
 TEST(MCFLArtifactRegressionTest, ReproducesFaketaobaoPairCounts) {
   const interleaved_dyck::Graph graph = interleaved_dyck::Graph::parseDotFile(
-      std::string(MCFL_BENCHMARK_DIR) + "/faketaobao.dot");
+      std::string(MCFL_DATASET_DIR) + "/faketaobao.dot");
   const InterleavedAnalysisResult result = InterleavedDyckSolver{}.solve(graph);
   ASSERT_EQ(result.dimensions.size(), 2U);
   EXPECT_EQ(result.dimensions[0].reachable_pairs.size(), 57U);

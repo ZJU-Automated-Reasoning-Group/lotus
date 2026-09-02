@@ -64,7 +64,7 @@ Command line
 only to Adaptive. ``--bidirect`` explicitly selects symmetrization, and output
 states the selected algorithm and resulting guarantee.
 
-The existing ``benchmarks/interleaved-dyck-approximation`` corpus is directed,
+The existing ``benchmarks/real-world/CFL/InterleavedDyck`` corpus is directed,
 so exact runs require a genuinely bidirected corpus. Using ``--bidirect`` on
 that corpus must be reported as an overapproximate experiment.
 

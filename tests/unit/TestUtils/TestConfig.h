@@ -9,7 +9,7 @@ namespace lotus { namespace unittest {
 
 // Path to LLVM test files (used for regression tests with .ll files)
 static const std::string PathToLLTestFiles = 
-    std::string(LOTUS_BUILD_DIR) + "/tests/regress/llvm_test_code/";
+    std::string(LOTUS_BUILD_DIR) + "/tests/regress/Legacy/LLVM/";
 
 // Path to text test files
 static const std::string PathToTxtTestFiles = 
@@ -20,7 +20,7 @@ static const std::string PathToJSONTestFiles =
     std::string(LOTUS_SRC_DIR) + "/tests/regress/json_test_code/";
 
 #define LOTUS_BUILD_SUBFOLDER(SUB) \
-  (std::string(LOTUS_BUILD_DIR) + "/tests/regress/llvm_test_code/" SUB)
+  (std::string(LOTUS_BUILD_DIR) + "/tests/regress/Legacy/LLVM/" SUB)
 
 // Utility macro for skipping tests conditionally
 #ifdef GTEST_SKIP

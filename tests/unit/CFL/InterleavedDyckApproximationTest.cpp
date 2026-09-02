@@ -26,7 +26,7 @@ TEST(InterleavedDyckApproximationGraphTest,
 }
 
 TEST(InterleavedDyckApproximationSolverTest,
-     SeparatesUnionDyckUnderapproximationFromInterleavedReachability) {
+     SeparatesUnionDyckUnderapproximationFromFullInterleavedDyck) {
   Graph graph;
   graph.addEdge(0, 1, Label::openParenthesis(0));
   graph.addEdge(1, 2, Label::openBracket(0));

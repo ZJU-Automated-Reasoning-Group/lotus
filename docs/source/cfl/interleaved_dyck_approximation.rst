@@ -166,8 +166,8 @@ Benchmark Modes
    the outer ``ob--0`` / ``cb--0`` source-sink condition.
 
 The reference DOT corpus is stored in
-``benchmarks/interleaved-dyck-approximation/taint`` and
-``benchmarks/interleaved-dyck-approximation/valueflow``. The supplied artifact
+``benchmarks/real-world/CFL/InterleavedDyck/taint`` and
+``benchmarks/real-world/CFL/InterleavedDyck/valueflow``. The supplied artifact
 did not contain a license file; see the benchmark README for provenance and
 redistribution notes.
 

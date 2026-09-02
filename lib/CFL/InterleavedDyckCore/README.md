@@ -25,7 +25,7 @@ zero labels, which is convenient for exact unary tests.
 | `MCFL::InterleavedDyckSolver` | Adapter to the generic string-labeled MCFL graph |
 
 The shared graph is the comparison boundary for
-`benchmarks/interleaved-dyck-approximation`. Algorithm-specific graph indexes
+`benchmarks/real-world/CFL/InterleavedDyck`. Algorithm-specific graph indexes
 and grammar IRs remain private to their consumers.
 
 The core preserves input arcs exactly and never adds complement reverse arcs.

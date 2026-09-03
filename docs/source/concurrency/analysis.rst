@@ -52,6 +52,9 @@ The source tree is grouped by subdirectory under ``include/Concurrency/`` and
   ``PTXAnalyzer`` for GPU thread/block hierarchy reasoning
 - ``LinuxKernel/``: ``LinuxKernelAnalysis``, ``LinuxKernelLockAnalysis``, and
   ``LinuxKernelRCUAnalysis`` for kernel concurrency primitives
+- ``ValueFlow/``: thread-aware sparse value-flow refinement
+  (``ThreadAwareSVFG``, ``SparseValueFlowRefinement``,
+  ``WholeProgramSparseRefinement``, ``FSMPTA``, and ``MultiStageSlicer``)
 
 ``Concurrency/MPI/`` models MPI communication in the SPMD setting. It complements
 the shared-memory analyses above, but it is not another thread library layered on
@@ -290,6 +293,110 @@ Combines escape analysis with thread flow information to identify shared memory.
 - Static identification of shared memory
 - Integration with alias analysis
 - Support for complex pointer structures
+
+Thread-Aware Sparse Value-Flow Refinement
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Files**: ``ValueFlow/ThreadAwareSVFG.cpp``, ``ValueFlow/ThreadAwareSVFG.h``,
+``ValueFlow/SparseValueFlowRefinement.cpp``,
+``ValueFlow/SparseValueFlowRefinement.h``,
+``ValueFlow/WholeProgramSparseRefinement.cpp``,
+``ValueFlow/WholeProgramSparseRefinement.h``, ``ValueFlow/FSMPTA.cpp``,
+``ValueFlow/FSMPTA.h``, ``ValueFlow/MultiStageSlicer.cpp``,
+``ValueFlow/MultiStageSlicer.h``
+
+The ``ValueFlow/`` subdirectory implements the optional whole-program refinement
+used by the concurrency checker: a thread-aware sparse value-flow analysis that
+refines data-race alias pairs with a flow-sensitive points-to solve over the
+SVFG. It was introduced by the thread-aware sparse SVFG refinement commit
+(``d13d1543``). The general solver lives in
+``Alias/InclusionBased/FlowSensitive/`` and is composed with the thread-aware
+SVFG by ``FSMPTA``; the concurrency layer does not duplicate it.
+
+**ThreadAwareSVFGBuilder** (``ThreadAwareSVFG.h``): adds guarded Store-to-Load
+and symmetric Store-to-Store ``ThreadMHPIndirectVF`` edges for accesses that may
+run in parallel. The base SVFG remains owned by the caller and can be restored
+with ``clear()``. A ``FilteredSVFGView`` can restrict construction to an induced
+subgraph without copying graph nodes. Fork and join memory flow is connected
+through dedicated passes (``connectForkFlow``, ``connectJoinFlow``).
+
+**SparseValueFlowRefinement** (``SparseValueFlowRefinement.h``): a lightweight
+concurrency-specific diagnostic refinement, introduced as
+``SparseFlowSensitivePTA`` in the original commit and later renamed. It solves
+pointer-value flow over the SVFG and its thread-interference overlay, attaching
+memory values to sparse MemorySSA definitions rather than to every LLVM
+instruction. It is not the alias-analysis oracle and cannot suppress race
+candidates on its own. Queries include ``pointsTo``, ``memoryValue``,
+``hasCompletePointsTo``, ``accessTargets``, and ``mayAliasAccesses`` (which
+returns ``nullopt`` when refinement is unavailable, otherwise whether two
+accesses may still address a common abstract object). Mutable and hash-consed
+points-to set backends are supported.
+
+**FlowSensitivePTA** (``Alias/InclusionBased/FlowSensitive/FlowSensitivePTA.h``):
+the general sparse flow-sensitive inclusion-based pointer analysis. It owns the
+top-level points-to sets and per-node MemorySSA ``IN``/``OUT`` state.
+
+**FSMPTA** (``FSMPTA.h``): composes ``FlowSensitivePTA`` with the thread-aware
+SVFG and an optional sliced solve scope.
+
+**WholeProgramSparseRefinement** (``WholeProgramSparseRefinement.h``): ownership
+wrapper for a complete analysis run. It owns the ICFG, SVFG, overlay, and
+solver, and supports two modes: ``WholeProgram`` and ``MultiStageSlicing``.
+Configuration covers the memory-region partition strategy, the thread context
+limit (default 2), and the points-to set backend.
+
+**MultiStageSlicer** (``MultiStageSlicer.h``): implements the MSli pipeline:
+candidate closure, synchronization/call expansion, and a bounded PTA closure.
+The pre-analysis overlay is discarded; MHP and lock queries are evaluated again
+while constructing the filtered main-phase overlay.
+
+**ThreadCallGraph / ThreadCreationTree**
+(``Concurrency/Thread/ThreadCreationTree.h``): rebuild context-bounded thread
+instances for both the pre-analysis and sliced main phase. Forks in loops or
+recursive contexts are marked multi-instance, and joins are resolved through
+canonicalized thread handles.
+
+**Thread-aware MemorySSA**: treats a fork as forward-only and a join as
+return-only. Caller memory definitions and payloads flow into the start routine,
+while joined ``FormalOut`` definitions flow to synthetic ``ActualOut`` nodes and
+dominated post-join accesses.
+
+**Memory region partition policies**: ``distinct`` preserves each exact
+points-to set; ``intra-disjoint`` merges overlapping sets independently per
+function; ``inter-disjoint`` merges overlapping sets over the whole module.
+Freezing the partition before MemorySSA construction prevents overlapping
+points-to sets from silently receiving unrelated SSA version streams.
+
+**Checker integration**: ``ConcurrencyChecker`` owns a
+``WholeProgramSparseRefinement`` and builds it when sparse flow-sensitive
+refinement is enabled and data-race checking is active, recording statistics
+such as interference edges and points-to facts. The original commit wired the
+sparse solver into ``DataRaceChecker``, which consults ``mayAliasAccesses``
+while deciding whether two accesses may share a location. Incomplete or
+wildcard points-to results never suppress a race candidate; the checker only
+removes a pair when complete sparse results prove its access-target sets
+disjoint.
+
+**Enabling**: the path is opt-in. Run:
+
+.. code-block:: text
+
+   lotus-check --engine=concur --checks=data-race \
+     --concur.sparse-flow-sensitive input.bc
+
+Multi-stage slicing is enabled with:
+
+.. code-block:: text
+
+   lotus-check --engine=concur --checks=data-race --concur.msli \
+     --concur.memory-partition=inter-disjoint \
+     --concur.points-to-sets=hash-consed input.bc
+
+The sparse analysis and hash-consed backend are both opt-in; mutable ordered
+sets remain the default.
+
+See also :doc:`../ir/svfg` for the underlying sparse value-flow graph and
+:doc:`../checker/concurrency` for the checker that consumes this refinement.
 
 Usage
 -----

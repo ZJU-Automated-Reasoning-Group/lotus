@@ -171,7 +171,7 @@ The main unit tests live in:
 
 * ``tests/unit/Checker/Pulse/PulseCheckerTest.cpp`` for end-to-end checker
   behavior and reporting
-* ``tests/unit/Pulse/PulseFormulaTest.cpp`` for formula-level reasoning
+* ``tests/unit/Checker/Pulse/PulseFormulaTest.cpp`` for formula-level reasoning
 
 Run the relevant tests from the build directory with:
 

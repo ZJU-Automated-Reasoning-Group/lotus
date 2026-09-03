@@ -124,7 +124,7 @@ Integration Notes
 
 The SMT backend is used throughout Lotus by components that require reasoning
 over rich theories, including CHC-based verifiers and symbolic abstractions.
-See :doc:`solvers` for a high-level overview of where the SMT solver fits in
+See :doc:`index` for a high-level overview of where the SMT solver fits in
 the rest of the system.
 
 

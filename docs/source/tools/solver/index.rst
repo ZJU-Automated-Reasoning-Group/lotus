@@ -4,7 +4,8 @@ Solver Tools
 This page documents the command-line front-ends under ``tools/solver/``.
 ``lotus-datalog`` is built by default, while ``owl`` requires
 ``-DLOTUS_ENABLE_OWL=ON``. ``staub`` remains a source-present experimental
-tool; SMT↔LLVM translation is provided by TUNA under ``lib/Solvers/SMT/TUNA``.
+tool; ``lotus-smt-stabilizer`` requires ``-DLOTUS_ENABLE_SMT_STABILIZER=ON``
+(GMP/MPFR). SMT↔LLVM translation is provided by TUNA under ``lib/Solvers/SMT/TUNA``.
 
 lotus-datalog – Datalog Solver Front-End
 ----------------------------------------
@@ -76,3 +77,28 @@ Important options:
 - ``-l`` – emit output compatible with SLOT
 - ``-i <N|aix|aix2>`` – integer bounding mode
 - ``-r <ebits,sbits|aix|aix4>`` – floating-point bounding mode
+
+lotus-smt-stabilizer – SMT Normalization Front-End
+--------------------------------------------------
+
+``lotus-smt-stabilizer`` normalizes SMT-LIB2 inputs to reduce runtime variance
+caused by syntactic mutations such as assertion reordering, symbol renaming,
+and commutative operand reordering.
+
+**Binary**: ``lotus-smt-stabilizer`` (requires ``-DLOTUS_ENABLE_SMT_STABILIZER=ON``)
+
+**Source**: ``tools/solver/smt-stabilizer.cpp``
+
+Enable it when configuring Lotus (needs GMP, GMPXX, and MPFR):
+
+.. code-block:: bash
+
+   cmake -S . -B build -DLOTUS_ENABLE_SMT_STABILIZER=ON
+   cmake --build build --target LotusSMTStabilizer lotus-smt-stabilizer
+   ./build/bin/lotus-smt-stabilizer query.smt2 > normalized.smt2
+
+Important options:
+
+- ``<file>`` – input SMT-LIB2 file (reads stdin when omitted)
+- ``--no-cp`` – disable context propagation
+- ``--no-sbp`` – disable symmetry-breaking perturbation

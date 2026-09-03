@@ -47,5 +47,5 @@ Integration Notes
 -----------------
 
 The WPDS backend is typically used by higher-level analyses that require
-interprocedural reasoning with explicit call stacks. See :doc:`solvers` for a
+interprocedural reasoning with explicit call stacks. See :doc:`index` for a
 high-level overview of where WPDS fits in the solver architecture.

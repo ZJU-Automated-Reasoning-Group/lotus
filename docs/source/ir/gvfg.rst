@@ -144,6 +144,12 @@ The construction pipeline is intentionally split:
 - ``LotusGuardedValueFlowAdapterPass::safeLink`` attaches dependencies while
   preserving confidence and guard metadata.
 
+When LotusAA's must-kill optimization is enabled, the adapter receives only
+the surviving roots of the incremental kill forest for each load. Conditional
+roots retain their ``path_cond_t`` provenance, so GVFG matching regions still
+represent the fallback blocking conditions for stores that cannot be killed
+statically.
+
 This split keeps the core graph useful on its own while allowing memory and
 interprocedural precision to be layered in when LotusAA is available.
 

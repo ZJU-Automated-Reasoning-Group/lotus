@@ -38,6 +38,29 @@ For each instruction ``n`` an analysis defines:
 The solver repeatedly applies client-provided ``normalFlow`` and ``merge``
 operations until all ``IN``/``OUT`` facts reach a monotone fixed point.
 
+Abstract Domain Contract
+========================
+
+The solver is generic over an abstract domain instead of taking handwritten
+lattice operations from the analysis ``Problem``. Domains are declared in
+``include/Dataflow/Mono/Core/AbstractDomain.h`` and must satisfy a small
+formal contract, detected by the ``IsMonoAbstractDomain`` trait:
+
+* ``value_type``: the type of facts the domain manipulates,
+* ``bottom()``: the least element of the lattice,
+* ``join(const value_type &Lhs, const value_type &Rhs)``: the lattice join,
+* ``equal(const value_type &Lhs, const value_type &Rhs)``: fact equality.
+
+The header ships three ready-made domains. ``UnionDomain<ContainerT>`` is the
+may-style domain used by the bit-vector clients: ``bottom()`` is the empty
+container and ``join`` inserts every element of ``Rhs`` into ``Lhs``.
+``IntersectionDomain<ContainerT>`` is the must-style counterpart: it is
+constructed with a ``Universe`` (also settable via ``setUniverse``),
+``bottom()`` returns the ``Universe``, and ``join`` keeps only elements present
+in both operands. ``LegacyProblemDomain<ValueT>`` provides a default contract
+for legacy problems and is flagged with ``is_legacy = true``. All three also
+provide a ``widen`` operation.
+
 Example Analyses
 ================
 

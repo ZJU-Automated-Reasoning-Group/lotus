@@ -2,7 +2,7 @@ Alias Analysis Tools
 ====================
 
 This page documents the command-line tools under ``tools/alias/``. For the
-underlying algorithms and architecture, see :doc:`../../analysis/alias_analysis`.
+underlying algorithms and architecture, see :doc:`../../alias/alias_analysis`.
 
 SparrowAA (lotus-alias-sparrow-aa)
 -------------------
@@ -87,7 +87,7 @@ sensitivities and solver algorithms.
 
    ./build/bin/lotus-alias-aser-aa [options] input.bc
 
-**Key Options** (see also :doc:`../../analysis/alias_analysis`):
+**Key Options** (see also :doc:`../../alias/alias_analysis`):
 
 - **Analysis mode**:
 
@@ -115,6 +115,46 @@ sensitivities and solver algorithms.
 
    # 1-CFA with deep solver
    ./build/bin/lotus-alias-aser-aa -analysis-mode=1-cfa -solver=deep input.bc
+
+FlowSensitivePTA (lotus-alias-fspta)
+------------------------------------
+
+Exhaustive sparse flow-sensitive pointer analysis. Builds the Lotus
+SVFG/MemorySSA from an ICFG and solves per-node memory ``IN``/``OUT`` state,
+with an optional object-versioned (``vfspta``) solver.
+
+**Binary**: ``lotus-alias-fspta``  
+**Location**: ``tools/alias/lotus-alias-fspta.cpp``
+
+**Usage**:
+
+.. code-block:: bash
+
+   ./build/bin/lotus-alias-fspta [options] input.bc
+
+**Key Options** (see also :doc:`../../alias/flowsensitive`):
+
+- ``--analysis=fspta|vfspta`` – Conventional sparse flow-sensitive analysis (default) or object-versioned analysis
+- ``--points-to-sets=mutable|hash-consed`` – Points-to set backend
+- ``--memory-partition=distinct|intra-disjoint|inter-disjoint`` – MemorySSA region partition strategy
+- ``--print-pts`` – Print top-level points-to results
+- ``--print-memory`` – Print non-empty sparse memory facts
+- ``--dump-stats`` – Print solver statistics (default on)
+- ``--dump-svfg=<file>`` – Write the initialized SVFG as a DOT file
+- ``--validate-annotations`` – Validate ``__aser_alias__``/``__aser_no_alias__`` calls
+
+**Examples**:
+
+.. code-block:: bash
+
+   # Conventional sparse flow-sensitive analysis
+   ./build/bin/lotus-alias-fspta input.bc
+
+   # Object-versioned analysis with points-to output
+   ./build/bin/lotus-alias-fspta input.bc --analysis=vfspta --print-pts
+
+   # Hash-consed points-to sets and SVFG dump
+   ./build/bin/lotus-alias-fspta input.bc --points-to-sets=hash-consed --dump-svfg=fspta.dot
 
 DFPA (dfpa)
 -----------

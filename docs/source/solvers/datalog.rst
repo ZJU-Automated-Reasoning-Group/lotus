@@ -2,8 +2,9 @@ Native C++ Datalog
 ==================
 
 Lotus provides a native, strongly typed C++17 Datalog runtime under
-``Solvers/Datalog``. The template API lowers rules to a type-erased semantic IR,
-then compiles relation dependencies into an SCC-ordered execution plan.
+``lib/Solvers/Datalog`` (implementation) and ``include/Solvers/Datalog``
+(headers). The template API lowers rules to a type-erased semantic IR, then
+compiles relation dependencies into an SCC-ordered execution plan.
 
 The runtime supports positive recursion, conditions, head expressions,
 distinct-aware greedy join planning, specialized full and partial runtime indexes,
@@ -71,7 +72,7 @@ relation negation, and whole-relation queries. Format is detected automatically 
 chosen with ``--format auto|json|datalog|z3``.
 
 The reusable frontend API is declared in
-``Solvers/Datalog/Frontend/Frontend.h`` and
+``include/Solvers/Datalog/Frontend/Frontend.h`` and
 implemented by the ``LotusDatalogFrontend`` library under
 ``lib/Solvers/Datalog/Frontend``. JSON, Lotus Datalog, Z3, and dispatch live in
 separate translation units and produce a source-aware ``FrontendIR`` which lowers

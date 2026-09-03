@@ -727,7 +727,7 @@ Syntax Errors
 See Also
 --------
 
-- :doc:`ir/pdg` - PDG construction details
+- :doc:`../ir/pdg` - PDG construction details
 - :doc:`tutorials` - PDG usage examples
 - :doc:`../developer/api_reference` - Programmatic PDG access
 - ``tools/ir/examples/`` - In-repo example query cookbook

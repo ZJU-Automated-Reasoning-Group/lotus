@@ -52,5 +52,5 @@ Integration Notes
 
 The CUDD backend is typically not used directly by end users. Instead, it is
 used by higher-level applications and analyses that require symbolic Boolean
-reasoning. See :doc:`solvers` for an overview of where CUDD fits in the solver
+reasoning. See :doc:`index` for an overview of where CUDD fits in the solver
 stack.

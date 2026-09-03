@@ -40,6 +40,8 @@ Options use a consistent ``LOTUS_*`` naming scheme.
   find a supported LLVM automatically.
 * ``-DLOTUS_BUILD_TESTS=ON``: Build unit tests (default: OFF)
 * ``-DLOTUS_BUILD_EXAMPLES=ON``: Build examples (default: OFF)
+* ``-DLOTUS_ENABLE_COVERAGE=ON``: Instrument Lotus and its tests for LLVM source
+  coverage (requires ``LOTUS_BUILD_TESTS=ON`` and Clang/AppleClang; default: OFF)
 
 **Optional verifier integrations** (all OFF by default — opt-in due to heavyweight dependencies):
 
@@ -55,6 +57,8 @@ Options use a consistent ``LOTUS_*`` naming scheme.
 * ``-DLOTUS_ENABLE_CFL=ON``: Build CFL reachability solvers
 * ``-DLOTUS_ENABLE_CSR=ON``: Build the indexing context-sensitive reachability solver
 * ``-DLOTUS_ENABLE_OWL=ON``: Build the Owl SMT solver
+* ``-DLOTUS_ENABLE_SMT_STABILIZER=ON``: Build the SMTStabilizer SMT-LIB
+  normalization library and tool (needs GMP, GMPXX, and MPFR)
 * ``-DLOTUS_ENABLE_DYNAA=ON``: Build dynamic alias-analysis tools
 * ``-DLOTUS_USE_CCLYZER=ON``: Enable optional cclyzer++ alias analysis backend
 * ``-DLOTUS_ENABLE_TYPE_QUALIFIER=ON``: Enable the TypeQualifier uninitialized-data checker

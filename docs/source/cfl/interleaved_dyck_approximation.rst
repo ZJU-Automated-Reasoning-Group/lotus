@@ -140,6 +140,7 @@ Using the Solver
    Options options;
    options.parity_groups = 2;
    options.run_on_demand = true;
+   options.factorized_tracing = true; // opt-in lazy provenance reconstruction
 
    Solver solver;
    ApproximationResult result =
@@ -148,6 +149,10 @@ Using the Solver
    bool may_reach = result.on_demand.count({source, target}) != 0;
    bool definitely_reaches =
        result.underapproximation.count({source, target}) != 0;
+
+``Options::factorized_tracing`` defaults to ``false``. Setting it to ``true``
+switches the refinement stages from eager derivation records to lazy
+reconstruction of contributing edges from the saturated CFL relations.
 
 Individual APIs are also available for projected reachability, projected
 intersection, the union-Dyck underapproximation, and mutual refinement. Public
@@ -188,8 +193,8 @@ refinement:
    ctest --test-dir build -R interleaved_dyck_approximation_test --output-on-failure
 
 The CLI exposes ``--value-flow``, ``--parity-groups N``, ``--no-on-demand``,
-``--print-lower``, and ``--print-final``. It preserves the directed input arcs
-exactly as parsed.
+``--factorized-tracing``, ``--print-lower``, and ``--print-final``. It
+preserves the directed input arcs exactly as parsed.
 
 Cost Considerations
 -------------------
@@ -199,5 +204,11 @@ Large dense graphs can therefore require substantial time and memory.
 On-demand refinement additionally analyzes unknown pairs one at a time. Set
 ``Options::run_on_demand`` to ``false`` when the stronger-grammar result is
 sufficient and lower latency is more important than the final refinement.
+
+The default eager tracing stores unary and binary derivation records during
+saturation, which can dominate memory on dense graphs. Setting
+``Options::factorized_tracing`` to ``true`` skips those records and
+reconstructs the contributing edges from the saturated relations instead,
+trading recomputation time for lower memory use.
 
 See also :doc:`mutual_refinement` and :doc:`inter_dyck_graph_reduce`.

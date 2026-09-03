@@ -76,7 +76,7 @@ PDG is exposed as an LLVM ``ModulePass``. A typical usage pattern:
 
    auto result = slicer.forward(criteria, options, &module);
 
-For interactive querying and slicing, see the :doc:`../pdg_query_language`
+For interactive querying and slicing, see the :doc:`../user_guide/pdg_query_language`
 and the ``lotus-ir-pdg-query`` tool described in :doc:`../tools/ir`.
 
 The Cypher selector language implementation is separated from these concrete

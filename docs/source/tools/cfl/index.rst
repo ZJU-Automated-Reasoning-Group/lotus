@@ -14,7 +14,10 @@ enables analysis of complex program properties using grammar-based constraints.
 **Location**: ``tools/cfl/``
 
 **Tools**: ``lotus-cfl-classical``, ``lotus-cfl-alias``, ``lotus-cfl-vf``,
-``lotus-cfl-mcfl``, and CSR.
+``lotus-cfl-mcfl``, ``lotus-cfl-mutual-refinement``,
+``lotus-cfl-interleaved-dyck-approximation``,
+``lotus-cfl-unary-interleaved-dyck``, ``lotus-cfl-inter-dyck-graph-reduce``,
+and CSR.
 
 Classical CFL and Alias Analysis
 --------------------------------
@@ -110,3 +113,104 @@ queries with different indexing strategies (GRAIL, PathTree, or combined).
 
    # Parallel tabulation with 4 threads
    ./build/bin/csr -p -j 4 input.graph
+
+Mutual Refinement of CFL Reachability
+-------------------------------------
+
+Runs the SAS 2023 mutual-refinement algorithm over a grammar file and a DOT
+graph. The grammar file holds one or more ``{ ... }`` blocks whose first ``|``
+row names the start symbol and whose later rows encode epsilon, unary, or
+binary productions.
+
+**Binary**: ``lotus-cfl-mutual-refinement``
+
+**Location**: ``tools/cfl/mutual-refinement/lotus-cfl-mutual-refinement.cpp``
+
+.. code-block:: bash
+
+   cmake --build build --target lotus-cfl-mutual-refinement
+   build/bin/lotus-cfl-mutual-refinement grammars.txt graph.dot refine
+
+The final argument selects ``naive`` (independent CFL saturation per grammar,
+then intersection) or ``refine`` (alternating refinement loop). Pass
+``--factorized-tracing`` after ``refine`` to reconstruct contributing edges
+from the saturated relations instead of eager derivation records. See
+:doc:`../../cfl/mutual_refinement` for the library API and algorithm details.
+
+Interleaved-Dyck Approximation
+------------------------------
+
+Computes staged lower and upper bounds for typed interleaved-Dyck reachability
+on a DOT graph: a certified lower bound, then progressively tighter
+overapproximations through parity refinement, mutual refinement, and on-demand
+checks.
+
+**Binary**: ``lotus-cfl-interleaved-dyck-approximation``
+
+**Location**: ``tools/cfl/interleaved-dyck-approximation/lotus-cfl-interleaved-dyck-approximation.cpp``
+
+.. code-block:: bash
+
+   cmake --build build --target lotus-cfl-interleaved-dyck-approximation
+   build/bin/lotus-cfl-interleaved-dyck-approximation --parity-groups 2 \
+     --factorized-tracing graph.dot
+
+Useful options include ``--value-flow`` for value-flow benchmark
+preprocessing, ``--no-on-demand`` to stop after the stronger grammar,
+``--print-lower``/``--print-final`` for the certified lower or final upper
+pairs, and ``-o FILE`` for file output. See
+:doc:`../../cfl/interleaved_dyck_approximation` for the library API and
+algorithm details.
+
+Unary Interleaved-Dyck Reachability
+-----------------------------------
+
+Computes exact bidirected unary ``D1``-interleaved-``D1`` reachability on a DOT
+graph with the adaptive (default) or fixed-counter algorithm.
+
+**Binary**: ``lotus-cfl-unary-interleaved-dyck``
+
+**Location**: ``tools/cfl/unary-interleaved-dyck/lotus-cfl-unary-interleaved-dyck.cpp``
+
+.. code-block:: bash
+
+   cmake --build build --target lotus-cfl-unary-interleaved-dyck
+   build/bin/lotus-cfl-unary-interleaved-dyck --algorithm adaptive graph.dot
+
+Useful options include ``--direct`` to skip quotient sparsification,
+``--bidirect`` to add missing complement reverse arcs (a sound
+overapproximation of the original directed graph), ``--shallow K`` for the
+adaptive-only shallow solve, ``--stats`` for construction and backend
+statistics, and ``--print-pairs`` to materialize non-reflexive component
+pairs. See :doc:`../../cfl/unary_interleaved_dyck` for the library API and
+algorithm details.
+
+Interleaved-Dyck Graph Reduction
+--------------------------------
+
+Implements the PLDI 2020 graph-simplification pipeline for interleaved-Dyck
+reachability. It is a graph transformation, not a reachability solver: it
+edits a working copy of a DOT graph in place and produces a smaller graph that
+preserves the reachability property covered by the reduction theorem.
+
+**Binary**: ``lotus-cfl-inter-dyck-graph-reduce`` (Python driver) with the
+compiled helpers ``lotus-cfl-inter-dyck-graphaux`` and
+``lotus-cfl-inter-dyck-dkmerge``
+
+**Location**: ``tools/cfl/inter-dyck-graph-reduce/``
+
+.. code-block:: bash
+
+   cmake --build build --target lotus-cfl-inter-dyck-graph-reduce
+   cp input.dot reduced.dot
+   python3 build/bin/lotus-cfl-inter-dyck-graph-reduce.py reduced.dot \
+     --graphaux build/bin/lotus-cfl-inter-dyck-graphaux \
+     --dkmerge build/bin/lotus-cfl-inter-dyck-dkmerge
+
+``lotus-cfl-inter-dyck-graphaux`` performs one-color component construction
+(``lotus-cfl-inter-dyck-graphaux <graph.dot>``) and
+``lotus-cfl-inter-dyck-dkmerge`` performs the degree-based merge phase; the
+Python driver alternates both colors and removes proven-redundant edges. Pass
+``--bidirected-input`` when the input already represents both directions. See
+:doc:`../../cfl/inter_dyck_graph_reduce` for the library API and algorithm
+details.

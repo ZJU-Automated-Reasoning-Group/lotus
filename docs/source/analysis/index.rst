@@ -16,6 +16,9 @@ At a glance:
 
 - **CFG** (``lib/Analysis/CFG``): Control Flow Graph utilities for reachability,
   dominance, and structural reasoning. See :doc:`cfg`.
+- **ControlDependence** (``lib/Analysis/ControlDependence``): Standard CD,
+  NTSCD variants, DOD variants, strong control closure, and Lotus ICFG
+  integration. See :doc:`control_dependence`.
 - **Concurrency** (``lib/Concurrency``): Thread-aware analyses for
   multi-threaded code (MHP, lock sets, thread modeling). Now documented in its
   own section: see :doc:`../concurrency/index`.
@@ -53,6 +56,7 @@ details.
    :maxdepth: 2
 
    cfg
+   control_dependence
    debug_info
    loop
    null_pointer

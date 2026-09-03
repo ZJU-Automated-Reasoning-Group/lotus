@@ -151,6 +151,8 @@ experiments and by ``InterleavedDyckApproximation``.
 * Integer-encoded ``CnfGrammar`` and ``CnfGraph`` representation
 * CFL saturation with unary and binary derivation records
 * Backward closure to contributing input edges
+* Opt-in factorized tracing that reconstructs contributing edges from the
+  saturated relations without recording derivations
 * Generic file-driven alternating-refinement experiment
 
 It does not own typed delimiter semantics, approximation grammars, benchmark

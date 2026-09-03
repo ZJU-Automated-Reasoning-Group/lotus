@@ -26,6 +26,31 @@ See :doc:`../alias/alias_analysis` for detailed instructions and command example
 * **AserPTA** – Constraint-based pointer analysis with multiple context
   sensitivities, including k-callsite and k-origin (thread-creation)
   sensitivity (``lib/Alias/InclusionBased/AserPTA``).
+* **LotusAA** – Native alias analysis engine with interprocedural,
+  flow-sensitive, and field-sensitive reasoning
+  (``lib/Alias/InclusionBased/LotusAA``). See :doc:`../alias/lotusaa`.
+* **FlowSensitivePTA** – Sparse flow-sensitive inclusion-based pointer
+  analysis with an object-versioned solver variant
+  (``lib/Alias/InclusionBased/FlowSensitive``).
+  See :doc:`../alias/flowsensitive`.
+* **DDA** – Demand-driven alias-analysis infrastructure that refines alias
+  information on demand instead of materializing a full global solution
+  (``lib/Alias/DemandDriven/DDA``). See :doc:`../alias/dda`.
+* **SRAA** – Strict Relations Alias Analysis that proves pointers cannot alias
+  by establishing strict relations between symbolic expressions
+  (``lib/Alias/Specialized/SRAA``). See :doc:`../alias/sraa`.
+* **TPA** – Inclusion-based, flow- and context-sensitive pointer analysis with
+  k-limiting support and a semi-sparse program representation
+  (``lib/Alias/InclusionBased/TPA``). See :doc:`../alias/tpa`.
+* **Spec** – Alias specification manager that loads and serves per-function
+  specifications for library routines (``lib/Alias/Infrastructure/Spec``).
+  See :doc:`../alias/spec`.
+* **Metrics** – Pointer analysis metrics for measuring precision and
+  soundness-related properties (``lib/Alias/Infrastructure/Metrics``).
+  See :doc:`../alias/metrics`.
+* **TypeQualifier** – Qualifier-based analysis infrastructure that models
+  qualifier-style properties over program values
+  (``lib/Alias/Specialized/TypeQualifier``). See :doc:`../alias/typequalifier`.
 
 Intermediate Representations
 ----------------------------
@@ -38,6 +63,21 @@ See :doc:`../ir/index` for builder APIs and code snippets.
   predicate information.
 * **DyckVFG** – Value Flow Graph variant designed for Dyck-based alias
   analyses (``lib/Alias/UnificationBased/DyckAA/DyckVFG.cpp``).
+* **SVFG** – Sparse Value-Flow Graph combining SSA with MemorySSA for
+  efficient interprocedural value-flow analysis (``lib/IR/SVFG``).
+  See :doc:`../ir/svfg`.
+* **GVFG** – Guarded Value-Flow Graph, a per-function IR for value flow,
+  memory flow, and path-sensitive dependencies (``lib/IR/GVFG``).
+  See :doc:`../ir/gvfg`.
+* **ICFG** – Interprocedural Control Flow Graph extending the CFG with call
+  and return edges (``lib/IR/ICFG``). See :doc:`../ir/icfg`.
+* **ShadowMemSSA** – Query layer for SSA-like shadow memory instructions
+  inserted by the Sea-DSA ShadowMem pass (``lib/IR/ShadowMemSSA``).
+  See :doc:`../ir/shadowmemssa`.
+* **GSA** – Gated SSA, a read-only view of the control flow guarding SSA
+  values at join points (``lib/IR/GSA``). See :doc:`../ir/gsa`.
+* **vSSA** – Variable Static Single Assignment, an SSI variant designed for
+  precise symbolic range analysis (``lib/IR/vSSA``). See :doc:`../ir/vssa`.
 
 Machine Learning Features
 ------------------------

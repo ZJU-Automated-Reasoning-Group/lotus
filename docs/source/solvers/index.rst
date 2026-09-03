@@ -18,6 +18,7 @@ SMTSampler).
    smtsampler
    symabs
    staub
+   tuna
    stingx
    egraphs_simp
    fpsolve

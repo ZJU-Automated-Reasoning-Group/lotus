@@ -791,7 +791,7 @@ Getting Help
 Documentation
 ~~~~~~~~~~~~~
 
-- :doc:`index` - Main documentation
+- :doc:`../index` - Main documentation
 - :doc:`architecture` - Framework architecture
 - :doc:`../developer/api_reference` - API documentation
 - :doc:`tutorials` - Usage examples
@@ -862,4 +862,4 @@ See Also
 
 - :doc:`installation` - Installation guide
 - :doc:`quickstart` - Quick start guide  
-- :doc:`tools/index` - Tool documentation
+- :doc:`../tools/index` - Tool documentation

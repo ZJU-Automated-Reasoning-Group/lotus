@@ -26,6 +26,9 @@ struct Options {
   /// On-demand refinement can be expensive because it checks unknown pairs
   /// separately. It is enabled by default to reproduce the full pipeline.
   bool run_on_demand = true;
+  /// Reconstruct contributing edges from the saturated CFL relations instead
+  /// of recording derivations eagerly. Disabled by default for compatibility.
+  bool factorized_tracing = false;
 };
 
 struct ApproximationResult {
@@ -69,11 +72,11 @@ public:
 
   /// Alternates the two projected analyses and retains only graph edges used
   /// by their derivations until the edge set stabilizes.
-  PairSet
-  mutualRefinement(const Graph &graph,
-                   GrammarStrength strength = GrammarStrength::Classic,
-                   unsigned parity_groups = 2,
-                   BenchmarkKind benchmark = BenchmarkKind::Taint) const;
+  PairSet mutualRefinement(const Graph &graph,
+                           GrammarStrength strength = GrammarStrength::Classic,
+                           unsigned parity_groups = 2,
+                           BenchmarkKind benchmark = BenchmarkKind::Taint,
+                           bool factorized_tracing = false) const;
 
   /// Reproduces the staged benchmark pipeline from the reference artifact.
   ApproximationResult analyze(const Graph &graph,

@@ -477,7 +477,7 @@ struct ReachabilityRun {
 };
 
 ReachabilityRun
-runGrammar(EncodedGrammar encoded, bool trace,
+runGrammar(EncodedGrammar encoded, bool trace, bool factorized_tracing = false,
            const std::optional<Pair> &trace_pair = std::nullopt) {
   if (encoded.dense_to_vertex.size() >
       static_cast<std::size_t>(std::numeric_limits<int>::max())) {
@@ -496,8 +496,12 @@ runGrammar(EncodedGrammar encoded, bool trace,
       binary_record;
   std::unordered_set<mr::Edge, mr::EdgeHasher> raw_result;
   if (trace) {
-    raw_result =
-        engine.runCFLReachability(encoded.grammar, unary_record, binary_record);
+    if (factorized_tracing) {
+      raw_result = engine.runCFLReachability(encoded.grammar);
+    } else {
+      raw_result = engine.runCFLReachability(encoded.grammar, unary_record,
+                                             binary_record);
+    }
   } else {
     raw_result = engine.runCFLReachability(encoded.grammar);
   }
@@ -519,8 +523,11 @@ runGrammar(EncodedGrammar encoded, bool trace,
   if (!trace) {
     return result;
   }
-  const auto closure = engine.getEdgeClosure(encoded.grammar, closure_roots,
-                                             unary_record, binary_record);
+  const auto closure =
+      factorized_tracing
+          ? engine.getFactorizedEdgeClosure(encoded.grammar, closure_roots)
+          : engine.getEdgeClosure(encoded.grammar, closure_roots, unary_record,
+                                  binary_record);
   for (const mr::Edge &edge : closure) {
     const auto label = encoded.terminal_to_label.find(std::get<1>(edge));
     if (label == encoded.terminal_to_label.end()) {
@@ -536,12 +543,14 @@ runGrammar(EncodedGrammar encoded, bool trace,
 ReachabilityRun
 runProjected(const Graph &graph, Alphabet balanced, GrammarStrength strength,
              unsigned parity_groups, bool trace = false,
+             bool factorized_tracing = false,
              const std::optional<Pair> &trace_pair = std::nullopt) {
   if (strength == GrammarStrength::Parity) {
     return runGrammar(buildParityGrammar(graph, balanced, parity_groups), trace,
-                      trace_pair);
+                      factorized_tracing, trace_pair);
   }
-  return runGrammar(buildClassicGrammar(graph, balanced), trace, trace_pair);
+  return runGrammar(buildClassicGrammar(graph, balanced), trace,
+                    factorized_tracing, trace_pair);
 }
 
 PairSet runCombined(const Graph &graph) {
@@ -724,13 +733,15 @@ std::vector<Graph> weakComponents(const Graph &graph) {
 
 PairSet mutualRefinementImpl(const Graph &input, GrammarStrength strength,
                              unsigned parity_groups, BenchmarkKind benchmark,
+                             bool factorized_tracing,
                              const std::optional<Pair> &target = std::nullopt) {
   const std::vector<Graph> components = weakComponents(input);
   if (components.size() > 1U) {
     PairSet result;
     for (const Graph &component : components) {
-      PairSet component_result = mutualRefinementImpl(
-          component, strength, parity_groups, benchmark, target);
+      PairSet component_result =
+          mutualRefinementImpl(component, strength, parity_groups, benchmark,
+                               factorized_tracing, target);
       result.insert(component_result.begin(), component_result.end());
     }
     return result;
@@ -745,7 +756,7 @@ PairSet mutualRefinementImpl(const Graph &input, GrammarStrength strength,
   while (!graph.empty()) {
     const std::size_t old_edge_count = graph.edges().size();
     auto alpha = runProjected(graph, Alphabet::Parenthesis, strength,
-                              parity_groups, true, target);
+                              parity_groups, true, factorized_tracing, target);
     alpha_paths = std::move(alpha.pairs);
     if (target && alpha_paths.count(*target) == 0U) {
       return {};
@@ -756,7 +767,7 @@ PairSet mutualRefinementImpl(const Graph &input, GrammarStrength strength,
     }
 
     auto beta = runProjected(graph, Alphabet::Bracket, strength, parity_groups,
-                             true, target);
+                             true, factorized_tracing, target);
     beta_paths = std::move(beta.pairs);
     if (target && beta_paths.count(*target) == 0U) {
       return {};
@@ -884,17 +895,19 @@ PairSet expandCondensedPairs(const Condensation &condensation,
 PairSet refinedWithCondensation(const Graph &graph,
                                 const PairSet &underapproximation,
                                 GrammarStrength strength,
-                                unsigned parity_groups,
-                                BenchmarkKind benchmark) {
+                                unsigned parity_groups, BenchmarkKind benchmark,
+                                bool factorized_tracing) {
   const Condensation condensation = condense(graph, underapproximation);
-  const PairSet condensed = mutualRefinementImpl(condensation.graph, strength,
-                                                 parity_groups, benchmark);
+  const PairSet condensed =
+      mutualRefinementImpl(condensation.graph, strength, parity_groups,
+                           benchmark, factorized_tracing);
   return expandCondensedPairs(condensation, condensed);
 }
 
 PairSet onDemand(const Graph &graph, const PairSet &underapproximation,
                  const PairSet &overapproximation, GrammarStrength strength,
-                 unsigned parity_groups, BenchmarkKind benchmark) {
+                 unsigned parity_groups, BenchmarkKind benchmark,
+                 bool factorized_tracing) {
   const Condensation condensation = condense(graph, underapproximation);
   PairSet result = underapproximation;
   std::unordered_map<Pair, bool, PairHash> memory;
@@ -913,7 +926,7 @@ PairSet onDemand(const Graph &graph, const PairSet &underapproximation,
     if (found == memory.end()) {
       const bool accepted =
           mutualRefinementImpl(condensation.graph, strength, parity_groups,
-                               benchmark, root_pair)
+                               benchmark, factorized_tracing, root_pair)
               .count(root_pair) != 0U;
       found = memory.emplace(root_pair, accepted).first;
     }
@@ -948,8 +961,10 @@ PairSet Solver::underapproximation(const Graph &graph) const {
 
 PairSet Solver::mutualRefinement(const Graph &graph, GrammarStrength strength,
                                  unsigned parity_groups,
-                                 BenchmarkKind benchmark) const {
-  return mutualRefinementImpl(graph, strength, parity_groups, benchmark);
+                                 BenchmarkKind benchmark,
+                                 bool factorized_tracing) const {
+  return mutualRefinementImpl(graph, strength, parity_groups, benchmark,
+                              factorized_tracing);
 }
 
 ApproximationResult Solver::analyze(const Graph &input, BenchmarkKind benchmark,
@@ -983,13 +998,13 @@ ApproximationResult Solver::analyze(const Graph &input, BenchmarkKind benchmark,
 
   result.mutual_refinement = refinedWithCondensation(
       graph, result.underapproximation, GrammarStrength::Classic,
-      options.parity_groups, benchmark);
+      options.parity_groups, benchmark, options.factorized_tracing);
   graph = retainMatchedLabels(
       removeNotOnCandidatePaths(graph, result.mutual_refinement));
 
   result.stronger_grammar = refinedWithCondensation(
       graph, result.underapproximation, GrammarStrength::Parity,
-      options.parity_groups, benchmark);
+      options.parity_groups, benchmark, options.factorized_tracing);
   graph = retainMatchedLabels(
       removeNotOnCandidatePaths(graph, result.stronger_grammar));
 
@@ -1000,12 +1015,14 @@ ApproximationResult Solver::analyze(const Graph &input, BenchmarkKind benchmark,
 
   const PairSet classic_on_demand =
       onDemand(graph, result.underapproximation, result.stronger_grammar,
-               GrammarStrength::Classic, options.parity_groups, benchmark);
+               GrammarStrength::Classic, options.parity_groups, benchmark,
+               options.factorized_tracing);
   graph =
       retainMatchedLabels(removeNotOnCandidatePaths(graph, classic_on_demand));
   result.on_demand =
       onDemand(graph, result.underapproximation, classic_on_demand,
-               GrammarStrength::Parity, options.parity_groups, benchmark);
+               GrammarStrength::Parity, options.parity_groups, benchmark,
+               options.factorized_tracing);
   return result;
 }
 

@@ -8,8 +8,8 @@ Context-free-language reachability and graph simplification.
 | **CSIndex** | Indexing extended Dyck-CFL reachability for context-sensitive analysis (OOPSLA 22). Backbone discovery, gate graph, tabulation, compression. |
 | **InterDyckGraphReduce** | Graph simplification for interleaved Dyck-reachability (PLDI 20). Bracket/paren matching. |
 | **InterleavedDyckCore** | Shared typed labels, graph, pair types, and DOT parser for interleaved-Dyck datasets. |
-| **UnaryInterleavedDyck** | Exact Adaptive and POPL 2022 FixedCounter algorithms for bidirected unary `D1`-interleaved-`D1`. |
-| **InterleavedDyckApproximation** | Staged lower/upper bounds, parity grammar, mutual refinement, and on-demand checks for typed interleaved Dyck (SOAP 25?). |
+| **UnaryInterleavedDyck** | Adaptive and POPL 2022 FixedCounter algorithms for bidirected unary `D1`-interleaved-`D1`. |
+| **InterleavedDyckApproximation** | Staged lower/upper bounds, parity grammar, mutual refinement, and on-demand checks for typed interleaved Dyck ([SOAP 24](https://cs.au.dk/~pavlogiannis/publications/papers/soap24.pdf)). |
 | **MCFL** | Normal-form multiple-context-free-language reachability and the POPL 2025 typed underapproximation hierarchy. |
 | **MutualRefinement** | Integer CNF saturation, derivation tracing, and generic mutual-refinement experiments (SAS 23). |
 

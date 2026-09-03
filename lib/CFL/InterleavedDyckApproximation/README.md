@@ -4,7 +4,7 @@
 > general typed interleaved-Dyck reachability.
 
 This directory contains a native C++17 implementation of the staged algorithm
-from the artifact **A Better Approximation for Interleaved Dyck Reachability**
+from the artifact **A Better Approximation for Interleaved Dyck Reachability (SOAP'24)**
 by Giovanna Kobus Conrado and Andreas Pavlogiannis.
 
 The port retains the artifact's main stages:

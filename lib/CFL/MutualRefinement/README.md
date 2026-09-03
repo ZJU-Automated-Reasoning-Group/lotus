@@ -11,9 +11,9 @@ pipeline. It provides:
 
 - an integer-encoded Chomsky-normal-form `CnfGrammar`;
 - CFL saturation over an integer-encoded `CnfGraph`;
-- unary/binary derivation records; and
-- backward closure from derived reachability edges to contributing input
-  edges.
+- eager unary/binary derivation records and backward closure; and
+- opt-in factorized tracing that reconstructs contributing input edges from
+  the saturated relations without recording derivations.
 
 Clients supply the grammar, graph encoding, refinement schedule, and meaning
 of the result. The library does not parse `op/cp/ob/cb` labels, construct
@@ -71,3 +71,7 @@ epsilon, unary, or binary productions:
 
 Graph labels are treated as opaque terminals. This CLI does not assign
 interleaved-Dyck lower/upper semantics.
+
+Pass `--factorized-tracing` after `refine` to use ordinary CFL saturation plus
+lazy backward reconstruction. Without the option, refinement continues to use
+the original eager derivation records.

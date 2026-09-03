@@ -26,6 +26,7 @@ struct CommandLine {
   unsigned parity_groups = 2;
   bool value_flow = false;
   bool run_on_demand = true;
+  bool factorized_tracing = false;
   PrintedPairs printed_pairs = PrintedPairs::None;
 };
 
@@ -39,6 +40,8 @@ void usage(std::ostream &output) {
             "  --value-flow       use value-flow benchmark preprocessing\n"
             "  --parity-groups N  parity groups, 1-4 (default: 2)\n"
             "  --no-on-demand     stop after the stronger grammar\n"
+            "  --factorized-tracing\n"
+            "                     reconstruct provenance from CFL closure\n"
             "  --print-lower      print certified lower-bound pairs\n"
             "  --print-final      print final upper-bound pairs\n"
             "  -o FILE            write output to FILE\n"
@@ -77,6 +80,10 @@ CommandLine parseCommandLine(int argc, char **argv) {
     }
     if (argument == "--no-on-demand") {
       result.run_on_demand = false;
+      continue;
+    }
+    if (argument == "--factorized-tracing") {
+      result.factorized_tracing = true;
       continue;
     }
     if (argument == "--print-lower") {
@@ -146,6 +153,7 @@ int main(int argc, char **argv) {
     approximation::Options options;
     options.parity_groups = command_line.parity_groups;
     options.run_on_demand = command_line.run_on_demand;
+    options.factorized_tracing = command_line.factorized_tracing;
     const auto start = std::chrono::steady_clock::now();
     const approximation::ApproximationResult result =
         approximation::Solver{}.analyze(

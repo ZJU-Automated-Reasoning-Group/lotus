@@ -185,15 +185,22 @@ encode(
 }
 
 int run(int argc, char *argv[]) {
-  if (argc != 4) {
+  if (argc != 4 && argc != 5) {
     std::cerr << "Usage: " << argv[0]
-              << " <grammar-file> <graph-file> <\"naive\"/\"refine\">" << '\n';
+              << " <grammar-file> <graph-file> <\"naive\"/\"refine\"> "
+                 "[--factorized-tracing]"
+              << '\n';
     return 1;
   }
   // Get arguments
   std::string grammarFile = argv[1];
   std::string graphFile = argv[2];
   std::string mode = argv[3];
+  const bool factorized_tracing = argc == 5;
+  if (factorized_tracing && std::string(argv[4]) != "--factorized-tracing") {
+    std::cerr << "unknown option: " << argv[4] << '\n';
+    return 1;
+  }
   // Read and encode
   auto encoded = encode(readRawGrammars(grammarFile), readRawGraph(graphFile));
   const std::vector<CnfGrammar> &grammars = std::get<0>(encoded);
@@ -226,17 +233,22 @@ int run(int argc, char *argv[]) {
       previousEdgeSetSize = edgeSet.size();
       for (size_t i = 0; i < numGrammar; i++) {
         graphs[i].reinit(numNode, edgeSet);
-        std::unordered_map<Edge, std::unordered_set<int>, EdgeHasher>
-            singleRecord;
-        std::unordered_map<
-            Edge,
-            std::unordered_set<std::tuple<int, int, int>, IntTripleHasher>,
-            EdgeHasher>
-            binaryRecord;
-        results[i] = graphs[i].runCFLReachability(grammars[i], singleRecord,
-                                                  binaryRecord);
-        edgeSet = graphs[i].getEdgeClosure(grammars[i], results[i],
-                                           singleRecord, binaryRecord);
+        if (factorized_tracing) {
+          results[i] = graphs[i].runCFLReachability(grammars[i]);
+          edgeSet = graphs[i].getFactorizedEdgeClosure(grammars[i], results[i]);
+        } else {
+          std::unordered_map<Edge, std::unordered_set<int>, EdgeHasher>
+              singleRecord;
+          std::unordered_map<
+              Edge,
+              std::unordered_set<std::tuple<int, int, int>, IntTripleHasher>,
+              EdgeHasher>
+              binaryRecord;
+          results[i] = graphs[i].runCFLReachability(grammars[i], singleRecord,
+                                                    binaryRecord);
+          edgeSet = graphs[i].getEdgeClosure(grammars[i], results[i],
+                                             singleRecord, binaryRecord);
+        }
       }
       refineIterationCounter++;
     } while (edgeSet.size() != previousEdgeSetSize);

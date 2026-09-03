@@ -16,6 +16,11 @@ add_lotus_targeted_test(interleaved_dyck_approximation_test
     LINK_LIBS
         CanaryInterleavedDyckApproximation)
 
+add_lotus_targeted_test(mutual_refinement_test
+    MutualRefinementTest.cpp
+    LINK_LIBS
+        MutualRefinement)
+
 add_lotus_test_suite(unary_interleaved_dyck_test
     SOURCES
         UnaryInterleavedDyckAdaptiveTest.cpp

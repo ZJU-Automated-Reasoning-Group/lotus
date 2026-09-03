@@ -61,6 +61,32 @@ TEST(InterleavedDyckApproximationSolverTest,
 }
 
 TEST(InterleavedDyckApproximationSolverTest,
+     FactorizedTracingPreservesTheFullPipeline) {
+  Graph graph;
+  graph.addEdge(0, 1, Label::openParenthesis(0));
+  graph.addEdge(1, 2, Label::openBracket(0));
+  graph.addEdge(2, 3, Label::closeBracket(0));
+  graph.addEdge(3, 4, Label::closeParenthesis(0));
+  graph.addEdge(0, 5, Label::openParenthesis(0));
+  graph.addEdge(5, 6, Label::openBracket(0));
+  graph.addEdge(6, 3, Label::closeBracket(0));
+
+  const Solver solver;
+  const ApproximationResult eager = solver.analyze(graph);
+  Options options;
+  options.factorized_tracing = true;
+  const ApproximationResult factorized =
+      solver.analyze(graph, BenchmarkKind::Taint, options);
+
+  EXPECT_EQ(factorized.regularization, eager.regularization);
+  EXPECT_EQ(factorized.intersection, eager.intersection);
+  EXPECT_EQ(factorized.underapproximation, eager.underapproximation);
+  EXPECT_EQ(factorized.mutual_refinement, eager.mutual_refinement);
+  EXPECT_EQ(factorized.stronger_grammar, eager.stronger_grammar);
+  EXPECT_EQ(factorized.on_demand, eager.on_demand);
+}
+
+TEST(InterleavedDyckApproximationSolverTest,
      FullPipelineKeepsAConcreteBalancedPath) {
   Graph graph;
   graph.addEdge(0, 1, Label::openParenthesis(0));

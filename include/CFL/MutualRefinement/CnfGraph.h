@@ -39,6 +39,11 @@ struct CnfGraph {
       const std::unordered_map<
           Edge, std::unordered_set<std::tuple<int, int, int>, IntTripleHasher>,
           EdgeHasher> &binaryRecord) const;
+  // Reconstruct contributing edges directly from the saturated relations.
+  // runCFLReachability(grammar) must be called before this method.
+  std::unordered_set<Edge, EdgeHasher> getFactorizedEdgeClosure(
+      const CnfGrammar &grammar,
+      const std::unordered_set<Edge, EdgeHasher> &result) const;
 
 private:
   std::unordered_set<Edge, EdgeHasher> fastEdgeTest;
@@ -49,12 +54,12 @@ private:
   // This function is called by the previous two overloaded runCFLReachability
   // functions
   std::unordered_set<Edge, EdgeHasher> runCFLReachabilityCore(
-      const CnfGrammar &grammar, const bool record,
+      const CnfGrammar &grammar,
       std::unordered_map<Edge, std::unordered_set<int>, EdgeHasher>
-          &singleRecord,
+          *singleRecord,
       std::unordered_map<
           Edge, std::unordered_set<std::tuple<int, int, int>, IntTripleHasher>,
-          EdgeHasher> &binaryRecord);
+          EdgeHasher> *binaryRecord);
 };
 
 } // namespace lotus::cfl::mutual_refinement

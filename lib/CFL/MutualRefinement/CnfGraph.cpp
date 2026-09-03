@@ -37,14 +37,7 @@ bool CnfGraph::hasEdge(const Edge &e) const {
 
 std::unordered_set<Edge, EdgeHasher>
 CnfGraph::runCFLReachability(const CnfGrammar &grammar) {
-  // To call runCFLReachabilityCore, those two maps are always needed,
-  // but we can use the Boolean flag to enable or disable tracing
-  std::unordered_map<Edge, std::unordered_set<int>, EdgeHasher> singleRecord;
-  std::unordered_map<
-      Edge, std::unordered_set<std::tuple<int, int, int>, IntTripleHasher>,
-      EdgeHasher>
-      binaryRecord;
-  return runCFLReachabilityCore(grammar, false, singleRecord, binaryRecord);
+  return runCFLReachabilityCore(grammar, nullptr, nullptr);
 }
 
 std::unordered_set<Edge, EdgeHasher> CnfGraph::runCFLReachability(
@@ -53,7 +46,7 @@ std::unordered_set<Edge, EdgeHasher> CnfGraph::runCFLReachability(
     std::unordered_map<
         Edge, std::unordered_set<std::tuple<int, int, int>, IntTripleHasher>,
         EdgeHasher> &binaryRecord) {
-  return runCFLReachabilityCore(grammar, true, singleRecord, binaryRecord);
+  return runCFLReachabilityCore(grammar, &singleRecord, &binaryRecord);
 }
 
 std::unordered_set<Edge, EdgeHasher> CnfGraph::getEdgeClosure(
@@ -119,13 +112,102 @@ std::unordered_set<Edge, EdgeHasher> CnfGraph::getEdgeClosure(
   return closure;
 }
 
+std::unordered_set<Edge, EdgeHasher> CnfGraph::getFactorizedEdgeClosure(
+    const CnfGrammar &grammar,
+    const std::unordered_set<Edge, EdgeHasher> &result) const {
+  // Build symbol-specific views of the already saturated closure. These are
+  // the factorized Out_X(i) and In_X(j) relations, not derivation records.
+  std::unordered_map<std::pair<int, int>, std::vector<int>, IntPairHasher>
+      outgoing;
+  std::unordered_map<std::pair<int, int>, std::vector<int>, IntPairHasher>
+      incoming;
+  for (const Edge &edge : fastEdgeTest) {
+    const int source = std::get<0>(edge);
+    const int symbol = std::get<1>(edge);
+    const int target = std::get<2>(edge);
+    outgoing[std::make_pair(symbol, source)].push_back(target);
+    incoming[std::make_pair(symbol, target)].push_back(source);
+  }
+
+  std::unordered_set<Edge, EdgeHasher> closure;
+  std::unordered_set<Edge, EdgeHasher> visited;
+  std::deque<Edge> worklist;
+
+  auto enqueue = [&visited, &worklist](const Edge &edge) {
+    if (visited.insert(edge).second) {
+      worklist.push_back(edge);
+    }
+  };
+  for (const Edge &edge : result) {
+    enqueue(edge);
+  }
+
+  while (!worklist.empty()) {
+    const Edge edge = worklist.front();
+    worklist.pop_front();
+    const int source = std::get<0>(edge);
+    const int symbol = std::get<1>(edge);
+    const int target = std::get<2>(edge);
+
+    if (grammar.terminals.count(symbol) != 0U) {
+      closure.insert(edge);
+      continue;
+    }
+
+    const auto unary = grammar.unaryL.find(symbol);
+    if (unary != grammar.unaryL.end()) {
+      for (int production_index : unary->second) {
+        const int child = grammar.unaryProductions[production_index].second;
+        const Edge child_edge = std::make_tuple(source, child, target);
+        if (hasEdge(child_edge)) {
+          enqueue(child_edge);
+        }
+      }
+    }
+
+    const auto binary = grammar.binaryL.find(symbol);
+    if (binary == grammar.binaryL.end()) {
+      continue;
+    }
+    for (int production_index : binary->second) {
+      const auto &production = grammar.binaryProductions[production_index];
+      const int left = production.second.first;
+      const int right = production.second.second;
+      const auto out = outgoing.find(std::make_pair(left, source));
+      const auto in = incoming.find(std::make_pair(right, target));
+      if (out == outgoing.end() || in == incoming.end()) {
+        continue;
+      }
+
+      if (out->second.size() <= in->second.size()) {
+        for (int pivot : out->second) {
+          if (!hasEdge(std::make_tuple(pivot, right, target))) {
+            continue;
+          }
+          enqueue(std::make_tuple(source, left, pivot));
+          enqueue(std::make_tuple(pivot, right, target));
+        }
+      } else {
+        for (int pivot : in->second) {
+          if (!hasEdge(std::make_tuple(source, left, pivot))) {
+            continue;
+          }
+          enqueue(std::make_tuple(source, left, pivot));
+          enqueue(std::make_tuple(pivot, right, target));
+        }
+      }
+    }
+  }
+  return closure;
+}
+
 /* The CFL-reachability algorithm */
 std::unordered_set<Edge, EdgeHasher> CnfGraph::runCFLReachabilityCore(
-    const CnfGrammar &grammar, const bool record,
-    std::unordered_map<Edge, std::unordered_set<int>, EdgeHasher> &singleRecord,
+    const CnfGrammar &grammar,
+    std::unordered_map<Edge, std::unordered_set<int>, EdgeHasher> *singleRecord,
     std::unordered_map<
         Edge, std::unordered_set<std::tuple<int, int, int>, IntTripleHasher>,
-        EdgeHasher> &binaryRecord) {
+        EdgeHasher> *binaryRecord) {
   std::unordered_set<Edge, EdgeHasher> result;
   std::deque<Edge> w;
   // Original edges
@@ -163,9 +245,8 @@ std::unordered_set<Edge, EdgeHasher> CnfGraph::runCFLReachabilityCore(
         int x = grammar.unaryProductions[ind].first;
         Edge e1 = std::make_tuple(i, x, j);
         tba.push_back(e1);
-        // May use conditional compilation to avoid the if-test cost
-        if (record) {
-          singleRecord[e1].insert(y);
+        if (singleRecord != nullptr) {
+          (*singleRecord)[e1].insert(y);
         }
       }
     }
@@ -178,8 +259,8 @@ std::unordered_set<Edge, EdgeHasher> CnfGraph::runCFLReachabilityCore(
           int x = grammar.binaryProductions[ind].first;
           Edge e1 = std::make_tuple(i, x, k);
           tba.push_back(e1);
-          if (record) {
-            binaryRecord[e1].insert(std::make_tuple(y, j, z));
+          if (binaryRecord != nullptr) {
+            (*binaryRecord)[e1].insert(std::make_tuple(y, j, z));
           }
         }
       }
@@ -193,8 +274,8 @@ std::unordered_set<Edge, EdgeHasher> CnfGraph::runCFLReachabilityCore(
           int x = grammar.binaryProductions[ind].first;
           Edge e1 = std::make_tuple(k, x, j);
           tba.push_back(e1);
-          if (record) {
-            binaryRecord[e1].insert(std::make_tuple(z, i, y));
+          if (binaryRecord != nullptr) {
+            (*binaryRecord)[e1].insert(std::make_tuple(z, i, y));
           }
         }
       }

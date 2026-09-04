@@ -1,7 +1,8 @@
 # SMACK verifier integration for Lotus.
 # Integrated from the SMACK source tree.
 
-set(SMACK_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include/Verification/smack)
+set(SMACK_INCLUDE_DIR
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/Verification/smack)
 set(SMACK_SEADSA_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include/Alias/UnificationBased)
 
 add_library(SmackUtils STATIC

@@ -72,7 +72,7 @@ Core Components
    - **BDD Solver**: CUDD-based symbolic set operations
    - **WPDS**: Weighted pushdown systems for interprocedural reachability
 
-5. **Abstract Interpretation** (``lib/Verification/clam/``, ``lib/Verification/SymAbsAI/``)
+5. **Abstract Interpretation** (``third-party/verification/clam/``, ``lib/Verification/SymAbsAI/``)
    
    Numerical and symbolic abstract domains:
    

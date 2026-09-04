@@ -2,7 +2,7 @@ SMACK Verification Frontend
 ===========================
 
 SMACK translates LLVM bitcode into Boogie programs for verifier backends. Lotus
-keeps the migrated SMACK implementation under ``lib/Verification/smack/`` and
+keeps the migrated SMACK implementation under ``third-party/verification/smack/`` and
 the command-line frontend under ``tools/verifier/smack/``.
 
 The upstream SMACK documentation has been copied into this repository under

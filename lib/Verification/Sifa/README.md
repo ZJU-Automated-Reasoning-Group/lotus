@@ -113,7 +113,7 @@ The value domains (Interval, Eq, ExplicitValue) apply **real instruction-level t
 
 ### Region-based memory (lib/Alias, IKOS/CLAM style)
 
-When you pass an **alias analysis** via **SifaOptions::aliasAnalysis**, **all value domains** (Interval, Octagon, Eq, ExplicitValue) use a **region-based memory model** that reuses pointer/alias analyses from **lib/Alias**. For a richer, CLAM-aligned model (one region per pointer, type info, field-sensitive), see **lib/Verification/clam** (HeapAbstraction, SeaDsa).
+When you pass an **alias analysis** via **SifaOptions::aliasAnalysis**, **all value domains** (Interval, Octagon, Eq, ExplicitValue) use a **region-based memory model** that reuses pointer/alias analyses from **lib/Alias**. For a richer, CLAM-aligned model (one region per pointer, type info, field-sensitive), see **third-party/verification/clam** (HeapAbstraction, SeaDsa).
 
 - **Regions**: allocas in the function + globals in the module (see `include/Verification/Sifa/RegionMemory.h`).
 - **Resolve pointer**: Uses `AliasAnalysisWrapper::getPointsToSet()` when the backend supports it (e.g. SparrowAA); otherwise `mayAlias(ptr, region)` over all regions.
@@ -140,13 +140,13 @@ auto state = lotus::sifa::analyzeToWithIntervalDomain(F, target, lotus::sifa::In
 
 The domain string (`SifaSymAbsOptions::abstractDomain`) controls what information is tracked precisely. For programs that use memory heavily (typical unoptimized C/C++), consider including a memory-aware domain (e.g. `MemRange` / `ValidRegion`) instead of only numeric domains like `Interval, Octagon`. For native Sifa value domains (e.g. Interval), set **SifaOptions::aliasAnalysis** to enable region-based memory via lib/Alias.
 
-### Comparison with CLAM (lib/Verification/clam)
+### Comparison with CLAM (`third-party/verification/clam`)
 
-CLAM uses a **HeapAbstraction** (see `include/Verification/clam/HeapAbstraction.hh`) that maps **(function, pointer) → one Region** with a unique **RegionId**, **RegionInfo** (type: INT_REGION, BOOL_REGION, PTR_REGION, UNTYPED; bitwidth; is_sequence, is_heap, is_cyclic), and optional **singleton Value\***. Load/Store in CLAM call `getRegion(mem, regions, params, I, ptr)` and get **one** region; if unknown they handle conservatively. The default implementation is **SeaDsaHeapAbstraction** (SeaDsa), which builds regions from SeaDsa’s graph (nodes/fields). CLAM also supports **getRegion(F, V, offset, AccessedType)** for field-sensitive access.
+CLAM uses a **HeapAbstraction** (see `third-party/verification/clam/include/Verification/clam/HeapAbstraction.hh`) that maps **(function, pointer) → one Region** with a unique **RegionId**, **RegionInfo** (type: INT_REGION, BOOL_REGION, PTR_REGION, UNTYPED; bitwidth; is_sequence, is_heap, is_cyclic), and optional **singleton Value\***. Load/Store in CLAM call `getRegion(mem, regions, params, I, ptr)` and get **one** region; if unknown they handle conservatively. The default implementation is **SeaDsaHeapAbstraction** (SeaDsa), which builds regions from SeaDsa’s graph (nodes/fields). CLAM also supports **getRegion(F, V, offset, AccessedType)** for field-sensitive access.
 
 Sifa’s region model is simpler and AA-driven:
 
-| Aspect | CLAM (lib/Verification/clam) | Sifa (RegionMemory.h + lib/Alias) |
+| Aspect | CLAM (`third-party/verification/clam`) | Sifa (RegionMemory.h + lib/Alias) |
 |--------|------------------------------|------------------------------------|
 | Region set | From HeapAbstraction (SeaDsa): nodes/fields, unique RegionId | Fixed set: **allocas** in function + **globals** in module (Value* as id) |
 | Pointer resolution | **One** region per pointer via `getRegion(F, ptr)` (or unknown) | **Set** of regions via getPointsToSet or mayAlias; **join** over set for Load, **join into each** for Store |

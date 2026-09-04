@@ -3,9 +3,9 @@ CLAM – Abstract Interpretation Framework
 
 CLAM is a static analysis framework based on abstract interpretation over numerical abstract domains. It provides invariant generation and property checking for LLVM bitcode.
 
-**Location**: ``lib/Verification/clam/``
+**Location**: ``third-party/verification/clam/src/``
 
-**Headers**: ``include/Verification/clam/``
+**Headers**: ``third-party/verification/clam/include/Verification/clam/``
 
 **Tools**: ``tools/verifier/clam/`` (command-line frontends)
 
@@ -25,7 +25,7 @@ CLAM computes sound over-approximations of program behaviors by interpreting pro
 Components
 ----------
 
-**Core Library** (``lib/Verification/clam/``):
+**Core Library** (``third-party/verification/clam/src/``):
 
 * ``Clam.cc`` – Main analysis engine and pass registration
 * ``CfgBuilder.cc`` – LLVM IR to CRAB IR translation
@@ -33,20 +33,20 @@ Components
 * ``SeaDsaHeapAbstraction.cc`` – Sea-DSA integration
 * ``ClamQueryCache.cc`` – Query result caching
 
-**Abstract Domains** (``lib/Verification/clam/crab/domains/``):
+**Abstract Domains** (``third-party/verification/clam/src/crab/domains/``):
 
 * Intervals, zones, octagons, polyhedra
 * Disjunctive domains and term domains
 * Domain-specific optimizations
 
-**Property Checkers** (``lib/Verification/clam/Properties/``):
+**Property Checkers** (``third-party/verification/clam/src/Properties/``):
 
 * ``NullCheck.cc`` – Null pointer dereference detection
 * ``BndCheck.cc`` – Buffer bounds checking
 * ``UafCheck.cc`` – Use-after-free detection
 * ``MemoryCheckUtils.cc`` – Memory safety utilities
 
-**Transforms** (``lib/Verification/clam/Transforms/``):
+**Transforms** (``third-party/verification/clam/src/Transforms/``):
 
 * ``DevirtFunctions.cc`` – Function devirtualization
 * ``LowerSelect.cc`` – Select instruction lowering
@@ -63,7 +63,7 @@ Components
 Build Targets
 -------------
 
-* ``ClamAnalysis`` – Core library (``lib/Verification/clam/``)
+* ``ClamAnalysis`` – Core library (``third-party/verification/clam/src/``)
 * ``clam`` – Command-line analyzer
 * ``clam-pp`` – Preprocessor
 * ``clam-diff`` – Differential analyzer
@@ -156,4 +156,3 @@ See Also
 - :doc:`../user_guide/tutorials` – CLAM usage examples
 - :doc:`../alias/index` – Alias analysis for pointer information
 - :doc:`../solvers/index` – Constraint solving backends
-

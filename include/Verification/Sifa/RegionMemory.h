@@ -5,7 +5,7 @@
 // abstract regions (allocas, globals). Used by IntervalDomain and other
 // value domains for sound Load/Store transfer when alias analysis is provided.
 //
-// Comparison: lib/Verification/clam uses HeapAbstraction (SeaDsa) which maps
+// Comparison: the vendored CLAM backend uses HeapAbstraction (SeaDsa), which maps
 // (function, pointer) -> one Region with RegionId, RegionInfo (type, bitwidth,
 // is_sequence, is_heap), and optional singleton. Sifa uses a fixed region set
 // (allocas + globals) and resolves pointer -> set of regions via AA, then

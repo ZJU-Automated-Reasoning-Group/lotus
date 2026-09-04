@@ -2,6 +2,8 @@
 
 if(LOTUS_ENABLE_CLAM)
     set(LOTUS_VENDORED_CRAB_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/third-party/crab")
+    set(LOTUS_CLAM_INCLUDE_ROOT
+        "${CMAKE_CURRENT_SOURCE_DIR}/third-party/verification/clam/include")
 
     # Determine CRAB root directory
     if(LOTUS_CUSTOM_CRAB_ROOT)
@@ -74,11 +76,12 @@ if(LOTUS_ENABLE_CLAM)
         
         # Add CRAB as subdirectory
         add_subdirectory(${CRAB_ROOT} ${CMAKE_BINARY_DIR}/crab)
-        
-        # Include CRAB headers (legacy global include for compatibility)
-        # Individual targets should use target_include_directories with SYSTEM
-        # to suppress warnings from third-party CRAB library
-        include_directories(BEFORE ${CRAB_ROOT}/include)
+
+        # CRAB's Lotus-specific NTT implementation includes the CLAM
+        # compatibility API as `clam/...`.
+        target_include_directories(Crab PRIVATE
+            ${LOTUS_CLAM_INCLUDE_ROOT}/Verification
+            ${CMAKE_BINARY_DIR}/include/Verification)
         
         # Configure CLAM config.h
         set(HAVE_LLVM_SEAHORN FALSE)
@@ -88,12 +91,23 @@ if(LOTUS_ENABLE_CLAM)
         set(CLAM_IS_TOPLEVEL FALSE)
         
         configure_file(
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/Verification/clam/config.h.cmake
+            ${LOTUS_CLAM_INCLUDE_ROOT}/Verification/clam/config.h.cmake
             ${CMAKE_BINARY_DIR}/include/Verification/clam/config.h
         )
-        
-        include_directories(BEFORE ${CMAKE_BINARY_DIR}/include ${CMAKE_BINARY_DIR}/include/Verification)
-        add_definitions(-DHAVE_CLAM)
+
+        add_library(LotusClamBackendConfig INTERFACE)
+        add_library(Lotus::ClamBackendConfig ALIAS LotusClamBackendConfig)
+        target_include_directories(LotusClamBackendConfig INTERFACE
+            ${LOTUS_CLAM_INCLUDE_ROOT}
+            ${LOTUS_CLAM_INCLUDE_ROOT}/Verification
+            ${LOTUS_CLAM_INCLUDE_ROOT}/Verification/clam
+            ${CMAKE_BINARY_DIR}/include
+            ${CMAKE_BINARY_DIR}/include/Verification)
+        target_include_directories(LotusClamBackendConfig SYSTEM INTERFACE
+            ${CRAB_ROOT}/include)
+        target_compile_definitions(LotusClamBackendConfig INTERFACE HAVE_CLAM=1)
+
+        set(HAVE_CLAM 1)
         
         # Set CLAM libraries - must include both ClamAnalysis and Crab
         set(CLAM_LIBS ClamAnalysis Crab)

@@ -12,12 +12,6 @@ else()
   message(FATAL_ERROR "CLAM: CRAB not found at ${CRAB_ROOT}")
 endif()
 
-# Include CLAM headers
-include_directories(${CMAKE_SOURCE_DIR}/include/Verification/clam)
-
-# Include sea-dsa headers (located in Alias/seadsa)
-include_directories(${CMAKE_SOURCE_DIR}/include/Alias)
-
 # Build CLAM Analysis library
 add_library(ClamAnalysis STATIC
   CfgBuilder.cc
@@ -62,14 +56,13 @@ add_library(ClamAnalysis STATIC
 # Set include directories for this target
 # Use SYSTEM for CRAB headers to suppress warnings from third-party library
 target_include_directories(ClamAnalysis PUBLIC
-  ${CMAKE_SOURCE_DIR}/include/Verification
   ${CMAKE_SOURCE_DIR}/include/Alias
-  SYSTEM ${CRAB_ROOT}/include
 )
 
 # Link against Crab library
 target_link_libraries(ClamAnalysis PUBLIC
   Crab
+  Lotus::ClamBackendConfig
 )
 
 # Suppress deprecation warnings
@@ -79,12 +72,6 @@ target_compile_options(ClamAnalysis PRIVATE -Wno-deprecated-declarations)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Optimizer/Optimizer.cc")
   add_library(ClamOptimizer STATIC
     Optimizer/Optimizer.cc
-  )
-  
-  target_include_directories(ClamOptimizer PUBLIC
-    ${CMAKE_SOURCE_DIR}/include/Verification
-    SYSTEM ${CRAB_ROOT}/include
-    #${LLVM_INCLUDE_DIRS}
   )
   
   target_link_libraries(ClamOptimizer PUBLIC

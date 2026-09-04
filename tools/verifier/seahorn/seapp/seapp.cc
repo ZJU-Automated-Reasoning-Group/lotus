@@ -478,6 +478,10 @@ int main(int argc, char **argv) {
     // -- Externalize some user-selected functions
     pm_wrapper.add(seahorn::createExternalizeFunctionsPass());
   } else if (CrabLowerIsDeref) {
+#ifndef HAVE_CLAM
+    llvm::errs() << "--crab-lower-is-deref requires LOTUS_ENABLE_CLAM=ON\n";
+    return 1;
+#else
     // -- prerequisite 1 : Lower constant expressions to instructions
     pm_wrapper.add(seahorn::createLowerCstExprPass());
     pm_wrapper.add(llvm::createDeadCodeEliminationPass());
@@ -492,6 +496,7 @@ int main(int argc, char **argv) {
     // Note that, another prerequisite: Sea-DSA analysis is run inside
     // the below LLVM pass.
     pm_wrapper.add(seahorn::createCrabLowerIsDerefPass());
+#endif
   }
   // default pre-processing pipeline
   else {

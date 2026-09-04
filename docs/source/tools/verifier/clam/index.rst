@@ -13,9 +13,9 @@ Overview
 CLAM computes sound over-approximations of program behaviors by interpreting
 the program over different numerical domains.
 
-**Headers**: ``include/Verification/clam``
+**Headers**: ``third-party/verification/clam/include/Verification/clam``
 
-**Implementation**: ``lib/Verification/clam`` (core library), ``tools/verifier/clam`` (command-line frontends)
+**Implementation**: ``third-party/verification/clam/src`` (vendored core), ``lib/Verification/Backends`` (Lotus integration), and ``tools/verifier/clam`` (command-line frontends)
 
 **Key features**:
 
@@ -145,4 +145,3 @@ Typical Workflow
          --crab-check=assert \
          --crab-out=results.json \
          prep.bc
-

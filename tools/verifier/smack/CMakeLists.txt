@@ -1,6 +1,7 @@
 # SMACK verifier tools for Lotus.
 
-set(SMACK_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include/Verification/smack)
+set(SMACK_INCLUDE_DIR
+    ${CMAKE_SOURCE_DIR}/third-party/verification/smack/include/Verification/smack)
 set(SMACK_SEADSA_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include/Alias/UnificationBased)
 
 add_library(SmackExternalizePass STATIC

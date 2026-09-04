@@ -25,14 +25,14 @@ llvm_map_components_to_libnames(LLVM_LIBS
   objcarcopts
   )
 
-target_link_libraries(ClamLlvmPasses
+target_link_libraries(ClamLlvmPasses PUBLIC
   CanaryLLVMUtils
   SeaDsaAnalysis
+  Lotus::ClamBackendConfig
   ## Needed if dynamic linking
   ${LLVM_LIBS})
 
 target_include_directories(ClamLlvmPasses PUBLIC
-  ${CMAKE_SOURCE_DIR}/include/Verification
   ${CMAKE_SOURCE_DIR}/include/Alias
 )
 

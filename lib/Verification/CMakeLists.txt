@@ -1,12 +1,4 @@
-if(LOTUS_ENABLE_CLAM)
-  add_subdirectory(clam)
-endif()
-if(LOTUS_ENABLE_SEAHORN)
-  add_subdirectory(seahorn)
-endif()
-if(LOTUS_ENABLE_SMACK)
-  add_subdirectory(smack)
-endif()
+add_subdirectory(Backends)
 
 add_subdirectory(SymAbsAI)
 add_subdirectory(Sifa)

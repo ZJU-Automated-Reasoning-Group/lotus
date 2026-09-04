@@ -96,7 +96,7 @@ See :doc:`../verification/clam` for CLAM and :doc:`../verification/symabs-ai`
 for higher-level abstractions.
 
 * **CLAM** – Modular AI-driven static analyzer with multiple abstract domains
-  (``tools/verifier/clam`` and ``lib/Verification/clam``).
+  (``tools/verifier/clam`` and ``third-party/verification/clam``).
 * **SymAbsAI** – Configurable abstract interpretation framework with domain
   composition (``lib/Verification/SymAbsAI`` and ``include/Verification/SymAbsAI``).
 

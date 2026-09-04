@@ -1,4 +1,4 @@
-add_library (SeaTransformsScalar STATIC
+set(SEA_TRANSFORMS_SCALAR_SOURCES
   LoopUnhoist.cc
   LowerCstExpr.cc
   LowerGvInitializers.cc
@@ -19,9 +19,18 @@ add_library (SeaTransformsScalar STATIC
   LoopPeeler.cc
   BackedgeCutter.cc
   LowerIsDeref.cc
-  CrabLowerIsDeref.cc
-  )
+)
+
+if(HAVE_CLAM)
+  list(APPEND SEA_TRANSFORMS_SCALAR_SOURCES CrabLowerIsDeref.cc)
+endif()
+
+add_library(SeaTransformsScalar STATIC ${SEA_TRANSFORMS_SCALAR_SOURCES})
 
 target_link_libraries(SeaTransformsScalar PUBLIC
   CanaryTransform
 )
+
+if(HAVE_CLAM)
+  target_link_libraries(SeaTransformsScalar PRIVATE ${CLAM_LIBS})
+endif()

@@ -5,6 +5,6 @@ add_library (SeaSupport STATIC
   CFGPrinter.cc
   SeaLog.cc
   SeaDebug.cc
-  GitSHA1.cc
+  ${SEAHORN_GIT_SHA1_SOURCE}
   BoostException.cc
   )

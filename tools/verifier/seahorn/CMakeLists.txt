@@ -7,5 +7,3 @@ set(LLVM_SEAHORN_LIBS "")
 add_subdirectory(seahorn)
 add_subdirectory(seapp)
 add_subdirectory(seainspect)
-
-

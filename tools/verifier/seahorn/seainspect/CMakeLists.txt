@@ -1,6 +1,3 @@
-add_definitions(-D__STDC_CONSTANT_MACROS)
-add_definitions(-D__STDC_LIMIT_MACROS)
-
 set (SEAINSPECT_LIBS
   SeaAnalysis
   SeaInstrumentation
@@ -24,6 +21,9 @@ set(LLVM_LINK_COMPONENTS
 
 
 add_executable(seainspect seainspect.cc)
+target_compile_definitions(seainspect PRIVATE
+  __STDC_CONSTANT_MACROS
+  __STDC_LIMIT_MACROS)
 if(APPLE)
   set_target_properties(seainspect PROPERTIES LINK_FLAGS "${LINK_FLAGS} -Wl,-search_paths_first")
 endif()

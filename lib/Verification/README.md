@@ -12,9 +12,7 @@ symbolic reasoning.
 | **Sifa** | Symbolic Interpretation with Fluid Abstractions: interprocedural symbolic interpretation over ICFG-style procedure graphs and regex-DAG summaries. See `Sifa/README.md`. |
 | **SymAbsAI** | SMT-backed abstract interpretation framework with reusable transfer semantics, fixpoint engines, and abstract domains. See `SymAbsAI/README.md`. |
 | **Transform** | IR transformations for verification, including CFG normalization, loop/control-flow rewriting, memory instrumentation, and nondeterminism injection. |
-| **clam** | CLAM-based abstract interpretation backend and supporting SeaDsa/Crab integration code. See `clam/README.md`. |
-| **seahorn** | Seahorn integration and support code for Horn-clause-based verification. |
-| **smack** | SMACK integration for translating LLVM IR into Boogie-based verification workflows. |
+| **Backends** | Lotus-owned build adapters for optional vendored verification backends. |
 
 ## Analysis
 
@@ -39,6 +37,10 @@ Pre-verification analysis passes:
 - **SymAbsAI**: reusable abstract interpretation framework with SMT-based symbolic abstraction.
 - **Seahorn**: Horn-clause-based verification.
 - **smack**: translation from LLVM IR to Boogie-based verification workflows.
+
+The upstream-derived backend implementations and headers live under
+`third-party/verification/`. `lib/Verification/Backends/` is the Lotus-owned
+integration boundary.
 
 ## Failure-Directed Trimming
 

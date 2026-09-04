@@ -8,7 +8,8 @@ Vendored or in-tree copies of external dependencies used by this project.
 | **WPDS** | `WPDS/` | Weighted pushdown system library (WALi-style) for interprocedural dataflow | Wisconsin/GrammaTech WALi lineage; see e.g. [WALi-OpenNWA](https://github.com/WaliDev/WALi-OpenNWA) |
 | **WALi/OpenNWA** | `WALi-OpenNWA/` | Full WALi weighted automata library and OpenNWA nested-word automata implementation | [WaliDev/WALi-OpenNWA](https://github.com/WaliDev/WALi-OpenNWA) |
 | **spdlog** | `spdlog/` | Fast C++ logging library (header-only) | [gabime/spdlog](https://github.com/gabime/spdlog) |
-| **CRAB** | `crab/` | Abstract interpretation library used by `lib/Verification/clam` | [seahorn/crab](https://github.com/seahorn/crab) |
+| **CRAB** | `crab/` | Abstract interpretation library used by the vendored CLAM backend | [seahorn/crab](https://github.com/seahorn/crab) |
+| **Verification backends** | `verification/` | Upstream-derived CLAM, SeaHorn, and SMACK sources | See `verification/README.md` |
 | **FPsolve** | `fpsolve/` | Fixed-point solver based on Newton's method over omega-continuous semirings | TUM FPsolve project; see the vendored `fpsolve/README.md` |
 | **Horn-ICE** | `horn-ice/` | Horn-ICE invariant/contract synthesis components and CHC verifier frontend | Adapted from [horn-ice/hice-dt](https://github.com/horn-ice/hice-dt) |
 | **MDE** | `mde/` | Multilevel Deduplication Engine for compact data representation and cached set operations | Vendored MDE source; see `mde/README.md` |

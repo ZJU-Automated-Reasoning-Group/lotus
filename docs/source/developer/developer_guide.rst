@@ -535,7 +535,7 @@ For CLAM integration, create a new CRAB domain:
 Step 1: Define Domain Interface
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Create ``lib/Verification/clam/crab/domains/my_domain.hpp``:
+Create ``third-party/verification/clam/src/crab/domains/my_domain.hpp``:
 
 .. code-block:: cpp
 
@@ -644,7 +644,7 @@ Create ``lib/Verification/clam/crab/domains/my_domain.hpp``:
 Step 2: Register Domain
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Update ``lib/Verification/clam/ClamDomainRegistry.cc``:
+Update ``third-party/verification/clam/src/ClamDomainRegistry.cc``:
 
 .. code-block:: cpp
 

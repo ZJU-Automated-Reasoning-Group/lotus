@@ -39,11 +39,11 @@ Interleaved-Dyck Core
 Shared typed ``Label``, ``Edge``, ``Graph``, and ``Pair`` types plus the DOT
 parser used by interleaved-Dyck benchmark datasets.
 
-**Location**: ``include/CFL/InterleavedDyckCore/``,
-``lib/CFL/InterleavedDyckCore/``
+**Location**: ``include/CFL/InterleavedDyck/Core/``,
+``lib/CFL/InterleavedDyck/Core/``
 
-Approximation consumes this graph directly, UnaryInterleavedDyck applies unary
-projection, and MCFL converts it through a typed-to-generic adapter.
+StagedBounds consumes this graph directly, Unary applies unary projection,
+and MCFL converts it through a typed-to-generic adapter.
 
 Exact Unary Interleaved Dyck
 ----------------------------
@@ -52,20 +52,20 @@ Exact component reachability for bidirected unary
 ``D1``-interleaved-``D1``. The module provides adaptive counter flattening and
 the POPL 2022 fixed-counter exact baseline.
 
-**Location**: ``include/CFL/UnaryInterleavedDyck/``,
-``lib/CFL/UnaryInterleavedDyck/``
+**Location**: ``include/CFL/InterleavedDyck/Unary/``,
+``lib/CFL/InterleavedDyck/Unary/``
 
-See :doc:`unary_interleaved_dyck` for both algorithms, their exactness boundary,
+See :doc:`interleaved_dyck_unary` for both algorithms, their exactness boundary,
 and benchmark eligibility rules.
 
-Interleaved-Dyck Approximation
+Interleaved-Dyck Staged Bounds
 ------------------------------
 
 Staged under- and overapproximation for reachability under two interleaved
 families of Dyck constraints.
 
-**Location**: ``include/CFL/InterleavedDyckApproximation/``,
-``lib/CFL/InterleavedDyckApproximation/``
+**Location**: ``include/CFL/InterleavedDyck/StagedBounds/``,
+``lib/CFL/InterleavedDyck/StagedBounds/``
 
 This component computes a certified union-Dyck lower bound and progressively
 tighter projected-CFL upper bounds; it is not an exact solver for the general
@@ -85,7 +85,7 @@ Multiple Context-Free Language Reachability
 All-pairs reachability for non-deleting, non-permuting MCFGs and the POPL 2025
 typed underapproximation hierarchy.
 
-**Location**: ``include/CFL/MCFL/``, ``lib/CFL/MCFL/``
+**Location**: ``include/CFL/InterleavedDyck/MCFL/``, ``lib/CFL/InterleavedDyck/MCFL/``
 
 **Features**:
 
@@ -106,16 +106,16 @@ Guarantee Summary
    * - API
      - Intended use
      - Guarantee
-   * - ``mcfl::InterleavedDyckSolver``
+   * - ``interleaved_dyck::mcfl::InterleavedDyckSolver``
      - Certified typed pairs through ``G_d``
      - Underapproximation
-   * - ``unary_interleaved_dyck::FixedCounterSolver``
+   * - ``interleaved_dyck::unary::FixedCounterSolver``
      - POPL 2022 exact fixed-counter baseline
      - Exact component partition
-   * - ``unary_interleaved_dyck::AdaptiveSolver``
+   * - ``interleaved_dyck::unary::AdaptiveSolver``
      - Bidirected unary projection
      - Exact component partition
-   * - ``interleaved_dyck_approximation::Solver``
+   * - ``interleaved_dyck::staged_bounds::Solver``
      - Typed lower/upper refinement
      - Approximation bounds
 
@@ -134,13 +134,13 @@ Context-sensitive indexing for CFL reachability.
 * Memory-efficient representations
 
 
-InterDyckGraphReduce
---------------------
+Interleaved-Dyck Graph Reduction
+--------------------------------
 
 PLDI 2020 interleaved-Dyck graph simplification. This component transforms a
 DOT graph and does not itself return the final reachability relation.
 
-**Location**: ``lib/CFL/InterDyckGraphReduce/``
+**Location**: ``lib/CFL/InterleavedDyck/GraphReduction/``
 
 **Features**:
 
@@ -149,13 +149,13 @@ DOT graph and does not itself return the final reachability relation.
 * Explicit directed versus already-bidirected input mode
 * Private legacy summary representation under the ``lib`` subtree
 
-MutualRefinement
-----------------
+Mutual Refinement
+-----------------
 
 Grammar-agnostic CNF reachability and derivation tracing used by refinement
-experiments and by ``InterleavedDyckApproximation``.
+experiments and by ``StagedBounds``.
 
-**Location**: ``lib/CFL/MutualRefinement/``
+**Location**: ``lib/CFL/InterleavedDyck/MutualRefinement/``
 
 **Features**:
 
@@ -169,8 +169,9 @@ experiments and by ``InterleavedDyckApproximation``.
 It does not own typed delimiter semantics, approximation grammars, benchmark
 preprocessing, or lower/upper-bound interpretation;
 those belong to
-``InterleavedDyckApproximation``.
+``StagedBounds``.
 
-See also :doc:`classical`, :doc:`csindex`, :doc:`unary_interleaved_dyck`,
-:doc:`interleaved_dyck_approximation`, :doc:`inter_dyck_graph_reduce`,
-:doc:`mcfl`, and :doc:`mutual_refinement`.
+See also :doc:`classical`, :doc:`csindex`, :doc:`interleaved_dyck_unary`,
+:doc:`interleaved_dyck_staged_bounds`, :doc:`interleaved_dyck_graph_reduction`,
+:doc:`interleaved_dyck_mcfl`, and
+:doc:`interleaved_dyck_mutual_refinement`.

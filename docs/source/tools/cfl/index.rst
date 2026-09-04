@@ -15,9 +15,9 @@ enables analysis of complex program properties using grammar-based constraints.
 
 **Tools**: ``lotus-cfl-classical``, ``lotus-cfl-alias``, ``lotus-cfl-vf``,
 ``lotus-cfl-foldability``, ``lotus-cfl-pocr``, ``lotus-cfl-staged``,
-``lotus-cfl-mcfl``, ``lotus-cfl-mutual-refinement``,
-``lotus-cfl-interleaved-dyck-approximation``,
-``lotus-cfl-unary-interleaved-dyck``, ``lotus-cfl-inter-dyck-graph-reduce``,
+``lotus-cfl-interleaved-dyck-mcfl``, ``lotus-cfl-interleaved-dyck-mutual-refinement``,
+``lotus-cfl-interleaved-dyck-staged-bounds``,
+``lotus-cfl-interleaved-dyck-unary``, ``lotus-cfl-interleaved-dyck-graph-reduction``,
 and CSR.
 
 Classical CFL and Alias Analysis
@@ -82,21 +82,22 @@ MCFL: Multiple Context-Free Language Reachability
 Runs the POPL 2025 MCFL hierarchy for underapproximating interleaved-Dyck
 reachability on artifact-compatible DOT graphs.
 
-**Binary**: ``lotus-cfl-mcfl``
+**Binary**: ``lotus-cfl-interleaved-dyck-mcfl``
 
-**Location**: ``tools/cfl/mcfl/lotus-cfl-mcfl.cpp``
+**Location**: ``tools/cfl/interleaved-dyck/mcfl/lotus-cfl-interleaved-dyck-mcfl.cpp``
 
 .. code-block:: bash
 
    cmake -S . -B build -DLOTUS_ENABLE_CFL=ON
-   cmake --build build --target lotus-cfl-mcfl
-   ./build/bin/lotus-cfl-mcfl --dimension 2 input.dot
+   cmake --build build --target lotus-cfl-interleaved-dyck-mcfl
+   ./build/bin/lotus-cfl-interleaved-dyck-mcfl --dimension 2 input.dot
 
 Useful options include ``--simple`` for the weaker ``G_d^circ`` grammar,
 ``--no-condense`` to disable cycle elimination, ``--stats`` for saturation
 counters, ``--artifact-compatible`` for exact condensed cross-product
 expansion, ``--print-pairs`` for the final relation, and ``-o FILE`` for file
-output. See :doc:`../../cfl/mcfl` for the library API and algorithm details.
+output. See :doc:`../../cfl/interleaved_dyck_mcfl` for the library API and
+algorithm details.
 
 CSR: Context-Sensitive Reachability
 -----------------------------------
@@ -151,22 +152,23 @@ graph. The grammar file holds one or more ``{ ... }`` blocks whose first ``|``
 row names the start symbol and whose later rows encode epsilon, unary, or
 binary productions.
 
-**Binary**: ``lotus-cfl-mutual-refinement``
+**Binary**: ``lotus-cfl-interleaved-dyck-mutual-refinement``
 
-**Location**: ``tools/cfl/mutual-refinement/lotus-cfl-mutual-refinement.cpp``
+**Location**: ``tools/cfl/interleaved-dyck/mutual-refinement/lotus-cfl-interleaved-dyck-mutual-refinement.cpp``
 
 .. code-block:: bash
 
-   cmake --build build --target lotus-cfl-mutual-refinement
-   build/bin/lotus-cfl-mutual-refinement grammars.txt graph.dot refine
+   cmake --build build --target lotus-cfl-interleaved-dyck-mutual-refinement
+   build/bin/lotus-cfl-interleaved-dyck-mutual-refinement grammars.txt graph.dot refine
 
 The final argument selects ``naive`` (independent CFL saturation per grammar,
 then intersection) or ``refine`` (alternating refinement loop). Pass
 ``--factorized-tracing`` after ``refine`` to reconstruct contributing edges
 from the saturated relations instead of eager derivation records. See
-:doc:`../../cfl/mutual_refinement` for the library API and algorithm details.
+:doc:`../../cfl/interleaved_dyck_mutual_refinement` for the library API and
+algorithm details.
 
-Interleaved-Dyck Approximation
+Interleaved-Dyck Staged Bounds
 ------------------------------
 
 Computes staged lower and upper bounds for typed interleaved-Dyck reachability
@@ -174,21 +176,21 @@ on a DOT graph: a certified lower bound, then progressively tighter
 overapproximations through parity refinement, mutual refinement, and on-demand
 checks.
 
-**Binary**: ``lotus-cfl-interleaved-dyck-approximation``
+**Binary**: ``lotus-cfl-interleaved-dyck-staged-bounds``
 
-**Location**: ``tools/cfl/interleaved-dyck-approximation/lotus-cfl-interleaved-dyck-approximation.cpp``
+**Location**: ``tools/cfl/interleaved-dyck/staged-bounds/lotus-cfl-interleaved-dyck-staged-bounds.cpp``
 
 .. code-block:: bash
 
-   cmake --build build --target lotus-cfl-interleaved-dyck-approximation
-   build/bin/lotus-cfl-interleaved-dyck-approximation --parity-groups 2 \
+   cmake --build build --target lotus-cfl-interleaved-dyck-staged-bounds
+   build/bin/lotus-cfl-interleaved-dyck-staged-bounds --parity-groups 2 \
      --factorized-tracing graph.dot
 
 Useful options include ``--value-flow`` for value-flow benchmark
 preprocessing, ``--no-on-demand`` to stop after the stronger grammar,
 ``--print-lower``/``--print-final`` for the certified lower or final upper
 pairs, and ``-o FILE`` for file output. See
-:doc:`../../cfl/interleaved_dyck_approximation` for the library API and
+:doc:`../../cfl/interleaved_dyck_staged_bounds` for the library API and
 algorithm details.
 
 Unary Interleaved-Dyck Reachability
@@ -197,21 +199,21 @@ Unary Interleaved-Dyck Reachability
 Computes exact bidirected unary ``D1``-interleaved-``D1`` reachability on a DOT
 graph with the adaptive (default) or fixed-counter algorithm.
 
-**Binary**: ``lotus-cfl-unary-interleaved-dyck``
+**Binary**: ``lotus-cfl-interleaved-dyck-unary``
 
-**Location**: ``tools/cfl/unary-interleaved-dyck/lotus-cfl-unary-interleaved-dyck.cpp``
+**Location**: ``tools/cfl/interleaved-dyck/unary/lotus-cfl-interleaved-dyck-unary.cpp``
 
 .. code-block:: bash
 
-   cmake --build build --target lotus-cfl-unary-interleaved-dyck
-   build/bin/lotus-cfl-unary-interleaved-dyck --algorithm adaptive graph.dot
+   cmake --build build --target lotus-cfl-interleaved-dyck-unary
+   build/bin/lotus-cfl-interleaved-dyck-unary --algorithm adaptive graph.dot
 
 Useful options include ``--direct`` to skip quotient sparsification,
 ``--bidirect`` to add missing complement reverse arcs (a sound
 overapproximation of the original directed graph), ``--shallow K`` for the
 adaptive-only shallow solve, ``--stats`` for construction and backend
 statistics, and ``--print-pairs`` to materialize non-reflexive component
-pairs. See :doc:`../../cfl/unary_interleaved_dyck` for the library API and
+pairs. See :doc:`../../cfl/interleaved_dyck_unary` for the library API and
 algorithm details.
 
 Interleaved-Dyck Graph Reduction
@@ -222,24 +224,24 @@ reachability. It is a graph transformation, not a reachability solver: it
 edits a working copy of a DOT graph in place and produces a smaller graph that
 preserves the reachability property covered by the reduction theorem.
 
-**Binary**: ``lotus-cfl-inter-dyck-graph-reduce`` (Python driver) with the
-compiled helpers ``lotus-cfl-inter-dyck-graphaux`` and
-``lotus-cfl-inter-dyck-dkmerge``
+**Binary**: ``lotus-cfl-interleaved-dyck-graph-reduction`` (Python driver) with the
+compiled helpers ``lotus-cfl-interleaved-dyck-graphaux`` and
+``lotus-cfl-interleaved-dyck-dkmerge``
 
-**Location**: ``tools/cfl/inter-dyck-graph-reduce/``
+**Location**: ``tools/cfl/interleaved-dyck/graph-reduction/``
 
 .. code-block:: bash
 
-   cmake --build build --target lotus-cfl-inter-dyck-graph-reduce
+   cmake --build build --target lotus-cfl-interleaved-dyck-graph-reduction
    cp input.dot reduced.dot
-   python3 build/bin/lotus-cfl-inter-dyck-graph-reduce.py reduced.dot \
-     --graphaux build/bin/lotus-cfl-inter-dyck-graphaux \
-     --dkmerge build/bin/lotus-cfl-inter-dyck-dkmerge
+   python3 build/bin/lotus-cfl-interleaved-dyck-graph-reduction.py reduced.dot \
+     --graphaux build/bin/lotus-cfl-interleaved-dyck-graphaux \
+     --dkmerge build/bin/lotus-cfl-interleaved-dyck-dkmerge
 
-``lotus-cfl-inter-dyck-graphaux`` performs one-color component construction
-(``lotus-cfl-inter-dyck-graphaux <graph.dot>``) and
-``lotus-cfl-inter-dyck-dkmerge`` performs the degree-based merge phase; the
+``lotus-cfl-interleaved-dyck-graphaux`` performs one-color component construction
+(``lotus-cfl-interleaved-dyck-graphaux <graph.dot>``) and
+``lotus-cfl-interleaved-dyck-dkmerge`` performs the degree-based merge phase; the
 Python driver alternates both colors and removes proven-redundant edges. Pass
 ``--bidirected-input`` when the input already represents both directions. See
-:doc:`../../cfl/inter_dyck_graph_reduce` for the library API and algorithm
+:doc:`../../cfl/interleaved_dyck_graph_reduction` for the library API and algorithm
 details.

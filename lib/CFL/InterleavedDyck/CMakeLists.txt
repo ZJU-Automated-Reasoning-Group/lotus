@@ -1,0 +1,6 @@
+add_subdirectory(Core)
+add_subdirectory(MutualRefinement)
+add_subdirectory(GraphReduction)
+add_subdirectory(Unary)
+add_subdirectory(StagedBounds)
+add_subdirectory(MCFL)

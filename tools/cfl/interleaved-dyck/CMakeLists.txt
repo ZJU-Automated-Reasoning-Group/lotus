@@ -1,0 +1,5 @@
+add_subdirectory(unary)
+add_subdirectory(staged-bounds)
+add_subdirectory(mcfl)
+add_subdirectory(mutual-refinement)
+add_subdirectory(graph-reduction)

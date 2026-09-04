@@ -18,15 +18,15 @@ The supplied artifact contains no license file. Keep that provenance in mind whe
 ## Shared Lotus input
 
 Load these files with `interleaved_dyck::Graph::parseDotFile` from
-`CFL/InterleavedDyckCore/Graph.h`. The same parsed graph can be passed directly
+`CFL/InterleavedDyck/Core/Graph.h`. The same parsed graph can be passed directly
 to:
 
-- `interleaved_dyck_approximation::Solver`; and
-- `mcfl::InterleavedDyckSolver`, through its typed graph adapter.
+- `interleaved_dyck::staged_bounds::Solver`; and
+- `interleaved_dyck::mcfl::InterleavedDyckSolver`, through its typed graph adapter.
 
 The corpus is directed and therefore does not satisfy the exact-mode input
-contract of `unary_interleaved_dyck::FixedCounterSolver` or
-`unary_interleaved_dyck::AdaptiveSolver`. Their default policy rejects it. The
+contract of `interleaved_dyck::unary::FixedCounterSolver` or
+`interleaved_dyck::unary::AdaptiveSolver`. Their default policy rejects it. The
 explicit `AddMissingReverseEdges`/`--bidirect` policy computes a sound
 overapproximation for the original directed graph. Experiments must report
 that transformation because it changes the reachability problem.

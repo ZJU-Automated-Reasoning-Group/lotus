@@ -11,8 +11,8 @@ This section covers CFL-reachability and context-free language based analyses.
    pocr_migration
    pearl_stg_sqid
    csindex
-   unary_interleaved_dyck
-   interleaved_dyck_approximation
-   inter_dyck_graph_reduce
-   mcfl
-   mutual_refinement
+   interleaved_dyck_unary
+   interleaved_dyck_staged_bounds
+   interleaved_dyck_graph_reduction
+   interleaved_dyck_mcfl
+   interleaved_dyck_mutual_refinement

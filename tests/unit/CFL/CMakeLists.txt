@@ -11,36 +11,37 @@ add_lotus_targeted_test(scs_index_test SCSIndexTest.cpp
     LINK_LIBS
         CanaryCSIndex)
 
-add_lotus_targeted_test(interleaved_dyck_approximation_test
-    InterleavedDyckApproximationTest.cpp
+add_lotus_targeted_test(interleaved_dyck_staged_bounds_test
+    InterleavedDyckStagedBoundsTest.cpp
     LINK_LIBS
-        CanaryInterleavedDyckApproximation)
+        CanaryInterleavedDyckStagedBounds)
 
-add_lotus_targeted_test(mutual_refinement_test
-    MutualRefinementTest.cpp
+add_lotus_targeted_test(interleaved_dyck_mutual_refinement_test
+    InterleavedDyckMutualRefinementTest.cpp
     LINK_LIBS
-        MutualRefinement)
+        CanaryInterleavedDyckMutualRefinement)
 
-add_lotus_test_suite(unary_interleaved_dyck_test
+add_lotus_test_suite(interleaved_dyck_unary_test
     SOURCES
-        UnaryInterleavedDyckAdaptiveTest.cpp
-        UnaryInterleavedDyckFixedCounterTest.cpp
+        InterleavedDyckUnaryAdaptiveTest.cpp
+        InterleavedDyckUnaryFixedCounterTest.cpp
     LINK_LIBS
-        CanaryUnaryInterleavedDyck)
+        CanaryInterleavedDyckUnary)
 
 add_lotus_targeted_test(interleaved_dyck_comparison_test
     InterleavedDyckComparisonTest.cpp
     LINK_LIBS
-        CanaryInterleavedDyckApproximation
-        CanaryMCFL
-        CanaryUnaryInterleavedDyck)
+        CanaryInterleavedDyckStagedBounds
+        CanaryInterleavedDyckMCFL
+        CanaryInterleavedDyckUnary)
 target_compile_definitions(interleaved_dyck_comparison_test PRIVATE
     INTERLEAVED_DYCK_DATASET_DIR="${CMAKE_SOURCE_DIR}/benchmarks/real-world/CFL/InterleavedDyck/taint")
 
-add_lotus_targeted_test(mcfl_test MCFLTest.cpp
+add_lotus_targeted_test(interleaved_dyck_mcfl_test
+    InterleavedDyckMCFLTest.cpp
     LINK_LIBS
-        CanaryMCFL)
-target_compile_definitions(mcfl_test PRIVATE
+        CanaryInterleavedDyckMCFL)
+target_compile_definitions(interleaved_dyck_mcfl_test PRIVATE
     MCFL_DATASET_DIR="${CMAKE_SOURCE_DIR}/benchmarks/real-world/CFL/InterleavedDyck/taint")
 
 add_lotus_targeted_test(ClassicalAdaptersTest ClassicalAdaptersTest.cpp

@@ -1,104 +1,29 @@
 # CFL Library
 
-Context-free-language reachability and graph simplification.
+Lotus groups its CFL-related implementations by problem family:
 
-| Subdir | Purpose |
-|--------|---------|
-| **Classical** | Classical CFL-reachability algorithms. Includes EBNF grammar normalization, matrix/PAG-style labeled graph loading, cubic CFL solving, SC reduction, and CNF/STBDU utilities |
-| **CSIndex** | Indexing extended Dyck-CFL reachability for context-sensitive analysis (OOPSLA 22). Backbone discovery, gate graph, tabulation, compression. |
-| **InterDyckGraphReduce** | Graph simplification for interleaved Dyck-reachability (PLDI 20). Bracket/paren matching. |
-| **InterleavedDyckCore** | Shared typed labels, graph, pair types, and DOT parser for interleaved-Dyck datasets. |
-| **UnaryInterleavedDyck** | Adaptive and POPL 2022 FixedCounter algorithms for bidirected unary `D1`-interleaved-`D1`. |
-| **InterleavedDyckApproximation** | Staged lower/upper bounds, parity grammar, mutual refinement, and on-demand checks for typed interleaved Dyck ([SOAP 24](https://cs.au.dk/~pavlogiannis/publications/papers/soap24.pdf)). |
-| **MCFL** | Normal-form multiple-context-free-language reachability and the POPL 2025 typed underapproximation hierarchy. |
-| **MutualRefinement** | Integer CNF saturation, derivation tracing, and generic mutual-refinement experiments (SAS 23). |
-
-## Relationship between the interleaved-Dyck components
-
-`InterDyckGraphReduce`, `MutualRefinement`, `InterleavedDyckApproximation`, and
-`MCFL` all address constrained reachability involving two interleaved Dyck
-alphabets. Their guarantees and abstraction levels differ:
-
-```text
-                    typed D_k interleaved D_k
-                              |
-                 +------------+------------+
-                 |                         |
-          certified lower bounds     sound upper bounds
-          MCFL G_d grammars          Interleaved-Dyck
-          union-Dyck grammar         Approximation
-                                            |
-                                     MutualRefinement
-
-                 bidirected unary D_1 interleaved D_1
-                              |
-                     UnaryInterleavedDyck
-                              |
-                 +------------+------------+
-                 |                         |
-        FixedCounterSolver          AdaptiveSolver
-          cubic control           quadratic control
-                 |                         |
-                 +------------+------------+
-                              |
-                       exact partition
-```
-
-## Choosing a solver
-
-| Question | API | Guarantee |
-|---|---|---|
-| Reachability for a client-supplied MCFG | `mcfl::Solver` | Exact for that grammar |
-| Certified typed interleaved-Dyck pairs | `mcfl::InterleavedDyckSolver` | Dimension-indexed underapproximation |
-| POPL 2022 exact baseline | `unary_interleaved_dyck::FixedCounterSolver` | Exact component partition after unary projection |
-| Exact bidirected unary interleaved Dyck | `unary_interleaved_dyck::AdaptiveSolver` | Exact component partition after unary projection |
-| Typed candidates plus lower/upper refinement | `interleaved_dyck_approximation::Solver` | Underapproximation and progressively tighter overapproximations |
-
-## Directed and bidirected inputs
-
-| Component | Policy |
+| Subdirectory | Purpose |
 |---|---|
-| `InterleavedDyckCore` | Preserves exactly the arcs in the input file |
-| `InterleavedDyckApproximation` | Analyzes the directed graph as supplied; adds no reverse arcs |
-| `MCFL::InterleavedDyckSolver` | Analyzes supplied directed arcs; semantic epsilon self-paths are added internally |
-| `UnaryInterleavedDyck` | Both algorithms reject non-bidirected input by default; explicit symmetrization returns a sound overapproximation for the original directed graph |
-| `InterDyckGraphReduce` | Uses specialized reverse orientations/synthetic terminals inside its reduction proof; does not present them as original input arcs |
+| [`Classical`](Classical/README.md) | Grammar-driven classical CFL reachability, solver engines, preprocessing, and analysis clients |
+| [`CSIndex`](CSIndex/README.md) | Extended-Dyck indexing for context-sensitive reachability |
+| [`InterleavedDyck`](InterleavedDyck/README.md) | Shared representations, exact special cases, bounds, underapproximations, refinement, and graph reduction for interleaved-Dyck reachability |
 
-Any experiment that adds complement reverse arcs must report that transformation
-and the resulting change from exact-original to overapproximate-original
-semantics.
+The public header tree under `include/CFL` mirrors this organization. All
+interleaved-Dyck APIs live below `include/CFL/InterleavedDyck`.
 
 ## Command-line tools
 
-| Tool | Module | Purpose |
-|---|---|---|
-| `lotus-cfl-classical` | Classical | Run Lotus or POCR-format problems with sparse, Graspan, PEARL, Sqid, transitive-closure, POCR/hierarchical-POCR, or fully ordered backends |
-| `lotus-cfl-foldability` | Classical | Check POCR recursive-state-machine-guided node-pair foldability patterns |
-| `lotus-cfl-pocr` | Classical | Run POCR's standard, Graspan, rewritten-grammar, POCR, and FOCR engines directly on `.peg`/`.vfg` datasets |
-| `lotus-cfl-staged` | Classical | Run the ISSTA 2024 Stg solver with an explicit Dyck or Alias CFP decomposition |
-| `lotus-cfl-alias` | Classical | Run grammar-driven or hand-specialized POCR/FOCR alias and indirect-call analysis directly on LLVM IR/bitcode |
-| `lotus-cfl-vf` | Classical | Run grammar-driven or hand-specialized POCR/FOCR context-sensitive value-flow analysis over Lotus's SVFG |
-| `lotus-cfl-mcfl` | MCFL | Run the dimension-indexed `G_d` underapproximation hierarchy |
-| `lotus-cfl-interleaved-dyck-approximation` | InterleavedDyckApproximation | Report staged typed lower/upper bounds |
-| `lotus-cfl-unary-interleaved-dyck` | UnaryInterleavedDyck | Select `adaptive` or `fixed-counter` exact unary analysis |
-| `lotus-cfl-mutual-refinement` | MutualRefinement | Run generic file-driven `naive` or `refine` CNF experiments |
-| `lotus-cfl-inter-dyck-graph-reduce.py` | InterDyckGraphReduce | Orchestrate in-place graph simplification through the two compiled helper tools |
+Classical tools retain the `lotus-cfl-*` names documented by the Classical
+module. Interleaved-Dyck tools consistently use the
+`lotus-cfl-interleaved-dyck-*` prefix:
 
-Each module README documents its input contract and options. There is no
-combined comparison binary; experiments compose the individual tools or use
-the shared typed graph APIs directly.
+| Tool | Purpose |
+|---|---|
+| `lotus-cfl-interleaved-dyck-unary` | Run the adaptive or fixed-counter exact unary analysis |
+| `lotus-cfl-interleaved-dyck-staged-bounds` | Compute staged lower and upper bounds |
+| `lotus-cfl-interleaved-dyck-mcfl` | Run the dimension-indexed MCFL underapproximation hierarchy |
+| `lotus-cfl-interleaved-dyck-mutual-refinement` | Run the file-driven CNF refinement experiment |
+| `lotus-cfl-interleaved-dyck-graph-reduction.py` | Orchestrate the graph-reduction helpers |
 
-| Component | Role | Approximation/result | Current integration |
-|-----------|------|----------------------|---------------------|
-| [InterleavedDyckCore](InterleavedDyckCore/README.md) | Shared typed graph and DOT parser | No analysis result | Common input for Approximation, UnaryInterleavedDyck, and MCFL adapter |
-| [InterDyckGraphReduce](InterDyckGraphReduce/README.md) | PLDI 2020 specialized graph simplification for two interleaved Dyck alphabets | Produces a reduced DOT graph, not a reachability relation | File-oriented CLI with private legacy summary structures; output can be reloaded through `InterleavedDyckCore` |
-| [MutualRefinement](MutualRefinement/README.md) | Grammar-agnostic integer CNF saturation and derivation tracing | Returns grammar-relative reachability edges and contributing-edge closure; assigns no interleaved-Dyck lower/upper semantics | Low-level engine reused by `CanaryInterleavedDyckApproximation` |
-| [Interleaved-Dyck Approximation](InterleavedDyckApproximation/README.md) | Domain pipeline combining typed label parsing, projected grammars, union-Dyck lower bounds, parity refinement, and on-demand checks | Produces a certified lower bound and progressively tighter upper bounds; exact only when they coincide | Links against `MutualRefinement` and owns all pipeline policy |
-| [UnaryInterleavedDyck](UnaryInterleavedDyck/README.md) | Adaptive and fixed-counter algorithms for the bidirected unary specialization | Exact component partition | Both algorithms share projection, quotient, and Dyck backend; independent of MCFL |
-| [MCFL](MCFL/README.md) | General normal-form MCFG solver and the `G_d^circ`/`G_d^+` hierarchy | Exact for a supplied MCFG; dimension-indexed typed underapproximation for the generated hierarchy | Accepts `InterleavedDyckCore` graphs through an adapter |
-
-`InterleavedDyckCore` is the shared dataset boundary. Approximation consumes it
-directly, UnaryInterleavedDyck uses its unary projection and Dyck backend, and
-MCFL adapts it to its generic terminal-labeled graph. Algorithm-specific
-grammar and solver IRs stay separate: MutualRefinement uses integer CNF,
-whereas MCFL uses variable-arity MCFG predicates.
+There are no compatibility headers, CMake target aliases, or legacy command
+names for the former flat layout.

@@ -30,7 +30,10 @@ struct Options {
 void usage(std::ostream &stream) {
   stream << "Usage: lotus-cfl-alias [options] INPUT.{ll,bc}\n"
             "Options:\n"
-            "  --solver sparse-set|sparse-bitvector|transitive-closure\n"
+            "  --solver sparse-set|sparse-bitvector|graspan|"
+            "transitive-closure|pocr|hpocr|focr\n"
+            "  --engine grammar|pocr-aa|focr-aa\n"
+            "  --focr-scc\n"
             "  --encoding pag|peg\n"
             "  --entry FUNCTION\n"
             "  --max-callgraph-rounds N\n"
@@ -51,15 +54,19 @@ Options parseOptions(int argc, char **argv) {
       return argv[index];
     };
     if (argument == "--solver") {
+      options.analysis.backend = parseSolverBackend(value());
+    } else if (argument == "--engine") {
       const std::string selected = value();
-      if (selected == "sparse-set") {
-        options.analysis.backend = SolverBackend::SparseSet;
-      } else if (selected == "sparse-bitvector") {
-        options.analysis.backend = SolverBackend::SparseBitVector;
-      } else if (selected == "transitive-closure") {
-        options.analysis.backend = SolverBackend::TransitiveClosure;
+      if (selected == "grammar") {
+        options.analysis.specialized_backend.reset();
+      } else if (selected == "pocr-aa") {
+        options.analysis.specialized_backend =
+            engines::SpecializedPocrBackend::Pocr;
+      } else if (selected == "focr-aa") {
+        options.analysis.specialized_backend =
+            engines::SpecializedPocrBackend::Focr;
       } else {
-        throw std::invalid_argument("Unknown solver: " + selected);
+        throw std::invalid_argument("Unknown alias engine: " + selected);
       }
     } else if (argument == "--encoding") {
       const std::string selected = value();
@@ -70,6 +77,8 @@ Options parseOptions(int argc, char **argv) {
       } else {
         throw std::invalid_argument("Unknown encoding: " + selected);
       }
+    } else if (argument == "--focr-scc") {
+      options.analysis.simplify_focr_cycles = true;
     } else if (argument == "--entry") {
       options.analysis.entry = value();
     } else if (argument == "--max-callgraph-rounds") {
@@ -102,7 +111,20 @@ Options parseOptions(int argc, char **argv) {
   if (options.input.empty()) {
     throw std::invalid_argument("An input LLVM module is required");
   }
+  if (options.analysis.specialized_backend &&
+      options.analysis.encoding != AliasEncodingMode::PEG) {
+    throw std::invalid_argument("pocr-aa and focr-aa require the PEG encoding");
+  }
   return options;
+}
+
+const char *engineName(const LLVMAliasOptions &options) {
+  if (!options.specialized_backend) {
+    return solverBackendName(options.backend);
+  }
+  return *options.specialized_backend == engines::SpecializedPocrBackend::Pocr
+             ? "pocr-aa"
+             : "focr-aa";
 }
 
 const llvm::Value *findNamedValue(const llvm::Module &module,
@@ -246,8 +268,7 @@ int main(int argc, char **argv) {
           checkAnnotations(*module, analysis);
     }
     if (options.json_stats) {
-      std::cout << "{\"solver\":\""
-                << solverBackendName(options.analysis.backend)
+      std::cout << "{\"solver\":\"" << engineName(options.analysis)
                 << "\",\"encoding\":\""
                 << (options.analysis.encoding == AliasEncodingMode::PAG ? "pag"
                                                                         : "peg")
@@ -256,12 +277,31 @@ int main(int argc, char **argv) {
                 << ",\"relation_edges\":" << stats.relation_edges
                 << ",\"start_edges\":" << stats.start_symbol_edges
                 << ",\"callgraph_rounds\":" << stats.solver_rounds
+                << ",\"processed_items\":" << stats.processed_work_items
+                << ",\"transitive_pairs\":" << stats.transitive_propagated_pairs
+                << ",\"pocr_tree_nodes\":" << stats.pocr_tree_nodes
+                << ",\"pocr_traversal_steps\":" << stats.pocr_traversal_steps
+                << ",\"pocr_tree_join_visits\":" << stats.pocr_tree_join_visits
+                << ",\"focr_critical_edges\":"
+                << stats.fully_ordered_critical_edges
+                << ",\"focr_reachability_checks\":"
+                << stats.fully_ordered_reachability_checks
+                << ",\"focr_tree_join_visits\":"
+                << stats.fully_ordered_tree_join_visits
+                << ",\"focr_cycle_simplifications\":"
+                << stats.fully_ordered_cycle_simplifications
+                << ",\"graspan_epochs\":" << stats.graspan_epochs
+                << ",\"specialized_reachability_pairs\":"
+                << stats.specialized_reachability_pairs
+                << ",\"specialized_matched_pairs\":"
+                << stats.specialized_matched_pairs
+                << ",\"specialized_critical_edges\":"
+                << stats.specialized_critical_edges
                 << ",\"annotation_total\":" << annotation_total
                 << ",\"annotation_failures\":" << annotation_failures
                 << ",\"solve_us\":" << stats.solve_time_microseconds << "}\n";
     } else {
-      std::cout << "solver=" << solverBackendName(options.analysis.backend)
-                << " encoding="
+      std::cout << "solver=" << engineName(options.analysis) << " encoding="
                 << (options.analysis.encoding == AliasEncodingMode::PAG ? "pag"
                                                                         : "peg")
                 << " nodes=" << stats.graph_nodes
@@ -269,6 +309,15 @@ int main(int argc, char **argv) {
                 << " relation_edges=" << stats.relation_edges
                 << " start_edges=" << stats.start_symbol_edges
                 << " callgraph_rounds=" << stats.solver_rounds
+                << " processed_items=" << stats.processed_work_items
+                << " pocr_tree_nodes=" << stats.pocr_tree_nodes
+                << " pocr_traversal_steps=" << stats.pocr_traversal_steps
+                << " pocr_tree_join_visits=" << stats.pocr_tree_join_visits
+                << " focr_critical_edges=" << stats.fully_ordered_critical_edges
+                << " focr_tree_join_visits="
+                << stats.fully_ordered_tree_join_visits
+                << " graspan_epochs=" << stats.graspan_epochs
+                << " specialized_pairs=" << stats.specialized_reachability_pairs
                 << " annotation_total=" << annotation_total
                 << " annotation_failures=" << annotation_failures
                 << " solve_us=" << stats.solve_time_microseconds << '\n';

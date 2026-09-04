@@ -24,6 +24,9 @@ struct BinaryRuleId {
 };
 
 struct GrammarParseOptions {
+  /// Optional whitelist of suffix variables. Empty accepts every lowercase
+  /// suffix; POCR's legacy format fixes this to its conventional `_i`.
+  std::unordered_set<char> attribute_variables;
   /// Observed domain for a grammar variable such as i in call_i/ret_i.
   std::unordered_map<char, std::vector<std::uint32_t>> variable_attributes;
   /// Observed domain per symbol kind, e.g. call -> {1, 2}, gep -> {0, 4}.
@@ -109,6 +112,27 @@ public:
   const std::unordered_set<SymbolId> &transitiveSymbols() const {
     return transitive_symbols_;
   }
+  bool usesUnidirectionalMetadata() const {
+    return uses_unidirectional_metadata_;
+  }
+  bool isInsertSymbol(const std::string &symbol) const {
+    return insert_symbols_.count(symbol) != 0;
+  }
+  bool isFollowSymbol(const std::string &symbol) const {
+    return follow_symbols_.count(symbol) != 0;
+  }
+  bool isCountSymbol(const std::string &symbol) const {
+    return count_symbols_.count(symbol) != 0;
+  }
+  const std::unordered_set<std::string> &insertSymbols() const {
+    return insert_symbols_;
+  }
+  const std::unordered_set<std::string> &followSymbols() const {
+    return follow_symbols_;
+  }
+  const std::unordered_set<std::string> &countSymbols() const {
+    return count_symbols_;
+  }
 
 private:
   Grammar() = default;
@@ -136,6 +160,10 @@ private:
   std::unordered_map<SymbolId, std::vector<BinaryRuleId>> binary_by_first_id_;
   std::unordered_map<SymbolId, std::vector<BinaryRuleId>> binary_by_second_id_;
   std::unordered_set<SymbolId> transitive_symbols_;
+  bool uses_unidirectional_metadata_ = false;
+  std::unordered_set<std::string> insert_symbols_;
+  std::unordered_set<std::string> follow_symbols_;
+  std::unordered_set<std::string> count_symbols_;
   unsigned next_nonterminal_id_ = 0;
 };
 

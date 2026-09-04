@@ -1,10 +1,14 @@
 #include "CFL/Classical/Core/Graph.h"
 
+#include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <iterator>
 #include <regex>
+#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 
 #include <llvm/Support/Error.h>
 #include <llvm/Support/JSON.h>
@@ -24,6 +28,44 @@ std::string trim(const std::string &text) {
 
 bool startsWith(const std::string &value, const std::string &prefix) {
   return value.rfind(prefix, 0) == 0;
+}
+
+bool endsWith(const std::string &value, const std::string &suffix) {
+  return value.size() >= suffix.size() &&
+         value.compare(value.size() - suffix.size(), suffix.size(), suffix) ==
+             0;
+}
+
+std::string attributedLabel(const std::string &label,
+                            const std::string &attribute) {
+  if (!endsWith(label, "_i")) {
+    return label;
+  }
+  if (attribute.empty()) {
+    return label.substr(0, label.size() - 1) + '0';
+  }
+  if (!std::all_of(attribute.begin(), attribute.end(),
+                   [](unsigned char c) { return std::isdigit(c) != 0; })) {
+    throw std::invalid_argument("Invalid attributed graph label: " + label +
+                                " " + attribute);
+  }
+  return label.substr(0, label.size() - 1) + attribute;
+}
+
+bool looksLikeDotFile(const std::string &path) {
+  std::ifstream input(path);
+  if (!input) {
+    throw std::runtime_error("Failed to open graph file: " + path);
+  }
+  for (std::string line; std::getline(input, line);) {
+    line = trim(line);
+    if (line.empty() || line.front() == '#') {
+      continue;
+    }
+    return startsWith(line, "digraph") ||
+           line.find("->") != std::string::npos || line == "{";
+  }
+  return false;
 }
 
 std::string decodeDotIdentifier(std::string value) {
@@ -55,14 +97,40 @@ LabeledGraph LabeledGraph::parseFromFile(const std::string &path,
   const auto dot_pos = path.find_last_of('.');
   const auto suffix =
       dot_pos == std::string::npos ? std::string() : path.substr(dot_pos + 1);
-  if (suffix == "txt") {
+  if (suffix == "txt" || suffix == "peg" || suffix == "vfg" ||
+      suffix == "graph") {
     graph.loadFromTextFile(path);
   } else if (suffix == "json") {
     graph.loadFromJsonFile(path);
-  } else {
+  } else if (suffix == "dot" || looksLikeDotFile(path)) {
     graph.loadFromDotFile(path, options.mode);
+  } else {
+    graph.loadFromTextFile(path);
   }
   return graph.transformed(options.direction);
+}
+
+void LabeledGraph::writeTextFile(const std::string &path) const {
+  std::ofstream output(path);
+  if (!output) {
+    throw std::runtime_error("Failed to open graph output file: " + path);
+  }
+  std::vector<std::size_t> sources(source_vertices_.begin(),
+                                   source_vertices_.end());
+  std::sort(sources.begin(), sources.end());
+  for (std::size_t node : sources) {
+    output << vertexName(node) << '\t' << vertexName(node) << "\tsrc\n";
+  }
+  std::vector<LabeledEdge> ordered = edges();
+  std::sort(ordered.begin(), ordered.end(),
+            [](const LabeledEdge &first, const LabeledEdge &second) {
+              return std::tie(first.source, first.target, first.label) <
+                     std::tie(second.source, second.target, second.label);
+            });
+  for (const LabeledEdge &edge : ordered) {
+    output << vertexName(edge.source) << ',' << vertexName(edge.target) << ','
+           << edge.label << '\n';
+  }
 }
 
 std::string LabeledGraph::complementLabel(const std::string &label) {
@@ -87,6 +155,9 @@ LabeledGraph LabeledGraph::transformed(EdgeDirection direction) const {
   LabeledGraph result;
   for (const std::string &vertex : vertices_) {
     result.addVertex(vertex);
+  }
+  for (std::size_t source : source_vertices_) {
+    result.markSource(source);
   }
   for (const LabeledEdge &edge : edges()) {
     if (direction == EdgeDirection::Reverse) {
@@ -147,6 +218,15 @@ bool LabeledGraph::hasEdge(std::size_t source, std::size_t target,
   return out_it->second.count(label) != 0;
 }
 
+void LabeledGraph::markSource(std::size_t node) {
+  if (node >= vertexCount()) {
+    throw std::out_of_range("Source marker node is out of range");
+  }
+  if (source_vertices_.insert(node).second) {
+    ++mutation_version_;
+  }
+}
+
 std::size_t LabeledGraph::vertexId(const std::string &name) const {
   const auto it = vertex_ids_.find(name);
   if (it == vertex_ids_.end()) {
@@ -190,20 +270,36 @@ void LabeledGraph::loadFromTextFile(const std::string &path) {
   std::string line;
   while (std::getline(input, line)) {
     line = trim(line);
-    if (line.empty()) {
+    if (line.empty() || line.front() == '#') {
       continue;
     }
 
     const auto first = line.find(',');
     const auto second =
         line.find(',', first == std::string::npos ? first : first + 1);
-    if (first == std::string::npos || second == std::string::npos) {
-      throw std::invalid_argument("Malformed graph line: " + line);
+    if (first != std::string::npos && second != std::string::npos) {
+      addEdge(trim(line.substr(0, first)),
+              trim(line.substr(first + 1, second - first - 1)),
+              trim(line.substr(second + 1)));
+      continue;
     }
 
-    addEdge(trim(line.substr(0, first)),
-            trim(line.substr(first + 1, second - first - 1)),
-            trim(line.substr(second + 1)));
+    std::istringstream fields(line);
+    std::vector<std::string> tokens;
+    for (std::string token; fields >> token;) {
+      tokens.push_back(std::move(token));
+    }
+    if (tokens.size() < 3 || tokens.size() > 4) {
+      throw std::invalid_argument("Malformed graph line: " + line);
+    }
+    addVertex(tokens[0]);
+    addVertex(tokens[1]);
+    if (tokens[2] == "src") {
+      markSource(vertexId(tokens[0]));
+      continue;
+    }
+    addEdge(tokens[0], tokens[1],
+            attributedLabel(tokens[2], tokens.size() == 4 ? tokens[3] : ""));
   }
 }
 

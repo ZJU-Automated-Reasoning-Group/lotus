@@ -1,0 +1,19 @@
+V	Abar	V
+M	DV	d
+DV	dbar	V
+V	V	A
+V	FV_i	f_i
+V	M
+V
+FV_i	fbar_i	V
+A	A	A
+A	a	M
+A	a
+A
+Abar	Abar	Abar
+Abar	M	abar
+Abar	abar
+Abar
+
+Count:
+V

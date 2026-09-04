@@ -1,6 +1,7 @@
 #pragma once
 
-#include "CFL/Classical/Solvers/Reachability.h"
+#include "CFL/Classical/Solvers/Engines/POCR/SpecializedEngines.h"
+#include "CFL/Classical/Solvers/SolverSession.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -68,12 +69,18 @@ public:
                       AliasEncodingMode mode = AliasEncodingMode::PAG);
 
   ReachabilityStats solve(SolverBackend backend = SolverBackend::SparseSet);
+  ReachabilityStats solveSpecialized(engines::SpecializedPocrBackend backend,
+                                     bool simplify_focr_cycles = false);
   /// Alternate solving with a client-supplied discovery policy. The callback
   /// may add nodes and constraints and returns true when it changed the input.
   ReachabilityStats solveToFixedPoint(
       SolverBackend backend,
       const std::function<bool(AliasClient &)> &discover_constraints,
       std::size_t max_rounds = 64);
+  ReachabilityStats solveToFixedPoint(
+      engines::SpecializedPocrBackend backend,
+      const std::function<bool(AliasClient &)> &discover_constraints,
+      std::size_t max_rounds = 64, bool simplify_focr_cycles = false);
   std::size_t addNode(const std::string &name);
   /// Add a constraint after construction. If solving has started, the same
   /// solver session is resumed on the next solve() call.
@@ -95,6 +102,7 @@ private:
   void initializePegDereferences();
   void initializeGepAttributes();
   void rebuildGrammar();
+  void invalidateSpecializedEngines();
 
   struct State;
   std::unique_ptr<State> state_;
@@ -104,6 +112,10 @@ private:
   std::set<std::uint32_t> gep_attributes_;
   std::unique_ptr<SolverSession> session_;
   std::optional<SolverBackend> backend_;
+  std::unique_ptr<engines::PocrAliasEngine> pocr_engine_;
+  std::unique_ptr<engines::FocrAliasEngine> focr_engine_;
+  std::optional<engines::SpecializedPocrBackend> specialized_backend_;
+  bool specialized_focr_cycles_ = false;
 };
 
 } // namespace lotus::cfl::classical

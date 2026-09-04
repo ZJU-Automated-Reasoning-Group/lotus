@@ -14,6 +14,7 @@ enables analysis of complex program properties using grammar-based constraints.
 **Location**: ``tools/cfl/``
 
 **Tools**: ``lotus-cfl-classical``, ``lotus-cfl-alias``, ``lotus-cfl-vf``,
+``lotus-cfl-foldability``, ``lotus-cfl-pocr``,
 ``lotus-cfl-mcfl``, ``lotus-cfl-mutual-refinement``,
 ``lotus-cfl-interleaved-dyck-approximation``,
 ``lotus-cfl-unary-interleaved-dyck``, ``lotus-cfl-inter-dyck-graph-reduce``,
@@ -23,7 +24,8 @@ Classical CFL and Alias Analysis
 --------------------------------
 
 ``lotus-cfl-classical`` runs a supplied grammar over a text, DOT, or JSON
-graph with the sparse-set, sparse-bitvector, or transitive-closure backend.
+graph with the sparse-set, sparse-bitvector, Graspan, transitive-closure, POCR,
+hierarchical-POCR, or fully ordered backend.
 
 ``lotus-cfl-alias`` consumes LLVM IR or bitcode. It uses Aser as the constraint
 frontend but drives points-to propagation and indirect-call discovery through
@@ -44,6 +46,27 @@ labels.
      --check-annotations module.bc
    build/bin/lotus-cfl-vf --solver transitive-closure \
      --query main::source,main::sink module.bc
+
+Use ``--solver pocr``, ``--solver hpocr``, or ``--solver focr`` to select the
+ported POCR algorithm families. The same selectors are available to the alias
+and value-flow clients.
+
+The hand-specialized engines are separate from those general grammar
+backends. Use ``lotus-cfl-alias --engine pocr-aa|focr-aa --encoding peg`` or
+``lotus-cfl-vf --engine pocr-vfa|focr-vfa``. ``Clients/`` still contains only
+the alias and value-flow adapters; the implementations live under
+``Solvers/Engines/``.
+
+``lotus-cfl-pocr`` drives the standard, Graspan, grammar-rewritten,
+rewritten-Graspan, POCR, and FOCR engine choices directly on POCR ``.peg`` and
+``.vfg`` files for artifact comparison, without creating another client layer.
+It exposes POCR's SCC, graph-folding, InterDyck-pruning, graph-output, and
+optional ECG-SCC controls directly.
+
+``lotus-cfl-foldability`` ports POCR's recursive-state-machine-guided
+foldability checker. The general driver also accepts POCR grammar/graph files
+directly and exposes unidirectional summarization, SCC elimination, graph
+folding, and inter-Dyck pruning.
 
 See :doc:`../../cfl/classical` for the complete option and API description.
 

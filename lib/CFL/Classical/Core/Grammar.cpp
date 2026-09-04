@@ -43,6 +43,102 @@ std::vector<std::string> tokenize(const std::string &text) {
   return tokens;
 }
 
+struct PocrGrammarText {
+  std::string normalized;
+  std::vector<std::string> insert_symbols;
+  std::vector<std::string> follow_symbols;
+  std::vector<std::string> count_symbols;
+};
+
+std::vector<std::string> commaSeparatedSymbols(const std::string &line) {
+  std::vector<std::string> symbols;
+  for (const std::string &part : split(line, ',')) {
+    const std::string symbol = trim(part);
+    if (!symbol.empty()) {
+      symbols.push_back(symbol);
+    }
+  }
+  return symbols;
+}
+
+PocrGrammarText normalizePocrGrammar(const std::string &text) {
+  enum class Section { Productions, Insert, Follow, Count };
+  // POCR also emits rewritten grammars without an explicit Production header.
+  Section section = Section::Productions;
+  std::vector<std::vector<std::string>> productions;
+  PocrGrammarText result;
+
+  std::istringstream input(text);
+  for (std::string line; std::getline(input, line);) {
+    line = trim(line);
+    if (line.empty() || line.front() == '#') {
+      continue;
+    }
+    if (line == "Production:") {
+      section = Section::Productions;
+      continue;
+    }
+    if (line == "Insert:") {
+      section = Section::Insert;
+      continue;
+    }
+    if (line == "Follow:") {
+      section = Section::Follow;
+      continue;
+    }
+    if (line == "Count:") {
+      section = Section::Count;
+      continue;
+    }
+
+    if (section == Section::Productions) {
+      const auto symbols = tokenize(line);
+      if (symbols.empty() || symbols.size() > 3) {
+        throw std::invalid_argument("Invalid POCR production: " + line);
+      }
+      productions.push_back(symbols);
+      continue;
+    }
+
+    std::vector<std::string> *destination = nullptr;
+    if (section == Section::Insert) {
+      destination = &result.insert_symbols;
+    } else if (section == Section::Follow) {
+      destination = &result.follow_symbols;
+    } else if (section == Section::Count) {
+      destination = &result.count_symbols;
+    }
+    if (!destination) {
+      throw std::invalid_argument("Data before POCR Production section: " +
+                                  line);
+    }
+    const auto symbols = commaSeparatedSymbols(line);
+    destination->insert(destination->end(), symbols.begin(), symbols.end());
+  }
+
+  if (productions.empty()) {
+    throw std::invalid_argument("POCR grammar has no productions");
+  }
+  const std::string start = result.count_symbols.empty()
+                                ? productions.front().front()
+                                : result.count_symbols.front();
+  std::ostringstream normalized;
+  normalized << "Start:\n  " << start << "\nProductions:\n";
+  for (const auto &production : productions) {
+    normalized << "  " << production.front() << " ->";
+    if (production.size() == 1) {
+      normalized << ' ' << Grammar::kEpsilonSymbol;
+    } else {
+      for (std::size_t index = 1; index < production.size(); ++index) {
+        normalized << ' ' << production[index];
+      }
+    }
+    normalized << ";\n";
+  }
+  result.normalized = normalized.str();
+  return result;
+}
+
 bool isEpsilon(const std::string &token) {
   return token == Grammar::kEpsilonSymbol;
 }
@@ -96,12 +192,40 @@ std::vector<std::uint32_t> attributeDomain(const std::vector<std::string> &rule,
   return domain;
 }
 
+std::vector<std::uint32_t>
+pocrAttributeDomain(const std::vector<std::string> &rule, char variable,
+                    const GrammarParseOptions &options) {
+  bool indexed_rhs = false;
+  for (std::size_t index = 1; index < rule.size(); ++index) {
+    indexed_rhs = indexed_rhs || attributeVariable(rule[index]) == variable;
+  }
+  if (!indexed_rhs) {
+    // StdCFL assigns index zero when an indexed LHS is derived entirely from
+    // non-indexed symbols.
+    return {0};
+  }
+
+  std::vector<std::uint32_t> domain{0};
+  if (const auto it = options.variable_attributes.find(variable);
+      it != options.variable_attributes.end()) {
+    domain.insert(domain.end(), it->second.begin(), it->second.end());
+  }
+  for (const auto &[_, observed] : options.symbol_attributes) {
+    domain.insert(domain.end(), observed.begin(), observed.end());
+  }
+  return normalizedDomain(std::move(domain));
+}
+
 std::vector<std::vector<std::string>>
 expandAttributes(const std::vector<std::string> &rule,
-                 const GrammarParseOptions &options) {
+                 const GrammarParseOptions &options, bool pocr_legacy) {
   std::vector<char> variables;
   for (const std::string &token : rule) {
     const auto variable = attributeVariable(token);
+    if (variable && !options.attribute_variables.empty() &&
+        options.attribute_variables.count(*variable) == 0) {
+      continue;
+    }
     if (variable && std::find(variables.begin(), variables.end(), *variable) ==
                         variables.end()) {
       variables.push_back(*variable);
@@ -114,7 +238,8 @@ expandAttributes(const std::vector<std::string> &rule,
   std::vector<std::vector<std::string>> expanded{rule};
   for (char variable : variables) {
     const std::vector<std::uint32_t> domain =
-        attributeDomain(rule, variable, options);
+        pocr_legacy ? pocrAttributeDomain(rule, variable, options)
+                    : attributeDomain(rule, variable, options);
     if (domain.empty()) {
       throw std::invalid_argument(
           std::string("No attribute domain for grammar variable '") + variable +
@@ -249,21 +374,75 @@ Grammar Grammar::parseFromText(const std::string &text,
 
 void Grammar::loadFromText(const std::string &text,
                            const GrammarParseOptions &options) {
-  const auto productions_pos = text.find("Productions:");
+  const bool is_pocr = text.find("Productions:") == std::string::npos;
+  GrammarParseOptions effective_options = options;
+  if (is_pocr) {
+    effective_options.attribute_variables = {'i'};
+  }
+  PocrGrammarText pocr;
+  const std::string normalized_text =
+      is_pocr ? (pocr = normalizePocrGrammar(text), pocr.normalized) : text;
+  uses_unidirectional_metadata_ = is_pocr;
+
+  auto addMetadataSymbols = [&](const std::vector<std::string> &symbols,
+                                std::unordered_set<std::string> &destination) {
+    for (const std::string &symbol : symbols) {
+      const auto variable = attributeVariable(symbol);
+      if (!variable ||
+          (!effective_options.attribute_variables.empty() &&
+           effective_options.attribute_variables.count(*variable) == 0)) {
+        destination.insert(symbol);
+        continue;
+      }
+      std::vector<std::uint32_t> domain;
+      if (const auto it = effective_options.variable_attributes.find(*variable);
+          it != effective_options.variable_attributes.end()) {
+        domain = it->second;
+      } else {
+        for (const auto &[_, observed] : effective_options.symbol_attributes) {
+          domain.insert(domain.end(), observed.begin(), observed.end());
+        }
+      }
+      domain.push_back(0);
+      domain = normalizedDomain(std::move(domain));
+      if (domain.empty()) {
+        throw std::invalid_argument(
+            std::string("No attribute domain for POCR metadata variable '") +
+            *variable + "'");
+      }
+      for (std::uint32_t attribute : domain) {
+        std::string expanded = symbol;
+        expanded.replace(expanded.size() - 1, 1, std::to_string(attribute));
+        destination.insert(std::move(expanded));
+      }
+    }
+  };
+  if (is_pocr) {
+    addMetadataSymbols(pocr.insert_symbols, insert_symbols_);
+    addMetadataSymbols(pocr.follow_symbols, follow_symbols_);
+    addMetadataSymbols(pocr.count_symbols, count_symbols_);
+  }
+
+  const auto productions_pos = normalized_text.find("Productions:");
   if (productions_pos == std::string::npos) {
     throw std::invalid_argument(
         "Grammar file is missing a Productions section");
   }
 
-  parseDeclarationSections(text, start_symbol_, terminals_, nonterminals_);
-  for (const auto &[kind, domain] : options.symbol_attributes) {
+  parseDeclarationSections(normalized_text, start_symbol_, terminals_,
+                           nonterminals_);
+  if (is_pocr && attributeVariable(start_symbol_) && !count_symbols_.empty()) {
+    start_symbol_ =
+        *std::min_element(count_symbols_.begin(), count_symbols_.end());
+  }
+  for (const auto &[kind, domain] : effective_options.symbol_attributes) {
     for (std::uint32_t attribute : normalizedDomain(domain)) {
       terminals_.insert(kind + '_' + std::to_string(attribute));
     }
   }
 
-  const auto production_blob =
-      text.substr(productions_pos + std::string("Productions:").size());
+  const auto production_blob = normalized_text.substr(
+      productions_pos + std::string("Productions:").size());
   const auto raw_rules = split(production_blob, ';');
   std::string first_head;
   for (const auto &raw_rule : raw_rules) {
@@ -291,7 +470,8 @@ void Grammar::loadFromText(const std::string &text,
       }
       std::vector<std::string> production{head};
       production.insert(production.end(), rule.begin(), rule.end());
-      for (auto &expanded : expandAttributes(production, options)) {
+      for (auto &expanded :
+           expandAttributes(production, effective_options, is_pocr)) {
         const std::string expanded_head = expanded.front();
         if (first_head.empty()) {
           first_head = expanded_head;
@@ -432,6 +612,25 @@ void Grammar::loadFromText(const std::string &text,
     }
   }
   nullable_symbols_.assign(nullable.begin(), nullable.end());
+
+  auto discardUnmaterializedMetadata = [&](auto &symbols) {
+    for (auto it = symbols.begin(); it != symbols.end();) {
+      if (terminals_.count(*it) == 0 && nonterminals_.count(*it) == 0) {
+        it = symbols.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  };
+  discardUnmaterializedMetadata(insert_symbols_);
+  discardUnmaterializedMetadata(follow_symbols_);
+  discardUnmaterializedMetadata(count_symbols_);
+
+  if (!uses_unidirectional_metadata_ ||
+      (insert_symbols_.empty() && follow_symbols_.empty())) {
+    insert_symbols_.insert(terminals_.begin(), terminals_.end());
+    insert_symbols_.insert(nonterminals_.begin(), nonterminals_.end());
+  }
 }
 
 std::string Grammar::freshNonterminal() {
@@ -596,6 +795,15 @@ std::vector<GrammarIssue> Grammar::validate() const {
       issues.push_back(
           {GrammarIssueSeverity::Error,
            "Symbol is both terminal and nonterminal: " + terminal});
+    }
+  }
+  for (const auto *symbols :
+       {&insert_symbols_, &follow_symbols_, &count_symbols_}) {
+    for (const std::string &symbol : *symbols) {
+      if (!hasSymbol(symbol)) {
+        issues.push_back({GrammarIssueSeverity::Error,
+                          "POCR metadata uses an unknown symbol: " + symbol});
+      }
     }
   }
   for (const std::string &terminal : terminals_) {

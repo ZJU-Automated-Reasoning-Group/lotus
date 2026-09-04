@@ -1,0 +1,8 @@
+0	1	a
+1	0	abar
+0	2	d
+2	0	dbar
+1	3	d
+3	1	dbar
+0	1	f_i	0
+1	0	fbar_i	0

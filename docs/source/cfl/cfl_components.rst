@@ -9,13 +9,18 @@ Classical CFL Reachability
 Grammar-driven CFL reachability utilities and solver backends
 
 **Location**: ``include/CFL/Classical/``, ``lib/CFL/Classical/``. Both trees
-use ``Core/``, ``Solvers/``, ``Clients/Alias/``, and
-``Clients/ValueFlow/`` subdirectories.
+use ``Core/``, ``Solvers/Engines/`` (with a dedicated ``POCR/`` family),
+``Solvers/Preprocessing/``, ``Clients/Alias/``, and ``Clients/ValueFlow/``.
+The two client implementations consistently use ``AliasClient.*`` and
+``ValueFlowClient.*`` filenames.
 
 **Features**:
 * One canonical grammar parser with EBNF expansion and binary normalization
 * Labeled graph construction for text, DOT, PAG, and PEG-style encodings
-* Sparse-set, sparse-bitvector, and transitive-specialized closure backends
+* Sparse-set, sparse-bitvector, Graspan epoch/delta, transitive-specialized,
+  POCR/hierarchical-POCR, and fully ordered edge-critical-graph backends
+* Native POCR grammar/graph input, unidirectional summarization, client graph
+  simplification, and RSM-guided foldability checking
 * Incremental solver sessions for dynamically discovered terminal edges
 * Adapters for Lotus AserPTA constraint graphs and Lotus SVFG value flow
 * End-to-end LLVM bitcode alias analysis with CFL-driven indirect calls
@@ -156,15 +161,13 @@ experiments and by ``InterleavedDyckApproximation``.
 * Generic file-driven alternating-refinement experiment
 
 It does not own typed delimiter semantics, approximation grammars, benchmark
-preprocessing, or lower/upper-bound interpretation; those belong to
+preprocessing, or lower/upper-bound interpretation;
+those belong to
 ``InterleavedDyckApproximation``.
 
-See also:
+    See also :
 
-- :doc:`classical`
-- :doc:`csindex`
-- :doc:`unary_interleaved_dyck`
-- :doc:`interleaved_dyck_approximation`
-- :doc:`inter_dyck_graph_reduce`
-- :doc:`mcfl`
-- :doc:`mutual_refinement`
+    - : doc :`classical` -
+    : doc :`csindex` - : doc :`unary_interleaved_dyck` -
+    : doc :`interleaved_dyck_approximation` - : doc :`inter_dyck_graph_reduce` -
+    : doc :`mcfl` - : doc :`mutual_refinement`

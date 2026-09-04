@@ -1,5 +1,5 @@
 #include "Alias/InclusionBased/AserPTA/PointerAnalysis/Context/NoCtx.h"
-#include "CFL/Classical/Clients/Alias/Alias.h"
+#include "CFL/Classical/Clients/Alias/AliasClient.h"
 #include "CFL/Classical/Clients/Alias/AserConstraintAdapter.h"
 #include "CFL/Classical/Clients/Alias/LLVMAliasAnalysis.h"
 #include "CFL/Classical/Clients/ValueFlow/ValueFlowClient.h"
@@ -178,6 +178,17 @@ TEST(ClassicalAdaptersTest,
   const auto pts = client.pointsTo(loaded);
   EXPECT_FALSE(pts.empty());
   EXPECT_EQ(pts.front(), obj);
+
+  for (engines::SpecializedPocrBackend backend :
+       {engines::SpecializedPocrBackend::Pocr,
+        engines::SpecializedPocrBackend::Focr}) {
+    AliasClient specialized =
+        AliasClient::fromConstraintGraph(graph, AliasEncodingMode::PEG);
+    const ReachabilityStats specialized_stats =
+        specialized.solveSpecialized(backend);
+    EXPECT_TRUE(specialized.mayAlias(value, loaded));
+    EXPECT_GT(specialized_stats.specialized_reachability_pairs, 0u);
+  }
 }
 
 TEST(ClassicalAdaptersTest, IncrementalPegConvertsLoadsAndStores) {
@@ -251,7 +262,9 @@ TEST(ClassicalAdaptersTest, PegResultsAreIndependentOfConstraintOrder) {
 
   for (SolverBackend backend :
        {SolverBackend::SparseSet, SolverBackend::SparseBitVector,
-        SolverBackend::TransitiveClosure}) {
+        SolverBackend::Graspan, SolverBackend::TransitiveClosure,
+        SolverBackend::Pocr, SolverBackend::HierarchicalPocr,
+        SolverBackend::FullyOrdered}) {
     AliasConstraintGraph batch_graph = makeEmptyGraph();
     batch_graph.addEdge(object, pointer, AliasConstraintEdgeKind::Addr);
     batch_graph.addEdge(value, pointer, AliasConstraintEdgeKind::Store);
@@ -446,10 +459,21 @@ TEST(ClassicalAdaptersTest, ValueFlowClientEncodesSvfgCallsAndReachability) {
   EXPECT_GT(stats.added_edges, 0u);
 
   for (SolverBackend backend :
-       {SolverBackend::SparseBitVector, SolverBackend::TransitiveClosure}) {
+       {SolverBackend::SparseBitVector, SolverBackend::Graspan,
+        SolverBackend::TransitiveClosure, SolverBackend::Pocr,
+        SolverBackend::HierarchicalPocr, SolverBackend::FullyOrdered}) {
     ValueFlowClient alternate = ValueFlowClient::fromSVFG(svfg);
     alternate.solve(backend);
     EXPECT_TRUE(alternate.hasFlow(1, 4)) << solverBackendName(backend);
+  }
+  for (engines::SpecializedPocrBackend backend :
+       {engines::SpecializedPocrBackend::Pocr,
+        engines::SpecializedPocrBackend::Focr}) {
+    ValueFlowClient alternate = ValueFlowClient::fromSVFG(svfg);
+    const ReachabilityStats specialized_stats =
+        alternate.solveSpecialized(backend);
+    EXPECT_TRUE(alternate.hasFlow(1, 4));
+    EXPECT_GT(specialized_stats.specialized_reachability_pairs, 0u);
   }
 }
 

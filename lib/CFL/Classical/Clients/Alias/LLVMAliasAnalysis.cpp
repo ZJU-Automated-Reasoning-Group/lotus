@@ -85,31 +85,37 @@ public:
     buildValueIndex();
     addSupplementalConstraints();
 
-    statistics_ = client_->solveToFixedPoint(
-        options_.backend,
-        [&](AliasClient &) {
-          std::vector<aser::NodeID> function_pointers;
-          for (auto *node : *graph) {
-            if (node->isFunctionPtr()) {
-              function_pointers.push_back(node->getNodeID());
-            }
-          }
-          const bool calls_changed =
-              builder_->getLangModelForClients()->resolveFunctionPointers(
-                  function_pointers, [&](aser::NodeID pointer) {
-                    std::vector<aser::NodeID> result;
-                    for (std::size_t mapped : client_->pointsTo(
-                             synchronizer_->mappedNode(pointer))) {
-                      if (auto source = synchronizer_->sourceNode(mapped)) {
-                        result.push_back(*source);
-                      }
-                    }
-                    return result;
-                  });
-          const bool constraints_changed = synchronizer_->synchronize();
-          return calls_changed || constraints_changed;
-        },
-        options_.max_callgraph_rounds);
+    auto discover_constraints = [&](AliasClient &) {
+      std::vector<aser::NodeID> function_pointers;
+      for (auto *node : *graph) {
+        if (node->isFunctionPtr()) {
+          function_pointers.push_back(node->getNodeID());
+        }
+      }
+      const bool calls_changed =
+          builder_->getLangModelForClients()->resolveFunctionPointers(
+              function_pointers, [&](aser::NodeID pointer) {
+                std::vector<aser::NodeID> result;
+                for (std::size_t mapped :
+                     client_->pointsTo(synchronizer_->mappedNode(pointer))) {
+                  if (auto source = synchronizer_->sourceNode(mapped)) {
+                    result.push_back(*source);
+                  }
+                }
+                return result;
+              });
+      const bool constraints_changed = synchronizer_->synchronize();
+      return calls_changed || constraints_changed;
+    };
+    if (options_.specialized_backend) {
+      statistics_ = client_->solveToFixedPoint(
+          *options_.specialized_backend, discover_constraints,
+          options_.max_callgraph_rounds, options_.simplify_focr_cycles);
+    } else {
+      statistics_ =
+          client_->solveToFixedPoint(options_.backend, discover_constraints,
+                                     options_.max_callgraph_rounds);
+    }
     buildValueIndex();
     return statistics_;
   }

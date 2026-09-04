@@ -24,8 +24,10 @@ namespace {
 struct Options {
   std::string input;
   SolverBackend backend = SolverBackend::SparseSet;
+  std::optional<engines::SpecializedPocrBackend> specialized_backend;
   bool prepare_svfg = true;
   bool json_stats = false;
+  bool simplify_focr_cycles = false;
   std::string dump_svfg;
   std::string query_source;
   std::string query_target;
@@ -34,7 +36,10 @@ struct Options {
 void usage(std::ostream &stream) {
   stream << "Usage: lotus-cfl-vf [options] INPUT.{ll,bc}\n"
             "Options:\n"
-            "  --solver sparse-set|sparse-bitvector|transitive-closure\n"
+            "  --solver sparse-set|sparse-bitvector|graspan|"
+            "transitive-closure|pocr|hpocr|focr\n"
+            "  --engine grammar|pocr-vfa|focr-vfa\n"
+            "  --focr-scc\n"
             "  --query SOURCE,TARGET       Query named LLVM values\n"
             "                              (use FUNCTION::VALUE for locals)\n"
             "  --dump-svfg FILE            Write the prepared SVFG as DOT\n"
@@ -55,15 +60,17 @@ Options parseOptions(int argc, char **argv) {
     };
 
     if (argument == "--solver") {
+      options.backend = parseSolverBackend(value());
+    } else if (argument == "--engine") {
       const std::string selected = value();
-      if (selected == "sparse-set") {
-        options.backend = SolverBackend::SparseSet;
-      } else if (selected == "sparse-bitvector") {
-        options.backend = SolverBackend::SparseBitVector;
-      } else if (selected == "transitive-closure") {
-        options.backend = SolverBackend::TransitiveClosure;
+      if (selected == "grammar") {
+        options.specialized_backend.reset();
+      } else if (selected == "pocr-vfa") {
+        options.specialized_backend = engines::SpecializedPocrBackend::Pocr;
+      } else if (selected == "focr-vfa") {
+        options.specialized_backend = engines::SpecializedPocrBackend::Focr;
       } else {
-        throw std::invalid_argument("Unknown solver: " + selected);
+        throw std::invalid_argument("Unknown value-flow engine: " + selected);
       }
     } else if (argument == "--query") {
       const std::string query = value();
@@ -74,6 +81,8 @@ Options parseOptions(int argc, char **argv) {
       }
       options.query_source = query.substr(0, comma);
       options.query_target = query.substr(comma + 1);
+    } else if (argument == "--focr-scc") {
+      options.simplify_focr_cycles = true;
     } else if (argument == "--dump-svfg") {
       options.dump_svfg = value();
     } else if (argument == "--no-prepare") {
@@ -95,6 +104,15 @@ Options parseOptions(int argc, char **argv) {
     throw std::invalid_argument("An input LLVM module is required");
   }
   return options;
+}
+
+const char *engineName(const Options &options) {
+  if (!options.specialized_backend) {
+    return solverBackendName(options.backend);
+  }
+  return *options.specialized_backend == engines::SpecializedPocrBackend::Pocr
+             ? "pocr-vfa"
+             : "focr-vfa";
 }
 
 const llvm::Value *findLocalValue(const llvm::Function &function,
@@ -193,7 +211,11 @@ int main(int argc, char **argv) {
     }
 
     ValueFlowClient client = ValueFlowClient::fromSVFG(*svfg);
-    const ReachabilityStats statistics = client.solve(options.backend);
+    const ReachabilityStats statistics =
+        options.specialized_backend
+            ? client.solveSpecialized(*options.specialized_backend,
+                                      options.simplify_focr_cycles)
+            : client.solve(options.backend);
 
     if (!options.query_source.empty()) {
       const SVFGNode *source =
@@ -210,28 +232,57 @@ int main(int argc, char **argv) {
     }
 
     if (options.json_stats) {
-      std::cout << "{\"solver\":\"" << solverBackendName(options.backend)
-                << "\",\"svfg_nodes\":" << client.graph().vertexCount()
-                << ",\"cfl_nodes\":" << client.graph().vertexCount()
-                << ",\"input_edges\":" << statistics.input_edges
-                << ",\"derived_edges\":" << statistics.added_edges
-                << ",\"relation_edges\":" << statistics.relation_edges
-                << ",\"start_edges\":" << statistics.start_symbol_edges
-                << ",\"processed_items\":" << statistics.processed_work_items
-                << ",\"dereference_edges_removed\":"
-                << preparation.dereference_edges_removed
-                << ",\"strong_update_stores\":"
-                << preparation.strong_update_stores
-                << ",\"strong_update_edges_removed\":"
-                << preparation.strong_update_edges_removed << "}\n";
+      std::cout
+          << "{\"solver\":\"" << engineName(options)
+          << "\",\"svfg_nodes\":" << client.graph().vertexCount()
+          << ",\"cfl_nodes\":" << client.graph().vertexCount()
+          << ",\"input_edges\":" << statistics.input_edges
+          << ",\"derived_edges\":" << statistics.added_edges
+          << ",\"relation_edges\":" << statistics.relation_edges
+          << ",\"start_edges\":" << statistics.start_symbol_edges
+          << ",\"processed_items\":" << statistics.processed_work_items
+          << ",\"transitive_pairs\":" << statistics.transitive_propagated_pairs
+          << ",\"pocr_tree_nodes\":" << statistics.pocr_tree_nodes
+          << ",\"pocr_traversal_steps\":" << statistics.pocr_traversal_steps
+          << ",\"pocr_tree_join_visits\":" << statistics.pocr_tree_join_visits
+          << ",\"focr_critical_edges\":"
+          << statistics.fully_ordered_critical_edges
+          << ",\"focr_reachability_checks\":"
+          << statistics.fully_ordered_reachability_checks
+          << ",\"focr_tree_join_visits\":"
+          << statistics.fully_ordered_tree_join_visits
+          << ",\"focr_cycle_simplifications\":"
+          << statistics.fully_ordered_cycle_simplifications
+          << ",\"graspan_epochs\":" << statistics.graspan_epochs
+          << ",\"specialized_reachability_pairs\":"
+          << statistics.specialized_reachability_pairs
+          << ",\"specialized_matched_pairs\":"
+          << statistics.specialized_matched_pairs
+          << ",\"specialized_critical_edges\":"
+          << statistics.specialized_critical_edges
+          << ",\"dereference_edges_removed\":"
+          << preparation.dereference_edges_removed
+          << ",\"strong_update_stores\":" << preparation.strong_update_stores
+          << ",\"strong_update_edges_removed\":"
+          << preparation.strong_update_edges_removed << "}\n";
     } else {
-      std::cout << "solver=" << solverBackendName(options.backend)
+      std::cout << "solver=" << engineName(options)
                 << " svfg_nodes=" << client.graph().vertexCount()
                 << " cfl_nodes=" << client.graph().vertexCount()
                 << " input_edges=" << statistics.input_edges
                 << " derived_edges=" << statistics.added_edges
                 << " relation_edges=" << statistics.relation_edges
                 << " start_edges=" << statistics.start_symbol_edges
+                << " pocr_tree_nodes=" << statistics.pocr_tree_nodes
+                << " pocr_traversal_steps=" << statistics.pocr_traversal_steps
+                << " pocr_tree_join_visits=" << statistics.pocr_tree_join_visits
+                << " focr_critical_edges="
+                << statistics.fully_ordered_critical_edges
+                << " focr_tree_join_visits="
+                << statistics.fully_ordered_tree_join_visits
+                << " graspan_epochs=" << statistics.graspan_epochs
+                << " specialized_pairs="
+                << statistics.specialized_reachability_pairs
                 << " dereference_edges_removed="
                 << preparation.dereference_edges_removed
                 << " strong_update_edges_removed="

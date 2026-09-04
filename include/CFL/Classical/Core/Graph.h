@@ -39,6 +39,7 @@ public:
                                     GraphMode mode = GraphMode::Matrix);
   static LabeledGraph parseFromFile(const std::string &path,
                                     const GraphLoadOptions &options);
+  void writeTextFile(const std::string &path) const;
 
   /// Return a graph with an explicit direction transform. Reverse labels use
   /// the conventional x/xbar and call_i/callbar_i pairing.
@@ -52,6 +53,10 @@ public:
                const std::string &label);
   bool hasEdge(std::size_t source, std::size_t target,
                const std::string &label) const;
+  void markSource(std::size_t node);
+  bool isSource(std::size_t node) const {
+    return source_vertices_.count(node) != 0;
+  }
 
   std::size_t vertexId(const std::string &name) const;
   const std::string &vertexName(std::size_t id) const;
@@ -117,6 +122,7 @@ private:
 
   std::vector<std::string> vertices_;
   std::unordered_map<std::string, std::size_t> vertex_ids_;
+  std::unordered_set<std::size_t> source_vertices_;
   std::vector<std::unordered_map<std::size_t, std::unordered_set<std::string>>>
       adjacency_;
   std::unordered_map<std::string,

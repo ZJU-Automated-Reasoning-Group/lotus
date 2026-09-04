@@ -1,0 +1,8 @@
+A	A	A
+A	CA_i	ret_i
+A	a
+A
+CA_i	call_i	A
+
+Count:
+A

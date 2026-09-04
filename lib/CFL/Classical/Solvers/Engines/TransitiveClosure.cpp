@@ -1,11 +1,11 @@
-#include "CFL/Classical/Solvers/TransitiveClosure.h"
+#include "CFL/Classical/Solvers/Engines/TransitiveClosure.h"
 
 #include <limits>
 #include <stdexcept>
 
 #include <llvm/ADT/SparseBitVector.h>
 
-namespace lotus::cfl::classical {
+namespace lotus::cfl::classical::engines {
 
 class IncrementalTransitiveClosure::Impl {
 public:
@@ -165,4 +165,4 @@ IncrementalTransitiveClosure::statistics() const {
   return impl_->statistics();
 }
 
-} // namespace lotus::cfl::classical
+} // namespace lotus::cfl::classical::engines

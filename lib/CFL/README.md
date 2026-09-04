@@ -72,9 +72,11 @@ semantics.
 
 | Tool | Module | Purpose |
 |---|---|---|
-| `lotus-cfl-classical` | Classical | Run a supplied grammar and text/DOT/JSON graph with the baseline, POCR, or hybrid backend |
-| `lotus-cfl-alias` | Classical | Run CFL-driven alias and indirect-call analysis directly on LLVM IR/bitcode |
-| `lotus-cfl-vf` | Classical | Run context-sensitive CFL value-flow analysis over Lotus's SVFG |
+| `lotus-cfl-classical` | Classical | Run Lotus or POCR-format problems with sparse, Graspan, transitive-closure, POCR/hierarchical-POCR, or fully ordered backends |
+| `lotus-cfl-foldability` | Classical | Check POCR recursive-state-machine-guided node-pair foldability patterns |
+| `lotus-cfl-pocr` | Classical | Run POCR's standard, Graspan, rewritten-grammar, POCR, and FOCR engines directly on `.peg`/`.vfg` datasets |
+| `lotus-cfl-alias` | Classical | Run grammar-driven or hand-specialized POCR/FOCR alias and indirect-call analysis directly on LLVM IR/bitcode |
+| `lotus-cfl-vf` | Classical | Run grammar-driven or hand-specialized POCR/FOCR context-sensitive value-flow analysis over Lotus's SVFG |
 | `lotus-cfl-mcfl` | MCFL | Run the dimension-indexed `G_d` underapproximation hierarchy |
 | `lotus-cfl-interleaved-dyck-approximation` | InterleavedDyckApproximation | Report staged typed lower/upper bounds |
 | `lotus-cfl-unary-interleaved-dyck` | UnaryInterleavedDyck | Select `adaptive` or `fixed-counter` exact unary analysis |

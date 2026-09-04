@@ -1,5 +1,6 @@
 #include "CFL/Classical/Core/Validation.h"
-#include "CFL/Classical/Solvers/Reachability.h"
+#include "CFL/Classical/Solvers/Preprocessing/GraphSimplification.h"
+#include "CFL/Classical/Solvers/SolverSession.h"
 
 #include <algorithm>
 #include <chrono>
@@ -24,27 +25,43 @@ struct Options {
   GrammarParseOptions grammar_options;
   bool dump_relation = false;
   bool start_only = false;
+  bool count_only = false;
   bool json_stats = false;
   bool validate_only = false;
+  bool unidirectional = false;
+  bool simplify_focr_cycles = false;
+  GraphSimplificationOptions simplification;
   std::string relation_output;
   std::string stats_output;
+  std::string graph_output;
 };
 
 void usage(std::ostream &stream) {
-  stream << "Usage: lotus-cfl-classical --grammar FILE --graph FILE [options]\n"
-            "Options:\n"
-            "  --solver sparse-set|sparse-bitvector|transitive-closure\n"
-            "  --graph-mode plain|matrix|pag-matrix\n"
-            "  --direction plain|reverse|bidirectional\n"
-            "  --attribute-domain var:i=N,N,...  Variable-specific domain\n"
-            "  --attribute-domain kind:call=N,N  Symbol-kind domain\n"
-            "  --max-attribute-expansions N      Expansion safety limit\n"
-            "  --dump-relation\n"
-            "  --relation-output FILE\n"
-            "  --start-only\n"
-            "  --json-stats\n"
-            "  --stats-output FILE\n"
-            "  --validate-only\n";
+  stream
+      << "Usage: lotus-cfl-classical --grammar FILE --graph FILE [options]\n"
+         "Options:\n"
+         "  --solver sparse-set|sparse-bitvector|graspan|"
+         "transitive-closure|pocr|hpocr|focr\n"
+         "  --graph-mode plain|matrix|pag-matrix\n"
+         "  --direction plain|reverse|bidirectional\n"
+         "  --attribute-domain var:i=N,N,...  Variable-specific domain\n"
+         "  --attribute-domain kind:call=N,N  Symbol-kind domain\n"
+         "  --max-attribute-expansions N      Expansion safety limit\n"
+         "  --dump-relation\n"
+         "  --relation-output FILE\n"
+         "  --graph-output FILE          Write normalized/preprocessed graph\n"
+         "  --start-only\n"
+         "  --count-only                 Emit POCR Count symbols only\n"
+         "  --json-stats\n"
+         "  --stats-output FILE\n"
+         "  --unidirectional            Honor POCR Insert/Follow metadata\n"
+         "  --focr-scc                  Simplify FOCR critical-graph SCCs\n"
+         "  --simplification-flavor alias|value-flow\n"
+         "  --scc-elimination           Condense direct-edge SCCs\n"
+         "  --graph-folding             Apply POCR client graph folding\n"
+         "  --interdyck-pruning         Prune non-contributing Dyck edges\n"
+         "  --simplify-graph            Enable SCC elimination and folding\n"
+         "  --validate-only\n";
 }
 
 std::vector<std::uint32_t> parseAttributes(const std::string &value) {
@@ -121,16 +138,7 @@ Options parseOptions(int argc, char **argv) {
     } else if (argument == "--graph") {
       options.graph = value();
     } else if (argument == "--solver") {
-      const std::string selected = value();
-      if (selected == "sparse-set") {
-        options.backend = SolverBackend::SparseSet;
-      } else if (selected == "sparse-bitvector") {
-        options.backend = SolverBackend::SparseBitVector;
-      } else if (selected == "transitive-closure") {
-        options.backend = SolverBackend::TransitiveClosure;
-      } else {
-        throw std::invalid_argument("Unknown solver: " + selected);
-      }
+      options.backend = parseSolverBackend(value());
     } else if (argument == "--graph-mode") {
       const std::string selected = value();
       if (selected == "plain") {
@@ -162,12 +170,39 @@ Options parseOptions(int argc, char **argv) {
     } else if (argument == "--relation-output") {
       options.relation_output = value();
       options.dump_relation = true;
+    } else if (argument == "--graph-output") {
+      options.graph_output = value();
     } else if (argument == "--start-only") {
       options.start_only = true;
+    } else if (argument == "--count-only") {
+      options.count_only = true;
     } else if (argument == "--json-stats") {
       options.json_stats = true;
     } else if (argument == "--stats-output") {
       options.stats_output = value();
+    } else if (argument == "--unidirectional") {
+      options.unidirectional = true;
+    } else if (argument == "--focr-scc") {
+      options.simplify_focr_cycles = true;
+    } else if (argument == "--simplification-flavor") {
+      const std::string selected = value();
+      if (selected == "alias") {
+        options.simplification.flavor = GraphSimplificationFlavor::Alias;
+      } else if (selected == "value-flow") {
+        options.simplification.flavor = GraphSimplificationFlavor::ValueFlow;
+      } else {
+        throw std::invalid_argument("Unknown simplification flavor: " +
+                                    selected);
+      }
+    } else if (argument == "--scc-elimination") {
+      options.simplification.eliminate_sccs = true;
+    } else if (argument == "--graph-folding") {
+      options.simplification.fold_graph = true;
+    } else if (argument == "--interdyck-pruning") {
+      options.simplification.prune_interdyck = true;
+    } else if (argument == "--simplify-graph") {
+      options.simplification.eliminate_sccs = true;
+      options.simplification.fold_graph = true;
     } else if (argument == "--validate-only") {
       options.validate_only = true;
     } else if (argument == "--help" || argument == "-h") {
@@ -179,6 +214,9 @@ Options parseOptions(int argc, char **argv) {
   }
   if (options.grammar.empty() || options.graph.empty()) {
     throw std::invalid_argument("--grammar and --graph are required");
+  }
+  if (options.start_only && options.count_only) {
+    throw std::invalid_argument("--start-only and --count-only are exclusive");
   }
   return options;
 }
@@ -192,6 +230,22 @@ int main(int argc, char **argv) {
     const auto graph_start = std::chrono::steady_clock::now();
     LabeledGraph graph =
         LabeledGraph::parseFromFile(options.graph, options.graph_options);
+    GraphSimplificationStatistics simplification_stats;
+    simplification_stats.original_nodes = graph.vertexCount();
+    simplification_stats.original_edges = graph.edgeCount();
+    simplification_stats.reduced_nodes = graph.vertexCount();
+    simplification_stats.reduced_edges = graph.edgeCount();
+    if (options.simplification.eliminate_sccs ||
+        options.simplification.fold_graph ||
+        options.simplification.prune_interdyck) {
+      GraphSimplificationResult simplified =
+          simplifyGraph(graph, options.simplification);
+      simplification_stats = simplified.statistics;
+      graph = std::move(simplified.graph);
+    }
+    if (!options.graph_output.empty()) {
+      graph.writeTextFile(options.graph_output);
+    }
     const auto graph_load_us =
         std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::steady_clock::now() - graph_start)
@@ -223,7 +277,9 @@ int main(int argc, char **argv) {
       return 0;
     }
 
-    SolverSession session(graph, grammar, options.backend);
+    SolverSession session(graph, grammar,
+                          SolverOptions{options.backend, options.unidirectional,
+                                        options.simplify_focr_cycles});
     const ReachabilityStats stats = session.solve();
     if (options.dump_relation) {
       std::ofstream relation_file;
@@ -244,6 +300,13 @@ int main(int argc, char **argv) {
         if (options.start_only && edge.symbol != grammar.startSymbolId()) {
           continue;
         }
+        if (options.count_only &&
+            !grammar.isCountSymbol(grammar.symbolName(edge.symbol))) {
+          continue;
+        }
+        if (options.count_only && edge.source == edge.target) {
+          continue;
+        }
         relation_output << graph.vertexName(edge.source) << ','
                         << graph.vertexName(edge.target) << ','
                         << grammar.symbolName(edge.symbol) << '\n';
@@ -256,68 +319,110 @@ int main(int argc, char **argv) {
     std::ofstream stats_file;
     std::ostream &stats_output = *openOutput(options.stats_output, stats_file);
     if (options.json_stats) {
-      stats_output << "{\"solver\":\"" << solverBackendName(options.backend)
-                   << "\",\"nodes\":" << graph.vertexCount()
-                   << ",\"base_edges\":" << stats.base_graph_edges
-                   << ",\"grammar_symbols\":" << stats.grammar_symbols
-                   << ",\"grammar_terminals\":" << stats.grammar_terminals
-                   << ",\"grammar_nonterminals\":" << stats.grammar_nonterminals
-                   << ",\"grammar_productions\":" << stats.grammar_productions
-                   << ",\"grammar_nullable\":" << stats.grammar_nullable_symbols
-                   << ",\"grammar_transitive\":"
-                   << stats.grammar_transitive_symbols
-                   << ",\"input_edges\":" << stats.input_edges
-                   << ",\"derived_edges\":" << stats.added_edges
-                   << ",\"relation_edges\":" << stats.relation_edges
-                   << ",\"start_edges\":" << stats.start_symbol_edges
-                   << ",\"checks\":" << stats.classical_iterations
-                   << ",\"processed_items\":" << stats.processed_work_items
-                   << ",\"duplicates\":" << stats.duplicate_edges
-                   << ",\"peak_worklist\":" << stats.peak_worklist_size
-                   << ",\"relation_payload_bytes_estimate\":"
-                   << stats.relation_payload_bytes_estimate
-                   << ",\"transitive_instances\":"
-                   << stats.transitive_closure_instances
-                   << ",\"transitive_edges\":"
-                   << stats.transitive_relation_edges
-                   << ",\"transitive_arcs\":" << stats.transitive_arc_insertions
-                   << ",\"transitive_propagated_pairs\":"
-                   << stats.transitive_propagated_pairs
-                   << ",\"transitive_duplicate_pairs\":"
-                   << stats.transitive_duplicate_pairs
-                   << ",\"transitive_payload_bytes_estimate\":"
-                   << stats.transitive_payload_bytes_estimate
-                   << ",\"graph_load_us\":" << graph_load_us
-                   << ",\"grammar_load_us\":" << grammar_load_us
-                   << ",\"solve_us\":" << stats.solve_time_microseconds
-                   << ",\"total_us\":" << total_us
-                   << ",\"rounds\":" << stats.solver_rounds << "}\n";
+      stats_output
+          << "{\"solver\":\"" << solverBackendName(options.backend)
+          << "\",\"nodes\":" << graph.vertexCount()
+          << ",\"base_edges\":" << stats.base_graph_edges
+          << ",\"grammar_symbols\":" << stats.grammar_symbols
+          << ",\"grammar_terminals\":" << stats.grammar_terminals
+          << ",\"grammar_nonterminals\":" << stats.grammar_nonterminals
+          << ",\"grammar_productions\":" << stats.grammar_productions
+          << ",\"grammar_nullable\":" << stats.grammar_nullable_symbols
+          << ",\"grammar_transitive\":" << stats.grammar_transitive_symbols
+          << ",\"input_edges\":" << stats.input_edges
+          << ",\"derived_edges\":" << stats.added_edges
+          << ",\"relation_edges\":" << stats.relation_edges
+          << ",\"start_edges\":" << stats.start_symbol_edges
+          << ",\"count_edges\":" << stats.count_symbol_edges
+          << ",\"checks\":" << stats.classical_iterations
+          << ",\"processed_items\":" << stats.processed_work_items
+          << ",\"duplicates\":" << stats.duplicate_edges
+          << ",\"peak_worklist\":" << stats.peak_worklist_size
+          << ",\"candidate_relation_edges\":" << stats.candidate_relation_edges
+          << ",\"unidirectional\":"
+          << (options.unidirectional ? "true" : "false")
+          << ",\"relation_payload_bytes_estimate\":"
+          << stats.relation_payload_bytes_estimate
+          << ",\"transitive_instances\":" << stats.transitive_closure_instances
+          << ",\"transitive_edges\":" << stats.transitive_relation_edges
+          << ",\"transitive_arcs\":" << stats.transitive_arc_insertions
+          << ",\"transitive_propagated_pairs\":"
+          << stats.transitive_propagated_pairs
+          << ",\"transitive_duplicate_pairs\":"
+          << stats.transitive_duplicate_pairs
+          << ",\"transitive_payload_bytes_estimate\":"
+          << stats.transitive_payload_bytes_estimate
+          << ",\"pocr_tree_roots\":" << stats.pocr_tree_roots
+          << ",\"pocr_tree_nodes\":" << stats.pocr_tree_nodes
+          << ",\"pocr_tree_edges\":" << stats.pocr_tree_edges
+          << ",\"pocr_traversal_steps\":" << stats.pocr_traversal_steps
+          << ",\"pocr_tree_join_visits\":" << stats.pocr_tree_join_visits
+          << ",\"focr_critical_edges\":" << stats.fully_ordered_critical_edges
+          << ",\"focr_reachability_checks\":"
+          << stats.fully_ordered_reachability_checks
+          << ",\"focr_tree_join_visits\":"
+          << stats.fully_ordered_tree_join_visits
+          << ",\"focr_critical_edge_insertions\":"
+          << stats.fully_ordered_critical_edge_insertions
+          << ",\"focr_critical_edge_removals\":"
+          << stats.fully_ordered_critical_edge_removals
+          << ",\"focr_cycle_simplifications\":"
+          << stats.fully_ordered_cycle_simplifications
+          << ",\"graspan_epochs\":" << stats.graspan_epochs
+          << ",\"simplified_nodes\":" << simplification_stats.reduced_nodes
+          << ",\"scc_nodes_merged\":" << simplification_stats.scc_nodes_merged
+          << ",\"folded_nodes\":" << simplification_stats.folded_nodes
+          << ",\"common_dereference_nodes_merged\":"
+          << simplification_stats.common_dereference_nodes_merged
+          << ",\"interdyck_edges_pruned\":"
+          << simplification_stats.interdyck_edges_pruned
+          << ",\"graph_load_us\":" << graph_load_us
+          << ",\"grammar_load_us\":" << grammar_load_us
+          << ",\"solve_us\":" << stats.solve_time_microseconds
+          << ",\"total_us\":" << total_us
+          << ",\"rounds\":" << stats.solver_rounds << "}\n";
     } else {
-      stats_output << "solver=" << solverBackendName(options.backend)
-                   << " nodes=" << graph.vertexCount()
-                   << " base_edges=" << stats.base_graph_edges
-                   << " grammar_symbols=" << stats.grammar_symbols
-                   << " productions=" << stats.grammar_productions
-                   << " input_edges=" << stats.input_edges
-                   << " derived_edges=" << stats.added_edges
-                   << " relation_edges=" << stats.relation_edges
-                   << " start_edges=" << stats.start_symbol_edges
-                   << " checks=" << stats.classical_iterations
-                   << " processed_items=" << stats.processed_work_items
-                   << " duplicates=" << stats.duplicate_edges
-                   << " peak_worklist=" << stats.peak_worklist_size
-                   << " relation_payload_bytes_estimate="
-                   << stats.relation_payload_bytes_estimate
-                   << " transitive_instances="
-                   << stats.transitive_closure_instances
-                   << " transitive_pairs=" << stats.transitive_propagated_pairs
-                   << " transitive_payload_bytes_estimate="
-                   << stats.transitive_payload_bytes_estimate
-                   << " graph_load_us=" << graph_load_us
-                   << " grammar_load_us=" << grammar_load_us
-                   << " solve_us=" << stats.solve_time_microseconds
-                   << " total_us=" << total_us
-                   << " rounds=" << stats.solver_rounds << '\n';
+      stats_output
+          << "solver=" << solverBackendName(options.backend)
+          << " nodes=" << graph.vertexCount()
+          << " base_edges=" << stats.base_graph_edges
+          << " grammar_symbols=" << stats.grammar_symbols
+          << " productions=" << stats.grammar_productions
+          << " input_edges=" << stats.input_edges
+          << " derived_edges=" << stats.added_edges
+          << " relation_edges=" << stats.relation_edges
+          << " start_edges=" << stats.start_symbol_edges
+          << " count_edges=" << stats.count_symbol_edges
+          << " checks=" << stats.classical_iterations
+          << " processed_items=" << stats.processed_work_items
+          << " duplicates=" << stats.duplicate_edges
+          << " peak_worklist=" << stats.peak_worklist_size
+          << " candidate_relation_edges=" << stats.candidate_relation_edges
+          << " unidirectional=" << options.unidirectional
+          << " relation_payload_bytes_estimate="
+          << stats.relation_payload_bytes_estimate
+          << " transitive_instances=" << stats.transitive_closure_instances
+          << " transitive_pairs=" << stats.transitive_propagated_pairs
+          << " transitive_payload_bytes_estimate="
+          << stats.transitive_payload_bytes_estimate
+          << " pocr_tree_nodes=" << stats.pocr_tree_nodes
+          << " pocr_traversal_steps=" << stats.pocr_traversal_steps
+          << " pocr_tree_join_visits=" << stats.pocr_tree_join_visits
+          << " focr_critical_edges=" << stats.fully_ordered_critical_edges
+          << " focr_reachability_checks="
+          << stats.fully_ordered_reachability_checks
+          << " focr_tree_join_visits=" << stats.fully_ordered_tree_join_visits
+          << " graspan_epochs=" << stats.graspan_epochs
+          << " simplified_nodes=" << simplification_stats.reduced_nodes
+          << " scc_nodes_merged=" << simplification_stats.scc_nodes_merged
+          << " folded_nodes=" << simplification_stats.folded_nodes
+          << " interdyck_edges_pruned="
+          << simplification_stats.interdyck_edges_pruned
+          << " graph_load_us=" << graph_load_us
+          << " grammar_load_us=" << grammar_load_us
+          << " solve_us=" << stats.solve_time_microseconds
+          << " total_us=" << total_us << " rounds=" << stats.solver_rounds
+          << '\n';
     }
     return 0;
   } catch (const std::exception &error) {

@@ -9,7 +9,7 @@
 
 #include <llvm/ADT/STLFunctionalExtras.h>
 
-namespace lotus::cfl::classical {
+namespace lotus::cfl::classical::engines {
 
 struct TransitiveClosureStatistics {
   std::size_t nodes = 0;
@@ -50,4 +50,4 @@ private:
   std::unique_ptr<Impl> impl_;
 };
 
-} // namespace lotus::cfl::classical
+} // namespace lotus::cfl::classical::engines

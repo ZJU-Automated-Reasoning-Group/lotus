@@ -1,7 +1,8 @@
 #pragma once
 
 #include "CFL/Classical/Clients/ValueFlow/SVFGPreparation.h"
-#include "CFL/Classical/Solvers/Reachability.h"
+#include "CFL/Classical/Solvers/Engines/POCR/SpecializedEngines.h"
+#include "CFL/Classical/Solvers/SolverSession.h"
 
 #include <cstdint>
 #include <memory>
@@ -35,6 +36,8 @@ public:
                    const SVFGPreparationOptions &options = {});
 
   ReachabilityStats solve(SolverBackend backend = SolverBackend::SparseSet);
+  ReachabilityStats solveSpecialized(engines::SpecializedPocrBackend backend,
+                                     bool simplify_focr_cycles = false);
   bool hasFlow(std::uint32_t source_node, std::uint32_t target_node) const;
   std::vector<std::uint32_t> reachableFrom(std::uint32_t source_node) const;
 
@@ -52,6 +55,10 @@ private:
   std::vector<std::optional<std::uint32_t>> vertex_to_node_;
   std::unique_ptr<SolverSession> session_;
   std::optional<SolverBackend> backend_;
+  std::unique_ptr<engines::PocrValueFlowEngine> pocr_engine_;
+  std::unique_ptr<engines::FocrValueFlowEngine> focr_engine_;
+  std::optional<engines::SpecializedPocrBackend> specialized_backend_;
+  bool specialized_focr_cycles_ = false;
 };
 
 } // namespace lotus::cfl::classical

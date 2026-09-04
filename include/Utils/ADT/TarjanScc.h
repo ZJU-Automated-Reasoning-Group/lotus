@@ -1,6 +1,7 @@
 #ifndef TARJANSCC_HPP
 #define TARJANSCC_HPP
 
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -60,7 +61,7 @@ NodeType FindStronglyConnectedComponents(
   // Use the max values of the NodeType as sentinel values
   const NodeType NOT_VISITED = std::numeric_limits<NodeType>::max();
   const NodeType SCC_FINISHED = NOT_VISITED - 1;
-  JLM_ASSERT(numNodes <= SCC_FINISHED);
+  assert(numNodes <= SCC_FINISHED);
 
   // Non-recursive implementation of Tarjan's SCC
   std::vector<NodeType> order(numNodes, NOT_VISITED);
@@ -141,7 +142,7 @@ NodeType FindStronglyConnectedComponents(
       }
     }
   }
-  JLM_ASSERT(sccStack.empty());
+  assert(sccStack.empty());
 
   return sccsFinished;
 }

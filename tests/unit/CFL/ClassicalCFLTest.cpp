@@ -1,7 +1,7 @@
 #include "CFL/Classical/Core/Grammar.h"
 #include "CFL/Classical/Core/Graph.h"
 #include "CFL/Classical/Solvers/ConstraintGrounding.h"
-#include "CFL/Classical/Solvers/Reachability.h"
+#include "CFL/Classical/Solvers/SolverSession.h"
 
 #include <algorithm>
 #include <filesystem>

@@ -1,9 +1,10 @@
-#include "CFL/Classical/Clients/Alias/Alias.h"
+#include "CFL/Classical/Clients/Alias/AliasClient.h"
 
 #include "CFL/Classical/Core/Validation.h"
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -84,6 +85,33 @@ std::string joinAlternatives(const std::vector<std::string> &alternatives) {
     stream << alternatives[i];
   }
   return stream.str();
+}
+
+ReachabilityStats
+specializedStats(const engines::SpecializedPocrStatistics &source,
+                 const Grammar &grammar) {
+  ReachabilityStats result;
+  result.graph_nodes = source.graph_nodes;
+  result.base_graph_edges = source.graph_edges;
+  result.grammar_symbols = grammar.symbolCount();
+  result.grammar_terminals = grammar.terminals().size();
+  result.grammar_nonterminals = grammar.nonterminals().size();
+  result.grammar_productions = grammar.productionCount();
+  result.grammar_nullable_symbols = grammar.nullableSymbols().size();
+  result.grammar_transitive_symbols = grammar.transitiveSymbols().size();
+  result.input_edges = source.graph_edges;
+  result.relation_edges =
+      source.reachability_pairs + source.value_or_flow_pairs;
+  result.start_symbol_edges = source.value_or_flow_pairs;
+  result.classical_iterations = source.reachability_checks;
+  result.processed_work_items = source.processed_items;
+  result.duplicate_edges = source.duplicate_items;
+  result.added_edges = result.relation_edges;
+  result.specialized_reachability_pairs = source.reachability_pairs;
+  result.specialized_matched_pairs = source.matched_pairs;
+  result.specialized_critical_edges = source.critical_edges;
+  result.fully_ordered_cycle_simplifications = source.cycle_simplifications;
+  return result;
 }
 
 std::string buildPagGrammarText(const AliasConstraintGraph &graph) {
@@ -388,8 +416,11 @@ AliasClient::AliasClient(AliasClient &&other) noexcept
       peg_dereferences_(std::move(other.peg_dereferences_)),
       next_synthetic_dereference_(other.next_synthetic_dereference_),
       gep_attributes_(std::move(other.gep_attributes_)),
-      session_(std::move(other.session_)), backend_(std::move(other.backend_)) {
-}
+      session_(std::move(other.session_)), backend_(std::move(other.backend_)),
+      pocr_engine_(std::move(other.pocr_engine_)),
+      focr_engine_(std::move(other.focr_engine_)),
+      specialized_backend_(std::move(other.specialized_backend_)),
+      specialized_focr_cycles_(other.specialized_focr_cycles_) {}
 
 AliasClient &AliasClient::operator=(AliasClient &&other) noexcept {
   if (this == &other) {
@@ -403,6 +434,10 @@ AliasClient &AliasClient::operator=(AliasClient &&other) noexcept {
   gep_attributes_ = std::move(other.gep_attributes_);
   session_ = std::move(other.session_);
   backend_ = std::move(other.backend_);
+  pocr_engine_ = std::move(other.pocr_engine_);
+  focr_engine_ = std::move(other.focr_engine_);
+  specialized_backend_ = std::move(other.specialized_backend_);
+  specialized_focr_cycles_ = other.specialized_focr_cycles_;
   return *this;
 }
 
@@ -411,6 +446,10 @@ const LabeledGraph &AliasClient::graph() const { return state_->graph; }
 const Grammar &AliasClient::grammar() const { return state_->grammar; }
 
 ReachabilityStats AliasClient::solve(SolverBackend backend) {
+  if (specialized_backend_) {
+    throw std::invalid_argument(
+        "Cannot switch from a specialized alias engine to SolverSession");
+  }
   if (backend_ && *backend_ != backend) {
     throw std::invalid_argument(
         "Cannot change solver backend after an alias session has started");
@@ -421,6 +460,52 @@ ReachabilityStats AliasClient::solve(SolverBackend backend) {
     backend_ = backend;
   }
   return session_->solve();
+}
+
+ReachabilityStats
+AliasClient::solveSpecialized(engines::SpecializedPocrBackend backend,
+                              bool simplify_focr_cycles) {
+  const auto start = std::chrono::steady_clock::now();
+  simplify_focr_cycles =
+      backend == engines::SpecializedPocrBackend::Focr && simplify_focr_cycles;
+  if (session_) {
+    throw std::invalid_argument(
+        "Cannot switch from SolverSession to a specialized alias engine");
+  }
+  if (specialized_backend_ && *specialized_backend_ != backend) {
+    throw std::invalid_argument(
+        "Cannot change specialized alias engine after solving has started");
+  }
+  if (specialized_backend_ &&
+      specialized_focr_cycles_ != simplify_focr_cycles) {
+    throw std::invalid_argument(
+        "Cannot change FOCR cycle simplification after solving has started");
+  }
+  specialized_backend_ = backend;
+  specialized_focr_cycles_ = simplify_focr_cycles;
+  if (backend == engines::SpecializedPocrBackend::Pocr) {
+    if (!pocr_engine_) {
+      pocr_engine_ = std::make_unique<engines::PocrAliasEngine>(state_->graph);
+    }
+    ReachabilityStats result =
+        specializedStats(pocr_engine_->solve(), state_->grammar);
+    result.solve_time_microseconds =
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now() - start)
+            .count();
+    return result;
+  }
+  if (!focr_engine_) {
+    focr_engine_ = std::make_unique<engines::FocrAliasEngine>(
+        state_->graph, simplify_focr_cycles);
+  }
+  ReachabilityStats result =
+      specializedStats(focr_engine_->solve(), state_->grammar);
+  result.solve_time_microseconds =
+      std::chrono::duration_cast<std::chrono::microseconds>(
+          std::chrono::steady_clock::now() - start)
+          .count();
+  return result;
 }
 
 ReachabilityStats AliasClient::solveToFixedPoint(
@@ -448,9 +533,11 @@ ReachabilityStats AliasClient::solveToFixedPoint(
     aggregate.input_edges = current.input_edges;
     aggregate.relation_edges = current.relation_edges;
     aggregate.start_symbol_edges = current.start_symbol_edges;
+    aggregate.count_symbol_edges = current.count_symbol_edges;
     aggregate.solve_time_microseconds += current.solve_time_microseconds;
     aggregate.relation_payload_bytes_estimate =
         current.relation_payload_bytes_estimate;
+    aggregate.candidate_relation_edges = current.candidate_relation_edges;
     aggregate.transitive_closure_instances =
         current.transitive_closure_instances;
     aggregate.transitive_relation_edges = current.transitive_relation_edges;
@@ -460,6 +547,24 @@ ReachabilityStats AliasClient::solveToFixedPoint(
     aggregate.transitive_duplicate_pairs += current.transitive_duplicate_pairs;
     aggregate.transitive_payload_bytes_estimate =
         current.transitive_payload_bytes_estimate;
+    aggregate.pocr_tree_roots = current.pocr_tree_roots;
+    aggregate.pocr_tree_nodes = current.pocr_tree_nodes;
+    aggregate.pocr_tree_edges = current.pocr_tree_edges;
+    aggregate.pocr_traversal_steps += current.pocr_traversal_steps;
+    aggregate.pocr_tree_join_visits += current.pocr_tree_join_visits;
+    aggregate.fully_ordered_critical_edges =
+        current.fully_ordered_critical_edges;
+    aggregate.fully_ordered_reachability_checks +=
+        current.fully_ordered_reachability_checks;
+    aggregate.fully_ordered_tree_join_visits +=
+        current.fully_ordered_tree_join_visits;
+    aggregate.fully_ordered_critical_edge_insertions +=
+        current.fully_ordered_critical_edge_insertions;
+    aggregate.fully_ordered_critical_edge_removals +=
+        current.fully_ordered_critical_edge_removals;
+    aggregate.fully_ordered_cycle_simplifications +=
+        current.fully_ordered_cycle_simplifications;
+    aggregate.graspan_epochs += current.graspan_epochs;
     ++aggregate.solver_rounds;
     if (!discover_constraints(*this)) {
       return aggregate;
@@ -469,11 +574,42 @@ ReachabilityStats AliasClient::solveToFixedPoint(
       "Alias constraint discovery did not stabilize within max_rounds");
 }
 
+ReachabilityStats AliasClient::solveToFixedPoint(
+    engines::SpecializedPocrBackend backend,
+    const std::function<bool(AliasClient &)> &discover_constraints,
+    std::size_t max_rounds, bool simplify_focr_cycles) {
+  ReachabilityStats aggregate;
+  aggregate.solver_rounds = 0;
+  for (std::size_t round = 0; round < max_rounds; ++round) {
+    const ReachabilityStats current =
+        solveSpecialized(backend, simplify_focr_cycles);
+    const std::size_t prior_rounds = aggregate.solver_rounds;
+    const std::uint64_t prior_iterations = aggregate.classical_iterations;
+    const std::size_t prior_processed = aggregate.processed_work_items;
+    const std::size_t prior_duplicates = aggregate.duplicate_edges;
+    const std::size_t prior_added = aggregate.added_edges;
+    aggregate = current;
+    aggregate.solver_rounds = prior_rounds + 1;
+    aggregate.classical_iterations += prior_iterations;
+    aggregate.processed_work_items += prior_processed;
+    aggregate.duplicate_edges += prior_duplicates;
+    aggregate.added_edges += prior_added;
+    if (!discover_constraints(*this)) {
+      return aggregate;
+    }
+  }
+  throw std::runtime_error(
+      "Specialized alias constraint discovery did not stabilize within "
+      "max_rounds");
+}
+
 std::size_t AliasClient::addNode(const std::string &name) {
   if (session_) {
     return session_->addNode(name);
   }
-  return state_->graph.addVertex(name);
+  const std::size_t node = state_->graph.addVertex(name);
+  invalidateSpecializedEngines();
+  return node;
 }
 
 bool AliasClient::addConstraint(std::size_t source, std::size_t target,
@@ -535,11 +671,19 @@ bool AliasClient::addEncodedEdge(std::size_t source, std::size_t target,
   if (!session_) {
     const bool first = state_->graph.addEdge(source, target, forward);
     const bool second = state_->graph.addEdge(target, source, reverse);
+    if (first || second) {
+      invalidateSpecializedEngines();
+    }
     return first || second;
   }
   const bool first = session_->addTerminalEdge(source, target, forward);
   const bool second = session_->addTerminalEdge(target, source, reverse);
   return first || second;
+}
+
+void AliasClient::invalidateSpecializedEngines() {
+  pocr_engine_.reset();
+  focr_engine_.reset();
 }
 
 const std::vector<std::size_t> &
@@ -623,40 +767,77 @@ void AliasClient::rebuildGrammar() {
 }
 
 bool AliasClient::mayAlias(std::size_t lhs, std::size_t rhs) const {
-  if (!session_) {
-    throw std::logic_error("solve() has not been called");
-  }
   if (lhs >= state_->graph.vertexCount() ||
       rhs >= state_->graph.vertexCount()) {
     return false;
+  }
+  if (specialized_backend_) {
+    if (*specialized_backend_ == engines::SpecializedPocrBackend::Pocr) {
+      if (!pocr_engine_) {
+        throw std::logic_error(
+            "Specialized alias graph changed; solve again before querying");
+      }
+      return pocr_engine_->mayAlias(lhs, rhs);
+    }
+    if (!focr_engine_) {
+      throw std::logic_error(
+          "Specialized alias graph changed; solve again before querying");
+    }
+    return focr_engine_->mayAlias(lhs, rhs);
+  }
+  if (!session_) {
+    throw std::logic_error("solve() has not been called");
   }
   return session_->contains(lhs, rhs, "V");
 }
 
 std::vector<std::size_t> AliasClient::pointsTo(std::size_t ptr) const {
-  if (!session_) {
+  if (!session_ && !specialized_backend_) {
     throw std::logic_error("solve() has not been called");
   }
   if (ptr >= state_->graph.vertexCount()) {
     return {};
   }
   std::set<std::size_t> result;
-  const SymbolId value_symbol = state_->grammar.symbolId("V");
-  session_->relation().forEachSuccessor(
-      value_symbol, ptr, [&](std::size_t target) {
-        bool added_precise_target = false;
-        state_->graph.forEachIncomingEdge(
-            target, [&](const std::string &label, std::size_t pred) {
-              if (label == "addr" || label.rfind("gep_", 0) == 0) {
-                result.insert(pred);
-                added_precise_target = true;
-              }
-            });
+  auto add_target = [&](std::size_t target) {
+    bool added_precise_target = false;
+    state_->graph.forEachIncomingEdge(
+        target, [&](const std::string &label, std::size_t pred) {
+          if (label == "addr" || label.rfind("gep_", 0) == 0) {
+            result.insert(pred);
+            added_precise_target = true;
+          }
+        });
 
-        if (!added_precise_target) {
-          result.insert(target);
-        }
-      });
+    if (!added_precise_target) {
+      result.insert(target);
+    }
+  };
+
+  if (specialized_backend_) {
+    std::vector<std::pair<NodeId, NodeId>> pairs;
+    if (*specialized_backend_ == engines::SpecializedPocrBackend::Pocr) {
+      if (!pocr_engine_) {
+        throw std::logic_error(
+            "Specialized alias graph changed; solve again before querying");
+      }
+      pairs = pocr_engine_->valuePairs();
+    } else {
+      if (!focr_engine_) {
+        throw std::logic_error(
+            "Specialized alias graph changed; solve again before querying");
+      }
+      pairs = focr_engine_->valuePairs();
+    }
+    for (const auto &[source, target] : pairs) {
+      if (source == ptr) {
+        add_target(target);
+      }
+    }
+  } else {
+    const SymbolId value_symbol = state_->grammar.symbolId("V");
+    session_->relation().forEachSuccessor(value_symbol, ptr, add_target);
+  }
 
   return {result.begin(), result.end()};
 }

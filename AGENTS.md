@@ -5,7 +5,7 @@
 Lotus is a **program analysis, verification, and optimization framework** built on LLVM. It provides alias analysis, intermediate representations, dataflow analysis, abstract interpretation, bug checkers, etc.
 
 - **Language**: C++17
-- **Dependencies**: LLVM 14.x, Z3, CMake 3.10+
+- **Dependencies**: LLVM 14.x, Z3, CMake 3.16+
 - **Docs**: https://zju-pl.github.io/lotus
 
 ## Repository Layout
@@ -14,13 +14,13 @@ Lotus is a **program analysis, verification, and optimization framework** built 
 lotus/
 ├── include/           # Public headers (mirrors lib structure)
 │   ├── Alias/         # Alias analysis (DyckAA, AserPTA, LotusAA, SparrowAA, etc.)
-│   ├── Analysis/      # Analysis utilities (NullPointer, SymbolicExecution, CFG, etc.)
+│   ├── Analysis/      # Analysis utilities (NullPointer,CFG, etc.)
 │   ├── CFL/           # CFL reachability
 │   ├── Checker/       # Bug checkers (AE, Concurrency, FiTx, KINT, Pulse, Saber etc.)
 │   ├── Concurrency/   # Concurrency analyses (MHP, lockset, MPI, OpenMP, kernel, CUDA, etc.)
 │   ├── Dataflow/      # APA, IFDS/IDE, Mono, NPA, VASCO, WPDS
-│   ├── IR/            # GSA, GVFG, ICFG, MemorySSA, PDG, SSI, SVFG, vSSA
-│   ├── Solvers/       # SMT
+│   ├── IR/            # GSA, GVFG, ICFG, PDG, SSI, SVFG, vSSA, etc.
+│   ├── Solvers/       # Datalog, EGraph, SMT
 │   ├── Transform/     # LLVM bitcode transformations
 │   ├── Utils/         # LLVM utilities, ThreadPool, formats, etc.
 │   └── Verification/  # SIFA, CLAM, smarck, Seahorn, etc.
@@ -29,7 +29,7 @@ lotus/
 ├── tests/             # GTest-based tests (tests/unit/ mirrors subsystems)
 ├── benchmarks/        # Benchmark programs
 ├── third-party/       # CUDD, WPDS, spdlog
-├── scripts/           # Python and build utilities
+├── scripts/           # Python utilities
 └── docs/              # Sphinx documentation (source/)
 ```
 
@@ -85,7 +85,5 @@ LLVM (Module, Function, BasicBlock, Instruction) | Solvers
 - Shared unit-test build helpers are defined in `tests/unit/UnitTestHelpers.cmake`, which is included by `tests/unit/CMakeLists.txt`.
 - Add new tests with the subsystem-specific helpers from `tests/unit/UnitTestHelpers.cmake`, e.g. `add_lotus_analysis_test`, `add_lotus_concurrency_test`, `add_lotus_ir_test`, `add_lotus_pointer_test`, `add_lotus_verification_test`.
 - Use `add_lotus_targeted_test(...)` only when no existing subsystem helper fits; keep the link set minimal and add subsystem-specific libraries explicitly.
-- `add_lotus_pdg_test(...)` is still available for PDG-heavy tests that need the extra LLVM transform utilities.
 - Shared test support targets include `lotus_test_utils` and `lotus_test_harness_utils`; prefer them over reintroducing large catch-all link bundles.
 - Run all tests with `cd build && ctest --output-on-failure`, or build specific test targets with `cmake --build build --target <test_name>`.
-- If a test gains new linker dependencies after CMake cleanup, prefer fixing the relevant subsystem helper in `tests/unit/UnitTestHelpers.cmake` instead of restoring a global "link everything" pattern.

@@ -72,9 +72,10 @@ semantics.
 
 | Tool | Module | Purpose |
 |---|---|---|
-| `lotus-cfl-classical` | Classical | Run Lotus or POCR-format problems with sparse, Graspan, transitive-closure, POCR/hierarchical-POCR, or fully ordered backends |
+| `lotus-cfl-classical` | Classical | Run Lotus or POCR-format problems with sparse, Graspan, PEARL, Sqid, transitive-closure, POCR/hierarchical-POCR, or fully ordered backends |
 | `lotus-cfl-foldability` | Classical | Check POCR recursive-state-machine-guided node-pair foldability patterns |
 | `lotus-cfl-pocr` | Classical | Run POCR's standard, Graspan, rewritten-grammar, POCR, and FOCR engines directly on `.peg`/`.vfg` datasets |
+| `lotus-cfl-staged` | Classical | Run the ISSTA 2024 Stg solver with an explicit Dyck or Alias CFP decomposition |
 | `lotus-cfl-alias` | Classical | Run grammar-driven or hand-specialized POCR/FOCR alias and indirect-call analysis directly on LLVM IR/bitcode |
 | `lotus-cfl-vf` | Classical | Run grammar-driven or hand-specialized POCR/FOCR context-sensitive value-flow analysis over Lotus's SVFG |
 | `lotus-cfl-mcfl` | MCFL | Run the dimension-indexed `G_d` underapproximation hierarchy |

@@ -8,6 +8,8 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 namespace lotus::cfl::classical {
 
@@ -68,6 +70,10 @@ enum class SolverBackend {
   SparseBitVector,
   /// Graspan-style epoch/delta evaluation with sparse-bitvector relations.
   Graspan,
+  /// Sqid adaptive and differential relation chaining.
+  Sqid,
+  /// PEARL transitivity-aware multi-derivation.
+  Pearl,
   /// Classical worklist plus dedicated incremental closure only for symbols
   /// having a literal production A -> A A.
   TransitiveClosure,
@@ -86,6 +92,8 @@ struct SolverOptions {
   bool unidirectional = false;
   /// Apply POCR's optional ECG SCC simplification in the FOCR backend.
   bool simplify_focr_cycles = false;
+  /// Explicit X/Xbar pairs for PEARL's PackRR and paired propagation graphs.
+  std::vector<std::pair<std::string, std::string>> pearl_inverse_relations;
 };
 
 const char *solverBackendName(SolverBackend backend);

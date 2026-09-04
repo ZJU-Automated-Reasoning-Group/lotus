@@ -50,7 +50,7 @@ add_lotus_targeted_test(ClassicalAdaptersTest ClassicalAdaptersTest.cpp
 
 if(TARGET lotus-cfl-classical)
     foreach(classical_backend
-            sparse-set sparse-bitvector graspan transitive-closure pocr hpocr
+            sparse-set sparse-bitvector graspan sqid pearl transitive-closure pocr hpocr
             focr)
         add_test(NAME classical_cfl_cli_${classical_backend}
             COMMAND $<TARGET_FILE:lotus-cfl-classical>
@@ -198,7 +198,7 @@ endif()
 
 if(TARGET lotus-cfl-vf)
     foreach(classical_backend
-            sparse-set sparse-bitvector graspan transitive-closure pocr hpocr
+            sparse-set sparse-bitvector graspan sqid pearl transitive-closure pocr hpocr
             focr)
         add_test(NAME classical_cfl_vf_${classical_backend}
             COMMAND $<TARGET_FILE:lotus-cfl-vf>
@@ -259,6 +259,38 @@ if(TARGET lotus-cfl-pocr)
             --json-stats)
     set_tests_properties(classical_cfl_engine_preprocessing PROPERTIES
         PASS_REGULAR_EXPRESSION "\"folded_nodes\":")
+endif()
+
+if(TARGET lotus-cfl-staged)
+    add_test(NAME classical_cfl_engine_stg_standard_dyck
+        COMMAND $<TARGET_FILE:lotus-cfl-staged>
+            --grammar ${CMAKE_SOURCE_DIR}/tests/regress/CFL/Classical/stg-dyck.grammar
+            --graph ${CMAKE_SOURCE_DIR}/tests/regress/CFL/Classical/stg-dyck.graph
+            --mode standard-dyck
+            --summary Sum
+            --delimiter call_0,ret_0
+            --neutral s
+            --json-stats)
+    set_tests_properties(classical_cfl_engine_stg_standard_dyck PROPERTIES
+        PASS_REGULAR_EXPRESSION "\"start_edges\":16")
+
+    add_test(NAME classical_cfl_engine_stg_alias
+        COMMAND $<TARGET_FILE:lotus-cfl-staged>
+            --grammar ${CMAKE_SOURCE_DIR}/tests/regress/CFL/Classical/stg-alias.grammar
+            --graph ${CMAKE_SOURCE_DIR}/tests/regress/CFL/Classical/stg-alias.graph
+            --mode alias
+            --summary X
+            --open open
+            --close close
+            --reverse-forward Abar
+            --center Y
+            --backward B
+            --phase-l Abar=abar
+            --phase-l Y=y
+            --phase-l B=b
+            --json-stats)
+    set_tests_properties(classical_cfl_engine_stg_alias PROPERTIES
+        PASS_REGULAR_EXPRESSION "\"start_edges\":1")
 endif()
 
 get_property(cfl_registered_tests DIRECTORY PROPERTY TESTS)

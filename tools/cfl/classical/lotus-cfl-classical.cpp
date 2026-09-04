@@ -30,6 +30,7 @@ struct Options {
   bool validate_only = false;
   bool unidirectional = false;
   bool simplify_focr_cycles = false;
+  std::vector<std::pair<std::string, std::string>> pearl_inverse_relations;
   GraphSimplificationOptions simplification;
   std::string relation_output;
   std::string stats_output;
@@ -40,7 +41,7 @@ void usage(std::ostream &stream) {
   stream
       << "Usage: lotus-cfl-classical --grammar FILE --graph FILE [options]\n"
          "Options:\n"
-         "  --solver sparse-set|sparse-bitvector|graspan|"
+         "  --solver sparse-set|sparse-bitvector|graspan|sqid|pearl|"
          "transitive-closure|pocr|hpocr|focr\n"
          "  --graph-mode plain|matrix|pag-matrix\n"
          "  --direction plain|reverse|bidirectional\n"
@@ -56,6 +57,7 @@ void usage(std::ostream &stream) {
          "  --stats-output FILE\n"
          "  --unidirectional            Honor POCR Insert/Follow metadata\n"
          "  --focr-scc                  Simplify FOCR critical-graph SCCs\n"
+         "  --pearl-inverse X,XBAR      Pair inverse PEARL relations\n"
          "  --simplification-flavor alias|value-flow\n"
          "  --scc-elimination           Condense direct-edge SCCs\n"
          "  --graph-folding             Apply POCR client graph folding\n"
@@ -184,6 +186,15 @@ Options parseOptions(int argc, char **argv) {
       options.unidirectional = true;
     } else if (argument == "--focr-scc") {
       options.simplify_focr_cycles = true;
+    } else if (argument == "--pearl-inverse") {
+      const std::string relation_pair = value();
+      const std::size_t comma = relation_pair.find(',');
+      if (comma == std::string::npos || comma == 0 ||
+          comma + 1 == relation_pair.size()) {
+        throw std::invalid_argument("PEARL inverse relation must be X,XBAR");
+      }
+      options.pearl_inverse_relations.emplace_back(
+          relation_pair.substr(0, comma), relation_pair.substr(comma + 1));
     } else if (argument == "--simplification-flavor") {
       const std::string selected = value();
       if (selected == "alias") {
@@ -279,7 +290,8 @@ int main(int argc, char **argv) {
 
     SolverSession session(graph, grammar,
                           SolverOptions{options.backend, options.unidirectional,
-                                        options.simplify_focr_cycles});
+                                        options.simplify_focr_cycles,
+                                        options.pearl_inverse_relations});
     const ReachabilityStats stats = session.solve();
     if (options.dump_relation) {
       std::ofstream relation_file;

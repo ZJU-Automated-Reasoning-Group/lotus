@@ -20,8 +20,9 @@ layout:
 
 ``Solvers/Engines/``
    Reusable relation engines. ``TransitiveClosure`` is the generic incremental
-   closure engine; ``Engines/POCR/`` contains the paired-tree and fully ordered
-   closures, specialized alias/value-flow engines, and POCR client grammars.
+   closure engine. ``Engines/PEARL/``, ``Engines/POCR/``, ``Engines/SQID/``,
+   and ``Engines/STG/`` contain the paper algorithms; ``Engines/POCR/`` also
+   contains its specialized alias/value-flow engines and client grammars.
 
 ``Solvers/Preprocessing/``
    Graph simplification and RSM-guided foldability analysis.
@@ -87,6 +88,15 @@ Solver backends
    ``GspanAA``/``GspanVFA``, then immediately updates that source's two
    relations. Old sources are revisited while any middle-node delta remains.
 
+``Pearl``
+   Implements ASE 2023 multi-derivation with separate non-transitive,
+   partially transitive, and fully transitive propagation. Select it with
+   ``--solver pearl``.
+
+``Sqid``
+   Implements OOPSLA 2026 adaptive and differential relation chaining with
+   dual old/delta graph views. Select it with ``--solver sqid``.
+
 ``TransitiveClosure``
    Uses sparse bitvectors generally and a dedicated incremental forward/reverse
    bitvector closure for every production ``X -> X X``. Inserting ``u -> v``
@@ -148,6 +158,8 @@ join candidates. Use ``--unidirectional`` in the general driver.
 
 See :doc:`pocr_migration` for the complete source-to-Lotus mapping and the
 algorithms intentionally merged with an existing implementation.
+See :doc:`pearl`, :doc:`stg`, and :doc:`sqid` for the papers, key ideas,
+published algorithms, Lotus adaptations, and validation boundaries.
 
 Adapters
 --------

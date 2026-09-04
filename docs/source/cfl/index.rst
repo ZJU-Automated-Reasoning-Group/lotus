@@ -9,6 +9,7 @@ This section covers CFL-reachability and context-free language based analyses.
    cfl_components
    classical
    pocr_migration
+   pearl_stg_sqid
    csindex
    unary_interleaved_dyck
    interleaved_dyck_approximation

@@ -1,7 +1,9 @@
 #include "CFL/Classical/Solvers/SolverSession.h"
 
+#include "CFL/Classical/Solvers/Engines/PEARL/PearlEngine.h"
 #include "CFL/Classical/Solvers/Engines/POCR/FullyOrderedClosure.h"
 #include "CFL/Classical/Solvers/Engines/POCR/PairedTreeClosure.h"
+#include "CFL/Classical/Solvers/Engines/SQID/SqidEngine.h"
 #include "CFL/Classical/Solvers/Engines/TransitiveClosure.h"
 
 #include <algorithm>
@@ -271,6 +273,8 @@ createSolverRelation(SolverBackend backend,
   case SolverBackend::SparseBitVector:
     return createRelation(RelationBackend::SparseBitVectors, node_count);
   case SolverBackend::Graspan:
+  case SolverBackend::Sqid:
+  case SolverBackend::Pearl:
     return createRelation(RelationBackend::SparseBitVectors, node_count);
   case SolverBackend::TransitiveClosure:
     return std::make_unique<BitVectorClosureRelation>(transitive_symbols,
@@ -296,6 +300,10 @@ const char *solverBackendName(SolverBackend backend) {
     return "sparse-bitvector";
   case SolverBackend::Graspan:
     return "graspan";
+  case SolverBackend::Sqid:
+    return "sqid";
+  case SolverBackend::Pearl:
+    return "pearl";
   case SolverBackend::TransitiveClosure:
     return "transitive-closure";
   case SolverBackend::Pocr:
@@ -317,6 +325,12 @@ SolverBackend parseSolverBackend(std::string_view name) {
   }
   if (name == "graspan") {
     return SolverBackend::Graspan;
+  }
+  if (name == "sqid") {
+    return SolverBackend::Sqid;
+  }
+  if (name == "pearl") {
+    return SolverBackend::Pearl;
   }
   if (name == "transitive-closure") {
     return SolverBackend::TransitiveClosure;
@@ -360,6 +374,23 @@ public:
       graspan_current_ = std::make_unique<GraspanData>(grammar.symbolCount(),
                                                        graph.vertexCount());
     }
+    if (backend_ == SolverBackend::Sqid) {
+      sqid_engine_ = std::make_unique<engines::SqidEngine>(grammar, *relation_,
+                                                           graph.vertexCount());
+    }
+    if (backend_ == SolverBackend::Pearl) {
+      engines::PearlOptions pearl_options;
+      for (const auto &[first, second] : options.pearl_inverse_relations) {
+        if (!grammar.hasSymbol(first) || !grammar.hasSymbol(second)) {
+          throw std::invalid_argument(
+              "PEARL inverse relation uses an unknown grammar symbol");
+        }
+        pearl_options.inverse_relations.push_back(
+            {grammar.symbolId(first), grammar.symbolId(second)});
+      }
+      pearl_engine_ = std::make_unique<engines::PearlEngine>(
+          grammar, *relation_, graph.vertexCount(), std::move(pearl_options));
+    }
     if (unidirectional_) {
       candidate_relation_ = createRelation(RelationBackend::SparseBitVectors,
                                            graph.vertexCount());
@@ -400,6 +431,12 @@ public:
       graspan_old_->ensureNodeCount(graph_.vertexCount());
       graspan_current_->ensureNodeCount(graph_.vertexCount());
     }
+    if (sqid_engine_) {
+      sqid_engine_->ensureNodeCount(graph_.vertexCount());
+    }
+    if (pearl_engine_) {
+      pearl_engine_->ensureNodeCount(graph_.vertexCount());
+    }
     if (candidate_relation_) {
       candidate_relation_->ensureNodeCount(graph_.vertexCount());
     }
@@ -425,15 +462,34 @@ public:
     stats.grammar_transitive_symbols = grammar_.transitiveSymbols().size();
     stats.input_edges = input_edges_;
 
-    for (SymbolId symbol : grammar_.nullableSymbolIds()) {
-      for (NodeId node = nullable_seeded_nodes_; node < graph_.vertexCount();
-           ++node) {
-        addDerived(symbol, node, node, stats, true);
+    if (backend_ != SolverBackend::Pearl && backend_ != SolverBackend::Sqid) {
+      for (SymbolId symbol : grammar_.nullableSymbolIds()) {
+        for (NodeId node = nullable_seeded_nodes_; node < graph_.vertexCount();
+             ++node) {
+          addDerived(symbol, node, node, stats, true);
+        }
       }
+      nullable_seeded_nodes_ = graph_.vertexCount();
     }
-    nullable_seeded_nodes_ = graph_.vertexCount();
 
-    if (backend_ == SolverBackend::Graspan) {
+    if (backend_ == SolverBackend::Pearl) {
+      const engines::PearlStatistics pearl = pearl_engine_->solve();
+      stats.classical_iterations += pearl.batch_propagations;
+      stats.processed_work_items += pearl.non_transitive_items +
+                                    pearl.partially_transitive_nodes +
+                                    pearl.fully_transitive_primary_edges;
+      stats.duplicate_edges += pearl.duplicate_edges;
+      stats.added_edges += pearl.derived_edges;
+    } else if (backend_ == SolverBackend::Sqid) {
+      const engines::SqidStatistics sqid = sqid_engine_->solve();
+      stats.classical_iterations += sqid.chaining_products;
+      stats.processed_work_items +=
+          sqid.processed_in_keys + sqid.processed_out_keys;
+      stats.duplicate_edges += sqid.duplicate_edges;
+      stats.added_edges += sqid.derived_edges;
+      stats.peak_worklist_size =
+          std::max(sqid.peak_in_worklist, sqid.peak_out_worklist);
+    } else if (backend_ == SolverBackend::Graspan) {
       solveGraspan(stats);
     } else if (backend_ == SolverBackend::HierarchicalPocr) {
       do {
@@ -474,7 +530,8 @@ public:
     stats.candidate_relation_edges = candidate_relation_
                                          ? candidate_relation_->edgeCount()
                                          : relation_->edgeCount();
-    stats.peak_worklist_size = current_peak_worklist_size_;
+    stats.peak_worklist_size =
+        std::max(stats.peak_worklist_size, current_peak_worklist_size_);
     current_peak_worklist_size_ = primary_worklist_.size() + worklist_.size();
     collectTransitiveStatistics(stats, transitive_before);
     collectPocrStatistics(stats, pocr_before);
@@ -810,6 +867,24 @@ private:
 
   bool addDerived(SymbolId symbol, NodeId source, NodeId target,
                   ReachabilityStats &stats, bool force_candidate = false) {
+    if (backend_ == SolverBackend::Pearl) {
+      if (!pearl_engine_->addEdge(symbol, source, target)) {
+        ++stats.duplicate_edges;
+        return false;
+      }
+      addCandidate(symbol, source, target, force_candidate);
+      ++stats.added_edges;
+      return true;
+    }
+    if (backend_ == SolverBackend::Sqid) {
+      if (!sqid_engine_->addEdge(symbol, source, target)) {
+        ++stats.duplicate_edges;
+        return false;
+      }
+      addCandidate(symbol, source, target, force_candidate);
+      ++stats.added_edges;
+      return true;
+    }
     if (backend_ == SolverBackend::Graspan) {
       if (!relation_->add(symbol, source, target)) {
         ++stats.duplicate_edges;
@@ -975,6 +1050,20 @@ private:
   }
 
   bool insertInputFact(SymbolId symbol, NodeId source, NodeId target) {
+    if (backend_ == SolverBackend::Pearl) {
+      if (!pearl_engine_->addEdge(symbol, source, target)) {
+        return false;
+      }
+      addCandidate(symbol, source, target, true);
+      return true;
+    }
+    if (backend_ == SolverBackend::Sqid) {
+      if (!sqid_engine_->addEdge(symbol, source, target)) {
+        return false;
+      }
+      addCandidate(symbol, source, target, true);
+      return true;
+    }
     if (backend_ == SolverBackend::Graspan) {
       if (!relation_->add(symbol, source, target)) {
         return false;
@@ -1052,6 +1141,8 @@ private:
   std::vector<NodeId> join_candidates_;
   std::unique_ptr<GraspanData> graspan_old_;
   std::unique_ptr<GraspanData> graspan_current_;
+  std::unique_ptr<engines::SqidEngine> sqid_engine_;
+  std::unique_ptr<engines::PearlEngine> pearl_engine_;
   std::size_t input_edges_ = 0;
   std::size_t current_peak_worklist_size_ = 0;
   std::size_t pending_derived_edges_ = 0;
@@ -1064,7 +1155,7 @@ private:
 
 SolverSession::SolverSession(LabeledGraph &graph, const Grammar &grammar,
                              SolverBackend backend)
-    : SolverSession(graph, grammar, SolverOptions{backend, false, false}) {}
+    : SolverSession(graph, grammar, SolverOptions{backend, false, false, {}}) {}
 
 SolverSession::SolverSession(LabeledGraph &graph, const Grammar &grammar,
                              const SolverOptions &options)

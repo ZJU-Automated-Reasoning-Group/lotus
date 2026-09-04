@@ -1,0 +1,12 @@
+Start:
+  X
+Terminal:
+  open close a abar y b
+Variables:
+  X A Abar Y B
+Productions:
+  A -> a;
+  Abar -> abar;
+  Y -> y;
+  B -> b;
+  X -> open ( A ) * Y ( B ) * close;

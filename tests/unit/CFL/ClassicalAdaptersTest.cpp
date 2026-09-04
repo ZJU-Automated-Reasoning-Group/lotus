@@ -262,9 +262,9 @@ TEST(ClassicalAdaptersTest, PegResultsAreIndependentOfConstraintOrder) {
 
   for (SolverBackend backend :
        {SolverBackend::SparseSet, SolverBackend::SparseBitVector,
-        SolverBackend::Graspan, SolverBackend::TransitiveClosure,
-        SolverBackend::Pocr, SolverBackend::HierarchicalPocr,
-        SolverBackend::FullyOrdered}) {
+        SolverBackend::Graspan, SolverBackend::Sqid, SolverBackend::Pearl,
+        SolverBackend::TransitiveClosure, SolverBackend::Pocr,
+        SolverBackend::HierarchicalPocr, SolverBackend::FullyOrdered}) {
     AliasConstraintGraph batch_graph = makeEmptyGraph();
     batch_graph.addEdge(object, pointer, AliasConstraintEdgeKind::Addr);
     batch_graph.addEdge(value, pointer, AliasConstraintEdgeKind::Store);
@@ -460,6 +460,7 @@ TEST(ClassicalAdaptersTest, ValueFlowClientEncodesSvfgCallsAndReachability) {
 
   for (SolverBackend backend :
        {SolverBackend::SparseBitVector, SolverBackend::Graspan,
+        SolverBackend::Sqid, SolverBackend::Pearl,
         SolverBackend::TransitiveClosure, SolverBackend::Pocr,
         SolverBackend::HierarchicalPocr, SolverBackend::FullyOrdered}) {
     ValueFlowClient alternate = ValueFlowClient::fromSVFG(svfg);

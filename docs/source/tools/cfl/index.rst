@@ -14,7 +14,7 @@ enables analysis of complex program properties using grammar-based constraints.
 **Location**: ``tools/cfl/``
 
 **Tools**: ``lotus-cfl-classical``, ``lotus-cfl-alias``, ``lotus-cfl-vf``,
-``lotus-cfl-foldability``, ``lotus-cfl-pocr``,
+``lotus-cfl-foldability``, ``lotus-cfl-pocr``, ``lotus-cfl-staged``,
 ``lotus-cfl-mcfl``, ``lotus-cfl-mutual-refinement``,
 ``lotus-cfl-interleaved-dyck-approximation``,
 ``lotus-cfl-unary-interleaved-dyck``, ``lotus-cfl-inter-dyck-graph-reduce``,
@@ -25,7 +25,7 @@ Classical CFL and Alias Analysis
 
 ``lotus-cfl-classical`` runs a supplied grammar over a text, DOT, or JSON
 graph with the sparse-set, sparse-bitvector, Graspan, transitive-closure, POCR,
-hierarchical-POCR, or fully ordered backend.
+hierarchical-POCR, fully ordered, PEARL, or Sqid backend.
 
 ``lotus-cfl-alias`` consumes LLVM IR or bitcode. It uses Aser as the constraint
 frontend but drives points-to propagation and indirect-call discovery through
@@ -68,7 +68,13 @@ foldability checker. The general driver also accepts POCR grammar/graph files
 directly and exposes unidirectional summarization, SCC elimination, graph
 folding, and inter-Dyck pruning.
 
-See :doc:`../../cfl/classical` for the complete option and API description.
+``lotus-cfl-staged`` runs the ISSTA 2024 Stg solver. It accepts explicit
+standard-Dyck, extended-Dyck, or Alias-CFP decomposition parameters and DNF
+regular productions for Phase L and Phase R.
+
+See :doc:`../../cfl/classical`, :doc:`../../cfl/pearl`,
+:doc:`../../cfl/stg`, and :doc:`../../cfl/sqid` for the complete algorithm,
+option, and API descriptions.
 
 MCFL: Multiple Context-Free Language Reachability
 -------------------------------------------------

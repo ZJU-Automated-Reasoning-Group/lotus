@@ -7,6 +7,9 @@ target_link_libraries(lotus-cfl-foldability PRIVATE CanaryClassicalCFL)
 add_executable(lotus-cfl-pocr lotus-cfl-pocr.cpp)
 target_link_libraries(lotus-cfl-pocr PRIVATE CanaryClassicalCFL)
 
+add_executable(lotus-cfl-staged lotus-cfl-staged.cpp)
+target_link_libraries(lotus-cfl-staged PRIVATE CanaryClassicalCFL)
+
 add_executable(lotus-cfl-alias lotus-cfl-alias.cpp)
 target_link_libraries(lotus-cfl-alias PRIVATE
     CanaryClassicalCFLAliasClient

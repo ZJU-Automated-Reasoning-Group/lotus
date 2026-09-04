@@ -1,15 +1,19 @@
 #include "CFL/Classical/Core/RecursiveStateMachine.h"
 #include "CFL/Classical/Core/Validation.h"
+#include "CFL/Classical/Solvers/Engines/PEARL/PearlEngine.h"
 #include "CFL/Classical/Solvers/Engines/POCR/ClientGrammars.h"
 #include "CFL/Classical/Solvers/Engines/POCR/FullyOrderedClosure.h"
 #include "CFL/Classical/Solvers/Engines/POCR/PairedTreeClosure.h"
 #include "CFL/Classical/Solvers/Engines/POCR/SpecializedEngines.h"
+#include "CFL/Classical/Solvers/Engines/SQID/SqidEngine.h"
+#include "CFL/Classical/Solvers/Engines/STG/StagedSolver.h"
 #include "CFL/Classical/Solvers/Engines/TransitiveClosure.h"
 #include "CFL/Classical/Solvers/Preprocessing/GraphSimplification.h"
 #include "CFL/Classical/Solvers/Preprocessing/RSMFoldability.h"
 #include "CFL/Classical/Solvers/SolverSession.h"
 
 #include <algorithm>
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include <limits>
@@ -886,10 +890,583 @@ TEST(ClassicalArchitectureTest,
 
 TEST(ClassicalArchitectureTest, ParsesSolverBackendNames) {
   EXPECT_EQ(parseSolverBackend("graspan"), SolverBackend::Graspan);
+  EXPECT_EQ(parseSolverBackend("sqid"), SolverBackend::Sqid);
+  EXPECT_EQ(parseSolverBackend("pearl"), SolverBackend::Pearl);
   EXPECT_EQ(parseSolverBackend("pocr"), SolverBackend::Pocr);
   EXPECT_EQ(parseSolverBackend("hpocr"), SolverBackend::HierarchicalPocr);
   EXPECT_EQ(parseSolverBackend("focr"), SolverBackend::FullyOrdered);
   EXPECT_THROW(parseSolverBackend("not-a-solver"), std::invalid_argument);
+}
+
+TEST(ClassicalArchitectureTest,
+     SqidUsesAdaptiveForwardAndBackwardDifferentialChaining) {
+  const Grammar grammar = Grammar::parseFromText(
+      "Start:\n  S\nTerminal:\n  a b\nVariables:\n  S A B\n"
+      "Productions:\n  A -> a; B -> b; S -> A B;\n");
+  auto relation = createRelation(RelationBackend::SparseBitVectors, 9);
+  SqidEngine engine(grammar, *relation, 9);
+  const SymbolId a = grammar.symbolId("a");
+  const SymbolId b = grammar.symbolId("b");
+
+  engine.addEdge(a, 0, 3);
+  engine.addEdge(a, 1, 3);
+  engine.addEdge(a, 2, 3);
+  engine.addEdge(b, 3, 4);
+  engine.addEdge(a, 4, 5);
+  engine.addEdge(b, 5, 6);
+  engine.addEdge(b, 5, 7);
+  engine.addEdge(b, 5, 8);
+  const SqidStatistics statistics = engine.solve();
+
+  const SymbolId start = grammar.startSymbolId();
+  EXPECT_TRUE(relation->contains(start, 0, 4));
+  EXPECT_TRUE(relation->contains(start, 1, 4));
+  EXPECT_TRUE(relation->contains(start, 2, 4));
+  EXPECT_TRUE(relation->contains(start, 4, 6));
+  EXPECT_TRUE(relation->contains(start, 4, 7));
+  EXPECT_TRUE(relation->contains(start, 4, 8));
+  EXPECT_GT(statistics.backward_chains, 0u);
+  EXPECT_GT(statistics.forward_chains, 0u);
+  EXPECT_TRUE(engine.empty());
+}
+
+TEST(ClassicalArchitectureTest, PaperEnginesInitializeNullableProductions) {
+  const Grammar grammar =
+      Grammar::parseFromText("Start:\n  S\nTerminal:\n  a\nVariables:\n  S\n"
+                             "Productions:\n  S -> a | <epsilon>;\n");
+
+  auto sqid_relation = createRelation(RelationBackend::SparseBitVectors, 0);
+  SqidEngine sqid(grammar, *sqid_relation, 3);
+  sqid.solve();
+  for (NodeId node = 0; node < 3; ++node) {
+    EXPECT_TRUE(sqid_relation->contains(grammar.startSymbolId(), node, node));
+  }
+
+  auto pearl_relation = createRelation(RelationBackend::SparseBitVectors, 0);
+  PearlEngine pearl(grammar, *pearl_relation, 3);
+  pearl.solve();
+  for (NodeId node = 0; node < 3; ++node) {
+    EXPECT_TRUE(pearl_relation->contains(grammar.startSymbolId(), node, node));
+  }
+}
+
+TEST(ClassicalArchitectureTest,
+     PearlBatchesFullAndBothPartialTransitiveRelations) {
+  const Grammar grammar = Grammar::parseFromText(
+      "Start:\n  S\nTerminal:\n  a x y\nVariables:\n  S A X Y\n"
+      "Productions:\n"
+      "  A -> A A | a;\n"
+      "  X -> X A | x;\n"
+      "  Y -> A Y | y;\n"
+      "  S -> X Y;\n");
+  auto relation = createRelation(RelationBackend::SparseBitVectors, 5);
+  PearlEngine engine(grammar, *relation, 5);
+  engine.addEdge(grammar.symbolId("x"), 0, 1);
+  engine.addEdge(grammar.symbolId("a"), 1, 2);
+  engine.addEdge(grammar.symbolId("a"), 2, 3);
+  engine.addEdge(grammar.symbolId("y"), 3, 4);
+  const PearlStatistics statistics = engine.solve();
+
+  EXPECT_TRUE(relation->contains(grammar.symbolId("A"), 1, 3));
+  EXPECT_TRUE(relation->contains(grammar.symbolId("X"), 0, 3));
+  EXPECT_TRUE(relation->contains(grammar.symbolId("Y"), 1, 4));
+  EXPECT_TRUE(relation->contains(grammar.symbolId("S"), 0, 4));
+  EXPECT_GT(statistics.fully_transitive_primary_edges, 0u);
+  EXPECT_GT(statistics.fully_transitive_secondary_edges, 0u);
+  EXPECT_GT(statistics.partially_transitive_nodes, 0u);
+  EXPECT_GT(statistics.batch_propagations, 0u);
+  EXPECT_TRUE(engine.empty());
+}
+
+TEST(ClassicalArchitectureTest, PearlPacksExplicitInverseRelations) {
+  const Grammar grammar =
+      Grammar::parseFromText("Start:\n  X\nTerminal:\n  a1 a2 x\n"
+                             "Variables:\n  X Xbar A1 A2\nProductions:\n"
+                             "  A1 -> A1 A1 | a1; A2 -> A2 A2 | a2;\n"
+                             "  X -> X A1 | x; Xbar -> Xbar A2;\n");
+  auto relation = createRelation(RelationBackend::SparseBitVectors, 4);
+  PearlOptions options;
+  options.inverse_relations.push_back(
+      {grammar.symbolId("X"), grammar.symbolId("Xbar")});
+  PearlEngine engine(grammar, *relation, 4, std::move(options));
+  engine.addEdge(grammar.symbolId("x"), 2, 1);
+  engine.addEdge(grammar.symbolId("a1"), 1, 0);
+  engine.addEdge(grammar.symbolId("a2"), 2, 3);
+  const PearlStatistics statistics = engine.solve();
+
+  EXPECT_TRUE(relation->contains(grammar.symbolId("X"), 2, 0));
+  EXPECT_TRUE(relation->contains(grammar.symbolId("Xbar"), 0, 2));
+  EXPECT_TRUE(relation->contains(grammar.symbolId("Xbar"), 0, 3));
+  EXPECT_GT(statistics.batch_propagations, 0u);
+
+  LabeledGraph graph;
+  for (std::size_t node = 0; node < 4; ++node) {
+    graph.addVertex("n" + std::to_string(node));
+  }
+  graph.addEdge(2, 1, "x");
+  graph.addEdge(1, 0, "a1");
+  graph.addEdge(2, 3, "a2");
+  SolverSession session(
+      graph, grammar,
+      SolverOptions{SolverBackend::Pearl, false, false, {{"X", "Xbar"}}});
+  session.solve();
+  EXPECT_TRUE(session.contains(0, 3, "Xbar"));
+}
+
+TEST(ClassicalArchitectureTest,
+     PearlTreatsTheInverseOfAFullRelationAsFullyTransitive) {
+  const Grammar grammar = Grammar::parseFromText(
+      "Start:\n  X\nTerminal:\n  a x\nVariables:\n  X A Abar\n"
+      "Productions:\n  A -> A A | a; X -> X Abar | x;\n");
+  auto relation = createRelation(RelationBackend::SparseBitVectors, 4);
+  PearlOptions options;
+  options.inverse_relations.push_back(
+      {grammar.symbolId("A"), grammar.symbolId("Abar")});
+  PearlEngine engine(grammar, *relation, 4, std::move(options));
+  engine.addEdge(grammar.symbolId("a"), 0, 1);
+  engine.addEdge(grammar.symbolId("a"), 1, 2);
+  engine.addEdge(grammar.symbolId("x"), 3, 2);
+  const PearlStatistics statistics = engine.solve();
+
+  EXPECT_TRUE(relation->contains(grammar.symbolId("Abar"), 2, 0));
+  EXPECT_TRUE(relation->contains(grammar.symbolId("X"), 3, 0));
+  EXPECT_GT(statistics.batch_propagations, 0u);
+}
+
+TEST(ClassicalArchitectureTest,
+     PearlHandlesRelationsThatAreBothFullAndPartialTransitive) {
+  const Grammar grammar = Grammar::parseFromText(
+      "Start:\n  X\nTerminal:\n  a x\nVariables:\n  A X\n"
+      "Productions:\n  A -> A A | a; X -> X X | X A | x;\n");
+  LabeledGraph graph;
+  graph.addEdge("n0", "n1", "x");
+  graph.addEdge("n1", "n2", "a");
+  graph.addEdge("n2", "n3", "a");
+
+  EXPECT_EQ(solveWith(SolverBackend::Pearl, graph, grammar),
+            solveReference(graph, grammar));
+}
+
+TEST(ClassicalArchitectureTest,
+     PearlMatchesCubicReferenceAcrossGeneratedTransitiveProblems) {
+  const Grammar grammar =
+      Grammar::parseFromText("Start:\n  S\nTerminal:\n  a b x y\n"
+                             "Variables:\n  S A B X Y\nProductions:\n"
+                             "  A -> A A | a; B -> B B | b;\n"
+                             "  X -> X A | B X | x;\n"
+                             "  Y -> A Y | Y B | y;\n"
+                             "  S -> X Y | Y X;\n");
+  for (std::size_t seed = 1; seed <= 128; ++seed) {
+    LabeledGraph graph;
+    for (std::size_t node = 0; node < 5; ++node) {
+      graph.addVertex("n" + std::to_string(node));
+    }
+    for (std::size_t source = 0; source < 5; ++source) {
+      for (std::size_t target = 0; target < 5; ++target) {
+        for (std::size_t label = 0; label < 4; ++label) {
+          const std::size_t value =
+              source * 31 + target * 17 + label * 13 + seed * 19;
+          if (value % 11 == 0) {
+            graph.addEdge(
+                source, target,
+                std::array<const char *, 4>{"a", "b", "x", "y"}[label]);
+          }
+        }
+      }
+    }
+    EXPECT_EQ(solveWith(SolverBackend::Pearl, graph, grammar),
+              solveReference(graph, grammar))
+        << "seed=" << seed;
+  }
+}
+
+TEST(ClassicalArchitectureTest,
+     StgSolvesRegularKleeneSequencesInSccTopologicalOrder) {
+  const Grammar grammar =
+      Grammar::parseFromText("Start:\n  R\nTerminal:\n  a b\nVariables:\n  R\n"
+                             "Productions:\n  R -> a R | b;\n");
+  auto relation = createRelation(RelationBackend::SparseBitVectors, 4);
+  stg::StagedSpecification specification;
+  specification.phase_r.push_back(
+      {grammar.symbolId("R"),
+       {{{{grammar.symbolId("a")}, true}, {{grammar.symbolId("b")}, false}}}});
+  stg::StagedSolver solver(grammar, *relation, std::move(specification), 4);
+  solver.addEdge(grammar.symbolId("a"), 0, 1);
+  solver.addEdge(grammar.symbolId("a"), 1, 0);
+  solver.addEdge(grammar.symbolId("a"), 1, 2);
+  solver.addEdge(grammar.symbolId("b"), 2, 3);
+  const stg::StagedStatistics statistics = solver.solve();
+
+  EXPECT_TRUE(relation->contains(grammar.symbolId("R"), 0, 3));
+  EXPECT_TRUE(relation->contains(grammar.symbolId("R"), 1, 3));
+  EXPECT_TRUE(relation->contains(grammar.symbolId("R"), 2, 3));
+  EXPECT_GT(statistics.ordered_scc_propagations, 0u);
+}
+
+TEST(ClassicalArchitectureTest,
+     StgHandlesNestedKleeneViaPaperAuxiliaryNonterminal) {
+  const Grammar grammar = Grammar::parseFromText(
+      "Start:\n  R\nTerminal:\n  a b\nVariables:\n  R C\nProductions:\n"
+      "  C -> a ( b ) *; R -> ( C ) *;\n");
+  LabeledGraph graph;
+  graph.addEdge("n0", "n1", "a");
+  graph.addEdge("n1", "n2", "b");
+  graph.addEdge("n2", "n1", "b");
+  graph.addEdge("n2", "n3", "a");
+
+  auto relation =
+      createRelation(RelationBackend::SparseBitVectors, graph.vertexCount());
+  stg::StagedSpecification specification;
+  specification.phase_r = {
+      {grammar.symbolId("C"),
+       {{{{grammar.symbolId("a")}, false}, {{grammar.symbolId("b")}, true}}}},
+      {grammar.symbolId("R"), {{{{grammar.symbolId("C")}, true}}}},
+  };
+  stg::StagedSolver staged(grammar, *relation, std::move(specification),
+                           graph.vertexCount());
+  for (const LabeledEdge &edge : graph.edges()) {
+    staged.addEdge(grammar.symbolId(edge.label), edge.source, edge.target);
+  }
+  staged.solve();
+
+  LabeledGraph baseline_graph = graph;
+  SolverSession baseline(baseline_graph, grammar, SolverBackend::SparseSet);
+  baseline.solve();
+  std::set<std::pair<NodeId, NodeId>> staged_pairs;
+  std::set<std::pair<NodeId, NodeId>> baseline_pairs;
+  for (const RelationEdge &edge : relation->edges(grammar.startSymbolId())) {
+    staged_pairs.insert({edge.source, edge.target});
+  }
+  for (const RelationEdge &edge :
+       baseline.relation().edges(grammar.startSymbolId())) {
+    baseline_pairs.insert({edge.source, edge.target});
+  }
+  EXPECT_EQ(staged_pairs, baseline_pairs);
+  EXPECT_TRUE(relation->contains(grammar.startSymbolId(), 0, 3));
+}
+
+TEST(ClassicalArchitectureTest,
+     StgDyckCfpAndRegularPhaseMatchMonolithicGrammar) {
+  const Grammar grammar =
+      Grammar::parseFromText("Start:\n  S\nTerminal:\n  call_0 ret_0 s\n"
+                             "Variables:\n  S Sum\nProductions:\n"
+                             "  Sum -> call_0 S ret_0;\n"
+                             "  S -> S S | Sum | s | <epsilon>;\n");
+  LabeledGraph graph;
+  graph.addEdge("n0", "n1", "call_0");
+  graph.addEdge("n1", "n2", "s");
+  graph.addEdge("n2", "n3", "call_0");
+  graph.addEdge("n3", "n4", "s");
+  graph.addEdge("n4", "n5", "ret_0");
+  graph.addEdge("n5", "n6", "s");
+  graph.addEdge("n6", "n7", "ret_0");
+
+  auto relation =
+      createRelation(RelationBackend::SparseBitVectors, graph.vertexCount());
+  stg::StagedSpecification specification = stg::decomposeStandardDyck(
+      grammar.symbolId("S"), grammar.symbolId("Sum"), {grammar.symbolId("s")},
+      {{grammar.symbolId("call_0"), grammar.symbolId("ret_0")}});
+  stg::StagedSolver solver(grammar, *relation, std::move(specification),
+                           graph.vertexCount());
+  for (const LabeledEdge &edge : graph.edges()) {
+    solver.addEdge(grammar.symbolId(edge.label), edge.source, edge.target);
+  }
+  const stg::StagedStatistics statistics = solver.solve();
+
+  LabeledGraph baseline_graph = graph;
+  SolverSession baseline(baseline_graph, grammar, SolverBackend::SparseSet);
+  baseline.solve();
+  const SymbolId start = grammar.startSymbolId();
+  std::set<std::pair<NodeId, NodeId>> staged_pairs;
+  std::set<std::pair<NodeId, NodeId>> baseline_pairs;
+  for (const RelationEdge &edge : relation->edges(start)) {
+    staged_pairs.insert({edge.source, edge.target});
+  }
+  for (const RelationEdge &edge : baseline.relation().edges(start)) {
+    baseline_pairs.insert({edge.source, edge.target});
+  }
+  EXPECT_EQ(staged_pairs, baseline_pairs);
+  EXPECT_TRUE(relation->contains(start, 0, 7));
+  EXPECT_GT(statistics.summary_edges, 0u);
+  EXPECT_GT(statistics.dyck_path_edges, 0u);
+}
+
+TEST(ClassicalArchitectureTest,
+     StgExtendedDyckDecompositionMatchesMonolithicGrammar) {
+  const Grammar grammar =
+      Grammar::parseFromText("Start:\n  Start\nTerminal:\n  call_0 ret_0 s\n"
+                             "Variables:\n  Start P N S Sum\nProductions:\n"
+                             "  Start -> P N;\n"
+                             "  P -> S P | ret_0 P | <epsilon>;\n"
+                             "  N -> S N | call_0 N | <epsilon>;\n"
+                             "  Sum -> call_0 S ret_0;\n"
+                             "  S -> S S | Sum | s | <epsilon>;\n");
+  LabeledGraph graph;
+  graph.addEdge("n0", "n1", "ret_0");
+  graph.addEdge("n1", "n2", "call_0");
+  graph.addEdge("n2", "n3", "s");
+  graph.addEdge("n3", "n4", "ret_0");
+  graph.addEdge("n4", "n5", "call_0");
+
+  auto relation =
+      createRelation(RelationBackend::SparseBitVectors, graph.vertexCount());
+  stg::StagedSpecification specification = stg::decomposeExtendedDyck(
+      grammar.symbolId("Start"), grammar.symbolId("Sum"),
+      {grammar.symbolId("s")},
+      {{grammar.symbolId("call_0"), grammar.symbolId("ret_0")}});
+  stg::StagedSolver solver(grammar, *relation, std::move(specification),
+                           graph.vertexCount());
+  for (const LabeledEdge &edge : graph.edges()) {
+    solver.addEdge(grammar.symbolId(edge.label), edge.source, edge.target);
+  }
+  solver.solve();
+
+  LabeledGraph baseline_graph = graph;
+  SolverSession baseline(baseline_graph, grammar, SolverBackend::SparseSet);
+  baseline.solve();
+  std::set<std::pair<NodeId, NodeId>> staged_pairs;
+  std::set<std::pair<NodeId, NodeId>> baseline_pairs;
+  for (const RelationEdge &edge : relation->edges(grammar.symbolId("Start"))) {
+    staged_pairs.insert({edge.source, edge.target});
+  }
+  for (const RelationEdge &edge :
+       baseline.relation().edges(grammar.symbolId("Start"))) {
+    baseline_pairs.insert({edge.source, edge.target});
+  }
+  EXPECT_EQ(staged_pairs, baseline_pairs);
+  EXPECT_TRUE(relation->contains(grammar.symbolId("Start"), 0, 5));
+}
+
+TEST(ClassicalArchitectureTest, StgAliasCfpMatchesMonolithicGrammar) {
+  const Grammar grammar =
+      Grammar::parseFromText("Start:\n  X\nTerminal:\n  open close a abar y b\n"
+                             "Variables:\n  X A Abar Y B\nProductions:\n"
+                             "  A -> a; Abar -> abar; Y -> y; B -> b;\n"
+                             "  X -> open ( A ) * Y ( B ) * close;\n");
+  LabeledGraph graph;
+  graph.addEdge("n0", "n1", "open");
+  graph.addEdge("n1", "n2", "a");
+  graph.addEdge("n2", "n1", "abar");
+  graph.addEdge("n2", "n3", "a");
+  graph.addEdge("n3", "n2", "abar");
+  graph.addEdge("n3", "n4", "y");
+  graph.addEdge("n4", "n5", "b");
+  graph.addEdge("n5", "n6", "b");
+  graph.addEdge("n6", "n7", "close");
+
+  auto relation =
+      createRelation(RelationBackend::SparseBitVectors, graph.vertexCount());
+  stg::StagedSpecification specification = stg::decomposeAliasCfp(
+      {grammar.symbolId("X"), grammar.symbolId("open"),
+       grammar.symbolId("close"), grammar.symbolId("Abar"),
+       grammar.symbolId("Y"), grammar.symbolId("B")},
+      {
+          {grammar.symbolId("A"), {{{{grammar.symbolId("a")}, false}}}},
+          {grammar.symbolId("Abar"), {{{{grammar.symbolId("abar")}, false}}}},
+          {grammar.symbolId("Y"), {{{{grammar.symbolId("y")}, false}}}},
+          {grammar.symbolId("B"), {{{{grammar.symbolId("b")}, false}}}},
+      });
+  stg::StagedSolver solver(grammar, *relation, std::move(specification),
+                           graph.vertexCount());
+  for (const LabeledEdge &edge : graph.edges()) {
+    solver.addEdge(grammar.symbolId(edge.label), edge.source, edge.target);
+  }
+  const stg::StagedStatistics statistics = solver.solve();
+
+  LabeledGraph baseline_graph = graph;
+  SolverSession baseline(baseline_graph, grammar, SolverBackend::SparseSet);
+  baseline.solve();
+  std::set<std::pair<NodeId, NodeId>> staged_pairs;
+  std::set<std::pair<NodeId, NodeId>> baseline_pairs;
+  for (const RelationEdge &edge : relation->edges(grammar.startSymbolId())) {
+    staged_pairs.insert({edge.source, edge.target});
+  }
+  for (const RelationEdge &edge :
+       baseline.relation().edges(grammar.startSymbolId())) {
+    baseline_pairs.insert({edge.source, edge.target});
+  }
+  EXPECT_EQ(staged_pairs, baseline_pairs);
+  EXPECT_TRUE(relation->contains(grammar.startSymbolId(), 0, 7));
+  EXPECT_GT(statistics.alias_forward_path_edges, 0u);
+  EXPECT_GT(statistics.alias_backward_path_edges, 0u);
+}
+
+TEST(ClassicalArchitectureTest,
+     StgAliasCfpReprocessesEdgesGeneratedFromNewSummaries) {
+  const Grammar grammar =
+      Grammar::parseFromText("Start:\n  X\nTerminal:\n  open close abar y b\n"
+                             "Variables:\n  X Abar Y B\nProductions:\n"
+                             "  Abar -> abar | X; Y -> y | X; B -> b | X;\n"
+                             "  X -> open Y ( B ) * close;\n");
+  LabeledGraph graph;
+  for (std::size_t node = 0; node <= 12; ++node) {
+    graph.addVertex("n" + std::to_string(node));
+  }
+
+  // The first summary X(0, 3) feeds all three regular Phase-L relations.
+  graph.addEdge("n0", "n1", "open");
+  graph.addEdge("n1", "n2", "y");
+  graph.addEdge("n2", "n3", "close");
+
+  // New B(0, 3) extends Y(5, 0) and creates X(4, 6).
+  graph.addEdge("n4", "n5", "open");
+  graph.addEdge("n5", "n0", "y");
+  graph.addEdge("n3", "n6", "close");
+
+  // New Y(0, 3) is itself a complete forward path and creates X(7, 8).
+  graph.addEdge("n7", "n0", "open");
+  graph.addEdge("n3", "n8", "close");
+
+  // New Abar(0, 3) extends an existing backward path from 0 to 3 and
+  // creates X(12, 11), exercising Algorithm 1 lines 26-29.
+  graph.addEdge("n0", "n10", "y");
+  graph.addEdge("n10", "n11", "close");
+  graph.addEdge("n12", "n3", "open");
+
+  auto relation =
+      createRelation(RelationBackend::SparseBitVectors, graph.vertexCount());
+  stg::StagedSpecification specification = stg::decomposeAliasCfp(
+      {grammar.symbolId("X"), grammar.symbolId("open"),
+       grammar.symbolId("close"), grammar.symbolId("Abar"),
+       grammar.symbolId("Y"), grammar.symbolId("B")},
+      {
+          {grammar.symbolId("Abar"),
+           {{{{grammar.symbolId("abar")}, false}},
+            {{{grammar.symbolId("X")}, false}}}},
+          {grammar.symbolId("Y"),
+           {{{{grammar.symbolId("y")}, false}},
+            {{{grammar.symbolId("X")}, false}}}},
+          {grammar.symbolId("B"),
+           {{{{grammar.symbolId("b")}, false}},
+            {{{grammar.symbolId("X")}, false}}}},
+      });
+  stg::StagedSolver solver(grammar, *relation, std::move(specification),
+                           graph.vertexCount());
+  for (const LabeledEdge &edge : graph.edges()) {
+    solver.addEdge(grammar.symbolId(edge.label), edge.source, edge.target);
+  }
+  const stg::StagedStatistics statistics = solver.solve();
+
+  const SymbolId summary = grammar.symbolId("X");
+  EXPECT_TRUE(relation->contains(summary, 0, 3));
+  EXPECT_TRUE(relation->contains(summary, 4, 6));
+  EXPECT_TRUE(relation->contains(summary, 7, 8));
+  EXPECT_TRUE(relation->contains(summary, 12, 11));
+  EXPECT_GT(statistics.phase_l_rounds, 1u);
+}
+
+TEST(ClassicalArchitectureTest,
+     StgMatchesMonolithicSolvingOnGeneratedCfpGraphs) {
+  const Grammar dyck = Grammar::parseFromText(
+      "Start:\n  S\nTerminal:\n  call_0 ret_0 call_1 ret_1 s\n"
+      "Variables:\n  S Sum\nProductions:\n"
+      "  Sum -> call_0 S ret_0 | call_1 S ret_1;\n"
+      "  S -> S S | Sum | s | <epsilon>;\n");
+  const std::array<const char *, 5> dyck_labels{"call_0", "ret_0", "call_1",
+                                                "ret_1", "s"};
+  for (std::size_t seed = 1; seed <= 32; ++seed) {
+    LabeledGraph graph;
+    for (std::size_t node = 0; node < 5; ++node) {
+      graph.addVertex("n" + std::to_string(node));
+    }
+    for (std::size_t source = 0; source < 5; ++source) {
+      for (std::size_t target = 0; target < 5; ++target) {
+        for (std::size_t label = 0; label < dyck_labels.size(); ++label) {
+          if ((source * 17 + target * 29 + label * 31 + seed * 13) % 19 == 0) {
+            graph.addEdge(source, target, dyck_labels[label]);
+          }
+        }
+      }
+    }
+    auto relation =
+        createRelation(RelationBackend::SparseBitVectors, graph.vertexCount());
+    stg::StagedSpecification specification = stg::decomposeStandardDyck(
+        dyck.symbolId("S"), dyck.symbolId("Sum"), {dyck.symbolId("s")},
+        {{dyck.symbolId("call_0"), dyck.symbolId("ret_0")},
+         {dyck.symbolId("call_1"), dyck.symbolId("ret_1")}});
+    stg::StagedSolver staged(dyck, *relation, std::move(specification),
+                             graph.vertexCount());
+    for (const LabeledEdge &edge : graph.edges()) {
+      staged.addEdge(dyck.symbolId(edge.label), edge.source, edge.target);
+    }
+    staged.solve();
+    LabeledGraph baseline_graph = graph;
+    SolverSession baseline(baseline_graph, dyck, SolverBackend::SparseSet);
+    baseline.solve();
+    std::set<std::pair<NodeId, NodeId>> staged_pairs;
+    std::set<std::pair<NodeId, NodeId>> baseline_pairs;
+    for (const RelationEdge &edge : relation->edges(dyck.startSymbolId())) {
+      staged_pairs.insert({edge.source, edge.target});
+    }
+    for (const RelationEdge &edge :
+         baseline.relation().edges(dyck.startSymbolId())) {
+      baseline_pairs.insert({edge.source, edge.target});
+    }
+    EXPECT_EQ(staged_pairs, baseline_pairs) << "dyck seed=" << seed;
+  }
+
+  const Grammar alias =
+      Grammar::parseFromText("Start:\n  X\nTerminal:\n  open close a abar y b\n"
+                             "Variables:\n  X A Abar Y B\nProductions:\n"
+                             "  A -> a; Abar -> abar; Y -> y; B -> b;\n"
+                             "  X -> open ( A ) * Y ( B ) * close;\n");
+  for (std::size_t seed = 1; seed <= 32; ++seed) {
+    LabeledGraph graph;
+    for (std::size_t node = 0; node < 5; ++node) {
+      graph.addVertex("n" + std::to_string(node));
+    }
+    for (std::size_t source = 0; source < 5; ++source) {
+      for (std::size_t target = 0; target < 5; ++target) {
+        const std::size_t value = source * 23 + target * 37 + seed * 11;
+        if (value % 17 == 0) {
+          graph.addEdge(source, target, "a");
+          graph.addEdge(target, source, "abar");
+        }
+        if (value % 19 == 0) {
+          graph.addEdge(source, target, "open");
+        }
+        if (value % 23 == 0) {
+          graph.addEdge(source, target, "close");
+        }
+        if (value % 29 == 0) {
+          graph.addEdge(source, target, "y");
+        }
+        if (value % 31 == 0) {
+          graph.addEdge(source, target, "b");
+        }
+      }
+    }
+    auto relation =
+        createRelation(RelationBackend::SparseBitVectors, graph.vertexCount());
+    stg::StagedSpecification specification = stg::decomposeAliasCfp(
+        {alias.symbolId("X"), alias.symbolId("open"), alias.symbolId("close"),
+         alias.symbolId("Abar"), alias.symbolId("Y"), alias.symbolId("B")},
+        {
+            {alias.symbolId("A"), {{{{alias.symbolId("a")}, false}}}},
+            {alias.symbolId("Abar"), {{{{alias.symbolId("abar")}, false}}}},
+            {alias.symbolId("Y"), {{{{alias.symbolId("y")}, false}}}},
+            {alias.symbolId("B"), {{{{alias.symbolId("b")}, false}}}},
+        });
+    stg::StagedSolver staged(alias, *relation, std::move(specification),
+                             graph.vertexCount());
+    for (const LabeledEdge &edge : graph.edges()) {
+      staged.addEdge(alias.symbolId(edge.label), edge.source, edge.target);
+    }
+    staged.solve();
+    LabeledGraph baseline_graph = graph;
+    SolverSession baseline(baseline_graph, alias, SolverBackend::SparseSet);
+    baseline.solve();
+    std::set<std::pair<NodeId, NodeId>> staged_pairs;
+    std::set<std::pair<NodeId, NodeId>> baseline_pairs;
+    for (const RelationEdge &edge : relation->edges(alias.startSymbolId())) {
+      staged_pairs.insert({edge.source, edge.target});
+    }
+    for (const RelationEdge &edge :
+         baseline.relation().edges(alias.startSymbolId())) {
+      baseline_pairs.insert({edge.source, edge.target});
+    }
+    EXPECT_EQ(staged_pairs, baseline_pairs) << "alias seed=" << seed;
+  }
 }
 
 TEST(ClassicalArchitectureTest, AllSolverBackendsProduceTheSameClosure) {
@@ -905,6 +1482,8 @@ TEST(ClassicalArchitectureTest, AllSolverBackendsProduceTheSameClosure) {
   EXPECT_EQ(solveWith(SolverBackend::SparseBitVector, graph, grammar),
             baseline);
   EXPECT_EQ(solveWith(SolverBackend::Graspan, graph, grammar), baseline);
+  EXPECT_EQ(solveWith(SolverBackend::Sqid, graph, grammar), baseline);
+  EXPECT_EQ(solveWith(SolverBackend::Pearl, graph, grammar), baseline);
   EXPECT_EQ(solveWith(SolverBackend::TransitiveClosure, graph, grammar),
             baseline);
   EXPECT_EQ(solveWith(SolverBackend::Pocr, graph, grammar), baseline);
@@ -1030,6 +1609,10 @@ TEST(ClassicalArchitectureTest, BackendsAgreeAcrossGeneratedSmallGraphs) {
         << "seed=" << seed;
     EXPECT_EQ(solveWith(SolverBackend::Graspan, graph, grammar), baseline)
         << "seed=" << seed;
+    EXPECT_EQ(solveWith(SolverBackend::Sqid, graph, grammar), baseline)
+        << "seed=" << seed;
+    EXPECT_EQ(solveWith(SolverBackend::Pearl, graph, grammar), baseline)
+        << "seed=" << seed;
     EXPECT_EQ(solveWith(SolverBackend::TransitiveClosure, graph, grammar),
               baseline)
         << "seed=" << seed;
@@ -1099,9 +1682,9 @@ TEST(ClassicalArchitectureTest,
     const auto reference = solveReference(graph, grammar);
     for (SolverBackend backend :
          {SolverBackend::SparseSet, SolverBackend::SparseBitVector,
-          SolverBackend::Graspan, SolverBackend::TransitiveClosure,
-          SolverBackend::Pocr, SolverBackend::HierarchicalPocr,
-          SolverBackend::FullyOrdered}) {
+          SolverBackend::Graspan, SolverBackend::Sqid, SolverBackend::Pearl,
+          SolverBackend::TransitiveClosure, SolverBackend::Pocr,
+          SolverBackend::HierarchicalPocr, SolverBackend::FullyOrdered}) {
       EXPECT_EQ(solveWith(backend, graph, grammar), reference)
           << "seed=" << seed << " backend=" << solverBackendName(backend);
     }
@@ -1240,9 +1823,9 @@ TEST(ClassicalArchitectureTest, RepeatedSolveDoesNotReseedNullableFacts) {
                              "Productions:\n  S -> a | <epsilon>;\n");
   for (SolverBackend backend :
        {SolverBackend::SparseSet, SolverBackend::SparseBitVector,
-        SolverBackend::Graspan, SolverBackend::TransitiveClosure,
-        SolverBackend::Pocr, SolverBackend::HierarchicalPocr,
-        SolverBackend::FullyOrdered}) {
+        SolverBackend::Graspan, SolverBackend::Sqid, SolverBackend::Pearl,
+        SolverBackend::TransitiveClosure, SolverBackend::Pocr,
+        SolverBackend::HierarchicalPocr, SolverBackend::FullyOrdered}) {
     LabeledGraph graph;
     graph.addVertex("n0");
     SolverSession session(graph, grammar, backend);

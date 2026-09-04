@@ -1,0 +1,9 @@
+Start:
+  S
+Terminal:
+  call_0 ret_0 s
+Variables:
+  S Sum
+Productions:
+  Sum -> call_0 S ret_0;
+  S -> S S | Sum | s | <epsilon>;

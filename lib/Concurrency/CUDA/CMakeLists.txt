@@ -1,0 +1,14 @@
+lotus_add_concurrency_sources(
+  CUDAAbstractState.cpp
+  CUDAAnalysis.cpp
+  CUDAAnalysisLaunch.cpp
+  CUDAAnalysisMemory.cpp
+  CUDAFunctionSummary.cpp
+  CUDAKernelProtocolAnalysis.cpp
+  CUDAMemoryModel.cpp
+  CUDAParticipantAnalysis.cpp
+  CUDASemantics.cpp
+  CUDAStreamAutomaton.cpp
+  CUDASymbolicModel.cpp
+  PTXAnalyzer.cpp
+)

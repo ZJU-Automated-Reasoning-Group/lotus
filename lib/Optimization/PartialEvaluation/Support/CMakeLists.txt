@@ -1,0 +1,14 @@
+lotus_add_partial_evaluation_sources(
+  ArgSpec.cpp
+  CommandLine.cpp
+  CopyPaste.cpp
+  DOT.cpp
+  DriverInterface.cpp
+  DumpType.cpp
+  LLIO.cpp
+  Misc.cpp
+  NameBlocks.cpp
+  NewStats.cpp
+  Print.cpp
+  TLDump.cpp
+)

@@ -1,0 +1,9 @@
+lotus_add_concurrency_sources(
+  BVClock.cpp
+  CppAtomics.cpp
+  FBVClock.cpp
+  RAIILockTracker.cpp
+  ThreadAPI.cpp
+  ThreadFlowGraph.cpp
+  ThreadLocalAnalysis.cpp
+)

@@ -1,0 +1,21 @@
+lotus_add_partial_evaluation_sources(
+  BytewiseReinterpret.cpp
+  CFGEval.cpp
+  CreateSpecialisationContext.cpp
+  DIE.cpp
+  DSE.cpp
+  Eval.cpp
+  FunctionSharing.cpp
+  IAWalkers.cpp
+  IntBenefit.cpp
+  IntConstFold.cpp
+  LoadForward.cpp
+  MainLoop.cpp
+  PartialLoadForward.cpp
+  Selective.cpp
+  Shadows.cpp
+  TentativeLoads.cpp
+  TopLevel.cpp
+  VFSCallModRef.cpp
+  VFSOps.cpp
+)

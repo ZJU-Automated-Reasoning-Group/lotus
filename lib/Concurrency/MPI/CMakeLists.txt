@@ -1,0 +1,10 @@
+lotus_add_concurrency_sources(
+  MPIAbstractState.cpp
+  MPIAnalysis.cpp
+  MPICollectiveAnalysis.cpp
+  MPIProcessModel.cpp
+  MPIProtocolAutomaton.cpp
+  MPIRMAAnalysis.cpp
+  MPIRankAnalysis.cpp
+  MPISemantics.cpp
+)

@@ -6,12 +6,21 @@ Headers live under `include/Concurrency/`, sources under `lib/Concurrency/`, gro
 
 | Subdirectory | Contents |
 |--------------|----------|
-| **Support/** | ThreadAPI, ThreadFlowGraph, ThreadInfo, BVClock, FBVClock, CppAtomics, RAIILockTracker, LanguageModel/ (CppThreading, OpenMP, MPI, LinuxKernel) |
-| **MHP/** | MHPAnalysis, StaticVectorClockMHP, HappensBeforeAnalysis |
-| **LockSet/** | LockSetAnalysis |
-| **Memory/** | EscapeAnalysis, StaticThreadSharingAnalysis |
-| **JoinTarget/** | JoinTargetAnalysis |
-| **MPI/** | MPIAnalysis (process model, collective analysis, RMA analysis) |
+| **Utils/** | Thread APIs, flow graphs, vector clocks, atomics, and RAII lock support |
+| **MHP/** | May-happen-in-parallel and happens-before analyses |
+| **LockSet/** | Intra- and interprocedural lock-set analysis |
+| **Memory/** | Escape and thread-sharing analyses |
+| **Thread/** | Thread creation-tree analysis |
+| **JoinTarget/** | Join-target resolution |
+| **ValueFlow/** | Thread-aware sparse value-flow refinement |
+| **OpenMP/** | OpenMP semantics, task graphs, and data sharing |
+| **CUDA/** | CUDA semantics, memory model, and kernel protocol analysis |
+| **MPI/** | MPI process, collective, protocol, rank, and RMA analyses |
+| **LinuxKernel/** | Linux kernel concurrency and lifetime analyses |
+
+Each source subdirectory owns a `CMakeLists.txt` containing its source manifest.
+The parent directory aggregates those manifests into the stable `Concurrency`
+library target, which preserves compatibility for existing consumers.
 
 Include paths use these subdirs, e.g. `Concurrency/Utils/ThreadAPI.h`, `Concurrency/MHP/MHPAnalysis.h`, `Concurrency/MPI/MPIAnalysis.h`.
 

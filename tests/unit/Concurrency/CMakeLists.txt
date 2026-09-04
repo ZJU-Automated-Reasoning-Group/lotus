@@ -25,5 +25,8 @@ add_custom_target(concurrency_core_tests
     concurrency_clock_tests
     concurrency_thread_api_tests
     concurrency_thread_local_tests
+    concurrency_openmp_tests
+    concurrency_mpi_tests
+    concurrency_mpi_rank_tests
     concurrency_cuda_tests
     concurrency_linux_kernel_tests)

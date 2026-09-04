@@ -41,8 +41,7 @@ set_target_properties(parallel_tabulation_harness_test PROPERTIES
 target_include_directories(parallel_tabulation_harness_test PRIVATE ${LOTUS_UNIT_TEST_COMMON_INCLUDES})
 target_link_libraries(parallel_tabulation_harness_test
   lotus_test_harness_utils
-  CanaryParallel
-  CanaryCSIndex)
+  CanaryCSIndexFLARE)
 
 add_test(NAME parallel_tabulation_harness_serial_test
   COMMAND ${LOTUS_TEST_BIN_DIR}/parallel_tabulation_harness_test -nworkers=0)

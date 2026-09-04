@@ -1,31 +1,61 @@
-CSIndex: Indexed Context-Sensitive CFL Reachability
-===================================================
+Context-Sensitive Reachability Indexing
+=======================================
 
-``include/CFL/CSIndex/`` and ``lib/CFL/CSIndex/`` implement the indexed
-context-sensitive reachability engine used by the ``csr`` tool.
+``CSIndex`` is organized as two explicit subsystems:
+
+.. code-block:: text
+
+   SCS -> FLARE
 
 **Location**: ``include/CFL/CSIndex/``, ``lib/CFL/CSIndex/``
 
-**Main components**:
+FLARE
+-----
 
-- ``Graph`` and ``ReachBackbone`` build the indexed graph representation.
-- ``Query`` and ``PathtreeQuery`` answer reachability queries.
-- ``Tabulation`` and ``ParallelTabulation`` provide exact query engines.
-- ``Grail`` adds pruning through reachability labeling.
+``FLARE`` implements extended-Dyck indexing for context-sensitive
+reachability. Its shared graph and algorithms live directly under
+``CFL/CSIndex/FLARE``. Algorithm-owned code is grouped further:
 
-**Use cases**:
+* ``FLARE/Grail`` contains the GRAIL reachability index.
+* ``FLARE/PathTree`` contains PathTree construction, querying, weighted graph
+  support, and compression.
+* ``FLARE/Tabulation`` contains sequential and parallel exact baselines.
 
-- Fast context-sensitive CFL reachability on large graph inputs.
-- Comparing indexing strategies such as GRAIL and PathTree.
-- Backing the ``tools/cfl/csr`` command-line front-end.
+The main public APIs are:
 
-Query workflow
---------------
+* ``lotus::cfl::cs_index::flare::Graph``;
+* ``lotus::cfl::cs_index::flare::Index``;
+* ``lotus::cfl::cs_index::flare::ReachBackbone``;
+* ``lotus::cfl::cs_index::flare::grail::Index``;
+* ``lotus::cfl::cs_index::flare::path_tree::Index`` and ``Query``; and
+* ``lotus::cfl::cs_index::flare::tabulation::Sequential`` and ``Parallel``.
 
-Build the indexed graph and reachability backbone once, then issue ``Query``
-or ``PathtreeQuery`` requests against that index.  This up-front work is what
-makes the subsystem useful when many context-sensitive questions target the
-same graph.  ``Grail`` is a pruning aid, so clients should retain an exact
-tabulation engine for answers that must not rely on an approximation.
+SCS
+---
 
-See also :doc:`cfl_components` and :doc:`../tools/cfl/index`.
+``SCS`` adds sanitizer-aware reachability. Every input edge has independent
+structural and security-event labels. The policy automaton product is built
+before FLARE's summary-edge and indexing transformations, ensuring both
+constraints refer to the same witness path.
+
+The public namespace is ``lotus::cfl::cs_index::scs`` and exposes ``Graph``,
+``PolicyAutomaton``, ``Index``, and ``FactorizedIndex``. ``Index`` supports
+explicit or source-rooted lazy product construction, point and fixed-batch
+queries, optional witness replay, and construction/query statistics.
+
+Build and tools
+---------------
+
+``CanaryCSIndexFLARE`` and ``CanaryCSIndexSCS`` are separate libraries; the
+latter links the former. Configure ``LOTUS_ENABLE_CSR`` to build the FLARE
+command-line driver:
+
+.. code-block:: console
+
+   cmake -S . -B build -DLOTUS_ENABLE_CSR=ON
+   cmake --build build --target csr
+   build/bin/csr input.graph
+
+The driver supports GRAIL, PathTree, combined indexes, sequential tabulation,
+and parallel tabulation. See :doc:`../tools/cfl/index` for command-line
+options.

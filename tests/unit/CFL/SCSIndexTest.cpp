@@ -1,12 +1,27 @@
-#include "CFL/CSIndex/FactorizedSCSIndex.h"
-#include "CFL/CSIndex/GraphUtil.h"
-#include "CFL/CSIndex/Tabulation.h"
+#include "CFL/CSIndex/SCS/FactorizedIndex.h"
+#include "CFL/CSIndex/FLARE/GraphAlgorithms.h"
+#include "CFL/CSIndex/FLARE/Tabulation/Sequential.h"
 
 #include <set>
 #include <sstream>
 #include <vector>
 
 #include <gtest/gtest.h>
+
+namespace flare = lotus::cfl::cs_index::flare;
+namespace scs = lotus::cfl::cs_index::scs;
+
+using GraphAlgorithms = flare::GraphAlgorithms;
+using SequentialTabulation = flare::tabulation::Sequential;
+using BatchQuery = scs::BatchQuery;
+using Edge = scs::Edge;
+using FactorizedIndex = scs::FactorizedIndex;
+using Graph = scs::Graph;
+using Index = scs::Index;
+using IndexOptions = scs::IndexOptions;
+using IndexStats = scs::IndexStats;
+using PolicyAutomaton = scs::PolicyAutomaton;
+using ProductConstruction = scs::ProductConstruction;
 
 namespace {
 
@@ -32,11 +47,11 @@ PolicyAutomaton buildTaintPolicy() {
   return policy;
 }
 
-void addVertex(SCSGraph &graph, int id, int function) {
+void addVertex(Graph &graph, int id, int function) {
   graph.addVertex(id, function);
 }
 
-void addNestedPath(SCSGraph &graph, bool sanitized, bool matched_returns = true,
+void addNestedPath(Graph &graph, bool sanitized, bool matched_returns = true,
                    int offset = 0) {
   addVertex(graph, offset + 0, 0 + offset);
   addVertex(graph, offset + 1, 0 + offset);
@@ -54,20 +69,20 @@ void addNestedPath(SCSGraph &graph, bool sanitized, bool matched_returns = true,
   graph.addEdge(offset + 5, offset + 6, 0, SINK_EVENT);
 }
 
-SCSGraph buildNestedPath(bool sanitized, bool matched_returns = true,
+Graph buildNestedPath(bool sanitized, bool matched_returns = true,
                          int offset = 0) {
-  SCSGraph graph;
+  Graph graph;
   addNestedPath(graph, sanitized, matched_returns, offset);
   return graph;
 }
 
-Graph structuralGraph(const SCSGraph &source) {
-  Graph graph;
+flare::Graph structuralGraph(const Graph &source) {
+  flare::Graph graph;
   for (int vertex = 0; vertex < source.num_vertices(); ++vertex) {
     graph.addVertex(vertex);
     graph.at(vertex).func_id = source.vertex(vertex).func_id;
   }
-  for (const SCSEdge &edge : source.edges()) {
+  for (const Edge &edge : source.edges()) {
     if (edge.structural_label == 0)
       graph.addEdge(edge.source, edge.target);
     else
@@ -76,21 +91,21 @@ Graph structuralGraph(const SCSGraph &source) {
   return graph;
 }
 
-bool flareReachable(const SCSGraph &source, int start, int target) {
-  Graph graph = structuralGraph(source);
+bool flareReachable(const Graph &source, int start, int target) {
+  flare::Graph graph = structuralGraph(source);
   const int original_size = graph.num_vertices();
   graph.build_summary_edges();
   graph.to_indexing_graph();
-  return GraphUtil::DFSReach(graph, start, target + original_size);
+  return GraphAlgorithms::DFSReach(graph, start, target + original_size);
 }
 
 TEST(SCSIndexTest, DistinguishesSanitizedAndUnsanitizedBalancedPaths) {
   PolicyAutomaton policy = buildTaintPolicy();
-  SCSGraph sanitized = buildNestedPath(true);
-  SCSGraph unsanitized = buildNestedPath(false);
+  Graph sanitized = buildNestedPath(true);
+  Graph unsanitized = buildNestedPath(false);
 
-  SCSIndex sanitized_index(sanitized, policy, {0}, {6});
-  SCSIndex unsanitized_index(unsanitized, policy, {0}, {6});
+  Index sanitized_index(sanitized, policy, {0}, {6});
+  Index unsanitized_index(unsanitized, policy, {0}, {6});
 
   EXPECT_FALSE(sanitized_index.reachable(0, 6));
   EXPECT_TRUE(unsanitized_index.reachable(0, 6));
@@ -98,18 +113,18 @@ TEST(SCSIndexTest, DistinguishesSanitizedAndUnsanitizedBalancedPaths) {
 }
 
 TEST(SCSIndexTest, RejectsMismatchedReturnsWithAnAcceptingPolicyRun) {
-  SCSGraph graph = buildNestedPath(false, false);
-  SCSIndex index(graph, buildTaintPolicy(), {0}, {6});
+  Graph graph = buildNestedPath(false, false);
+  Index index(graph, buildTaintPolicy(), {0}, {6});
 
   EXPECT_FALSE(index.reachable(0, 6));
   const int accepting_sink = index.productVertex(6, 2);
   ASSERT_GE(accepting_sink, 0);
-  EXPECT_TRUE(GraphUtil::DFSReach(index.productGraph(),
+  EXPECT_TRUE(GraphAlgorithms::DFSReach(index.productGraph(),
                                   index.productVertex(0, 0), accepting_sink));
 }
 
 TEST(SCSIndexTest, RequiresBothConstraintsOnTheSamePath) {
-  SCSGraph graph;
+  Graph graph;
   for (int vertex = 0; vertex <= 9; ++vertex)
     graph.addVertex(vertex, vertex < 2 || vertex == 9 ? 0 : vertex);
 
@@ -127,27 +142,27 @@ TEST(SCSIndexTest, RequiresBothConstraintsOnTheSamePath) {
   graph.addEdge(6, 7, -3, 0);
   graph.addEdge(7, 9, 0, SINK_EVENT);
 
-  SCSIndex index(graph, buildTaintPolicy(), {0}, {9});
+  Index index(graph, buildTaintPolicy(), {0}, {9});
   EXPECT_FALSE(index.reachable(0, 9));
   EXPECT_TRUE(flareReachable(graph, 0, 9));
-  EXPECT_TRUE(GraphUtil::DFSReach(index.productGraph(),
+  EXPECT_TRUE(GraphAlgorithms::DFSReach(index.productGraph(),
                                   index.productVertex(0, 0),
                                   index.productVertex(9, 2)));
 }
 
 TEST(SCSIndexTest, LazyAndExplicitProductsAreEquivalent) {
-  SCSGraph graph = buildNestedPath(false);
+  Graph graph = buildNestedPath(false);
   graph.addVertex(7, 7);
   graph.addVertex(8, 7);
   graph.addEdge(7, 8);
 
-  SCSIndexOptions lazy_options;
+  IndexOptions lazy_options;
   lazy_options.product_construction = ProductConstruction::Lazy;
-  SCSIndexOptions explicit_options;
+  IndexOptions explicit_options;
   explicit_options.product_construction = ProductConstruction::Explicit;
 
-  SCSIndex lazy(graph, buildTaintPolicy(), {0}, {6}, lazy_options);
-  SCSIndex explicit_index(graph, buildTaintPolicy(), {0}, {6},
+  Index lazy(graph, buildTaintPolicy(), {0}, {6}, lazy_options);
+  Index explicit_index(graph, buildTaintPolicy(), {0}, {6},
                           explicit_options);
 
   EXPECT_EQ(lazy.reachable(0, 6), explicit_index.reachable(0, 6));
@@ -160,7 +175,7 @@ TEST(SCSIndexTest, LazyAndExplicitProductsAreEquivalent) {
 TEST(SCSIndexTest, SupportsDirectNfaProducts) {
   constexpr int START = 10;
   constexpr int FINISH = 11;
-  SCSGraph graph;
+  Graph graph;
   graph.addVertex(0, 0);
   graph.addVertex(1, 0);
   graph.addVertex(2, 0);
@@ -173,12 +188,12 @@ TEST(SCSIndexTest, SupportsDirectNfaProducts) {
   policy.addTransition(0, START, 1);
   policy.addTransition(1, FINISH, 1);
 
-  SCSIndex index(graph, policy, {0}, {2});
+  Index index(graph, policy, {0}, {2});
   EXPECT_TRUE(index.reachable(0, 2));
 }
 
 TEST(SCSIndexTest, PreservesCollidingParallelStructuralRoles) {
-  SCSGraph graph;
+  Graph graph;
   graph.addVertex(0, 0);
   graph.addVertex(1, 1);
   graph.addVertex(2, 0);
@@ -190,23 +205,23 @@ TEST(SCSIndexTest, PreservesCollidingParallelStructuralRoles) {
   graph.addEdge(1, 2, -1, 0);
   graph.addEdge(2, 3, 0, SINK_EVENT);
 
-  SCSIndexOptions options;
+  IndexOptions options;
   options.retain_witnesses = true;
-  SCSIndex index(graph, buildTaintPolicy(), {0}, {3}, options);
+  Index index(graph, buildTaintPolicy(), {0}, {3}, options);
   EXPECT_GT(index.stats().normalized_product_edges, 0U);
-  EXPECT_TRUE(GraphUtil::DFSReach(index.indexingGraph(), index.startVertex(0),
+  EXPECT_TRUE(GraphAlgorithms::DFSReach(index.indexingGraph(), index.startVertex(0),
                                   index.acceptVertex(3)));
   EXPECT_TRUE(index.reachable(0, 3));
   EXPECT_TRUE(index.witness(0, 3).has_value());
 }
 
 TEST(SCSIndexTest, BatchEndpointsMatchTheDisjunctionOfPointQueries) {
-  SCSGraph graph;
+  Graph graph;
   addNestedPath(graph, false, true, 0);
   addNestedPath(graph, true, true, 10);
 
-  SCSBatchQuery batch{"all", {0, 10}, {6, 16}};
-  SCSIndex index(graph, buildTaintPolicy(), {0, 10}, {6, 16}, {}, {batch});
+  BatchQuery batch{"all", {0, 10}, {6, 16}};
+  Index index(graph, buildTaintPolicy(), {0, 10}, {6, 16}, {}, {batch});
 
   bool disjunction = false;
   for (int source : batch.sources) {
@@ -246,7 +261,7 @@ TEST(SCSIndexTest, FactorizedCategoriesMatchTheJointDisjunctivePolicy) {
   constexpr int HTML_SINK = 23;
   const std::set<int> alphabet = {SQL_SOURCE, SQL_SINK, HTML_SOURCE, HTML_SINK};
 
-  SCSGraph graph;
+  Graph graph;
   graph.addVertex(0, 0);
   graph.addVertex(1, 0);
   graph.addVertex(2, 0);
@@ -255,9 +270,9 @@ TEST(SCSIndexTest, FactorizedCategoriesMatchTheJointDisjunctivePolicy) {
 
   PolicyAutomaton sql = buildCategoryPolicy(SQL_SOURCE, SQL_SINK, alphabet);
   PolicyAutomaton html = buildCategoryPolicy(HTML_SOURCE, HTML_SINK, alphabet);
-  SCSIndex sql_index(graph, sql, {0}, {2});
-  SCSIndex html_index(graph, html, {0}, {2});
-  FactorizedSCSIndex factorized({&sql_index, &html_index});
+  Index sql_index(graph, sql, {0}, {2});
+  Index html_index(graph, html, {0}, {2});
+  FactorizedIndex factorized({&sql_index, &html_index});
 
   PolicyAutomaton joint(9, 0);
   for (int sql_state = 0; sql_state < 3; ++sql_state) {
@@ -272,20 +287,20 @@ TEST(SCSIndexTest, FactorizedCategoriesMatchTheJointDisjunctivePolicy) {
       }
     }
   }
-  SCSIndex joint_index(graph, joint, {0}, {2});
+  Index joint_index(graph, joint, {0}, {2});
 
   EXPECT_EQ(factorized.reachable(0, 2), joint_index.reachable(0, 2));
   EXPECT_TRUE(joint_index.reachable(0, 2));
 }
 
 TEST(SCSIndexTest, IndexedAnswerMatchesProductTabulation) {
-  SCSGraph graph = buildNestedPath(false);
-  SCSIndex index(graph, buildTaintPolicy(), {0}, {6});
+  Graph graph = buildNestedPath(false);
+  Index index(graph, buildTaintPolicy(), {0}, {6});
 
-  Graph product = index.productGraph();
+  flare::Graph product = index.productGraph();
   product.build_summary_edges();
   product.add_summary_edges();
-  Tabulation tabulation(product);
+  SequentialTabulation tabulation(product);
 
   const bool baseline =
       tabulation.reach(index.productVertex(0, 0), index.productVertex(6, 2));
@@ -293,10 +308,10 @@ TEST(SCSIndexTest, IndexedAnswerMatchesProductTabulation) {
 }
 
 TEST(SCSIndexTest, ReconstructsAndReplaysAWitness) {
-  SCSGraph graph = buildNestedPath(false);
-  SCSIndexOptions options;
+  Graph graph = buildNestedPath(false);
+  IndexOptions options;
   options.retain_witnesses = true;
-  SCSIndex index(graph, buildTaintPolicy(), {0}, {6}, options);
+  Index index(graph, buildTaintPolicy(), {0}, {6}, options);
 
   const auto witness = index.witness(0, 6);
   ASSERT_TRUE(witness.has_value());
@@ -306,7 +321,7 @@ TEST(SCSIndexTest, ReconstructsAndReplaysAWitness) {
 }
 
 TEST(SCSIndexTest, RejectsIncompleteDfaPolicies) {
-  SCSGraph graph;
+  Graph graph;
   graph.addVertex(0, 0);
   graph.addVertex(1, 0);
   graph.addEdge(0, 1, 0, SOURCE_EVENT);
@@ -314,30 +329,30 @@ TEST(SCSIndexTest, RejectsIncompleteDfaPolicies) {
   PolicyAutomaton incomplete(2, 0);
   incomplete.addAcceptingState(1);
   incomplete.addTransition(0, SOURCE_EVENT, 1);
-  EXPECT_THROW(SCSIndex(graph, incomplete, {0}, {1}), std::invalid_argument);
+  EXPECT_THROW(Index(graph, incomplete, {0}, {1}), std::invalid_argument);
 }
 
 TEST(SCSIndexTest, NormalizesSourceAndSinkVertexEventsToEdges) {
-  SCSGraph graph;
+  Graph graph;
   graph.addVertex(0, 0);
   const int source = graph.addEventPredecessor(0, SOURCE_EVENT);
   const int sink = graph.addEventSuccessor(0, SINK_EVENT);
 
-  SCSIndex index(graph, buildTaintPolicy(), {source}, {sink});
+  Index index(graph, buildTaintPolicy(), {source}, {sink});
   EXPECT_TRUE(index.reachable(source, sink));
 }
 
 TEST(SCSIndexTest, RecordsConstructionAndQueryMetrics) {
-  SCSGraph graph;
+  Graph graph;
   addNestedPath(graph, false, true, 0);
   addNestedPath(graph, true, true, 10);
 
-  SCSIndexOptions options;
+  IndexOptions options;
   options.retain_witnesses = true;
-  SCSBatchQuery batch{"all", {0, 10}, {6, 16}};
-  SCSIndex index(graph, buildTaintPolicy(), {0, 10}, {6, 16}, options, {batch});
+  BatchQuery batch{"all", {0, 10}, {6, 16}};
+  Index index(graph, buildTaintPolicy(), {0, 10}, {6, 16}, options, {batch});
 
-  const SCSIndexStats &construction = index.stats();
+  const IndexStats &construction = index.stats();
   EXPECT_EQ(construction.base_vertices, 17U);
   EXPECT_EQ(construction.base_edges, 12U);
   EXPECT_EQ(construction.policy_states, 3U);
@@ -359,7 +374,7 @@ TEST(SCSIndexTest, RecordsConstructionAndQueryMetrics) {
   EXPECT_TRUE(index.witness(0, 6).has_value());
   EXPECT_FALSE(index.witness(10, 16).has_value());
 
-  const SCSIndexStats &queries = index.stats();
+  const IndexStats &queries = index.stats();
   EXPECT_EQ(queries.point_queries.queries, 2U);
   EXPECT_EQ(queries.point_queries.positive_queries, 1U);
   EXPECT_EQ(queries.batch_queries.queries, 1U);
@@ -376,7 +391,7 @@ TEST(SCSIndexTest, RecordsConstructionAndQueryMetrics) {
 
   std::ostringstream header;
   std::ostringstream row;
-  SCSIndexStats::writeCsvHeader(header);
+  IndexStats::writeCsvHeader(header);
   queries.writeCsvRow(row);
   const std::string header_text = header.str();
   const std::string row_text = row.str();

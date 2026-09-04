@@ -109,6 +109,8 @@ Indexing-based context-sensitive reachability engine for large graphs.
 
 CSR operates on graph files (not LLVM bitcode directly) and answers reachability
 queries with different indexing strategies (GRAIL, PathTree, or combined).
+The driver is implemented against the reorganized ``CFL/CSIndex/FLARE`` API;
+sanitizer-aware policy products live separately under ``CFL/CSIndex/SCS``.
 
 **Basic Usage**:
 

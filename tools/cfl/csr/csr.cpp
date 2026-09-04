@@ -2,16 +2,16 @@
 // Indexing Context-Sensitive Reachability Analysis
 //
 
-#include "CFL/CSIndex/CSProgressBar.h"
-#include "CFL/CSIndex/Grail.h"
-#include "CFL/CSIndex/Graph.h"
-#include "CFL/CSIndex/GraphUtil.h"
-#include "CFL/CSIndex/ParallelTabulation.h"
-#include "CFL/CSIndex/PathTree.h"
-#include "CFL/CSIndex/PathtreeQuery.h"
-#include "CFL/CSIndex/Query.h"
-#include "CFL/CSIndex/ReachBackbone.h"
-#include "CFL/CSIndex/Tabulation.h"
+#include "CFL/CSIndex/FLARE/Grail/Index.h"
+#include "CFL/CSIndex/FLARE/Graph.h"
+#include "CFL/CSIndex/FLARE/GraphAlgorithms.h"
+#include "CFL/CSIndex/FLARE/Tabulation/Parallel.h"
+#include "CFL/CSIndex/FLARE/PathTree/Index.h"
+#include "CFL/CSIndex/FLARE/PathTree/Query.h"
+#include "CFL/CSIndex/FLARE/Index.h"
+#include "CFL/CSIndex/FLARE/ReachBackbone.h"
+#include "CFL/CSIndex/FLARE/Tabulation/Sequential.h"
+#include "Utils/Platform/ProgressBar.h"
 
 #include <chrono>
 #include <csignal>
@@ -21,8 +21,24 @@
 #include <iomanip>
 #include <iostream>
 #include <ratio>
+#include <thread>
 
 #include <unistd.h>
+
+using namespace std;
+
+namespace flare = lotus::cfl::cs_index::flare;
+using Graph = flare::Graph;
+using GraphAlgorithms = flare::GraphAlgorithms;
+using EdgeList = flare::EdgeList;
+using FlareIndex = flare::Index;
+using ReachBackbone = flare::ReachBackbone;
+using ReachabilityQuery = flare::ReachabilityQuery;
+using GrailIndex = flare::grail::Index;
+using PathTreeIndex = flare::path_tree::Index;
+using PathTreeQuery = flare::path_tree::Query;
+using SequentialTabulation = flare::tabulation::Sequential;
+using ParallelTabulation = flare::tabulation::Parallel;
 
 static int query_num = 100;
 static int grail_dim = 2;
@@ -60,7 +76,7 @@ static void usage() {
           "auto-detect).\n"
           "	-m\tEvaluate what indexing approach, pathtree, grail, or "
           "pathtree+grail.\n"
-          "	-d\tSet the dim of Grail, 2 by default.\n"
+          "	-d\tSet the dim of GrailIndex, 2 by default.\n"
        << "\n";
 }
 
@@ -123,7 +139,7 @@ static void parse_arg(int argc, char *argv[]) {
 }
 
 template <typename Src, typename Target>
-static double test_query(AbstractQuery *aq,
+static double test_query(ReachabilityQuery *aq,
                          vector<std::pair<int, int>> &queries, bool r, Src src,
                          Target trg) {
   signal(SIGALRM, alarm_handler);
@@ -163,7 +179,7 @@ static double test_query(AbstractQuery *aq,
 
 static void
 read_or_generate_queries(int orig_vfg_size, int *sccmap,
-                         AbstractQuery *indexing_method,
+                         ReachabilityQuery *indexing_method,
                          vector<std::pair<int, int>> &reachable_pairs,
                          vector<std::pair<int, int>> &unreachable_pairs) {
   if (read_query) {
@@ -187,7 +203,7 @@ read_or_generate_queries(int orig_vfg_size, int *sccmap,
     int reachable_count = 0;
     int unreachable_count = 0;
     srand48(time(nullptr));
-    CSProgressBar bar(query_num * 2);
+    ProgressBar bar("CSR query generation", ProgressBar::PBS_CharacterStyle);
     while (reachable_count < query_num || unreachable_count < query_num) {
       int s = (int)lrand48() % (orig_vfg_size);
       int t = (int)lrand48() % (orig_vfg_size) + orig_vfg_size;
@@ -196,13 +212,17 @@ read_or_generate_queries(int orig_vfg_size, int *sccmap,
         if (reachable_count < query_num) {
           reachable_pairs.emplace_back(s, t - orig_vfg_size);
           reachable_count++;
-          bar.update();
+          bar.showProgress(static_cast<float>(reachable_count +
+                                              unreachable_count) /
+                           (query_num * 2));
         }
       } else {
         if (unreachable_count < query_num) {
           unreachable_pairs.emplace_back(s, t - orig_vfg_size);
           unreachable_count++;
-          bar.update();
+          bar.showProgress(static_cast<float>(reachable_count +
+                                              unreachable_count) /
+                           (query_num * 2));
         }
       }
     }
@@ -235,7 +255,7 @@ static double grail_index_size(Graph &ig) {
   return ret / 1024.0 / 1024.0;
 }
 
-static double pt_index_size(Graph &bbgg, PathTree &pt, Query &pt_query) {
+static double pt_index_size(Graph &bbgg, PathTreeIndex &pt, FlareIndex &pt_query) {
   double ret = 0;
   // backbone graph itself
   for (int i = 0; i < bbgg.num_vertices(); i++) {
@@ -296,7 +316,7 @@ int main(int argc, char *argv[]) {
   vector<int> reverse_topo_sort;
   cout << "Merging strongly connected component of IG ..." << "\n";
   start = std::chrono::high_resolution_clock::now();
-  GraphUtil::mergeSCC(vfg, sccmap, reverse_topo_sort);
+  GraphAlgorithms::mergeSCC(vfg, sccmap, reverse_topo_sort);
   end = std::chrono::high_resolution_clock::now();
   diff = end - start;
   cout << "Merging SCC of Indexing-Graph(IG) Duration: " << diff.count()
@@ -305,13 +325,13 @@ int main(int argc, char *argv[]) {
        << " #DAG of IG Edges:" << vfg.num_edges() << "\n";
 
   // GRAIL
-  Grail *grail = nullptr;
+  GrailIndex *grail = nullptr;
   double grail_on_ig_duration = 0;
   double grail_on_ig_size = 0;
   if (indexing == "grail" || indexing == "pathtree+grail") {
     start = std::chrono::high_resolution_clock::now();
-    GraphUtil::topo_leveler(vfg);
-    grail = new Grail(vfg, grail_dim, 1, false, 100);
+    GraphAlgorithms::topo_leveler(vfg);
+    grail = new GrailIndex(vfg, grail_dim, 1, false, 100);
     end = std::chrono::high_resolution_clock::now();
     diff = end - start;
     grail_on_ig_duration = diff.count();
@@ -321,7 +341,7 @@ int main(int argc, char *argv[]) {
   }
 
   // PATHTREE+SCARAB
-  Query *pathtree = nullptr;
+  FlareIndex *pathtree = nullptr;
   double pt_total_duration = 0;
   double pt_total_size = 0;
   if (indexing == "pathtree" || indexing == "pathtree+grail") {
@@ -366,7 +386,7 @@ int main(int argc, char *argv[]) {
     cout << "Merging SCC of Backbone ..." << "\n";
 
     start = std::chrono::high_resolution_clock::now();
-    GraphUtil::mergeSCC(bbgg, bbgg_sccmap, bbgg_reverse_topo_sort);
+    GraphAlgorithms::mergeSCC(bbgg, bbgg_sccmap, bbgg_reverse_topo_sort);
     end = std::chrono::high_resolution_clock::now();
     diff = end - start;
     pt_total_duration += diff.count();
@@ -377,7 +397,7 @@ int main(int argc, char *argv[]) {
 
     cout << "Constructing Pathtree (PT) Indexing ..." << "\n";
     start = std::chrono::high_resolution_clock::now();
-    PathTree pt(bbgg, bbgg_reverse_topo_sort);
+    PathTreeIndex pt(bbgg, bbgg_reverse_topo_sort);
     pt.createLabels(pt_alg_type, cfile, compress);
     end = std::chrono::high_resolution_clock::now();
     diff = end - start;
@@ -390,7 +410,7 @@ int main(int argc, char *argv[]) {
 
     // query utility of path tree
     double grail_on_bb_duration;
-    pathtree = new PathtreeQuery(filesystem.c_str(), vfg, epsilon, pr, true,
+    pathtree = new PathTreeQuery(filesystem.c_str(), vfg, epsilon, pr, true,
                                  &grail_on_bb_duration);
     pt_total_duration += grail_on_bb_duration;
     pt_total_size = pt_index_size(bbgg, pt, *pathtree);
@@ -449,8 +469,8 @@ int main(int argc, char *argv[]) {
     orig_vfg.add_summary_edges();
 
     if (reps_tab_alg) {
-      cout << "--------- Tabulation Queries Test ------------" << "\n";
-      auto *tab = new Tabulation(orig_vfg);
+      cout << "--------- SequentialTabulation Queries Test ------------" << "\n";
+      auto *tab = new SequentialTabulation(orig_vfg);
       auto vertex_map = [](int v) { return v; };
       tab_r_query_time =
           test_query(tab, reachable_pairs, true, vertex_map, vertex_map);
@@ -460,7 +480,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (parallel_tab_alg) {
-      cout << "--------- Parallel Tabulation Test ------------" << "\n";
+      cout << "--------- Parallel SequentialTabulation Test ------------" << "\n";
       // Create parallel tabulation with specified or auto-detected thread count
       ParallelTabulation *parallel_tab;
       if (parallel_threads > 0) {
@@ -481,9 +501,9 @@ int main(int argc, char *argv[]) {
       double parallel_nr_time = test_query(parallel_tab, unreachable_pairs,
                                            false, vertex_map, vertex_map);
 
-      cout << "Parallel Tabulation reachable queries: " << parallel_r_time
+      cout << "Parallel SequentialTabulation reachable queries: " << parallel_r_time
            << " ms" << "\n";
-      cout << "Parallel Tabulation unreachable queries: " << parallel_nr_time
+      cout << "Parallel SequentialTabulation unreachable queries: " << parallel_nr_time
            << " ms" << "\n";
 
       delete parallel_tab;
@@ -492,7 +512,7 @@ int main(int argc, char *argv[]) {
     if (transitive_closure) {
       cout << "--------- Transitive Closure ---------" << "\n";
       start = std::chrono::high_resolution_clock::now();
-      tc_size = Tabulation(orig_vfg).tc();
+      tc_size = SequentialTabulation(orig_vfg).tc();
       end = std::chrono::high_resolution_clock::now();
       diff = end - start;
       tc_time = diff.count();

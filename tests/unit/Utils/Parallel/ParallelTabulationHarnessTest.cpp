@@ -1,5 +1,5 @@
-#include "CFL/CSIndex/ParallelTabulation.h"
-#include "CFL/CSIndex/Tabulation.h"
+#include "CFL/CSIndex/FLARE/Tabulation/Parallel.h"
+#include "CFL/CSIndex/FLARE/Tabulation/Sequential.h"
 #include "Utils/Parallel/ThreadPool.h"
 
 #include <utility>
@@ -7,6 +7,10 @@
 
 #include <llvm/Support/CommandLine.h>
 #include <gtest/gtest.h>
+
+using Graph = lotus::cfl::cs_index::flare::Graph;
+using SequentialTabulation = lotus::cfl::cs_index::flare::tabulation::Sequential;
+using ParallelTabulation = lotus::cfl::cs_index::flare::tabulation::Parallel;
 
 namespace {
 
@@ -38,7 +42,7 @@ std::vector<std::pair<int, int>> queryPairs() {
 
 TEST(ParallelTabulationHarnessTest, TcMatchesSequentialReference) {
   Graph graph = buildTestGraph();
-  Tabulation serial(graph);
+  SequentialTabulation serial(graph);
   ParallelTabulation parallel(graph, 4);
 
   EXPECT_DOUBLE_EQ(parallel.tc(), serial.tc());
@@ -48,7 +52,7 @@ TEST(ParallelTabulationHarnessTest, ReachabilityMatchesSequentialReference) {
   Graph graph = buildTestGraph();
 
   for (const auto &query : queryPairs()) {
-    Tabulation serial(graph);
+    SequentialTabulation serial(graph);
     ParallelTabulation parallel(graph, 4);
     EXPECT_EQ(parallel.reach(query.first, query.second),
               serial.reach(query.first, query.second))
@@ -63,7 +67,7 @@ TEST(ParallelTabulationHarnessTest,
     GTEST_SKIP() << "Serial fallback coverage is only meaningful without workers.";
 
   Graph graph = buildTestGraph();
-  Tabulation serial(graph);
+  SequentialTabulation serial(graph);
   ParallelTabulation requested_parallel(graph, 8);
 
   EXPECT_DOUBLE_EQ(requested_parallel.tc(), serial.tc());
@@ -76,7 +80,7 @@ TEST(ParallelTabulationHarnessTest,
     GTEST_SKIP() << "Parallel thread-count coverage requires worker threads.";
 
   Graph graph = buildTestGraph();
-  const double expected_tc = Tabulation(graph).tc();
+  const double expected_tc = SequentialTabulation(graph).tc();
 
   ParallelTabulation fewer_threads(graph, 2);
   ParallelTabulation equal_threads(graph,

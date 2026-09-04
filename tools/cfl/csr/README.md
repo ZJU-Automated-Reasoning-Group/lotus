@@ -1,5 +1,9 @@
 # Context-Sensitive Reachability (CSR) Tool
 
+The tool uses the FLARE APIs under ``include/CFL/CSIndex/FLARE``. The separate
+sanitizer-aware extension lives under ``include/CFL/CSIndex/SCS`` and is not
+selected by this command-line driver.
+
 The CSR tool provides indexing-based context-sensitive reachability analysis for large-scale program analysis.
 
 ## Features

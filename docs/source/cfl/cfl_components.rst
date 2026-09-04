@@ -124,7 +124,12 @@ CSIndex (Context-Sensitive Indexing)
 
 Context-sensitive indexing for CFL reachability.
 
-**Location**: ``lib/CFL/CSIndex/``
+**Location**: ``include/CFL/CSIndex/``, ``lib/CFL/CSIndex/``
+
+The implementation is split into ``FLARE`` and ``SCS``. FLARE owns the
+extended-Dyck graph and indexing algorithms; SCS builds policy products and
+then reuses FLARE. See :doc:`csindex` for the public namespaces and directory
+layout.
 
 **Features**: Context-aware indexing algorithms for efficient CFL queries.
 

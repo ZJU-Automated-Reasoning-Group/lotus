@@ -9,7 +9,7 @@ add_lotus_targeted_test(ClassicalArchitectureTest
 
 add_lotus_targeted_test(scs_index_test SCSIndexTest.cpp
     LINK_LIBS
-        CanaryCSIndex)
+        CanaryCSIndexSCS)
 
 add_lotus_targeted_test(interleaved_dyck_staged_bounds_test
     InterleavedDyckStagedBoundsTest.cpp

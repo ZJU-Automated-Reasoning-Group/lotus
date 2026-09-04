@@ -12,8 +12,6 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "Dataflow/NPA/LLVM/BitVectorSolver.h"
-#include "Dataflow/NPA/LLVM/AnalysisSupport.h"
 #include "Dataflow/NPA/Analyses/Inter/ConstantPropagation.h"
 #include "Dataflow/NPA/Analyses/Inter/Interval.h"
 #include "Dataflow/NPA/Analyses/Inter/LiveVariables.h"
@@ -23,6 +21,8 @@
 #include "Dataflow/NPA/Analyses/Intra/LiveVariables.h"
 #include "Dataflow/NPA/Analyses/Intra/ReachableBlocks.h"
 #include "Dataflow/NPA/Analyses/Intra/ReachingDefinitions.h"
+#include "Dataflow/NPA/LLVM/AnalysisSupport.h"
+#include "Dataflow/NPA/LLVM/BitVectorSolver.h"
 #include "ToolSupport.h"
 #include "Utils/Parallel/ThreadPool.h"
 

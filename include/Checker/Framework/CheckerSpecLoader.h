@@ -1,7 +1,7 @@
 /** @file CheckerSpecLoader.h @brief Loader for declarative checker specifications from YAML/JSON. */
 #pragma once
 
-#include "Checker/Core/CheckerTypes.h"
+#include "Checker/Framework/CheckerTypes.h"
 
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/Error.h>

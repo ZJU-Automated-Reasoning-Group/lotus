@@ -1,4 +1,4 @@
-#include "Checker/Core/CheckerValidator.h"
+#include "Checker/Framework/CheckerValidator.h"
 
 #include <llvm/Support/Error.h>
 

@@ -1,7 +1,7 @@
 #include "Fuzzing/TargetGeneration.h"
 
-#include "Checker/Report/BugReport.h"
-#include "Checker/Report/BugReportMgr.h"
+#include "Checker/Framework/BugReport.h"
+#include "Checker/Framework/BugReportMgr.h"
 
 #include <algorithm>
 #include <map>

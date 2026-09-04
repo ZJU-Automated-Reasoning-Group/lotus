@@ -408,7 +408,7 @@ Create ``include/Checker/MyChecker.h``:
    
    #include "llvm/Pass.h"
    #include "llvm/IR/Module.h"
-   #include "Checker/Report/BugReportMgr.h"
+   #include "Checker/Framework/BugReportMgr.h"
    #include <vector>
    
    namespace lotus {
@@ -513,7 +513,7 @@ For SARIF/JSON output support:
 
 .. code-block:: cpp
 
-   #include "Checker/Report/BugReportMgr.h"
+   #include "Checker/Framework/BugReportMgr.h"
    
    bool MyChecker::runOnModule(Module &M) {
        // ... run checks ...

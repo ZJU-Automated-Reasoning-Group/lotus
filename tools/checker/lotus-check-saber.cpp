@@ -5,14 +5,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Checker/Report/BugReportMgr.h"
-#include "Checker/Report/ReportOptions.h"
-#include "Checker/Report/SuppressionManager.h"
+#include "Checker/Framework/BugReportMgr.h"
+#include "Checker/Framework/ReportOptions.h"
+#include "Checker/Framework/Subcommands.h"
+#include "Checker/Framework/SuppressionManager.h"
 #include "Checker/Saber/DoubleFreeChecker.h"
 #include "Checker/Saber/FileChecker.h"
 #include "Checker/Saber/LeakChecker.h"
 #include "Checker/Saber/SaberOptions.h"
-#include "Checker/Tooling/CheckerSubcommands.h"
 #include "CheckerOptions.h"
 #include "CheckerReport.h"
 #include "Utils/LLVM/RecursiveTimer.h"

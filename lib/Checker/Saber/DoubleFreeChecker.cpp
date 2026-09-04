@@ -7,9 +7,9 @@
 
 #include "Checker/Saber/DoubleFreeChecker.h"
 
-#include "Checker/Report/BugReport.h"
-#include "Checker/Report/BugReportMgr.h"
-#include "Checker/Report/BugTypes.h"
+#include "Checker/Framework/BugReport.h"
+#include "Checker/Framework/BugReportMgr.h"
+#include "Checker/Framework/BugTypes.h"
 #include "Checker/Saber/SaberOptions.h"
 #include "IR/SVFG/SVFGNode.h"
 

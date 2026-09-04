@@ -9,7 +9,7 @@
 #include "Checker/AE/AbsExtAPI.h"
 #include "Checker/AE/RelationSolver.h"
 #include "Checker/AE/SVFIRWrapper.h"
-#include "Checker/Report/BugReportMgr.h"
+#include "Checker/Framework/BugReportMgr.h"
 #include "Solvers/SMT/LIBSMT/Z3Expr.h"
 
 // AserPTA includes

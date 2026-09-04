@@ -1,6 +1,6 @@
 #include "Checker/Pulse/Report/PulseReport.h"
 
-#include "Checker/Report/BugReportMgr.h"
+#include "Checker/Framework/BugReportMgr.h"
 
 #include <llvm/Support/JSON.h>
 #include <llvm/Support/raw_ostream.h>

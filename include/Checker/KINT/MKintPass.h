@@ -2,11 +2,11 @@
 #pragma once
 
 #include "Checker/KINT/BugDetection.h"
+#include "Checker/Framework/BugReport.h"
+#include "Checker/Framework/BugReportMgr.h"
 #include "Checker/KINT/KINTTaintAnalysis.h"
 #include "Checker/KINT/SmtMemory.h"
 #include "Checker/KINT/SummaryEncoding.h"
-#include "Checker/Report/BugReport.h"
-#include "Checker/Report/BugReportMgr.h"
 
 #include <chrono>
 #include <optional>

@@ -1,4 +1,4 @@
-#include "Checker/Report/SuppressionManager.h"
+#include "Checker/Framework/SuppressionManager.h"
 
 #include "Utils/Formats/cJSON.h"
 

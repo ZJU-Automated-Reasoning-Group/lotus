@@ -1,4 +1,4 @@
-#include "Checker/Core/CheckerTypes.h"
+#include "Checker/Framework/CheckerTypes.h"
 
 namespace lotus::checker {
 
@@ -78,6 +78,33 @@ const char *toString(RuleKind kind) {
     return "native";
   }
   return "unknown";
+}
+
+BugDescription::BugImportance severityToImportance(Severity severity) {
+  switch (severity) {
+  case Severity::Low:
+    return BugDescription::BI_LOW;
+  case Severity::Medium:
+    return BugDescription::BI_MEDIUM;
+  case Severity::High:
+  case Severity::Critical:
+    return BugDescription::BI_HIGH;
+  }
+  return BugDescription::BI_NA;
+}
+
+Severity importanceToSeverity(BugDescription::BugImportance importance) {
+  switch (importance) {
+  case BugDescription::BI_LOW:
+    return Severity::Low;
+  case BugDescription::BI_MEDIUM:
+    return Severity::Medium;
+  case BugDescription::BI_HIGH:
+    return Severity::High;
+  case BugDescription::BI_NA:
+    return Severity::Low;
+  }
+  return Severity::Medium;
 }
 
 } // namespace lotus::checker

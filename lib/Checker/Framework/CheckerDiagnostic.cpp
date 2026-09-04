@@ -1,4 +1,4 @@
-#include "Checker/Core/CheckerDiagnostic.h"
+#include "Checker/Framework/CheckerDiagnostic.h"
 
 namespace lotus::checker {
 

@@ -13,7 +13,7 @@
 #include "Checker/Pulse/Domain/PulseLoopAbstraction.h"
 #include "Checker/Pulse/Report/PulseDiagnostic.h"
 #include "Checker/Pulse/Report/PulseReport.h"
-#include "Checker/Report/BugReportMgr.h"
+#include "Checker/Framework/BugReportMgr.h"
 #include "TestUtils/LLVMHelpers.h"
 
 #include <llvm/ADT/StringRef.h>

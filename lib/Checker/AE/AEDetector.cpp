@@ -8,9 +8,9 @@
 
 #include "Checker/AE/AbsExtAPI.h"
 #include "Checker/AE/AbstractInterpretation.h"
-#include "Checker/Report/BugReport.h"
-#include "Checker/Report/BugReportMgr.h"
-#include "Checker/Report/BugTypes.h"
+#include "Checker/Framework/BugReport.h"
+#include "Checker/Framework/BugReportMgr.h"
+#include "Checker/Framework/BugTypes.h"
 
 #include <algorithm>
 #include <limits>

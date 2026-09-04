@@ -1,6 +1,6 @@
-#include "Checker/Report/BugReport.h"
-#include "Checker/Report/BugReportMgr.h"
-#include "Checker/Report/SuppressionManager.h"
+#include "Checker/Framework/BugReport.h"
+#include "Checker/Framework/BugReportMgr.h"
+#include "Checker/Framework/SuppressionManager.h"
 
 #include <string>
 #include <vector>

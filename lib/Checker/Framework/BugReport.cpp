@@ -1,5 +1,5 @@
 // Author: rainoftime
-#include "Checker/Report/BugReport.h"
+#include "Checker/Framework/BugReport.h"
 
 #include "Analysis/DebugInfo/DebugInfoAnalysis.h"
 

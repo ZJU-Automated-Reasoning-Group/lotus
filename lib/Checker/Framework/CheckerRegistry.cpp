@@ -1,4 +1,4 @@
-#include "Checker/Core/CheckerRegistry.h"
+#include "Checker/Framework/CheckerRegistry.h"
 
 #include <llvm/Support/Error.h>
 

@@ -3,9 +3,9 @@
 #ifndef CHECKER_REPORT_BUGREPORTMGR_H
 #define CHECKER_REPORT_BUGREPORTMGR_H
 
-#include "Checker/Report/BugReport.h"
-#include "Checker/Report/BugTypes.h"
-#include "Checker/Report/SuppressionManager.h"
+#include "Checker/Framework/BugReport.h"
+#include "Checker/Framework/BugTypes.h"
+#include "Checker/Framework/SuppressionManager.h"
 
 #include <map>
 #include <set>

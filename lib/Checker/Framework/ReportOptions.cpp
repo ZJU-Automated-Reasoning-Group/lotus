@@ -1,4 +1,4 @@
-#include "Checker/Report/ReportOptions.h"
+#include "Checker/Framework/ReportOptions.h"
 namespace report_options {
 
 // Output format category

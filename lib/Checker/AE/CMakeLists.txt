@@ -17,7 +17,7 @@ add_library(AE STATIC ${AE_SOURCES})
 target_link_libraries(AE
   PUBLIC
     ${LLVM_LINK_COMPONENTS}
-    CanaryReport
+    CheckerFramework
     CanarySMT
     AserPTA
     ${Z3_LIBRARIES}

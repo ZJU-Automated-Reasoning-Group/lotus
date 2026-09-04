@@ -1,4 +1,4 @@
-#include "Checker/Report/SARIF.h"
+#include "Checker/Framework/SARIF.h"
 
 #include "Utils/LLVM/Demangle.h"
 

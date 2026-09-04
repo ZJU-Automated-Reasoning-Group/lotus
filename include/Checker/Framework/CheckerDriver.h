@@ -1,9 +1,9 @@
 /** @file CheckerDriver.h @brief Checker driver that orchestrates analysis execution and reporting. */
 #pragma once
 
-#include "Checker/Core/CheckerContext.h"
-#include "Checker/Core/CheckerDiagnostic.h"
-#include "Checker/Core/CheckerRegistry.h"
+#include "Checker/Framework/CheckerContext.h"
+#include "Checker/Framework/CheckerDiagnostic.h"
+#include "Checker/Framework/CheckerRegistry.h"
 
 #include <llvm/Support/Error.h>
 

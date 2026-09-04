@@ -12,7 +12,7 @@
 #include "Checker/AE/AbstractInterpretation.h"
 #include "Checker/AE/AbstractState.h"
 #include "Checker/AE/IntervalValue.h"
-#include "Checker/Report/BugReportMgr.h"
+#include "Checker/Framework/BugReportMgr.h"
 #include "TestUtils/LLVMHelpers.h"
 
 #ifndef GTEST_INTERNAL_CPLUSPLUS_LANG

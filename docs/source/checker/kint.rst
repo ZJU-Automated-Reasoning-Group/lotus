@@ -229,7 +229,7 @@ Programmatic Usage
 .. code-block:: cpp
 
    #include "Checker/KINT/MKintPass.h"
-   #include "Checker/Report/BugReportMgr.h"
+   #include "Checker/Framework/BugReportMgr.h"
    
    using namespace kint;
    

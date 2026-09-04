@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Checker/Core/CheckerRegistry.h"
+#include "Checker/Framework/CheckerRegistry.h"
 
 #include <chrono>
 #include <set>

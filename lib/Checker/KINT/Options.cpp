@@ -1,6 +1,6 @@
 #include "Checker/KINT/Options.h"
 
-#include "Checker/Tooling/CheckerSubcommands.h"
+#include "Checker/Framework/Subcommands.h"
 
 namespace kint {
 

@@ -2,6 +2,7 @@
 #include "Checker/Pulse/Checker/PulseChecker.h"
 
 #include "Alias/Infrastructure/AliasAnalysisWrapper/AliasAnalysisWrapper.h"
+#include "Checker/Framework/BugReportMgr.h"
 #include "Checker/Pulse/Checker/PulseCheckerUtils.h"
 #include "Checker/Pulse/Core/PulseFormula.h"
 #include "Checker/Pulse/Core/PulseSubstitution.h"
@@ -12,7 +13,6 @@
 #include "Checker/Pulse/Report/PulseDiagnostic.h"
 #include "Checker/Pulse/Report/PulseLogger.h"
 #include "Checker/Pulse/Report/PulseReport.h"
-#include "Checker/Report/BugReportMgr.h"
 
 #include <functional>
 #include <limits>

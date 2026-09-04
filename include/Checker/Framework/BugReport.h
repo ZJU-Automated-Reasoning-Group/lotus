@@ -3,7 +3,7 @@
 #ifndef CHECKER_REPORT_BUGREPORT_H
 #define CHECKER_REPORT_BUGREPORT_H
 
-#include "Checker/Report/BugTypes.h"
+#include "Checker/Framework/BugTypes.h"
 #include "Utils/Formats/cJSON.h"
 
 #include <map>

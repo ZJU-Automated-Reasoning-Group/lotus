@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Checker/Report/BugTypes.h"
+#include "Checker/Framework/BugTypes.h"
 
 #include <set>
 #include <string>

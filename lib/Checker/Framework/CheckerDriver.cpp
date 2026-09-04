@@ -1,6 +1,6 @@
-#include "Checker/Core/CheckerDriver.h"
+#include "Checker/Framework/CheckerDriver.h"
 
-#include "Checker/Report/BugReportMgr.h"
+#include "Checker/Framework/BugReportMgr.h"
 
 #include <algorithm>
 #include <map>
@@ -848,11 +848,21 @@ Error CheckerDriver::emitToReportManager(
   BugReportMgr &manager = BugReportMgr::get_instance();
   manager.clear_all_reports();
 
+  std::map<std::string, Severity> bug_type_severities;
+  for (const auto &diagnostic : diagnostics) {
+    Severity &severity = bug_type_severities[diagnostic.bug_type];
+    if (static_cast<int>(diagnostic.severity) > static_cast<int>(severity)) {
+      severity = diagnostic.severity;
+    }
+  }
+
   std::map<std::string, int> bug_type_ids;
   for (const auto &diagnostic : diagnostics) {
     auto it = bug_type_ids.find(diagnostic.bug_type);
     if (it == bug_type_ids.end()) {
-      int bug_type_id = manager.register_bug_type(diagnostic.bug_type);
+      int bug_type_id = manager.register_bug_type(
+          diagnostic.bug_type,
+          severityToImportance(bug_type_severities[diagnostic.bug_type]));
       it = bug_type_ids.emplace(diagnostic.bug_type, bug_type_id).first;
     }
     manager.insert_report(it->second, diagnostic.toBugReport(it->second), true);

@@ -1,12 +1,12 @@
 // Kint: A Bug-Finding Tool for C Programs (Refactored version)
 
 #include "Checker/KINT/Log.h"
+#include "Checker/Framework/BugReportMgr.h"
+#include "Checker/Framework/ReportOptions.h"
+#include "Checker/Framework/Subcommands.h"
+#include "Checker/Framework/SuppressionManager.h"
 #include "Checker/KINT/MKintPass.h"
 #include "Checker/KINT/Options.h"
-#include "Checker/Report/BugReportMgr.h"
-#include "Checker/Report/ReportOptions.h"
-#include "Checker/Report/SuppressionManager.h"
-#include "Checker/Tooling/CheckerSubcommands.h"
 #include "CheckerOptions.h"
 #include "CheckerReport.h"
 

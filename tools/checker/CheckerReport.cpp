@@ -1,8 +1,8 @@
 #include "CheckerReport.h"
 
-#include "Checker/Report/BugReportMgr.h"
-#include "Checker/Report/ReportOptions.h"
-#include "Checker/Report/SuppressionManager.h"
+#include "Checker/Framework/BugReportMgr.h"
+#include "Checker/Framework/ReportOptions.h"
+#include "Checker/Framework/SuppressionManager.h"
 #include "Fuzzing/TargetGeneration.h"
 
 #include <algorithm>

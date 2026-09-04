@@ -21,6 +21,6 @@ target_link_libraries(Saber
     SVFG
     CanaryICFG
     DDA
-    CanaryReport
+    CheckerFramework
     ${Z3_LIBRARIES}
 )

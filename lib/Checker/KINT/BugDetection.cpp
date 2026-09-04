@@ -1,8 +1,8 @@
 #include "Checker/KINT/BugDetection.h"
 
+#include "Checker/Framework/SARIF.h"
 #include "Checker/KINT/Log.h"
 #include "Checker/KINT/Options.h"
-#include "Checker/Report/SARIF.h"
 #include "Utils/Types/range.h"
 
 #include <llvm/ADT/SmallString.h>

@@ -1,6 +1,6 @@
 add_subdirectory(AE)
 add_subdirectory(Concurrency)
-add_subdirectory(Core)
+add_subdirectory(Framework)
 add_subdirectory(KINT)
 add_subdirectory(Pulse)
 add_subdirectory(Saber)
@@ -15,8 +15,7 @@ add_lotus_collected_test_suite(checker_tests
     ConcurrencyChecker
     CanaryKint
     Saber
-    CheckerCore
-    CanaryReport
+    CheckerFramework
     CanaryDebugInfo
     CanaryFormats
     CanaryLLVMUtils

@@ -5,11 +5,11 @@
 #include "CFL/CSIndex/FLARE/Grail/Index.h"
 #include "CFL/CSIndex/FLARE/Graph.h"
 #include "CFL/CSIndex/FLARE/GraphAlgorithms.h"
-#include "CFL/CSIndex/FLARE/Tabulation/Parallel.h"
+#include "CFL/CSIndex/FLARE/Index.h"
 #include "CFL/CSIndex/FLARE/PathTree/Index.h"
 #include "CFL/CSIndex/FLARE/PathTree/Query.h"
-#include "CFL/CSIndex/FLARE/Index.h"
 #include "CFL/CSIndex/FLARE/ReachBackbone.h"
+#include "CFL/CSIndex/FLARE/Tabulation/Parallel.h"
 #include "CFL/CSIndex/FLARE/Tabulation/Sequential.h"
 #include "Utils/Platform/ProgressBar.h"
 

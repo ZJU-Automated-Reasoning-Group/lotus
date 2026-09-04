@@ -27,9 +27,8 @@ target_link_libraries(lotus-check PRIVATE
   CanaryAliasAnalysisWrapper
   CanaryFuzzing
   CanaryKint
-  CanaryReport
   CanarySymbolicExecution
-  CheckerCore
+  CheckerFramework
   ConcurrencyChecker
   FiTxChecker
   IFDS

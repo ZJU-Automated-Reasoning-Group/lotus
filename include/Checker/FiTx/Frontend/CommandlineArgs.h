@@ -3,7 +3,7 @@
 #pragma once
 #include "llvm/Support/CommandLine.h"
 
-#include "Checker/Tooling/CheckerSubcommands.h"
+#include "Checker/Framework/Subcommands.h"
 
 namespace fitx {
 namespace CommandLineArgs {

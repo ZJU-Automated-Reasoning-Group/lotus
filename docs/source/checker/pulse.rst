@@ -152,7 +152,7 @@ Programmatic Usage
 
    #include "Alias/Infrastructure/AliasAnalysisWrapper/AliasAnalysisWrapper.h"
    #include "Checker/Pulse/Checker/PulseChecker.h"
-   #include "Checker/Report/BugReportMgr.h"
+   #include "Checker/Framework/BugReportMgr.h"
 
    auto AA = std::make_unique<lotus::AliasAnalysisWrapper>(
        *M, lotus::AAConfig::UnderApprox());

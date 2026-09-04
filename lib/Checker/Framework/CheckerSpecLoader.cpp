@@ -1,6 +1,6 @@
-#include "Checker/Core/CheckerSpecLoader.h"
+#include "Checker/Framework/CheckerSpecLoader.h"
 
-#include "Checker/Core/CheckerValidator.h"
+#include "Checker/Framework/CheckerValidator.h"
 
 #include <algorithm>
 #include <filesystem>

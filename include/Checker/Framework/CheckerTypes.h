@@ -2,6 +2,8 @@
  * (engine kinds, options). */
 #pragma once
 
+#include "Checker/Framework/BugTypes.h"
+
 #include <string>
 #include <vector>
 
@@ -115,5 +117,8 @@ const char *toString(EngineKind kind);
 const char *toString(CheckerCapability capability);
 const char *toString(Severity severity);
 const char *toString(RuleKind kind);
+
+BugDescription::BugImportance severityToImportance(Severity severity);
+Severity importanceToSeverity(BugDescription::BugImportance importance);
 
 } // namespace lotus::checker

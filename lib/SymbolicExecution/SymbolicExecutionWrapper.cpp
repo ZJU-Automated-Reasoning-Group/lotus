@@ -11,8 +11,8 @@
 
 #include "llvm/IR/Instructions.h"
 
-#include "Checker/Report/BugReport.h"
-#include "Checker/Report/BugReportMgr.h"
+#include "Checker/Framework/BugReport.h"
+#include "Checker/Framework/BugReportMgr.h"
 #include "IR/GSA/GSA.h"
 #include "IR/GVFG/GuardedValueFlowGraph.h"
 #include "IR/GVFG/LotusAdapter.h"

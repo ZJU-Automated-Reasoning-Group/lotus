@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Alias/InclusionBased/LotusAA/Engine/InterProceduralPass.h"
-#include "Checker/Report/BugReportMgr.h"
-#include "Checker/Report/ReportOptions.h"
-#include "Checker/Report/SuppressionManager.h"
-#include "Checker/Tooling/CheckerSubcommands.h"
+#include "Checker/Framework/BugReportMgr.h"
+#include "Checker/Framework/ReportOptions.h"
+#include "Checker/Framework/Subcommands.h"
+#include "Checker/Framework/SuppressionManager.h"
 #include "CheckerOptions.h"
 #include "CheckerReport.h"
 #include "IR/GSA/GSA.h"

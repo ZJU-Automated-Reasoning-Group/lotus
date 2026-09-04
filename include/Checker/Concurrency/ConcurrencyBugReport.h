@@ -2,7 +2,7 @@
 #ifndef CONCURRENCY_BUG_REPORT_H
 #define CONCURRENCY_BUG_REPORT_H
 
-#include "Checker/Report/BugTypes.h"
+#include "Checker/Framework/BugTypes.h"
 
 #include <memory>
 #include <string>

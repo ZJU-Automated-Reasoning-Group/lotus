@@ -1,7 +1,7 @@
-#include "Checker/Core/CheckerDriver.h"
-#include "Checker/Core/CheckerRegistry.h"
-#include "Checker/Core/CheckerSpecLoader.h"
-#include "Checker/Report/BugReportMgr.h"
+#include "Checker/Framework/CheckerDriver.h"
+#include "Checker/Framework/CheckerRegistry.h"
+#include "Checker/Framework/CheckerSpecLoader.h"
+#include "Checker/Framework/BugReportMgr.h"
 #include "TestUtils/LLVMHelpers.h"
 
 #include <gtest/gtest.h>
@@ -15,7 +15,7 @@ using lotus::checker::CheckerDriver;
 using lotus::checker::CheckerRegistry;
 using lotus::checker::CheckerSpecLoader;
 
-TEST(CheckerCoreTest, ParsesForbiddenCallYamlSpec) {
+TEST(CheckerFrameworkTest, ParsesForbiddenCallYamlSpec) {
   const char *yaml = R"(
 engine: declarative
 rule_kind: forbidden_call
@@ -35,7 +35,7 @@ functions: [system]
   EXPECT_EQ(spec_or->forbidden_call.functions.front(), "system");
 }
 
-TEST(CheckerCoreTest, RunsForbiddenCallAndSourceSinkChecks) {
+TEST(CheckerFrameworkTest, RunsForbiddenCallAndSourceSinkChecks) {
   CheckerSpecLoader loader;
   auto forbidden_or = loader.loadFromBuffer(R"(
 engine: declarative
@@ -90,7 +90,7 @@ entry:
   ret i32 %ret
 }
 )",
-                                                    "CheckerCoreTest");
+                                                    "CheckerFrameworkTest");
   ASSERT_NE(module, nullptr);
 
   CheckerContext checker_context{*module};
@@ -114,7 +114,7 @@ entry:
   EXPECT_EQ(taint_count, 1);
 }
 
-TEST(CheckerCoreTest, PropagatesSourceSinkTaintThroughSimpleMemory) {
+TEST(CheckerFrameworkTest, PropagatesSourceSinkTaintThroughSimpleMemory) {
   CheckerSpecLoader loader;
   auto taint_or = loader.loadFromBuffer(R"(
 engine: declarative
@@ -148,7 +148,7 @@ entry:
   ret void
 }
 )",
-                                                    "CheckerCoreTest");
+                                                    "CheckerFrameworkTest");
   ASSERT_NE(module, nullptr);
 
   CheckerContext checker_context{*module};
@@ -159,7 +159,7 @@ entry:
   EXPECT_EQ(diagnostics_or->front().checker_id, "taint.store-load");
 }
 
-TEST(CheckerCoreTest, PropagatesSourceSinkThroughExpressionsAndFunctions) {
+TEST(CheckerFrameworkTest, PropagatesSourceSinkThroughExpressionsAndFunctions) {
   CheckerSpecLoader loader;
   auto taint_or = loader.loadFromBuffer(R"(
 engine: declarative
@@ -198,7 +198,7 @@ entry:
   ret void
 }
 )",
-                                                    "CheckerCoreTest");
+                                                    "CheckerFrameworkTest");
   ASSERT_NE(module, nullptr);
 
   CheckerContext checker_context{*module};
@@ -209,7 +209,7 @@ entry:
   EXPECT_EQ(diagnostics_or->front().checker_id, "taint.interproc");
 }
 
-TEST(CheckerCoreTest, SupportsOutParameterSourceAndMemorySinkModels) {
+TEST(CheckerFrameworkTest, SupportsOutParameterSourceAndMemorySinkModels) {
   CheckerSpecLoader loader;
   auto taint_or = loader.loadFromBuffer(R"(
 engine: declarative
@@ -264,7 +264,7 @@ entry:
   ret void
 }
 )",
-                                                    "CheckerCoreTest");
+                                                    "CheckerFrameworkTest");
   ASSERT_NE(module, nullptr);
 
   CheckerContext checker_context{*module};
@@ -275,7 +275,7 @@ entry:
   EXPECT_EQ(diagnostics_or->front().checker_id, "taint.out-param");
 }
 
-TEST(CheckerCoreTest, DetectsProtocolViolations) {
+TEST(CheckerFrameworkTest, DetectsProtocolViolations) {
   CheckerSpecLoader loader;
   auto protocol_or = loader.loadFromBuffer(R"(
 engine: declarative
@@ -328,7 +328,7 @@ entry:
   ret void
 }
 )",
-                                                    "CheckerCoreTest");
+                                                    "CheckerFrameworkTest");
   ASSERT_NE(module, nullptr);
 
   CheckerContext checker_context{*module};
@@ -345,7 +345,7 @@ entry:
   EXPECT_EQ(count, 2);
 }
 
-TEST(CheckerCoreTest, UsesConfiguredProtocolResourceArguments) {
+TEST(CheckerFrameworkTest, UsesConfiguredProtocolResourceArguments) {
   CheckerSpecLoader loader;
   auto protocol_or = loader.loadFromBuffer(R"(
 engine: declarative
@@ -385,7 +385,7 @@ entry:
   ret void
 }
 )",
-                                                    "CheckerCoreTest");
+                                                    "CheckerFrameworkTest");
   ASSERT_NE(module, nullptr);
 
   CheckerContext checker_context{*module};
@@ -395,7 +395,7 @@ entry:
   EXPECT_TRUE(diagnostics_or->empty());
 }
 
-TEST(CheckerCoreTest, TracksProtocolStateAlongCfgPaths) {
+TEST(CheckerFrameworkTest, TracksProtocolStateAlongCfgPaths) {
   CheckerSpecLoader loader;
   auto protocol_or = loader.loadFromBuffer(R"(
 engine: declarative
@@ -444,7 +444,7 @@ exit:
   ret void
 }
 )",
-                                                    "CheckerCoreTest");
+                                                    "CheckerFrameworkTest");
   ASSERT_NE(module, nullptr);
 
   CheckerContext checker_context{*module};
@@ -468,7 +468,7 @@ exit:
   EXPECT_EQ(leaks, 1);
 }
 
-TEST(CheckerCoreTest, CanonicalizesAndSummarizesProtocolResources) {
+TEST(CheckerFrameworkTest, CanonicalizesAndSummarizesProtocolResources) {
   CheckerSpecLoader loader;
   auto protocol_or = loader.loadFromBuffer(R"(
 engine: declarative
@@ -536,7 +536,7 @@ entry:
   ret void
 }
 )",
-                                                    "CheckerCoreTest");
+                                                    "CheckerFrameworkTest");
   ASSERT_NE(module, nullptr);
 
   CheckerContext checker_context{*module};
@@ -555,7 +555,7 @@ entry:
   EXPECT_EQ(leaks, 0);
 }
 
-TEST(CheckerCoreTest, RejectsInvalidCheckerEnumsAndConfidence) {
+TEST(CheckerFrameworkTest, RejectsInvalidCheckerEnumsAndConfidence) {
   CheckerSpecLoader loader;
   auto bad_severity = loader.loadFromBuffer(R"(
 engine: declarative
@@ -588,7 +588,7 @@ functions: [system]
   consumeError(bad_confidence.takeError());
 }
 
-TEST(CheckerCoreTest, EmitsThroughBugReportManager) {
+TEST(CheckerFrameworkTest, EmitsThroughBugReportManager) {
   CheckerSpecLoader loader;
   auto forbidden_or = loader.loadFromBuffer(R"(
 engine: declarative
@@ -615,7 +615,7 @@ entry:
   ret void
 }
 )",
-                                                    "CheckerCoreTest");
+                                                    "CheckerFrameworkTest");
 
   CheckerContext checker_context{*module};
   CheckerDriver driver(registry, checker_context);

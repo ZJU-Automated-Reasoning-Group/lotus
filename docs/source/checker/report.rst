@@ -1,7 +1,7 @@
 Checker Report Infrastructure
 =============================
 
-``include/Checker/Report/`` and ``lib/Checker/Report/`` implement the shared
+``include/Checker/Framework/`` and ``lib/Checker/Framework/`` implement the shared
 bug-reporting layer used by all Lotus checkers.
 
 **Main components**:

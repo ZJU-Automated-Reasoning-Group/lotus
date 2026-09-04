@@ -1,6 +1,6 @@
 #include "CheckerOptions.h"
 
-#include "Checker/Report/BugReportMgr.h"
+#include "Checker/Framework/BugReportMgr.h"
 
 #include <algorithm>
 #include <system_error>

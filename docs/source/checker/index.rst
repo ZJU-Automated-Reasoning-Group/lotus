@@ -112,12 +112,14 @@ engines should be triaged as independent evidence. Record the engine value and
 its options with exported JSON or SARIF reports so that overlapping findings
 remain distinguishable.
 
-Declarative Checker Core
-------------------------
+Checker Framework
+-----------------
 
-The Declarative Checker Core (``lib/Checker/Core/``) provides a framework for
-defining bug checkers through specification files rather than hardcoded C++
-logic. This enables adding new checks without modifying the checker engine.
+The Checker Framework (``lib/Checker/Framework/``) provides the shared
+infrastructure for defining and running bug checkers and for reporting their
+findings. Declarative checkers are defined through specification files rather
+than hardcoded C++ logic, enabling new checks without modifying the checker
+engine.
 
 **Components**:
 
@@ -139,6 +141,11 @@ logic. This enables adding new checks without modifying the checker engine.
   and an optional alias-analysis wrapper.
 * **CheckerValidator** — Validates checker specifications for consistency
   (e.g., missing required fields, unknown rule kinds).
+* **BugReport** — Bug report data structures with source location information.
+* **BugReportMgr** — Centralized bug report management (singleton pattern).
+* **BugTypes** — Bug type definitions, classifications, and CWE mappings.
+* **SARIF** — SARIF format output support.
+* **ReportOptions** — Report configuration options (JSON, SARIF output).
 
 **Rule Kinds**:
 
@@ -166,8 +173,8 @@ logic. This enables adding new checks without modifying the checker engine.
 
 .. code-block:: cpp
 
-   #include "Checker/Core/CheckerRegistry.h"
-   #include "Checker/Core/CheckerSpecLoader.h"
+   #include "Checker/Framework/CheckerRegistry.h"
+   #include "Checker/Framework/CheckerSpecLoader.h"
 
    lotus::checker::CheckerRegistry registry;
    lotus::checker::CheckerSpecLoader loader;
@@ -246,14 +253,6 @@ Components
 * ``PathCondSolver.cpp`` – SMT-backed feasibility checking for path conditions
 * ``SymbolicExecutionWrapper.cpp`` – LLVM pass wrapper used by ``lotus-check --engine=symex``
 
-**Report System** (``lib/Checker/Report/``):
-
-* ``BugReport.cpp`` – Bug report data structures with source location information
-* ``BugReportMgr.cpp`` – Centralized bug report management (singleton pattern)
-* ``BugTypes.cpp`` – Bug type definitions, classifications, and CWE mappings
-* ``SARIF.cpp`` – SARIF format output support
-* ``ReportOptions.cpp`` – Report configuration options (JSON, SARIF output)
-
 **Debug Info Analysis** (``lib/Analysis/DebugInfo/``):
 
 * ``DebugInfoAnalysis.cpp`` – Debug information extraction from LLVM metadata
@@ -309,7 +308,7 @@ All checkers integrate with the centralized ``BugReportMgr``:
 
 .. code-block:: cpp
 
-   #include "Checker/Report/BugReportMgr.h"
+   #include "Checker/Framework/BugReportMgr.h"
    
    // Access centralized reports emitted by checker frontends
    BugReportMgr& mgr = BugReportMgr::get_instance();

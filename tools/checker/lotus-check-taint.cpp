@@ -5,8 +5,8 @@
  * A command-line tool for running IFDS/IDE interprocedural dataflow analysis
  */
 
-#include "Checker/Report/BugReportMgr.h"
-#include "Checker/Tooling/CheckerSubcommands.h"
+#include "Checker/Framework/BugReportMgr.h"
+#include "Checker/Framework/Subcommands.h"
 #include "CheckerOptions.h"
 #include "CheckerReport.h"
 #include "Utils/LLVM/Demangle.h"

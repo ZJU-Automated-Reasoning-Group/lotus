@@ -2,7 +2,7 @@
  * checker analyses. */
 #pragma once
 
-#include "Checker/Core/CheckerTypes.h"
+#include "Checker/Framework/CheckerTypes.h"
 
 #include <optional>
 #include <string>

@@ -1,10 +1,10 @@
 
 #include "Checker/Pulse/Domain/PulseTaint.h"
 
+#include "Checker/Framework/BugReport.h"
+#include "Checker/Framework/BugReportMgr.h"
 #include "Checker/Pulse/Domain/PulseDomain.h"
 #include "Checker/Pulse/Report/PulseDiagnostic.h"
-#include "Checker/Report/BugReport.h"
-#include "Checker/Report/BugReportMgr.h"
 
 #include <llvm/IR/Instructions.h>
 

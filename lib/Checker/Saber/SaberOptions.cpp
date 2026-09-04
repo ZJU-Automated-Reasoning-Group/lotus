@@ -7,7 +7,7 @@
 
 #include "Checker/Saber/SaberOptions.h"
 
-#include "Checker/Tooling/CheckerSubcommands.h"
+#include "Checker/Framework/Subcommands.h"
 
 #include <llvm/Support/CommandLine.h>
 

@@ -1,8 +1,8 @@
 /** @file CheckerDiagnostic.h @brief Diagnostic types and utilities for checker bug reports. */
 #pragma once
 
-#include "Checker/Core/CheckerTypes.h"
-#include "Checker/Report/BugReport.h"
+#include "Checker/Framework/CheckerTypes.h"
+#include "Checker/Framework/BugReport.h"
 
 #include <llvm/IR/Value.h>
 

@@ -1,6 +1,6 @@
-#include "Checker/Report/BugReportMgr.h"
+#include "Checker/Framework/BugReportMgr.h"
 
-#include "Checker/Report/SARIF.h"
+#include "Checker/Framework/SARIF.h"
 
 #include <algorithm>
 #include <set>

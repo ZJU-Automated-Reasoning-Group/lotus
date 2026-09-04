@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Checker/Saber/SaberCondAllocator.h"
-#include "Checker/Report/BugReportMgr.h"
+#include "Checker/Framework/BugReportMgr.h"
 #include "Checker/Saber/DoubleFreeChecker.h"
 #include "Checker/Saber/FileChecker.h"
 #include "Checker/Saber/LeakChecker.h"

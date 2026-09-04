@@ -4,7 +4,7 @@ Checker Tooling
 Subcommand registration and entry points for the ``lotus-check`` unified
 checker frontend.
 
-**Header**: ``include/Checker/Tooling/CheckerSubcommands.h``
+**Header**: ``include/Checker/Framework/Subcommands.h``
 
 **Implementation**: ``tools/checker/``
 
@@ -27,13 +27,14 @@ dispatch from a single entry point.
 Checker Subcommands
 -------------------
 
-**File**: ``CheckerSubcommands.h``
+**File**: ``Subcommands.h``
 
-Defines inline accessor functions for each subcommand:
+Declares accessor functions for each subcommand (defined in
+``lib/Checker/Framework/Subcommands.cpp``):
 
 .. code-block:: cpp
 
-   #include "Checker/Tooling/CheckerSubcommands.h"
+   #include "Checker/Framework/Subcommands.h"
 
    auto &sub = lotus::checker::tooling::genericSubCommand();
    auto &sub = lotus::checker::tooling::kintSubCommand();

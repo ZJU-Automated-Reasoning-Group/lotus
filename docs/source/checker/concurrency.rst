@@ -187,7 +187,7 @@ Programmatic Usage
 .. code-block:: cpp
 
    #include "Checker/Concurrency/ConcurrencyChecker.h"
-   #include "Checker/Report/BugReportMgr.h"
+   #include "Checker/Framework/BugReportMgr.h"
    
    using namespace concurrency;
    

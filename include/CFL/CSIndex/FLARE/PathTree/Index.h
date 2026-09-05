@@ -2,8 +2,8 @@
 #define _PATH_TREE_H
 
 #include "CFL/CSIndex/FLARE/PathTree/WeightedGraphAlgorithms.h"
-#include "CFL/CSIndex/FLARE/PathTree/DataCompression.h"
 #include "CFL/CSIndex/FLARE/GraphAlgorithms.h"
+#include "CFL/CSIndex/FLARE/PathTree/DataCompression.h"
 
 namespace lotus::cfl::cs_index::flare::path_tree {
 

@@ -25,8 +25,8 @@ struct LLVMAliasOptions {
 };
 
 /// End-to-end LLVM alias analysis using Aser only as the constraint/model
-/// frontend. Points-to propagation and indirect-call discovery are driven by
-/// AliasClient's CFL relation rather than Aser's native points-to solver.
+/// frontend. Object-valued points-to propagation and indirect-call discovery
+/// are driven by AliasClient rather than Aser's native points-to solver.
 class LLVMCFLAliasAnalysis {
 public:
   explicit LLVMCFLAliasAnalysis(LLVMAliasOptions options = {});

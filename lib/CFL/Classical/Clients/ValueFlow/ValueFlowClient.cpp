@@ -262,12 +262,14 @@ Grammar buildVfgGrammar(const lotus::analysis::SVFG &svfg) {
                                   "  direct directbar indirect indirectbar "
                                   "thread threadbar\n"
                                   "Variables:\n"
-                                  "  A Abar\n"
+                                  "  A Abar R Rbar\n"
                                   "Productions:\n"
                                   "  A -> A A | direct | indirect | thread | "
                                   "<epsilon>;\n"
                                   "  Abar -> Abar Abar | directbar | "
-                                  "indirectbar | threadbar | <epsilon>;\n");
+                                  "indirectbar | threadbar | <epsilon>;\n"
+                                  "  R -> A;\n"
+                                  "  Rbar -> Abar;\n");
   }
   return Grammar::parseFromText(
       "Start:\n"
@@ -276,12 +278,14 @@ Grammar buildVfgGrammar(const lotus::analysis::SVFG &svfg) {
       "  direct directbar indirect indirectbar thread threadbar call ret "
       "callbar retbar\n"
       "Variables:\n"
-      "  A Abar\n"
+      "  A Abar R Rbar\n"
       "Productions:\n"
       "  A -> A A | direct | indirect | thread | call_i A ret_i | "
       "<epsilon>;\n"
       "  Abar -> Abar Abar | directbar | indirectbar | threadbar | "
-      "retbar_i Abar callbar_i | <epsilon>;\n",
+      "retbar_i Abar callbar_i | <epsilon>;\n"
+      "  R -> A | ret_i R | R call_i | R A;\n"
+      "  Rbar -> Abar | callbar_i Rbar | Rbar retbar_i | Rbar Abar;\n",
       options);
 }
 
@@ -409,6 +413,26 @@ ValueFlowClient::solveSpecialized(engines::SpecializedPocrBackend backend,
 
 bool ValueFlowClient::hasFlow(std::uint32_t source_node,
                               std::uint32_t target_node) const {
+  return hasBalancedFlow(source_node, target_node);
+}
+
+bool ValueFlowClient::hasBalancedFlow(std::uint32_t source_node,
+                                      std::uint32_t target_node) const {
+  return contains(source_node, target_node, "A");
+}
+
+bool ValueFlowClient::hasRealizableFlow(std::uint32_t source_node,
+                                        std::uint32_t target_node) const {
+  if (specialized_backend_) {
+    throw std::logic_error(
+        "General realizable value-flow queries require a grammar solver");
+  }
+  return contains(source_node, target_node, "R");
+}
+
+bool ValueFlowClient::contains(std::uint32_t source_node,
+                               std::uint32_t target_node,
+                               const char *symbol) const {
   if (!session_ && !specialized_backend_) {
     throw std::logic_error("solve() has not been called");
   }
@@ -424,11 +448,26 @@ bool ValueFlowClient::hasFlow(std::uint32_t source_node,
     }
     return focr_engine_->hasFlow(source_it->second, target_it->second);
   }
-  return session_->contains(source_it->second, target_it->second, "A");
+  return session_->contains(source_it->second, target_it->second, symbol);
 }
 
 std::vector<std::uint32_t>
 ValueFlowClient::reachableFrom(std::uint32_t source_node) const {
+  return reachableFromSymbol(source_node, "A");
+}
+
+std::vector<std::uint32_t>
+ValueFlowClient::realizableReachableFrom(std::uint32_t source_node) const {
+  if (specialized_backend_) {
+    throw std::logic_error(
+        "General realizable value-flow queries require a grammar solver");
+  }
+  return reachableFromSymbol(source_node, "R");
+}
+
+std::vector<std::uint32_t>
+ValueFlowClient::reachableFromSymbol(std::uint32_t source_node,
+                                     const char *symbol) const {
   if (!session_ && !specialized_backend_) {
     throw std::logic_error("solve() has not been called");
   }
@@ -457,7 +496,7 @@ ValueFlowClient::reachableFrom(std::uint32_t source_node) const {
       }
     }
   } else {
-    const SymbolId flow_symbol = state_->grammar.symbolId("A");
+    const SymbolId flow_symbol = state_->grammar.symbolId(symbol);
     session_->relation().forEachSuccessor(flow_symbol, source_it->second,
                                           add_vertex);
   }

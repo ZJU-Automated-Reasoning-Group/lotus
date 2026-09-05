@@ -157,6 +157,35 @@ const llvm::Function *owningFunction(const llvm::Value *value) {
   return nullptr;
 }
 
+bool hasFullOverwriteCoverage(const lotus::analysis::StoreSVFGNode &store,
+                              const llvm::Value *object_value) {
+  const auto *instruction =
+      llvm::dyn_cast_or_null<llvm::StoreInst>(store.getValue());
+  if (!instruction || !object_value) {
+    return false;
+  }
+
+  const llvm::Value *destination =
+      instruction->getPointerOperand()->stripPointerCasts();
+  const llvm::Value *object_pointer = object_value->stripPointerCasts();
+  if (destination != object_pointer) {
+    return false;
+  }
+
+  if (const auto *allocation = llvm::dyn_cast<llvm::AllocaInst>(object_value)) {
+    const auto *count =
+        llvm::dyn_cast<llvm::ConstantInt>(allocation->getArraySize());
+    if (!allocation->isStaticAlloca() || !count || !count->isOne()) {
+      return false;
+    }
+  }
+
+  const auto *pointer_type =
+      llvm::dyn_cast<llvm::PointerType>(object_value->getType());
+  return pointer_type && pointer_type->getPointerElementType() ==
+                             instruction->getValueOperand()->getType();
+}
+
 bool isStrongUpdateStore(const lotus::analysis::SVFG &svfg,
                          const lotus::analysis::StoreSVFGNode &store,
                          const RecursiveFunctionSet &recursive_functions) {
@@ -166,17 +195,20 @@ bool isStrongUpdateStore(const lotus::analysis::SVFG &svfg,
   }
   const std::uint32_t object = *points_to.begin();
   const auto *info = svfg.getObjectInfo(object);
-  if (!info || info->isHeap || info->isArray || info->isFieldInsensitive ||
-      info->isUnknown) {
+  if (!info || !info->isSingleton || info->isHeap || info->isArray ||
+      info->isFieldInsensitive || info->isUnknown) {
     return false;
-  }
-  if (!info->isStack) {
-    return true;
   }
 
   const llvm::Value *object_value = svfg.getObjectValue(object);
   if (!object_value && info->baseObjId != 0) {
     object_value = svfg.getObjectValue(info->baseObjId);
+  }
+  if (!hasFullOverwriteCoverage(store, object_value)) {
+    return false;
+  }
+  if (!info->isStack) {
+    return true;
   }
   const llvm::Function *function = owningFunction(object_value);
   return function && recursive_functions.count(function) == 0;

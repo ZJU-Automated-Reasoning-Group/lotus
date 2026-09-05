@@ -172,7 +172,10 @@ Adapter implementations are split by dependency:
    loads and stores added after solving are converted through existing or
    reusable synthetic dereference nodes.
    ``solveSpecialized(Pocr|Focr)`` selects the hand-specialized engine without
-   creating a generic ``SolverSession``.
+   creating a generic ``SolverSession``. For PAG input, ``AliasClient`` lowers
+   ``load``/``store`` constraints in one structural pass, using indexed
+   address-taken objects or one reusable synthetic dereference per pointer.
+   Unknown raw terminals remain hard errors rather than being ignored.
 
 ``CanaryClassicalCFLValueFlowClient``
    SVFG preparation, value-flow encoding, ``ValueFlowClient``, and its
@@ -183,16 +186,32 @@ Adapter implementations are split by dependency:
    alias client input. A client-provided offset resolver preserves field GEP
    attributes, while ``AserAliasSynchronizer`` maps new Aser nodes and
    constraints into successive ``solveToFixedPoint`` rounds, including when
-   PEG has inserted synthetic nodes.
+   PEG has inserted synthetic nodes. Newly observed GEP attributes are batched
+   per synchronization round so the grammar is extended and parsed once.
 
 ``LLVMCFLAliasAnalysis`` / ``lotus-cfl-alias``
    Build Aser's constraint/model frontend without running its points-to
-   solver. CFL points-to facts resolve indirect and intercepted calls; normal
-   Aser callbacks then create actual/formal, return, heap, and newly reached
-   function constraints. Constant global initializers and pointer-bearing
+   solver. A lightweight projection from solved CFL value aliases to explicit
+   address-taken function objects resolves indirect and intercepted calls;
+   normal Aser callbacks then create actual/formal, return, heap, and newly
+   reached function constraints. Constant global initializers and pointer-bearing
    ``memcpy`` operations receive explicit constraints when the Aser frontend
-   does not emit them. An unmapped LLVM pointer is conservatively reported as
-   may-alias; it is never converted into a no-alias result.
+   does not emit them. Supplemental ``memcpy``/``memmove`` constraints are
+   field/range-aware and are revisited after newly discovered callees add
+   nodes. Unmapped pointers and mapped results of unsupported pointer-producing
+   LLVM instructions are conservatively reported as may-alias; explicit
+   unknown facts propagate through SSA uses and affected memory rather than
+   being converted into a no-alias result.
+
+   ``AliasClient::pointsTo`` is an object-valued relation derived directly
+   from address, copy, GEP, load, and store constraints. It represents fixed
+   fields with allocation-plus-cumulative-offset objects. Variant GEPs retain
+   a known offset congruence (for example, an array-element stride) when LLVM
+   can provide one and otherwise use an arbitrary-offset field object.
+   Synthetic field objects can be projected to their allocation with
+   ``baseObject``. This full object relation is computed lazily only for
+   ``pointsTo`` or enhanced alias queries; ordinary solving and indirect-call
+   discovery do not run a second pointer-analysis fixed point.
 
 ``ValueFlowClient`` / ``lotus-cfl-vf``
    Implement SVF's second classical-CFL client, ``CFLVF``. The driver builds
@@ -200,11 +219,22 @@ Adapter implementations are split by dependency:
    stale strong-update flow, keeps ``direct``, ``indirect``, and ``thread``
    terminals distinct, and encodes
    call/return edges as matched ``call_i``/``ret_i`` terminals, and solves
-   context-sensitive value-flow reachability with any classical backend. The
-   derived ``A`` relation is the sound union of those edge categories, not a
-   path-feasibility or memory-object proof.
+   context-sensitive value-flow reachability with any classical backend.
+   ``hasBalancedFlow`` (and the compatibility spelling ``hasFlow``) queries
+   the same-context summary relation ``A``. ``hasRealizableFlow`` queries
+   ``R``, which additionally permits unmatched returns at the beginning and
+   unmatched calls at the end while retaining callsite matching for balanced
+   pairs. General realizable queries require a grammar backend; the specialized
+   vertical-propagation engines expose balanced summaries only. The derived
+   relations are the sound union of the edge categories, not a path-feasibility
+   or memory-object proof.
    ``solveSpecialized(Pocr|Focr)`` selects the native vertical-propagation
    engine.
+
+SVFG strong-update preparation requires explicit ``isSingleton`` metadata,
+nonrecursive stack ownership, and evidence that the LLVM store overwrites the
+whole represented object. Loop/recursive allocations and partial writes retain
+weak-update input flow.
 
 Alias and value-flow relation queries require ``solve()`` first and throw a
 ``logic_error`` when called on an unsolved client.
@@ -213,6 +243,10 @@ Alias and value-flow relation queries require ``solve()`` first and throw a
 payload estimates) from work performed by the current ``solve()`` call
 (iterations, duplicates, peak worklist, timing, and transitive propagation).
 ``solveToFixedPoint`` sums per-call work and retains the final snapshots.
+The LLVM alias facade additionally reports ``frontend_time_microseconds``,
+``client_initialization_microseconds``, and
+``client_discovery_microseconds`` so encoding/synchronization costs remain
+distinguishable from solver time on whole-program workloads.
 
 
 Command line

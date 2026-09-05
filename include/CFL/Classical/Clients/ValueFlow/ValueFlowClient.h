@@ -21,7 +21,8 @@ Grammar buildVfgGrammar(const lotus::analysis::SVFG &svfg);
 
 /// Context-sensitive may-reach value-flow facade. Direct, indirect-memory,
 /// and may-happen-in-parallel input edges remain distinguishable in the
-/// encoded graph, while the derived A relation is their sound union.
+/// encoded graph. Balanced summaries and general realizable paths are exposed
+/// separately.
 class ValueFlowClient {
 public:
   ~ValueFlowClient();
@@ -38,8 +39,18 @@ public:
   ReachabilityStats solve(SolverBackend backend = SolverBackend::SparseSet);
   ReachabilityStats solveSpecialized(engines::SpecializedPocrBackend backend,
                                      bool simplify_focr_cycles = false);
+  /// Backward-compatible spelling for hasBalancedFlow().
   bool hasFlow(std::uint32_t source_node, std::uint32_t target_node) const;
+  bool hasBalancedFlow(std::uint32_t source_node,
+                       std::uint32_t target_node) const;
+  /// Allow unmatched returns at the path beginning and unmatched calls at the
+  /// path end while preserving matching for every balanced call/return pair.
+  bool hasRealizableFlow(std::uint32_t source_node,
+                         std::uint32_t target_node) const;
+  /// Backward-compatible balanced-summary reachability enumeration.
   std::vector<std::uint32_t> reachableFrom(std::uint32_t source_node) const;
+  std::vector<std::uint32_t>
+  realizableReachableFrom(std::uint32_t source_node) const;
 
   const LabeledGraph &graph() const;
   const Grammar &grammar() const;
@@ -59,6 +70,11 @@ private:
   std::unique_ptr<engines::FocrValueFlowEngine> focr_engine_;
   std::optional<engines::SpecializedPocrBackend> specialized_backend_;
   bool specialized_focr_cycles_ = false;
+
+  bool contains(std::uint32_t source_node, std::uint32_t target_node,
+                const char *symbol) const;
+  std::vector<std::uint32_t> reachableFromSymbol(std::uint32_t source_node,
+                                                 const char *symbol) const;
 };
 
 } // namespace lotus::cfl::classical

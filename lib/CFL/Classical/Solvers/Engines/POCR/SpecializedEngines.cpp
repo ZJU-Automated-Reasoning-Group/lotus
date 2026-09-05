@@ -438,6 +438,9 @@ public:
         auto [it, unused] = fields_.try_emplace(attribute, graph_nodes_);
         (void)unused;
         graph_edges_ += it->second.add(edge.source, edge.target) ? 1 : 0;
+      } else if (base != "addr") {
+        throw std::invalid_argument(
+            "Unsupported terminal for specialized alias engine: " + edge.label);
       }
     }
     for (NodeId node = 0; node < graph_nodes_; ++node) {

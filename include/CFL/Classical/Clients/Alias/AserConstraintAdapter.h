@@ -4,13 +4,32 @@
 #include "CFL/Classical/Clients/Alias/AliasClient.h"
 
 #include <functional>
+#include <set>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 namespace lotus::cfl::classical {
+
+struct AserGepResolution {
+  bool is_variant = false;
+  std::optional<std::uint32_t> constant_offset;
+  std::optional<std::uint32_t> modulus;
+};
+
+inline AserGepResolution
+normalizeAserGepResolution(std::optional<std::uint32_t> offset) {
+  return {!offset, offset, std::nullopt};
+}
+
+inline AserGepResolution
+normalizeAserGepResolution(AserGepResolution resolution) {
+  return resolution;
+}
 
 /// Convert an AserPTA graph while allowing the client to recover field offsets
 /// that are not represented by Aser's Constraints enum itself.
@@ -28,6 +47,7 @@ encodeAserConstraintGraph(const aser::ConstraintGraph<Context> &source,
       const auto edge = *it;
       AliasConstraintEdgeKind kind = AliasConstraintEdgeKind::Copy;
       std::optional<std::uint32_t> attribute;
+      std::optional<std::uint32_t> modulus;
       switch (edge.first) {
       case aser::Constraints::load:
         kind = AliasConstraintEdgeKind::Load;
@@ -41,14 +61,18 @@ encodeAserConstraintGraph(const aser::ConstraintGraph<Context> &source,
       case aser::Constraints::addr_of:
         kind = AliasConstraintEdgeKind::Addr;
         break;
-      case aser::Constraints::offset:
-        attribute = resolve_offset(*node, *edge.second);
-        kind = attribute ? AliasConstraintEdgeKind::NormalGep
-                         : AliasConstraintEdgeKind::VariantGep;
+      case aser::Constraints::offset: {
+        const AserGepResolution resolution =
+            normalizeAserGepResolution(resolve_offset(*node, *edge.second));
+        kind = resolution.is_variant ? AliasConstraintEdgeKind::VariantGep
+                                     : AliasConstraintEdgeKind::NormalGep;
+        attribute = resolution.constant_offset;
+        modulus = resolution.modulus;
         break;
       }
+      }
       result.addEdge(node->getNodeID(), edge.second->getNodeID(), kind,
-                     attribute);
+                     attribute, modulus);
     }
   }
   return result;
@@ -147,6 +171,11 @@ public:
       }
     }
 
+    using PendingConstraint =
+        std::tuple<std::size_t, std::size_t, AliasConstraintEdgeKind,
+                   std::optional<std::uint32_t>, std::optional<std::uint32_t>>;
+    std::vector<PendingConstraint> pending;
+    std::set<std::uint32_t> gep_attributes;
     for (const Node *node : source_) {
       for (auto it = node->succ_edge_begin(); it != node->succ_edge_end();
            ++it) {
@@ -156,13 +185,20 @@ public:
         if (!seen_.insert(key).second) {
           continue;
         }
-        const auto [kind, attribute] =
+        const auto [kind, attribute, modulus] =
             classify(*node, *edge.second, edge.first);
-        changed =
-            client_.addConstraint(mappedNode(key.source),
-                                  mappedNode(key.target), kind, attribute) ||
-            changed;
+        if (kind == AliasConstraintEdgeKind::NormalGep && attribute) {
+          gep_attributes.insert(*attribute);
+        }
+        pending.emplace_back(mappedNode(key.source), mappedNode(key.target),
+                             kind, attribute, modulus);
       }
+    }
+    client_.registerGepAttributes(gep_attributes);
+    for (const auto &[source, target, kind, attribute, modulus] : pending) {
+      changed =
+          client_.addConstraint(source, target, kind, attribute, modulus) ||
+          changed;
     }
     return changed;
   }
@@ -203,23 +239,25 @@ private:
     }
   };
 
-  std::pair<AliasConstraintEdgeKind, std::optional<std::uint32_t>>
+  std::tuple<AliasConstraintEdgeKind, std::optional<std::uint32_t>,
+             std::optional<std::uint32_t>>
   classify(const Node &source, const Node &target,
            aser::Constraints constraint) const {
     switch (constraint) {
     case aser::Constraints::load:
-      return {AliasConstraintEdgeKind::Load, std::nullopt};
+      return {AliasConstraintEdgeKind::Load, std::nullopt, std::nullopt};
     case aser::Constraints::store:
-      return {AliasConstraintEdgeKind::Store, std::nullopt};
+      return {AliasConstraintEdgeKind::Store, std::nullopt, std::nullopt};
     case aser::Constraints::copy:
-      return {AliasConstraintEdgeKind::Copy, std::nullopt};
+      return {AliasConstraintEdgeKind::Copy, std::nullopt, std::nullopt};
     case aser::Constraints::addr_of:
-      return {AliasConstraintEdgeKind::Addr, std::nullopt};
+      return {AliasConstraintEdgeKind::Addr, std::nullopt, std::nullopt};
     case aser::Constraints::offset: {
-      auto attribute = resolve_offset_(source, target);
-      return {attribute ? AliasConstraintEdgeKind::NormalGep
-                        : AliasConstraintEdgeKind::VariantGep,
-              attribute};
+      const AserGepResolution resolution =
+          normalizeAserGepResolution(resolve_offset_(source, target));
+      return {resolution.is_variant ? AliasConstraintEdgeKind::VariantGep
+                                    : AliasConstraintEdgeKind::NormalGep,
+              resolution.constant_offset, resolution.modulus};
     }
     }
     throw std::logic_error("Unknown Aser constraint kind");

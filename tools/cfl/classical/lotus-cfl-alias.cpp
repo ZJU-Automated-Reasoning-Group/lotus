@@ -111,10 +111,6 @@ Options parseOptions(int argc, char **argv) {
   if (options.input.empty()) {
     throw std::invalid_argument("An input LLVM module is required");
   }
-  if (options.analysis.specialized_backend &&
-      options.analysis.encoding != AliasEncodingMode::PEG) {
-    throw std::invalid_argument("pocr-aa and focr-aa require the PEG encoding");
-  }
   return options;
 }
 
@@ -299,6 +295,10 @@ int main(int argc, char **argv) {
                 << stats.specialized_critical_edges
                 << ",\"annotation_total\":" << annotation_total
                 << ",\"annotation_failures\":" << annotation_failures
+                << ",\"frontend_us\":" << stats.frontend_time_microseconds
+                << ",\"client_init_us\":"
+                << stats.client_initialization_microseconds
+                << ",\"discovery_us\":" << stats.client_discovery_microseconds
                 << ",\"solve_us\":" << stats.solve_time_microseconds << "}\n";
     } else {
       std::cout << "solver=" << engineName(options.analysis) << " encoding="
@@ -320,6 +320,10 @@ int main(int argc, char **argv) {
                 << " specialized_pairs=" << stats.specialized_reachability_pairs
                 << " annotation_total=" << annotation_total
                 << " annotation_failures=" << annotation_failures
+                << " frontend_us=" << stats.frontend_time_microseconds
+                << " client_init_us="
+                << stats.client_initialization_microseconds
+                << " discovery_us=" << stats.client_discovery_microseconds
                 << " solve_us=" << stats.solve_time_microseconds << '\n';
     }
     return annotation_failures == 0 ? 0 : 3;

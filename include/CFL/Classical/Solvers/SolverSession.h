@@ -47,6 +47,10 @@ struct ReachabilityStats {
   std::size_t peak_worklist_size = 0;
   std::size_t added_edges = 0;
   std::uint64_t solve_time_microseconds = 0;
+  /// Optional client-side timings; zero for graph-only solver sessions.
+  std::uint64_t frontend_time_microseconds = 0;
+  std::uint64_t client_initialization_microseconds = 0;
+  std::uint64_t client_discovery_microseconds = 0;
   std::size_t transitive_arc_insertions = 0;
   std::size_t transitive_propagated_pairs = 0;
   std::size_t transitive_duplicate_pairs = 0;

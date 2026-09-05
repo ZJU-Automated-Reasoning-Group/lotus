@@ -175,6 +175,16 @@ if(TARGET lotus-cfl-alias)
         set_tests_properties(
             classical_cfl_alias_${specialized_alias_engine} PROPERTIES
             PASS_REGULAR_EXPRESSION "annotation=pass")
+        add_test(NAME classical_cfl_alias_${specialized_alias_engine}_pag
+            COMMAND $<TARGET_FILE:lotus-cfl-alias>
+                --engine ${specialized_alias_engine}
+                --encoding pag
+                --check-annotations
+                --json-stats
+                ${CMAKE_SOURCE_DIR}/tests/regress/Alias/PTA/funptr-simple.ll)
+        set_tests_properties(
+            classical_cfl_alias_${specialized_alias_engine}_pag PROPERTIES
+            PASS_REGULAR_EXPRESSION "annotation=pass")
     endforeach()
 
     set(classical_alias_annotation_cases

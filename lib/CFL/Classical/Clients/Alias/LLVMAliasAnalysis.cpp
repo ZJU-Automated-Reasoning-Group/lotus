@@ -8,11 +8,14 @@
 #include "CFL/Classical/Clients/Alias/AserConstraintAdapter.h"
 
 #include <algorithm>
+#include <chrono>
 #include <limits>
+#include <numeric>
 #include <set>
 #include <stdexcept>
 #include <unordered_map>
 
+#include <llvm/ADT/MapVector.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/DerivedTypes.h>
@@ -38,24 +41,43 @@ public:
 struct LLVMGepOffsetResolver {
   const llvm::DataLayout *layout = nullptr;
 
-  std::optional<std::uint32_t>
+  AserGepResolution
   operator()(const aser::CGNodeBase<aser::NoCtx> &,
              const aser::CGNodeBase<aser::NoCtx> &target) const {
     const auto *pointer = llvm::dyn_cast<aser::CGPtrNode<aser::NoCtx>>(&target);
     if (!pointer || pointer->isAnonNode() || !layout) {
-      return std::nullopt;
+      return {true, 0, 1};
     }
     const auto *gep = llvm::dyn_cast<llvm::GetElementPtrInst>(
         pointer->getPointer()->getValue());
     if (!gep) {
-      return std::nullopt;
+      return {true, 0, 1};
     }
-    llvm::APInt offset(layout->getIndexTypeSizeInBits(gep->getType()), 0);
-    if (!gep->accumulateConstantOffset(*layout, offset) ||
-        offset.isNegative() || offset.getActiveBits() > 32) {
-      return std::nullopt;
+    const unsigned bit_width = layout->getIndexTypeSizeInBits(gep->getType());
+    llvm::MapVector<llvm::Value *, llvm::APInt> variables;
+    llvm::APInt constant(bit_width, 0);
+    if (!gep->collectOffset(*layout, bit_width, variables, constant) ||
+        constant.isNegative() || constant.getActiveBits() > 32) {
+      return {true, 0, 1};
     }
-    return static_cast<std::uint32_t>(offset.getZExtValue());
+    const std::uint32_t constant_offset =
+        static_cast<std::uint32_t>(constant.getZExtValue());
+    if (variables.empty()) {
+      return {false, constant_offset, std::nullopt};
+    }
+
+    std::uint32_t modulus = 0;
+    for (const auto &[_, coefficient] : variables) {
+      if (coefficient.isNegative() || coefficient.getActiveBits() > 32) {
+        return {true, 0, 1};
+      }
+      modulus = std::gcd(
+          modulus, static_cast<std::uint32_t>(coefficient.getZExtValue()));
+    }
+    if (modulus == 0) {
+      return {true, 0, 1};
+    }
+    return {true, constant_offset % modulus, modulus};
   }
 };
 
@@ -74,30 +96,79 @@ public:
     }
     analyzed_ = true;
     module_ = &module;
+    const auto frontend_start = std::chrono::steady_clock::now();
     builder_ = std::make_unique<ConstraintBuilder>();
     builder_->analyze(&module, options_.entry);
+    frontend_time_microseconds_ =
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now() - frontend_start)
+            .count();
 
+    const auto initialization_start = std::chrono::steady_clock::now();
     auto *graph = builder_->getConsGraph();
     LLVMGepOffsetResolver resolver{&module.getDataLayout()};
     client_ = std::make_unique<AliasClient>(
         makeAliasClient(*graph, resolver, options_.encoding));
     synchronizer_ = std::make_unique<Synchronizer>(*graph, *client_, resolver);
     buildValueIndex();
+    identifyUnknownValues();
     addSupplementalConstraints();
+    client_initialization_microseconds_ =
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now() - initialization_start)
+            .count();
 
     auto discover_constraints = [&](AliasClient &) {
+      const auto discovery_start = std::chrono::steady_clock::now();
+      const bool unknown_changed = refineUnknownValues();
       std::vector<aser::NodeID> function_pointers;
       for (auto *node : *graph) {
         if (node->isFunctionPtr()) {
           function_pointers.push_back(node->getNodeID());
         }
       }
+      std::vector<std::size_t> mapped_function_pointers;
+      mapped_function_pointers.reserve(function_pointers.size());
+      for (aser::NodeID pointer : function_pointers) {
+        mapped_function_pointers.push_back(synchronizer_->mappedNode(pointer));
+      }
+      std::vector<std::pair<std::size_t, std::size_t>> function_addresses;
+      for (const auto &[object, pointer] :
+           client_->graph().edgesForLabel("addr")) {
+        const auto source = synchronizer_->sourceNode(object);
+        if (!source || *source >= graph->getNodeNum()) {
+          continue;
+        }
+        const auto *object_node = llvm::dyn_cast<ObjectNode>((*graph)[*source]);
+        if (object_node &&
+            llvm::isa<llvm::Function>(object_node->getObject()->getValue())) {
+          function_addresses.emplace_back(object, pointer);
+        }
+      }
+      const auto address_objects = client_->matchingAddressTakenObjects(
+          mapped_function_pointers, function_addresses);
       const bool calls_changed =
           builder_->getLangModelForClients()->resolveFunctionPointers(
               function_pointers, [&](aser::NodeID pointer) {
                 std::vector<aser::NodeID> result;
-                for (std::size_t mapped :
-                     client_->pointsTo(synchronizer_->mappedNode(pointer))) {
+                const auto *pointer_node =
+                    llvm::dyn_cast<aser::CGPtrNode<aser::NoCtx>>(
+                        (*graph)[pointer]);
+                if (pointer_node && !pointer_node->isAnonNode() &&
+                    isUnknownValue(pointer_node->getPointer()->getValue())) {
+                  for (const auto &[object, _] : function_addresses) {
+                    if (const auto source = synchronizer_->sourceNode(object)) {
+                      result.push_back(*source);
+                    }
+                  }
+                  return result;
+                }
+                const auto targets =
+                    address_objects.find(synchronizer_->mappedNode(pointer));
+                if (targets == address_objects.end()) {
+                  return result;
+                }
+                for (std::size_t mapped : targets->second) {
                   if (auto source = synchronizer_->sourceNode(mapped)) {
                     result.push_back(*source);
                   }
@@ -105,7 +176,16 @@ public:
                 return result;
               });
       const bool constraints_changed = synchronizer_->synchronize();
-      return calls_changed || constraints_changed;
+      if (constraints_changed) {
+        buildValueIndex();
+      }
+      const bool supplemental_changed = addSupplementalConstraints();
+      client_discovery_microseconds_ +=
+          std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::steady_clock::now() - discovery_start)
+              .count();
+      return unknown_changed || calls_changed || constraints_changed ||
+             supplemental_changed;
     };
     if (options_.specialized_backend) {
       statistics_ = client_->solveToFixedPoint(
@@ -116,6 +196,10 @@ public:
           client_->solveToFixedPoint(options_.backend, discover_constraints,
                                      options_.max_callgraph_rounds);
     }
+    statistics_.frontend_time_microseconds = frontend_time_microseconds_;
+    statistics_.client_initialization_microseconds =
+        client_initialization_microseconds_;
+    statistics_.client_discovery_microseconds = client_discovery_microseconds_;
     buildValueIndex();
     return statistics_;
   }
@@ -137,6 +221,9 @@ public:
   }
 
   bool mayAlias(const llvm::Value *lhs, const llvm::Value *rhs) const {
+    if (isUnknownValue(lhs) || isUnknownValue(rhs)) {
+      return true;
+    }
     const auto lhs_node = nodeForValue(lhs);
     const auto rhs_node = nodeForValue(rhs);
     if (!lhs_node || !rhs_node) {
@@ -152,8 +239,17 @@ public:
     }
     std::set<const llvm::Value *> values;
     auto *graph = builder_->getConsGraph();
+    if (isUnknownValue(pointer)) {
+      for (auto *candidate : *graph) {
+        if (const auto *object = llvm::dyn_cast<ObjectNode>(candidate)) {
+          values.insert(object->getObject()->getValue());
+        }
+      }
+      return {values.begin(), values.end()};
+    }
     for (std::size_t mapped : client_->pointsTo(*node)) {
-      const auto source = synchronizer_->sourceNode(mapped);
+      const auto base = client_->baseObject(mapped);
+      const auto source = synchronizer_->sourceNode(base.value_or(mapped));
       if (!source || *source >= graph->getNodeNum()) {
         continue;
       }
@@ -209,8 +305,135 @@ private:
     return std::nullopt;
   }
 
-  void addSupplementalConstraints() {
+  bool isUnknownValue(const llvm::Value *value) const {
+    if (!value) {
+      return false;
+    }
+    if (unknown_values_.count(value) != 0) {
+      return true;
+    }
+    return value->getType()->isPointerTy() &&
+           unknown_values_.count(value->stripPointerCasts()) != 0;
+  }
+
+  bool identifyUnknownValues() {
+    bool any_changed = false;
+    bool changed = true;
+    while (changed) {
+      changed = false;
+      for (llvm::Function &function : *module_) {
+        for (llvm::Instruction &instruction : llvm::instructions(function)) {
+          if (auto *store = llvm::dyn_cast<llvm::StoreInst>(&instruction)) {
+            if (store->getValueOperand()->getType()->isPointerTy() &&
+                isUnknownValue(store->getValueOperand())) {
+              const bool inserted =
+                  unknown_memory_
+                      .insert(store->getPointerOperand()->stripPointerCasts())
+                      .second;
+              changed = inserted || changed;
+              any_changed = inserted || any_changed;
+            }
+          }
+          if (auto *set = llvm::dyn_cast<llvm::MemSetInst>(&instruction)) {
+            const bool inserted =
+                unknown_memory_.insert(set->getDest()->stripPointerCasts())
+                    .second;
+            changed = inserted || changed;
+            any_changed = inserted || any_changed;
+          }
+          if (auto *rmw = llvm::dyn_cast<llvm::AtomicRMWInst>(&instruction)) {
+            if (rmw->getValOperand()->getType()->isPointerTy()) {
+              const bool inserted =
+                  unknown_memory_
+                      .insert(rmw->getPointerOperand()->stripPointerCasts())
+                      .second;
+              changed = inserted || changed;
+              any_changed = inserted || any_changed;
+            }
+          }
+          if (auto *exchange =
+                  llvm::dyn_cast<llvm::AtomicCmpXchgInst>(&instruction)) {
+            if (exchange->getNewValOperand()->getType()->isPointerTy()) {
+              const bool inserted =
+                  unknown_memory_
+                      .insert(
+                          exchange->getPointerOperand()->stripPointerCasts())
+                      .second;
+              changed = inserted || changed;
+              any_changed = inserted || any_changed;
+            }
+          }
+          if (auto *transfer =
+                  llvm::dyn_cast<llvm::MemTransferInst>(&instruction)) {
+            if (unknown_memory_.count(
+                    transfer->getSource()->stripPointerCasts()) != 0) {
+              const bool inserted =
+                  unknown_memory_
+                      .insert(transfer->getDest()->stripPointerCasts())
+                      .second;
+              changed = inserted || changed;
+              any_changed = inserted || any_changed;
+            }
+          }
+
+          if (!instruction.getType()->isPointerTy()) {
+            continue;
+          }
+          bool is_unknown =
+              llvm::isa<llvm::ExtractValueInst, llvm::IntToPtrInst,
+                        llvm::AtomicRMWInst, llvm::VAArgInst,
+                        llvm::ExtractElementInst>(&instruction);
+          if (const auto *load = llvm::dyn_cast<llvm::LoadInst>(&instruction)) {
+            is_unknown =
+                is_unknown ||
+                unknown_memory_.count(
+                    load->getPointerOperand()->stripPointerCasts()) != 0;
+          }
+          for (const llvm::Use &operand : instruction.operands()) {
+            if (operand->getType()->isPointerTy() &&
+                isUnknownValue(operand.get())) {
+              is_unknown = true;
+              break;
+            }
+          }
+          if (is_unknown) {
+            const bool inserted = unknown_values_.insert(&instruction).second;
+            changed = inserted || changed;
+            any_changed = inserted || any_changed;
+          }
+        }
+      }
+    }
+    return any_changed;
+  }
+
+  bool refineUnknownValues() {
+    bool changed = false;
+    for (llvm::Function &function : *module_) {
+      for (llvm::Instruction &instruction : llvm::instructions(function)) {
+        auto *load = llvm::dyn_cast<llvm::LoadInst>(&instruction);
+        if (!load || !load->getType()->isPointerTy() || isUnknownValue(load)) {
+          continue;
+        }
+        for (const llvm::Value *unknown_memory : unknown_memory_) {
+          const auto source = mappedValue(load->getPointerOperand());
+          const auto target = mappedValue(unknown_memory);
+          if (!source || !target || client_->mayValueAlias(*source, *target)) {
+            changed = unknown_values_.insert(load).second || changed;
+            break;
+          }
+        }
+      }
+    }
+    return identifyUnknownValues() || changed;
+  }
+
+  bool addSupplementalConstraints() {
+    bool changed = false;
     for (llvm::GlobalVariable &global : module_->globals()) {
+      if (supplemented_values_.count(&global) != 0) {
+        continue;
+      }
       if (!global.hasInitializer() ||
           !global.getInitializer()->getType()->isPointerTy() ||
           global.getInitializer()->isNullValue()) {
@@ -219,15 +442,20 @@ private:
       const auto source = mappedValue(global.getInitializer());
       const auto target = mappedValue(&global);
       if (source && target) {
-        client_->addConstraint(*source, *target,
-                               AliasConstraintEdgeKind::Store);
+        changed = client_->addConstraint(*source, *target,
+                                         AliasConstraintEdgeKind::Store) ||
+                  changed;
+        supplemented_values_.insert(&global);
       }
     }
 
     for (llvm::Function &function : *module_) {
       for (llvm::Instruction &instruction : llvm::instructions(function)) {
-        const auto *copy = llvm::dyn_cast<llvm::MemCpyInst>(&instruction);
+        const auto *copy = llvm::dyn_cast<llvm::MemTransferInst>(&instruction);
         if (!copy) {
+          continue;
+        }
+        if (supplemented_values_.count(&instruction) != 0) {
           continue;
         }
         const auto source = mappedValue(copy->getSource());
@@ -235,14 +463,19 @@ private:
         if (!source || !target) {
           continue;
         }
-        const std::size_t temporary = client_->addNode(
-            "memcpy_" + std::to_string(client_->graph().vertexCount()));
-        client_->addConstraint(*source, temporary,
-                               AliasConstraintEdgeKind::Load);
-        client_->addConstraint(temporary, *target,
-                               AliasConstraintEdgeKind::Store);
+        std::optional<std::uint32_t> size;
+        if (const auto *constant =
+                llvm::dyn_cast<llvm::ConstantInt>(copy->getLength())) {
+          if (!constant->isNegative() &&
+              constant->getValue().getActiveBits() <= 32) {
+            size = static_cast<std::uint32_t>(constant->getZExtValue());
+          }
+        }
+        changed = client_->addMemoryTransfer(*source, *target, size) || changed;
+        supplemented_values_.insert(&instruction);
       }
     }
+    return changed;
   }
 
   LLVMAliasOptions options_;
@@ -252,7 +485,13 @@ private:
   std::unique_ptr<AliasClient> client_;
   std::unique_ptr<Synchronizer> synchronizer_;
   std::unordered_map<const llvm::Value *, std::size_t> value_nodes_;
+  std::set<const llvm::Value *> unknown_values_;
+  std::set<const llvm::Value *> unknown_memory_;
+  std::set<const llvm::Value *> supplemented_values_;
   ReachabilityStats statistics_;
+  std::uint64_t frontend_time_microseconds_ = 0;
+  std::uint64_t client_initialization_microseconds_ = 0;
+  std::uint64_t client_discovery_microseconds_ = 0;
 };
 
 LLVMCFLAliasAnalysis::LLVMCFLAliasAnalysis(LLVMAliasOptions options)

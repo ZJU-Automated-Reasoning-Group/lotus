@@ -1,0 +1,1230 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Developer Guide &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="API Reference" href="api_reference.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">API Reference</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Developer Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#development-environment-setup">Development Environment Setup</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#building-from-source">Building from Source</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ide-configuration">IDE Configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#code-organization">Code Organization</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#directory-structure">Directory Structure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#coding-standards">Coding Standards</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#adding-a-new-alias-analysis">Adding a New Alias Analysis</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#step-1-create-directory-structure">Step 1: Create Directory Structure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-2-define-header">Step 2: Define Header</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-3-implement-analysis">Step 3: Implement Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-4-add-cmakelists-txt">Step 4: Add CMakeLists.txt</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-5-create-command-line-tool">Step 5: Create Command-Line Tool</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-6-test-your-analysis">Step 6: Test Your Analysis</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#adding-a-new-bug-checker">Adding a New Bug Checker</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#step-1-define-checker-interface">Step 1: Define Checker Interface</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-2-implement-checker">Step 2: Implement Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-3-integrate-with-bugreportmgr">Step 3: Integrate with BugReportMgr</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#adding-a-new-abstract-domain">Adding a New Abstract Domain</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#step-1-define-domain-interface">Step 1: Define Domain Interface</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-2-register-domain">Step 2: Register Domain</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-3-add-command-line-option">Step 3: Add Command-Line Option</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#adding-a-data-flow-analysis">Adding a Data Flow Analysis</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#step-1-define-analysis-problem">Step 1: Define Analysis Problem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-2-implement-flow-functions">Step 2: Implement Flow Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-3-create-solver-and-run">Step 3: Create Solver and Run</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#testing-and-debugging">Testing and Debugging</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#writing-unit-tests">Writing Unit Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#debugging-tips">Debugging Tips</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#performance-optimization">Performance Optimization</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#profiling">Profiling</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#optimization-strategies">Optimization Strategies</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#contributing-to-lotus">Contributing to Lotus</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#contribution-workflow">Contribution Workflow</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#code-review-process">Code Review Process</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#documentation-updates">Documentation Updates</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#common-pitfalls">Common Pitfalls</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#memory-management">Memory Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pass-dependencies">Pass Dependencies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fixpoint-convergence">Fixpoint Convergence</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#resources">Resources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#community">Community</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Developer Guide</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/developer/developer_guide.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="developer-guide">
+<h1>Developer Guide<a class="headerlink" href="#developer-guide" title="Link to this heading"></a></h1>
+<p>This guide explains how to extend Lotus with custom analyses, checkers, and tools.</p>
+<section id="development-environment-setup">
+<h2>Development Environment Setup<a class="headerlink" href="#development-environment-setup" title="Link to this heading"></a></h2>
+<section id="prerequisites">
+<h3>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>LLVM 14.0.0 development libraries</p></li>
+<li><p>Z3 4.11 with headers</p></li>
+<li><p>CMake 3.10+</p></li>
+<li><p>C++17 compatible compiler (GCC 7+, Clang 5+)</p></li>
+<li><p>Git for version control</p></li>
+</ul>
+</section>
+<section id="building-from-source">
+<h3>Building from Source<a class="headerlink" href="#building-from-source" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/ZJU-PL/lotus
+<span class="nb">cd</span><span class="w"> </span>lotus
+mkdir<span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>build
+cmake<span class="w"> </span>../<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Debug
+make<span class="w"> </span>-j<span class="k">$(</span>nproc<span class="k">)</span>
+</pre></div>
+</div>
+<p>Debug build enables assertions and debugging symbols.</p>
+</section>
+<section id="ide-configuration">
+<h3>IDE Configuration<a class="headerlink" href="#ide-configuration" title="Link to this heading"></a></h3>
+<p><strong>VSCode</strong>: Create <code class="docutils literal notranslate"><span class="pre">.vscode/c_cpp_properties.json</span></code>:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"configurations"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span>
+<span class="w">        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Linux"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"includePath"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="s2">"${workspaceFolder}/include"</span><span class="p">,</span>
+<span class="w">            </span><span class="s2">"${workspaceFolder}/build/include"</span><span class="p">,</span>
+<span class="w">            </span><span class="s2">"/path/to/llvm/include"</span><span class="p">,</span>
+<span class="w">            </span><span class="s2">"/usr/include/z3"</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">"compileCommands"</span><span class="p">:</span><span class="w"> </span><span class="s2">"${workspaceFolder}/build/compile_commands.json"</span>
+<span class="w">    </span><span class="p">}]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>CLion</strong>: Open the project and point to <code class="docutils literal notranslate"><span class="pre">build/compile_commands.json</span></code>.</p>
+</section>
+</section>
+<section id="code-organization">
+<h2>Code Organization<a class="headerlink" href="#code-organization" title="Link to this heading"></a></h2>
+<section id="directory-structure">
+<h3>Directory Structure<a class="headerlink" href="#directory-structure" title="Link to this heading"></a></h3>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>lotus/
+├── include/        # Public headers
+│   ├── Alias/      # Alias analysis interfaces
+│   ├── Analysis/   # Analysis utilities
+│   ├── Apps/       # Application-level interfaces
+│   ├── CFL/        # CFL reachability
+│   ├── Dataflow/   # Data flow frameworks
+│   ├── IR/         # Intermediate representations
+│   ├── Solvers/    # Constraint solvers
+│   ├── SymbolicExecution/ # Symbolic execution
+│   ├── Transform/  # LLVM transformations
+│   └── Utils/      # Utilities
+├── lib/            # Implementation files
+│   ├── Alias/      # Alias analysis implementations
+│   ├── Analysis/   # Analysis implementations
+│   ├── Apps/       # Applications (Clam, checkers)
+│   ├── CFL/        # CFL implementations
+│   ├── Dataflow/   # Data flow implementations
+│   ├── IR/         # IR implementations
+│   ├── Solvers/    # Solver implementations
+│   ├── SymbolicExecution/ # Symbolic execution
+│   ├── Transform/  # Transformation passes
+│   └── Utils/      # Utility implementations
+├── tools/          # Command-line tools
+│   ├── alias/      # Alias analysis tools
+│   ├── checker/    # Bug checking tools
+│   ├── cfl/        # CFL tools
+│   └── verifier/   # Verification tools
+├── tests/          # Test cases
+├── benchmarks/     # Benchmark programs
+└── docs/           # Documentation
+</pre></div>
+</div>
+</section>
+<section id="coding-standards">
+<h3>Coding Standards<a class="headerlink" href="#coding-standards" title="Link to this heading"></a></h3>
+<p><strong>Naming Conventions</strong>:</p>
+<ul class="simple">
+<li><p>Classes: <code class="docutils literal notranslate"><span class="pre">CamelCase</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">PointerAnalysis</span></code>)</p></li>
+<li><p>Functions: <code class="docutils literal notranslate"><span class="pre">camelCase</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">getPointsToSet</span></code>)</p></li>
+<li><p>Variables: <code class="docutils literal notranslate"><span class="pre">snake_case</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">points_to_set</span></code>)</p></li>
+<li><p>Constants: <code class="docutils literal notranslate"><span class="pre">UPPER_CASE</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">MAX_ITERATIONS</span></code>)</p></li>
+<li><p>Member variables: prefix with <code class="docutils literal notranslate"><span class="pre">m_</span></code> or <code class="docutils literal notranslate"><span class="pre">_</span></code></p></li>
+</ul>
+<p><strong>Code Style</strong>:</p>
+<ul class="simple">
+<li><p>2-space indentation</p></li>
+<li><p>100 character line limit</p></li>
+<li><p>Use LLVM coding standards where applicable</p></li>
+<li><p>Add Doxygen comments for public APIs</p></li>
+</ul>
+</section>
+</section>
+<section id="adding-a-new-alias-analysis">
+<h2>Adding a New Alias Analysis<a class="headerlink" href="#adding-a-new-alias-analysis" title="Link to this heading"></a></h2>
+<section id="step-1-create-directory-structure">
+<h3>Step 1: Create Directory Structure<a class="headerlink" href="#step-1-create-directory-structure" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>lotus
+mkdir<span class="w"> </span>-p<span class="w"> </span>include/Alias/MyAA
+mkdir<span class="w"> </span>-p<span class="w"> </span>lib/Alias/MyAA
+</pre></div>
+</div>
+</section>
+<section id="step-2-define-header">
+<h3>Step 2: Define Header<a class="headerlink" href="#step-2-define-header" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">include/Alias/MyAA/MyAliasAnalysis.h</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#pragma once</span>
+
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/Pass.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/IR/Module.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/Analysis/AliasAnalysis.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;set&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;map&gt;</span>
+
+<span class="k">namespace</span><span class="w"> </span><span class="nn">myaa</span><span class="w"> </span><span class="p">{</span>
+
+<span class="cm">/**</span>
+<span class="cm"> * @brief My custom alias analysis</span>
+<span class="cm"> *</span>
+<span class="cm"> * This analysis computes pointer alias information using [describe algorithm].</span>
+<span class="cm"> */</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MyAliasAnalysis</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">ModulePass</span><span class="p">,</span>
+<span class="w">                       </span><span class="k">public</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">AliasAnalysis</span><span class="w"> </span><span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+<span class="w">    </span><span class="k">static</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="n">ID</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">MyAliasAnalysis</span><span class="p">()</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ModulePass</span><span class="p">(</span><span class="n">ID</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+
+<span class="w">    </span><span class="c1">/// Main analysis entry point</span>
+<span class="w">    </span><span class="kt">bool</span><span class="w"> </span><span class="nf">runOnModule</span><span class="p">(</span><span class="n">llvm</span><span class="o">::</span><span class="n">Module</span><span class="w"> </span><span class="o">&amp;</span><span class="n">M</span><span class="p">)</span><span class="w"> </span><span class="k">override</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">/// Query if two values may alias</span>
+<span class="w">    </span><span class="n">llvm</span><span class="o">::</span><span class="n">AliasResult</span><span class="w"> </span><span class="nf">alias</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">Value</span><span class="w"> </span><span class="o">*</span><span class="n">V1</span><span class="p">,</span>
+<span class="w">                           </span><span class="k">const</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">Value</span><span class="w"> </span><span class="o">*</span><span class="n">V2</span><span class="p">)</span><span class="w"> </span><span class="k">override</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">/// Get analysis usage</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">getAnalysisUsage</span><span class="p">(</span><span class="n">llvm</span><span class="o">::</span><span class="n">AnalysisUsage</span><span class="w"> </span><span class="o">&amp;</span><span class="n">AU</span><span class="p">)</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">override</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">/// Get pass name</span>
+<span class="w">    </span><span class="n">llvm</span><span class="o">::</span><span class="n">StringRef</span><span class="w"> </span><span class="nf">getPassName</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="s">"My Alias Analysis"</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="k">private</span><span class="o">:</span>
+<span class="w">    </span><span class="c1">/// Points-to sets: pointer -&gt; objects it may point to</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="k">const</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">Value</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">set</span><span class="o">&lt;</span><span class="k">const</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">Value</span><span class="o">*&gt;&gt;</span><span class="w"> </span><span class="n">points_to_</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">/// Compute points-to sets</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">computePointsTo</span><span class="p">(</span><span class="n">llvm</span><span class="o">::</span><span class="n">Module</span><span class="w"> </span><span class="o">&amp;</span><span class="n">M</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">/// Process a single instruction</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">processInstruction</span><span class="p">(</span><span class="n">llvm</span><span class="o">::</span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">I</span><span class="p">);</span>
+<span class="p">};</span>
+
+<span class="p">}</span><span class="w"> </span><span class="c1">// namespace myaa</span>
+</pre></div>
+</div>
+</section>
+<section id="step-3-implement-analysis">
+<h3>Step 3: Implement Analysis<a class="headerlink" href="#step-3-implement-analysis" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">lib/Alias/MyAA/MyAliasAnalysis.cpp</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"Alias/MyAA/MyAliasAnalysis.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/IR/Instructions.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/Support/raw_ostream.h"</span>
+
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">llvm</span><span class="p">;</span>
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">myaa</span><span class="p">;</span>
+
+<span class="kt">char</span><span class="w"> </span><span class="n">MyAliasAnalysis</span><span class="o">::</span><span class="n">ID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+
+<span class="kt">bool</span><span class="w"> </span><span class="nf">MyAliasAnalysis::runOnModule</span><span class="p">(</span><span class="n">Module</span><span class="w"> </span><span class="o">&amp;</span><span class="n">M</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Initialize points-to sets</span>
+<span class="w">    </span><span class="n">points_to_</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
+
+<span class="w">    </span><span class="c1">// Compute points-to information</span>
+<span class="w">    </span><span class="n">computePointsTo</span><span class="p">(</span><span class="n">M</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span><span class="w"> </span><span class="c1">// Did not modify the module</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">MyAliasAnalysis::computePointsTo</span><span class="p">(</span><span class="n">Module</span><span class="w"> </span><span class="o">&amp;</span><span class="n">M</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">F</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">M</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">F</span><span class="p">.</span><span class="n">isDeclaration</span><span class="p">())</span><span class="w"> </span><span class="k">continue</span><span class="p">;</span>
+
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">BB</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">F</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">I</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">BB</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">processInstruction</span><span class="p">(</span><span class="o">&amp;</span><span class="n">I</span><span class="p">);</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">MyAliasAnalysis::processInstruction</span><span class="p">(</span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">I</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Handle different instruction types</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">*</span><span class="n">alloca</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dyn_cast</span><span class="o">&lt;</span><span class="n">AllocaInst</span><span class="o">&gt;</span><span class="p">(</span><span class="n">I</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Alloca creates a new object</span>
+<span class="w">        </span><span class="n">points_to_</span><span class="p">[</span><span class="n">alloca</span><span class="p">].</span><span class="n">insert</span><span class="p">(</span><span class="n">alloca</span><span class="p">);</span>
+
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">*</span><span class="n">load</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dyn_cast</span><span class="o">&lt;</span><span class="n">LoadInst</span><span class="o">&gt;</span><span class="p">(</span><span class="n">I</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Load: propagate points-to from pointer</span>
+<span class="w">        </span><span class="n">Value</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">load</span><span class="o">-&gt;</span><span class="n">getPointerOperand</span><span class="p">();</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">points_to_</span><span class="p">.</span><span class="n">count</span><span class="p">(</span><span class="n">ptr</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">*</span><span class="n">obj</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">points_to_</span><span class="p">[</span><span class="n">ptr</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="c1">// load result points to objects pointed by ptr</span>
+<span class="w">                </span><span class="n">points_to_</span><span class="p">[</span><span class="n">load</span><span class="p">].</span><span class="n">insert</span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">*</span><span class="n">store</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dyn_cast</span><span class="o">&lt;</span><span class="n">StoreInst</span><span class="o">&gt;</span><span class="p">(</span><span class="n">I</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Store: update points-to at target location</span>
+<span class="w">        </span><span class="n">Value</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">store</span><span class="o">-&gt;</span><span class="n">getPointerOperand</span><span class="p">();</span>
+<span class="w">        </span><span class="n">Value</span><span class="w"> </span><span class="o">*</span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">store</span><span class="o">-&gt;</span><span class="n">getValueOperand</span><span class="p">();</span>
+<span class="w">        </span><span class="c1">// Handle store logic...</span>
+
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">*</span><span class="n">gep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dyn_cast</span><span class="o">&lt;</span><span class="n">GetElementPtrInst</span><span class="o">&gt;</span><span class="p">(</span><span class="n">I</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// GEP: field access</span>
+<span class="w">        </span><span class="n">Value</span><span class="w"> </span><span class="o">*</span><span class="n">base</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">gep</span><span class="o">-&gt;</span><span class="n">getPointerOperand</span><span class="p">();</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">points_to_</span><span class="p">.</span><span class="n">count</span><span class="p">(</span><span class="n">base</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">points_to_</span><span class="p">[</span><span class="n">gep</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">points_to_</span><span class="p">[</span><span class="n">base</span><span class="p">];</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="c1">// Add more cases as needed...</span>
+<span class="p">}</span>
+
+<span class="n">AliasResult</span><span class="w"> </span><span class="nf">MyAliasAnalysis::alias</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">Value</span><span class="w"> </span><span class="o">*</span><span class="n">V1</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">Value</span><span class="w"> </span><span class="o">*</span><span class="n">V2</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Check if points-to sets intersect</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">points_to_</span><span class="p">.</span><span class="n">count</span><span class="p">(</span><span class="n">V1</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">!</span><span class="n">points_to_</span><span class="p">.</span><span class="n">count</span><span class="p">(</span><span class="n">V2</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">MayAlias</span><span class="p">;</span><span class="w"> </span><span class="c1">// Conservative</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">pts1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">points_to_</span><span class="p">[</span><span class="n">V1</span><span class="p">];</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">pts2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">points_to_</span><span class="p">[</span><span class="n">V2</span><span class="p">];</span>
+
+<span class="w">    </span><span class="c1">// Check for intersection</span>
+<span class="w">    </span><span class="kt">bool</span><span class="w"> </span><span class="n">hasIntersection</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">*</span><span class="n">obj</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">pts1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">pts2</span><span class="p">.</span><span class="n">count</span><span class="p">(</span><span class="n">obj</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">hasIntersection</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="w">            </span><span class="k">break</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">hasIntersection</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">NoAlias</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">pts1</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">pts2</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">MustAlias</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">MayAlias</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">MyAliasAnalysis::getAnalysisUsage</span><span class="p">(</span><span class="n">AnalysisUsage</span><span class="w"> </span><span class="o">&amp;</span><span class="n">AU</span><span class="p">)</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">AU</span><span class="p">.</span><span class="n">setPreservesAll</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="c1">// Register pass</span>
+<span class="k">static</span><span class="w"> </span><span class="n">RegisterPass</span><span class="o">&lt;</span><span class="n">MyAliasAnalysis</span><span class="o">&gt;</span><span class="w"> </span><span class="n">X</span><span class="p">(</span><span class="s">"my-aa"</span><span class="p">,</span><span class="w"> </span><span class="s">"My Alias Analysis"</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+<section id="step-4-add-cmakelists-txt">
+<h3>Step 4: Add CMakeLists.txt<a class="headerlink" href="#step-4-add-cmakelists-txt" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">lib/Alias/MyAA/CMakeLists.txt</span></code>:</p>
+<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">set</span><span class="p">(</span><span class="s">SOURCES</span>
+<span class="w">    </span><span class="s">MyAliasAnalysis.cpp</span>
+<span class="p">)</span>
+
+<span class="nb">add_library</span><span class="p">(</span><span class="s">LotusMyAA</span><span class="w"> </span><span class="s">STATIC</span><span class="w"> </span><span class="o">${</span><span class="nv">SOURCES</span><span class="o">}</span><span class="p">)</span>
+
+<span class="nb">target_include_directories</span><span class="p">(</span><span class="s">LotusMyAA</span><span class="w"> </span><span class="s">PUBLIC</span>
+<span class="w">    </span><span class="o">${</span><span class="nv">CMAKE_SOURCE_DIR</span><span class="o">}</span><span class="s">/include</span>
+<span class="w">    </span><span class="o">${</span><span class="nv">LLVM_INCLUDE_DIRS</span><span class="o">}</span>
+<span class="p">)</span>
+
+<span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">LotusMyAA</span>
+<span class="w">    </span><span class="s">LLVMCore</span>
+<span class="w">    </span><span class="s">LLVMSupport</span>
+<span class="w">    </span><span class="s">LLVMAnalysis</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Update <code class="docutils literal notranslate"><span class="pre">lib/Alias/CMakeLists.txt</span></code>:</p>
+<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">add_subdirectory</span><span class="p">(</span><span class="s">MyAA</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="step-5-create-command-line-tool">
+<h3>Step 5: Create Command-Line Tool<a class="headerlink" href="#step-5-create-command-line-tool" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">tools/alias/my-aa.cpp</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/IR/LLVMContext.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/IR/Module.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/IRReader/IRReader.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/Support/SourceMgr.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/IR/LegacyPassManager.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/Support/CommandLine.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"Alias/MyAA/MyAliasAnalysis.h"</span>
+
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">llvm</span><span class="p">;</span>
+
+<span class="n">cl</span><span class="o">::</span><span class="n">opt</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="w"> </span><span class="n">InputFilename</span><span class="p">(</span><span class="n">cl</span><span class="o">::</span><span class="n">Positional</span><span class="p">,</span>
+<span class="w">                                  </span><span class="n">cl</span><span class="o">::</span><span class="n">desc</span><span class="p">(</span><span class="s">"&lt;input bitcode&gt;"</span><span class="p">),</span>
+<span class="w">                                  </span><span class="n">cl</span><span class="o">::</span><span class="n">Required</span><span class="p">);</span>
+
+<span class="n">cl</span><span class="o">::</span><span class="n">opt</span><span class="o">&lt;</span><span class="kt">bool</span><span class="o">&gt;</span><span class="w"> </span><span class="n">Verbose</span><span class="p">(</span><span class="s">"verbose"</span><span class="p">,</span>
+<span class="w">                     </span><span class="n">cl</span><span class="o">::</span><span class="n">desc</span><span class="p">(</span><span class="s">"Print detailed output"</span><span class="p">),</span>
+<span class="w">                     </span><span class="n">cl</span><span class="o">::</span><span class="n">init</span><span class="p">(</span><span class="nb">false</span><span class="p">));</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">argc</span><span class="p">,</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">**</span><span class="n">argv</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">cl</span><span class="o">::</span><span class="n">ParseCommandLineOptions</span><span class="p">(</span><span class="n">argc</span><span class="p">,</span><span class="w"> </span><span class="n">argv</span><span class="p">,</span><span class="w"> </span><span class="s">"My Alias Analysis Tool</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">LLVMContext</span><span class="w"> </span><span class="n">context</span><span class="p">;</span>
+<span class="w">    </span><span class="n">SMDiagnostic</span><span class="w"> </span><span class="n">error</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Load module</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">Module</span><span class="o">&gt;</span><span class="w"> </span><span class="k">module</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parseIRFile</span><span class="p">(</span><span class="n">InputFilename</span><span class="p">,</span><span class="w"> </span><span class="n">error</span><span class="p">,</span><span class="w"> </span><span class="n">context</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="k">module</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">error</span><span class="p">.</span><span class="n">print</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">errs</span><span class="p">());</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Run analysis</span>
+<span class="w">    </span><span class="n">legacy</span><span class="o">::</span><span class="n">PassManager</span><span class="w"> </span><span class="n">PM</span><span class="p">;</span>
+<span class="w">    </span><span class="n">PM</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">myaa</span><span class="o">::</span><span class="n">MyAliasAnalysis</span><span class="p">());</span>
+<span class="w">    </span><span class="n">PM</span><span class="p">.</span><span class="n">run</span><span class="p">(</span><span class="o">*</span><span class="k">module</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">errs</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Analysis completed successfully</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Update <code class="docutils literal notranslate"><span class="pre">tools/alias/CMakeLists.txt</span></code>:</p>
+<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">add_executable</span><span class="p">(</span><span class="s">my-aa</span><span class="w"> </span><span class="s">my-aa.cpp</span><span class="p">)</span>
+
+<span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">my-aa</span>
+<span class="w">    </span><span class="s">LotusMyAA</span>
+<span class="w">    </span><span class="o">${</span><span class="nv">LLVM_LIBS</span><span class="o">}</span>
+<span class="p">)</span>
+
+<span class="nb">install</span><span class="p">(</span><span class="s">TARGETS</span><span class="w"> </span><span class="s">my-aa</span><span class="w"> </span><span class="s">DESTINATION</span><span class="w"> </span><span class="s">bin</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="step-6-test-your-analysis">
+<h3>Step 6: Test Your Analysis<a class="headerlink" href="#step-6-test-your-analysis" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">tests/alias/test_my_aa.cpp</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">20</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">q</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">y</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// p and q should not alias</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Test:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>tests/alias/test_my_aa.cpp<span class="w"> </span>-o<span class="w"> </span>test.bc
+./build/bin/my-aa<span class="w"> </span>test.bc
+</pre></div>
+</div>
+</section>
+</section>
+<section id="adding-a-new-bug-checker">
+<h2>Adding a New Bug Checker<a class="headerlink" href="#adding-a-new-bug-checker" title="Link to this heading"></a></h2>
+<section id="step-1-define-checker-interface">
+<h3>Step 1: Define Checker Interface<a class="headerlink" href="#step-1-define-checker-interface" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">include/Checker/MyChecker.h</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#pragma once</span>
+
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/Pass.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/IR/Module.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"Checker/Framework/BugReportMgr.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;vector&gt;</span>
+
+<span class="k">namespace</span><span class="w"> </span><span class="nn">lotus</span><span class="w"> </span><span class="p">{</span>
+
+<span class="cm">/**</span>
+<span class="cm"> * @brief Checker for [describe bug type]</span>
+<span class="cm"> */</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MyChecker</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">ModulePass</span><span class="w"> </span><span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+<span class="w">    </span><span class="k">static</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="n">ID</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">MyChecker</span><span class="p">()</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">ModulePass</span><span class="p">(</span><span class="n">ID</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+
+<span class="w">    </span><span class="kt">bool</span><span class="w"> </span><span class="nf">runOnModule</span><span class="p">(</span><span class="n">llvm</span><span class="o">::</span><span class="n">Module</span><span class="w"> </span><span class="o">&amp;</span><span class="n">M</span><span class="p">)</span><span class="w"> </span><span class="k">override</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">llvm</span><span class="o">::</span><span class="n">StringRef</span><span class="w"> </span><span class="nf">getPassName</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="s">"My Bug Checker"</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="k">private</span><span class="o">:</span>
+<span class="w">    </span><span class="c1">/// Detected bugs</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">BugReport</span><span class="o">&gt;</span><span class="w"> </span><span class="n">bugs_</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">/// Check a single function</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">checkFunction</span><span class="p">(</span><span class="n">llvm</span><span class="o">::</span><span class="n">Function</span><span class="w"> </span><span class="o">&amp;</span><span class="n">F</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">/// Report a bug</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">reportBug</span><span class="p">(</span><span class="n">llvm</span><span class="o">::</span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">I</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="n">description</span><span class="p">);</span>
+<span class="p">};</span>
+
+<span class="p">}</span><span class="w"> </span><span class="c1">// namespace lotus</span>
+</pre></div>
+</div>
+</section>
+<section id="step-2-implement-checker">
+<h3>Step 2: Implement Checker<a class="headerlink" href="#step-2-implement-checker" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">lib/Checker/MyChecker.cpp</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"Checker/MyChecker.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/IR/Instructions.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/Support/raw_ostream.h"</span>
+
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">llvm</span><span class="p">;</span>
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">lotus</span><span class="p">;</span>
+
+<span class="kt">char</span><span class="w"> </span><span class="n">MyChecker</span><span class="o">::</span><span class="n">ID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+
+<span class="kt">bool</span><span class="w"> </span><span class="nf">MyChecker::runOnModule</span><span class="p">(</span><span class="n">Module</span><span class="w"> </span><span class="o">&amp;</span><span class="n">M</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">bugs_</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
+
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">F</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">M</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">F</span><span class="p">.</span><span class="n">isDeclaration</span><span class="p">())</span><span class="w"> </span><span class="k">continue</span><span class="p">;</span>
+<span class="w">        </span><span class="n">checkFunction</span><span class="p">(</span><span class="n">F</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Report all bugs</span>
+<span class="w">    </span><span class="n">errs</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Found "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">bugs_</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">" bugs</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">bug</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">bugs_</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">errs</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Bug at "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">bug</span><span class="p">.</span><span class="n">location</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">": "</span>
+<span class="w">               </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">bug</span><span class="p">.</span><span class="n">description</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">MyChecker::checkFunction</span><span class="p">(</span><span class="n">Function</span><span class="w"> </span><span class="o">&amp;</span><span class="n">F</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">BB</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">F</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">I</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">BB</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// Example: check for specific bug patterns</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">*</span><span class="n">call</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dyn_cast</span><span class="o">&lt;</span><span class="n">CallInst</span><span class="o">&gt;</span><span class="p">(</span><span class="o">&amp;</span><span class="n">I</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">Function</span><span class="w"> </span><span class="o">*</span><span class="n">callee</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">call</span><span class="o">-&gt;</span><span class="n">getCalledFunction</span><span class="p">();</span>
+<span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">callee</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">callee</span><span class="o">-&gt;</span><span class="n">getName</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">"dangerous_function"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="n">reportBug</span><span class="p">(</span><span class="n">call</span><span class="p">,</span><span class="w"> </span><span class="s">"Call to dangerous function"</span><span class="p">);</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">MyChecker::reportBug</span><span class="p">(</span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">I</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="n">description</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">BugReport</span><span class="w"> </span><span class="n">bug</span><span class="p">;</span>
+<span class="w">    </span><span class="n">bug</span><span class="p">.</span><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"MyBugType"</span><span class="p">;</span>
+<span class="w">    </span><span class="n">bug</span><span class="p">.</span><span class="n">instruction</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">I</span><span class="p">;</span>
+<span class="w">    </span><span class="n">bug</span><span class="p">.</span><span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">description</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Get source location if available</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">*</span><span class="n">DL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">I</span><span class="o">-&gt;</span><span class="n">getDebugLoc</span><span class="p">().</span><span class="n">get</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">bug</span><span class="p">.</span><span class="n">file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DL</span><span class="o">-&gt;</span><span class="n">getFilename</span><span class="p">().</span><span class="n">str</span><span class="p">();</span>
+<span class="w">        </span><span class="n">bug</span><span class="p">.</span><span class="n">line</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DL</span><span class="o">-&gt;</span><span class="n">getLine</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">bugs_</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">bug</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span><span class="w"> </span><span class="n">RegisterPass</span><span class="o">&lt;</span><span class="n">MyChecker</span><span class="o">&gt;</span><span class="w"> </span><span class="n">X</span><span class="p">(</span><span class="s">"my-checker"</span><span class="p">,</span><span class="w"> </span><span class="s">"My Bug Checker"</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+<section id="step-3-integrate-with-bugreportmgr">
+<h3>Step 3: Integrate with BugReportMgr<a class="headerlink" href="#step-3-integrate-with-bugreportmgr" title="Link to this heading"></a></h3>
+<p>For SARIF/JSON output support:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"Checker/Framework/BugReportMgr.h"</span>
+
+<span class="kt">bool</span><span class="w"> </span><span class="nf">MyChecker::runOnModule</span><span class="p">(</span><span class="n">Module</span><span class="w"> </span><span class="o">&amp;</span><span class="n">M</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// ... run checks ...</span>
+
+<span class="w">    </span><span class="c1">// Report to centralized manager</span>
+<span class="w">    </span><span class="n">BugReportMgr</span><span class="w"> </span><span class="o">&amp;</span><span class="n">mgr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">BugReportMgr</span><span class="o">::</span><span class="n">getInstance</span><span class="p">();</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">bug</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">bugs_</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">mgr</span><span class="p">.</span><span class="n">addBug</span><span class="p">(</span><span class="s">"MyChecker"</span><span class="p">,</span><span class="w"> </span><span class="n">bug</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="adding-a-new-abstract-domain">
+<h2>Adding a New Abstract Domain<a class="headerlink" href="#adding-a-new-abstract-domain" title="Link to this heading"></a></h2>
+<p>For CLAM integration, create a new CRAB domain:</p>
+<section id="step-1-define-domain-interface">
+<h3>Step 1: Define Domain Interface<a class="headerlink" href="#step-1-define-domain-interface" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">third-party/verification/clam/src/crab/domains/my_domain.hpp</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#pragma once</span>
+
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"crab/domains/abstract_domain.hpp"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;map&gt;</span>
+
+<span class="k">namespace</span><span class="w"> </span><span class="nn">crab</span><span class="w"> </span><span class="p">{</span>
+<span class="k">namespace</span><span class="w"> </span><span class="nn">domains</span><span class="w"> </span><span class="p">{</span>
+
+<span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">Number</span><span class="p">,</span><span class="w"> </span><span class="k">typename</span><span class="w"> </span><span class="nc">VariableName</span><span class="o">&gt;</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">my_domain</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">abstract_domain</span><span class="o">&lt;</span><span class="n">Number</span><span class="p">,</span><span class="w"> </span><span class="n">VariableName</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+<span class="w">    </span><span class="k">using</span><span class="w"> </span><span class="n">variable_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">VariableName</span><span class="p">;</span>
+<span class="w">    </span><span class="k">using</span><span class="w"> </span><span class="n">number_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Number</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Required lattice operations</span>
+<span class="w">    </span><span class="n">my_domain</span><span class="p">()</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">is_bottom_</span><span class="p">(</span><span class="nb">false</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+
+<span class="w">    </span><span class="k">static</span><span class="w"> </span><span class="n">my_domain</span><span class="w"> </span><span class="nf">top</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">my_domain</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">static</span><span class="w"> </span><span class="n">my_domain</span><span class="w"> </span><span class="nf">bottom</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">my_domain</span><span class="w"> </span><span class="n">d</span><span class="p">;</span>
+<span class="w">        </span><span class="n">d</span><span class="p">.</span><span class="n">is_bottom_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">d</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">bool</span><span class="w"> </span><span class="nf">is_bottom</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">is_bottom_</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="kt">bool</span><span class="w"> </span><span class="nf">is_top</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="o">!</span><span class="n">is_bottom_</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">state_</span><span class="p">.</span><span class="n">empty</span><span class="p">();</span><span class="w"> </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Join (least upper bound)</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="k">operator</span><span class="o">|=</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">my_domain</span><span class="w"> </span><span class="o">&amp;</span><span class="n">other</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">is_bottom</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="o">*</span><span class="k">this</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">other</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">other</span><span class="p">.</span><span class="n">is_bottom</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">return</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// Implement join logic</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Meet (greatest lower bound)</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="k">operator</span><span class="o">&amp;=</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">my_domain</span><span class="w"> </span><span class="o">&amp;</span><span class="n">other</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Implement meet logic</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Widening</span>
+<span class="w">    </span><span class="n">my_domain</span><span class="w"> </span><span class="k">operator</span><span class="o">||</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">my_domain</span><span class="w"> </span><span class="o">&amp;</span><span class="n">other</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Implement widening for convergence</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="o">*</span><span class="k">this</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Transfer functions</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">assign</span><span class="p">(</span><span class="n">variable_t</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">Number</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// x := n</span>
+<span class="w">        </span><span class="n">state_</span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">n</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">assign</span><span class="p">(</span><span class="n">variable_t</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">variable_t</span><span class="w"> </span><span class="n">y</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// x := y</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">state_</span><span class="p">.</span><span class="n">count</span><span class="p">(</span><span class="n">y</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">state_</span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">state_</span><span class="p">[</span><span class="n">y</span><span class="p">];</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">apply</span><span class="p">(</span><span class="n">operation_t</span><span class="w"> </span><span class="n">op</span><span class="p">,</span><span class="w"> </span><span class="n">variable_t</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">variable_t</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">variable_t</span><span class="w"> </span><span class="n">z</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// x := y op z</span>
+<span class="w">        </span><span class="c1">// Implement operation semantics</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="k">operator</span><span class="o">+=</span><span class="p">(</span><span class="n">constraint_t</span><span class="w"> </span><span class="n">cst</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Add constraint</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Queries</span>
+<span class="w">    </span><span class="kt">bool</span><span class="w"> </span><span class="n">entails</span><span class="p">(</span><span class="n">constraint_t</span><span class="w"> </span><span class="n">cst</span><span class="p">)</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Check if domain entails constraint</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">write</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">ostream</span><span class="w"> </span><span class="o">&amp;</span><span class="n">o</span><span class="p">)</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">is_bottom</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">o</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"_|_"</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">is_top</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">o</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"⊤"</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">o</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"{"</span><span class="p">;</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="p">[</span><span class="n">var</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">]</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">state_</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">o</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">var</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"="</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">" "</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">            </span><span class="n">o</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"}"</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="k">private</span><span class="o">:</span>
+<span class="w">    </span><span class="kt">bool</span><span class="w"> </span><span class="n">is_bottom_</span><span class="p">;</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">variable_t</span><span class="p">,</span><span class="w"> </span><span class="n">number_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">state_</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="p">}</span><span class="w"> </span><span class="c1">// namespace domains</span>
+<span class="p">}</span><span class="w"> </span><span class="c1">// namespace crab</span>
+</pre></div>
+</div>
+</section>
+<section id="step-2-register-domain">
+<h3>Step 2: Register Domain<a class="headerlink" href="#step-2-register-domain" title="Link to this heading"></a></h3>
+<p>Update <code class="docutils literal notranslate"><span class="pre">third-party/verification/clam/src/ClamDomainRegistry.cc</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"crab/domains/my_domain.hpp"</span>
+
+<span class="c1">// In domain factory</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">dom_name</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">"mydomain"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_unique</span><span class="o">&lt;</span><span class="n">my_domain</span><span class="o">&lt;</span><span class="n">number_t</span><span class="p">,</span><span class="w"> </span><span class="n">varname_t</span><span class="o">&gt;&gt;</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="step-3-add-command-line-option">
+<h3>Step 3: Add Command-Line Option<a class="headerlink" href="#step-3-add-command-line-option" title="Link to this heading"></a></h3>
+<p>Update <code class="docutils literal notranslate"><span class="pre">tools/verifier/clam/clam.cc</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Add to domain options</span>
+<span class="n">cl</span><span class="o">::</span><span class="n">opt</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="w"> </span><span class="n">CrabDomain</span><span class="p">(</span>
+<span class="w">    </span><span class="s">"crab-dom"</span><span class="p">,</span>
+<span class="w">    </span><span class="n">cl</span><span class="o">::</span><span class="n">desc</span><span class="p">(</span><span class="s">"Abstract domain"</span><span class="p">),</span>
+<span class="w">    </span><span class="n">cl</span><span class="o">::</span><span class="n">values</span><span class="p">(</span>
+<span class="w">        </span><span class="n">clEnumValN</span><span class="p">(</span><span class="n">INTERVALS</span><span class="p">,</span><span class="w"> </span><span class="s">"int"</span><span class="p">,</span><span class="w"> </span><span class="s">"Classical interval domain"</span><span class="p">),</span>
+<span class="w">        </span><span class="n">clEnumValN</span><span class="p">(</span><span class="n">MY_DOMAIN</span><span class="p">,</span><span class="w"> </span><span class="s">"mydomain"</span><span class="p">,</span><span class="w"> </span><span class="s">"My custom domain"</span><span class="p">),</span>
+<span class="w">        </span><span class="c1">// ...</span>
+<span class="w">    </span><span class="p">),</span>
+<span class="w">    </span><span class="n">cl</span><span class="o">::</span><span class="n">init</span><span class="p">(</span><span class="n">INTERVALS</span><span class="p">));</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="adding-a-data-flow-analysis">
+<h2>Adding a Data Flow Analysis<a class="headerlink" href="#adding-a-data-flow-analysis" title="Link to this heading"></a></h2>
+<p>Using the IFDS/IDE framework:</p>
+<section id="step-1-define-analysis-problem">
+<h3>Step 1: Define Analysis Problem<a class="headerlink" href="#step-1-define-analysis-problem" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">lib/Dataflow/MyDataFlow/MyAnalysis.h</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#pragma once</span>
+
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"Dataflow/IFDS/IFDSProblem.h"</span>
+
+<span class="k">namespace</span><span class="w"> </span><span class="nn">lotus</span><span class="w"> </span><span class="p">{</span>
+
+<span class="cm">/**</span>
+<span class="cm"> * @brief My custom data flow analysis</span>
+<span class="cm"> */</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MyAnalysis</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">IFDSProblem</span><span class="o">&lt;</span><span class="n">llvm</span><span class="o">::</span><span class="n">Value</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">Function</span><span class="o">*&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+<span class="w">    </span><span class="k">using</span><span class="w"> </span><span class="n">Fact</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">Value</span><span class="o">*</span><span class="p">;</span>
+<span class="w">    </span><span class="k">using</span><span class="w"> </span><span class="n">Context</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">Function</span><span class="o">*</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">MyAnalysis</span><span class="p">(</span><span class="n">llvm</span><span class="o">::</span><span class="n">Module</span><span class="w"> </span><span class="o">&amp;</span><span class="n">M</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">IFDSProblem</span><span class="p">(</span><span class="n">M</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+
+<span class="w">    </span><span class="c1">// Initial facts (sources)</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">set</span><span class="o">&lt;</span><span class="n">Fact</span><span class="o">&gt;</span><span class="w"> </span><span class="n">initialSeeds</span><span class="p">()</span><span class="w"> </span><span class="k">override</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Normal flow within basic blocks</span>
+<span class="w">    </span><span class="n">FlowFunctionPtr</span><span class="w"> </span><span class="nf">getNormalFlowFunction</span><span class="p">(</span>
+<span class="w">        </span><span class="n">llvm</span><span class="o">::</span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">curr</span><span class="p">,</span>
+<span class="w">        </span><span class="n">llvm</span><span class="o">::</span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">succ</span><span class="p">)</span><span class="w"> </span><span class="k">override</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Call flow (caller -&gt; callee)</span>
+<span class="w">    </span><span class="n">FlowFunctionPtr</span><span class="w"> </span><span class="nf">getCallFlowFunction</span><span class="p">(</span>
+<span class="w">        </span><span class="n">llvm</span><span class="o">::</span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">callSite</span><span class="p">,</span>
+<span class="w">        </span><span class="n">llvm</span><span class="o">::</span><span class="n">Function</span><span class="w"> </span><span class="o">*</span><span class="n">destFun</span><span class="p">)</span><span class="w"> </span><span class="k">override</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Return flow (callee -&gt; caller)</span>
+<span class="w">    </span><span class="n">FlowFunctionPtr</span><span class="w"> </span><span class="nf">getReturnFlowFunction</span><span class="p">(</span>
+<span class="w">        </span><span class="n">llvm</span><span class="o">::</span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">callSite</span><span class="p">,</span>
+<span class="w">        </span><span class="n">llvm</span><span class="o">::</span><span class="n">Function</span><span class="w"> </span><span class="o">*</span><span class="n">calleeFun</span><span class="p">,</span>
+<span class="w">        </span><span class="n">llvm</span><span class="o">::</span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">exitInst</span><span class="p">)</span><span class="w"> </span><span class="k">override</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Call-to-return flow (bypass call)</span>
+<span class="w">    </span><span class="n">FlowFunctionPtr</span><span class="w"> </span><span class="nf">getCallToReturnFlowFunction</span><span class="p">(</span>
+<span class="w">        </span><span class="n">llvm</span><span class="o">::</span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">callSite</span><span class="p">,</span>
+<span class="w">        </span><span class="n">llvm</span><span class="o">::</span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">returnSite</span><span class="p">)</span><span class="w"> </span><span class="k">override</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="p">}</span><span class="w"> </span><span class="c1">// namespace lotus</span>
+</pre></div>
+</div>
+</section>
+<section id="step-2-implement-flow-functions">
+<h3>Step 2: Implement Flow Functions<a class="headerlink" href="#step-2-implement-flow-functions" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">lib/Dataflow/MyDataFlow/MyAnalysis.cpp</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"Dataflow/MyDataFlow/MyAnalysis.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"Dataflow/IFDS/FlowFunctions.h"</span>
+
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">llvm</span><span class="p">;</span>
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">lotus</span><span class="p">;</span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">set</span><span class="o">&lt;</span><span class="n">Value</span><span class="o">*&gt;</span><span class="w"> </span><span class="n">MyAnalysis</span><span class="o">::</span><span class="n">initialSeeds</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">set</span><span class="o">&lt;</span><span class="n">Value</span><span class="o">*&gt;</span><span class="w"> </span><span class="n">seeds</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Add initial facts (e.g., function parameters, globals)</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">F</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">module</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">F</span><span class="p">.</span><span class="n">getName</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">"source_function"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// Return value is a source</span>
+<span class="w">            </span><span class="n">seeds</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="o">&amp;</span><span class="n">F</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">seeds</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">FlowFunctionPtr</span><span class="w"> </span><span class="n">MyAnalysis</span><span class="o">::</span><span class="n">getNormalFlowFunction</span><span class="p">(</span>
+<span class="w">    </span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">curr</span><span class="p">,</span><span class="w"> </span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">succ</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="c1">// Identity flow by default</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">affectsAnalysis</span><span class="p">(</span><span class="n">curr</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">Identity</span><span class="o">&lt;</span><span class="n">Fact</span><span class="o">&gt;&gt;</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Generate new facts</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">*</span><span class="n">alloca</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dyn_cast</span><span class="o">&lt;</span><span class="n">AllocaInst</span><span class="o">&gt;</span><span class="p">(</span><span class="n">curr</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">Gen</span><span class="o">&lt;</span><span class="n">Fact</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">alloca</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Kill facts</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">isSanitizer</span><span class="p">(</span><span class="n">curr</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">KillAll</span><span class="o">&lt;</span><span class="n">Fact</span><span class="o">&gt;&gt;</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Conditional generation</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">ConditionalGen</span><span class="o">&lt;</span><span class="n">Fact</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">curr</span><span class="p">,</span>
+<span class="w">        </span><span class="p">[](</span><span class="n">Fact</span><span class="w"> </span><span class="n">f</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">shouldPropagate</span><span class="p">(</span><span class="n">f</span><span class="p">);</span><span class="w"> </span><span class="p">});</span>
+<span class="p">}</span>
+
+<span class="n">FlowFunctionPtr</span><span class="w"> </span><span class="n">MyAnalysis</span><span class="o">::</span><span class="n">getCallFlowFunction</span><span class="p">(</span>
+<span class="w">    </span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">callSite</span><span class="p">,</span><span class="w"> </span><span class="n">Function</span><span class="w"> </span><span class="o">*</span><span class="n">destFun</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="c1">// Map actual parameters to formals</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="o">*</span><span class="n">call</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cast</span><span class="o">&lt;</span><span class="n">CallInst</span><span class="o">&gt;</span><span class="p">(</span><span class="n">callSite</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">MapParametersFlowFunction</span><span class="o">&gt;</span><span class="p">(</span>
+<span class="w">        </span><span class="n">call</span><span class="p">,</span><span class="w"> </span><span class="n">destFun</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="n">FlowFunctionPtr</span><span class="w"> </span><span class="n">MyAnalysis</span><span class="o">::</span><span class="n">getReturnFlowFunction</span><span class="p">(</span>
+<span class="w">    </span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">callSite</span><span class="p">,</span><span class="w"> </span><span class="n">Function</span><span class="w"> </span><span class="o">*</span><span class="n">calleeFun</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">exitInst</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="c1">// Map return value to call site</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">*</span><span class="n">ret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dyn_cast</span><span class="o">&lt;</span><span class="n">ReturnInst</span><span class="o">&gt;</span><span class="p">(</span><span class="n">exitInst</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">MapReturnFlowFunction</span><span class="o">&gt;</span><span class="p">(</span>
+<span class="w">            </span><span class="n">callSite</span><span class="p">,</span><span class="w"> </span><span class="n">ret</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">Identity</span><span class="o">&lt;</span><span class="n">Fact</span><span class="o">&gt;&gt;</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="step-3-create-solver-and-run">
+<h3>Step 3: Create Solver and Run<a class="headerlink" href="#step-3-create-solver-and-run" title="Link to this heading"></a></h3>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"Dataflow/IFDS/IFDSSolver.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"Dataflow/MyDataFlow/MyAnalysis.h"</span>
+
+<span class="c1">// Create problem</span>
+<span class="n">MyAnalysis</span><span class="w"> </span><span class="nf">problem</span><span class="p">(</span><span class="k">module</span><span class="p">);</span>
+
+<span class="c1">// Create solver</span>
+<span class="n">IFDSSolver</span><span class="o">&lt;</span><span class="n">Value</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="n">Function</span><span class="o">*&gt;</span><span class="w"> </span><span class="n">solver</span><span class="p">(</span><span class="n">problem</span><span class="p">);</span>
+
+<span class="c1">// Solve</span>
+<span class="n">solver</span><span class="p">.</span><span class="n">solve</span><span class="p">();</span>
+
+<span class="c1">// Query results</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">F</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">module</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">BB</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">F</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">I</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">BB</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">auto</span><span class="w"> </span><span class="n">facts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">solver</span><span class="p">.</span><span class="n">ifdsResultsAt</span><span class="p">(</span><span class="o">&amp;</span><span class="n">I</span><span class="p">);</span>
+<span class="w">            </span><span class="c1">// Process facts...</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="testing-and-debugging">
+<h2>Testing and Debugging<a class="headerlink" href="#testing-and-debugging" title="Link to this heading"></a></h2>
+<section id="writing-unit-tests">
+<h3>Writing Unit Tests<a class="headerlink" href="#writing-unit-tests" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">tests/unit/test_my_analysis.cpp</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"gtest/gtest.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/IR/LLVMContext.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/IR/Module.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"Alias/MyAA/MyAliasAnalysis.h"</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MyAnalysisTest</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="o">::</span><span class="n">testing</span><span class="o">::</span><span class="n">Test</span><span class="w"> </span><span class="p">{</span>
+<span class="k">protected</span><span class="o">:</span>
+<span class="w">    </span><span class="n">llvm</span><span class="o">::</span><span class="n">LLVMContext</span><span class="w"> </span><span class="n">context</span><span class="p">;</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">llvm</span><span class="o">::</span><span class="n">Module</span><span class="o">&gt;</span><span class="w"> </span><span class="k">module</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">SetUp</span><span class="p">()</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">module</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_unique</span><span class="o">&lt;</span><span class="n">llvm</span><span class="o">::</span><span class="n">Module</span><span class="o">&gt;</span><span class="p">(</span><span class="s">"test"</span><span class="p">,</span><span class="w"> </span><span class="n">context</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+
+<span class="n">TEST_F</span><span class="p">(</span><span class="n">MyAnalysisTest</span><span class="p">,</span><span class="w"> </span><span class="n">BasicAliasQuery</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Create test IR</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="o">*</span><span class="n">funcType</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">FunctionType</span><span class="o">::</span><span class="n">get</span><span class="p">(</span>
+<span class="w">        </span><span class="n">llvm</span><span class="o">::</span><span class="n">Type</span><span class="o">::</span><span class="n">getVoidTy</span><span class="p">(</span><span class="n">context</span><span class="p">),</span><span class="w"> </span><span class="nb">false</span><span class="p">);</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="o">*</span><span class="n">func</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">Function</span><span class="o">::</span><span class="n">Create</span><span class="p">(</span>
+<span class="w">        </span><span class="n">funcType</span><span class="p">,</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">Function</span><span class="o">::</span><span class="n">ExternalLinkage</span><span class="p">,</span><span class="w"> </span><span class="s">"test"</span><span class="p">,</span><span class="w"> </span><span class="k">module</span><span class="p">.</span><span class="n">get</span><span class="p">());</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="o">*</span><span class="n">bb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">BasicBlock</span><span class="o">::</span><span class="n">Create</span><span class="p">(</span><span class="n">context</span><span class="p">,</span><span class="w"> </span><span class="s">"entry"</span><span class="p">,</span><span class="w"> </span><span class="n">func</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// Add instructions...</span>
+
+<span class="w">    </span><span class="c1">// Run analysis</span>
+<span class="w">    </span><span class="n">myaa</span><span class="o">::</span><span class="n">MyAliasAnalysis</span><span class="w"> </span><span class="n">aa</span><span class="p">;</span>
+<span class="w">    </span><span class="n">aa</span><span class="p">.</span><span class="n">runOnModule</span><span class="p">(</span><span class="o">*</span><span class="k">module</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// Check results</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">aa</span><span class="p">.</span><span class="n">alias</span><span class="p">(</span><span class="n">val1</span><span class="p">,</span><span class="w"> </span><span class="n">val2</span><span class="p">);</span>
+<span class="w">    </span><span class="n">EXPECT_EQ</span><span class="p">(</span><span class="n">result</span><span class="p">,</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">NoAlias</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Run tests:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>build
+make<span class="w"> </span><span class="nb">test</span>
+</pre></div>
+</div>
+</section>
+<section id="debugging-tips">
+<h3>Debugging Tips<a class="headerlink" href="#debugging-tips" title="Link to this heading"></a></h3>
+<p><strong>1. Enable debug output</strong>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#define DEBUG_TYPE "my-analysis"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/Support/Debug.h"</span>
+
+<span class="n">LLVM_DEBUG</span><span class="p">(</span><span class="n">dbgs</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Processing instruction: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="o">*</span><span class="n">I</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Run with debug output:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./my-tool<span class="w"> </span>-debug-only<span class="o">=</span>my-analysis<span class="w"> </span>input.bc
+</pre></div>
+</div>
+<p><strong>2. Dump intermediate results</strong>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">errs</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Points-to set for "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">":</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">*</span><span class="n">obj</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">pts</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">errs</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"  - "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="o">*</span><span class="n">obj</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>3. Use LLVM’s verification passes</strong>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">PM</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">createVerifierPass</span><span class="p">());</span><span class="w"> </span><span class="c1">// Check IR validity</span>
+</pre></div>
+</div>
+<p><strong>4. GDB debugging</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>gdb<span class="w"> </span>--args<span class="w"> </span>./my-tool<span class="w"> </span>input.bc
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span><span class="k">break</span><span class="w"> </span>MyAliasAnalysis::runOnModule
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>run
+</pre></div>
+</div>
+</section>
+</section>
+<section id="performance-optimization">
+<h2>Performance Optimization<a class="headerlink" href="#performance-optimization" title="Link to this heading"></a></h2>
+<section id="profiling">
+<h3>Profiling<a class="headerlink" href="#profiling" title="Link to this heading"></a></h3>
+<p>Use LLVM’s time-passes:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./my-tool<span class="w"> </span>-time-passes<span class="w"> </span>input.bc
+</pre></div>
+</div>
+</section>
+<section id="optimization-strategies">
+<h3>Optimization Strategies<a class="headerlink" href="#optimization-strategies" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Use Sparse Data Structures</strong>: BitVector for points-to sets</p></li>
+<li><p><strong>Cache Results</strong>: Memoize expensive computations</p></li>
+<li><p><strong>Early Termination</strong>: Detect fixpoints early</p></li>
+<li><p><strong>SCC Collapsing</strong>: Merge strongly connected components</p></li>
+<li><p><strong>Incremental Analysis</strong>: Reuse results across runs</p></li>
+</ol>
+<p>Example caching:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">CachedAnalysis</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">Value</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="n">PointsToSet</span><span class="o">&gt;</span><span class="w"> </span><span class="n">cache_</span><span class="p">;</span>
+
+<span class="k">public</span><span class="o">:</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">PointsToSet</span><span class="o">&amp;</span><span class="w"> </span><span class="n">getPointsTo</span><span class="p">(</span><span class="n">Value</span><span class="w"> </span><span class="o">*</span><span class="n">v</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">auto</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cache_</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="n">v</span><span class="p">);</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">it</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">cache_</span><span class="p">.</span><span class="n">end</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">it</span><span class="o">-&gt;</span><span class="n">second</span><span class="p">;</span><span class="w"> </span><span class="c1">// Return cached result</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="c1">// Compute and cache</span>
+<span class="w">        </span><span class="n">PointsToSet</span><span class="w"> </span><span class="n">pts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">computePointsTo</span><span class="p">(</span><span class="n">v</span><span class="p">);</span>
+<span class="w">        </span><span class="n">cache_</span><span class="p">[</span><span class="n">v</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pts</span><span class="p">;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">cache_</span><span class="p">[</span><span class="n">v</span><span class="p">];</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="contributing-to-lotus">
+<h2>Contributing to Lotus<a class="headerlink" href="#contributing-to-lotus" title="Link to this heading"></a></h2>
+<section id="contribution-workflow">
+<h3>Contribution Workflow<a class="headerlink" href="#contribution-workflow" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Fork</strong> the repository on GitHub</p></li>
+<li><p><strong>Create</strong> a feature branch: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">checkout</span> <span class="pre">-b</span> <span class="pre">my-feature</span></code></p></li>
+<li><p><strong>Implement</strong> your changes with tests</p></li>
+<li><p><strong>Document</strong> your changes in relevant docs</p></li>
+<li><p><strong>Test</strong> thoroughly: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">test</span></code></p></li>
+<li><p><strong>Commit</strong> with clear messages: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">commit</span> <span class="pre">-m</span> <span class="pre">&quot;Add</span> <span class="pre">my</span> <span class="pre">feature&quot;</span></code></p></li>
+<li><p><strong>Push</strong>: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">push</span> <span class="pre">origin</span> <span class="pre">my-feature</span></code></p></li>
+<li><p><strong>Create</strong> a pull request on GitHub</p></li>
+</ol>
+</section>
+<section id="code-review-process">
+<h3>Code Review Process<a class="headerlink" href="#code-review-process" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>All code must pass CI tests</p></li>
+<li><p>At least one approval from maintainers required</p></li>
+<li><p>Follow coding standards</p></li>
+<li><p>Add documentation and tests</p></li>
+<li><p>Keep PRs focused and manageable</p></li>
+</ul>
+</section>
+<section id="documentation-updates">
+<h3>Documentation Updates<a class="headerlink" href="#documentation-updates" title="Link to this heading"></a></h3>
+<p>When adding new features:</p>
+<ol class="arabic simple">
+<li><p>Update relevant <code class="docutils literal notranslate"><span class="pre">.rst</span></code> files in <code class="docutils literal notranslate"><span class="pre">docs/source/</span></code></p></li>
+<li><p>Add API documentation in <code class="docutils literal notranslate"><span class="pre">api_reference.rst</span></code></p></li>
+<li><p>Add tutorial in <code class="docutils literal notranslate"><span class="pre">tutorials.rst</span></code> if applicable</p></li>
+<li><p>Add new tool documentation in <code class="docutils literal notranslate"><span class="pre">docs/source/tools/</span></code></p></li>
+</ol>
+<p>Build documentation:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>docs
+make<span class="w"> </span>html
+<span class="c1"># View at docs/build/html/index.html</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="common-pitfalls">
+<h2>Common Pitfalls<a class="headerlink" href="#common-pitfalls" title="Link to this heading"></a></h2>
+<section id="memory-management">
+<h3>Memory Management<a class="headerlink" href="#memory-management" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: LLVM uses custom allocators and memory management.</p>
+<p><strong>Solution</strong>: Use LLVM’s memory management properly:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Don't do this:</span>
+<span class="n">BasicBlock</span><span class="w"> </span><span class="o">*</span><span class="n">bb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">BasicBlock</span><span class="p">(...);</span>
+
+<span class="c1">// Do this:</span>
+<span class="n">BasicBlock</span><span class="w"> </span><span class="o">*</span><span class="n">bb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">BasicBlock</span><span class="o">::</span><span class="n">Create</span><span class="p">(</span><span class="n">context</span><span class="p">,</span><span class="w"> </span><span class="s">"name"</span><span class="p">,</span><span class="w"> </span><span class="n">func</span><span class="p">);</span>
+</pre></div>
+</div>
+<p><strong>Problem</strong>: Dangling pointers after IR modification.</p>
+<p><strong>Solution</strong>: Use <code class="docutils literal notranslate"><span class="pre">Value::replaceAllUsesWith()</span></code> and proper IR building.</p>
+</section>
+<section id="pass-dependencies">
+<h3>Pass Dependencies<a class="headerlink" href="#pass-dependencies" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Analysis depends on another pass but doesn’t declare it.</p>
+<p><strong>Solution</strong>: Declare dependencies in <code class="docutils literal notranslate"><span class="pre">getAnalysisUsage()</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">getAnalysisUsage</span><span class="p">(</span><span class="n">AnalysisUsage</span><span class="w"> </span><span class="o">&amp;</span><span class="n">AU</span><span class="p">)</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">AU</span><span class="p">.</span><span class="n">addRequired</span><span class="o">&lt;</span><span class="n">DominatorTreeWrapperPass</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="w">    </span><span class="n">AU</span><span class="p">.</span><span class="n">addRequired</span><span class="o">&lt;</span><span class="n">DyckAliasAnalysis</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="w">    </span><span class="n">AU</span><span class="p">.</span><span class="n">setPreservesAll</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="fixpoint-convergence">
+<h3>Fixpoint Convergence<a class="headerlink" href="#fixpoint-convergence" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Analysis doesn’t converge (infinite loop).</p>
+<p><strong>Solution</strong>: Implement proper widening and set iteration limit:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">MAX_ITERATIONS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">iter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">changed</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">iter</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">MAX_ITERATIONS</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Analysis logic...</span>
+<span class="w">    </span><span class="n">iter</span><span class="o">++</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">iter</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">MAX_ITERATIONS</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">errs</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Warning: Analysis did not converge</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="resources">
+<h2>Resources<a class="headerlink" href="#resources" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>LLVM Documentation</strong>: <a class="reference external" href="https://llvm.org/docs/">https://llvm.org/docs/</a></p></li>
+<li><p><strong>LLVM Programmer’s Manual</strong>: <a class="reference external" href="https://llvm.org/docs/ProgrammersManual.html">https://llvm.org/docs/ProgrammersManual.html</a></p></li>
+<li><p><strong>Writing LLVM Pass</strong>: <a class="reference external" href="https://llvm.org/docs/WritingAnLLVMPass.html">https://llvm.org/docs/WritingAnLLVMPass.html</a></p></li>
+<li><p><strong>Lotus Repository</strong>: <a class="reference external" href="https://github.com/ZJU-PL/lotus">https://github.com/ZJU-PL/lotus</a></p></li>
+<li><p><strong>Issue Tracker</strong>: <a class="reference external" href="https://github.com/ZJU-PL/lotus/issues">https://github.com/ZJU-PL/lotus/issues</a></p></li>
+</ul>
+</section>
+<section id="community">
+<h2>Community<a class="headerlink" href="#community" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>GitHub Discussions</strong>: For questions and discussions</p></li>
+<li><p><strong>Issue Tracker</strong>: For bug reports and feature requests</p></li>
+<li><p><strong>Pull Requests</strong>: For code contributions</p></li>
+</ul>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../user_guide/architecture.html"><span class="doc">Architecture Overview</span></a> - Framework architecture</p></li>
+<li><p><a class="reference internal" href="api_reference.html"><span class="doc">API Reference</span></a> - API documentation</p></li>
+<li><p><a class="reference internal" href="../user_guide/tutorials.html"><span class="doc">Tutorials and Examples</span></a> - Usage examples</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="api_reference.html" class="btn btn-neutral float-left" title="API Reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

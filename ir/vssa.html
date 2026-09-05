@@ -1,0 +1,414 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>vSSA — Variable Static Single Assignment &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="SVFG — Sparse Value-Flow Graph" href="svfg.html" />
+    <link rel="prev" title="SSI — Static Single Information" href="ssi.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Intermediate Representations</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="icfg.html">ICFG — Interprocedural Control Flow Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="icfg.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="icfg.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="icfg.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="icfg.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="icfg.html#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html">PDG — Program Dependence Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#core-passes">Core Passes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#unified-query-api">Unified Query API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#high-level-usage">High-Level Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#lotus-ir-pdg-query-analysis-mode"><cite>lotus-ir-pdg-query</cite> Analysis Mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html">SSI — Static Single Information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#ssi-formalism">SSI Formalism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#ssi-instructions">SSI Instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#algorithm">Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#integration">Integration</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">vSSA — Variable Static Single Assignment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#vssa-instructions">vSSA Instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#algorithm">Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#integration-with-sraa">Integration with SRAA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#references">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html">SVFG — Sparse Value-Flow Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#node-types">Node Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#edge-types">Edge Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#architecture">Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#references">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gvfg.html">GVFG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html">GSA — Gated SSA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#core-types">Core Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#passes">Passes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#command-line-options">Command-Line Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#behavior-notes">Behavior Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html">ShadowMem SSA — Sea-DSA Shadow Memory Queries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#shadow-memory-instructions">Shadow Memory Instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="path_program.html">Path Program</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Intermediate Representations</a></li>
+      <li class="breadcrumb-item active">vSSA — Variable Static Single Assignment</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/ir/vssa.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="vssa-variable-static-single-assignment">
+<h1>vSSA — Variable Static Single Assignment<a class="headerlink" href="#vssa-variable-static-single-assignment" title="Link to this heading"></a></h1>
+</section>
+<section id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h1>
+<p><strong>vSSA (Variable Static Single Assignment)</strong> is a variant of SSI (Static Single
+Information) designed specifically for enabling precise symbolic range analysis.
+It transforms SSA-form IR by introducing sigma (σ) and phi (φ) functions at
+control-flow splits and joins, providing fine-grained version information for
+variables involved in comparison operations.</p>
+<ul class="simple">
+<li><p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/IR/vSSA/</span></code>, <code class="docutils literal notranslate"><span class="pre">include/IR/vSSA/</span></code></p></li>
+</ul>
+<p>vSSA is used by the Strict Relations Alias Analysis (SRAA) to perform symbolic
+range analysis for pointer disambiguation. By splitting live ranges at critical
+program points, vSSA enables the range analysis to maintain precise bounds for
+variables along different execution paths.</p>
+</section>
+<section id="key-features">
+<h1>Key Features<a class="headerlink" href="#key-features" title="Link to this heading"></a></h1>
+<ul class="simple">
+<li><p><strong>Live-Range Splitting at Comparisons</strong>: Inserts σ-functions for operands of
+comparison instructions (ICmp, Switch) at control-flow splits.</p></li>
+<li><p><strong>Dominance Frontier Processing</strong>: Uses dominance frontiers to determine where
+additional φ-functions are needed to maintain SSA properties.</p></li>
+<li><p><strong>Condition-Sensitive Reasoning</strong>: Enables analyses to reason about variable
+values in the context of branch conditions.</p></li>
+<li><p><strong>Lazy Dominance Frontier Computation</strong>: Computes dominance frontiers on demand
+rather than pre-computing for all blocks.</p></li>
+</ul>
+</section>
+<section id="vssa-instructions">
+<h1>vSSA Instructions<a class="headerlink" href="#vssa-instructions" title="Link to this heading"></a></h1>
+<p>The vSSA transformation introduces two types of special instructions:</p>
+<p><strong>vSSA Sigma (σ) Functions</strong>:</p>
+<ul class="simple">
+<li><p>Named with prefix <code class="docutils literal notranslate"><span class="pre">vSSA_sigma</span></code></p></li>
+<li><p>Inserted at successor blocks of conditional branches and switches</p></li>
+<li><p>Create separate variable versions for each outgoing path</p></li>
+<li><p>Applied to operands of comparison instructions (ICmp, Switch conditions)</p></li>
+</ul>
+<p><strong>vSSA Phi (φ) Functions</strong>:</p>
+<ul class="simple">
+<li><p>Named with prefix <code class="docutils literal notranslate"><span class="pre">vSSA_phi</span></code></p></li>
+<li><p>Inserted at dominance frontiers of blocks containing σ-functions</p></li>
+<li><p>Merge values from different control-flow paths</p></li>
+<li><p>Maintain SSA properties after live-range splitting</p></li>
+</ul>
+</section>
+<section id="algorithm">
+<h1>Algorithm<a class="headerlink" href="#algorithm" title="Link to this heading"></a></h1>
+<p>The vSSA transformation algorithm proceeds in several stages:</p>
+<ol class="arabic">
+<li><p><strong>Unreachable Block Removal</strong>:</p>
+<p>Remove unreachable basic blocks from the function, as the DominatorTree pass
+treats unreachable blocks as dominated by anything, which can break the
+transformation algorithm.</p>
+</li>
+<li><p><strong>Sigma Function Insertion</strong>:</p>
+<p>For each basic block with a conditional terminator:</p>
+<ul class="simple">
+<li><p><strong>Branch Instructions</strong>: For conditional branches with ICmp conditions,
+create σ-functions for each operand of the comparison. Also handle
+indirect operands through CastInst (ZExt, SExt, Trunc).</p></li>
+<li><p><strong>Switch Instructions</strong>: Create σ-functions for the switch condition
+value, handling cast instructions similarly.</p></li>
+</ul>
+<p>σ-functions are only inserted when:</p>
+<ul class="simple">
+<li><p>The successor block has a single predecessor</p></li>
+<li><p>The predecessor dominates or has the successor in its dominance frontier</p></li>
+<li><p>An identical σ-function does not already exist</p></li>
+</ul>
+</li>
+<li><p><strong>Phi Function Insertion</strong>:</p>
+<p>For each σ-function created, compute the dominance frontier and insert
+φ-functions where needed:</p>
+<ul class="simple">
+<li><p>The φ-functions are inserted in blocks where the original value dominates
+the block and the block dominates some use of the value.</p></li>
+</ul>
+</li>
+<li><p><strong>Variable Renaming</strong>:</p>
+<p>Rename uses of variables to reference their new versions:</p>
+<ul class="simple">
+<li><p>Uses in the dominator tree of a σ/φ-function are renamed to use the new
+version.</p></li>
+<li><p>Uses in the dominance frontier are renamed selectively based on incoming
+edges.</p></li>
+</ul>
+</li>
+<li><p><strong>Recursive Processing</strong>:</p>
+<p>The insertion of φ-functions may require additional φ-functions to be
+inserted, so the algorithm processes newly created φ-functions recursively.</p>
+</li>
+</ol>
+</section>
+<section id="components">
+<h1>Components<a class="headerlink" href="#components" title="Link to this heading"></a></h1>
+<p><strong>vSSA Pass</strong> (<code class="docutils literal notranslate"><span class="pre">vSSA.h</span></code>, <code class="docutils literal notranslate"><span class="pre">vSSA.cpp</span></code>):</p>
+<p>The main transformation pass that converts SSA to vSSA form:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">runOnFunction()</span></code> – Main entry point that processes a function</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">createSigmasIfNeeded()</span></code> – Examines terminator instructions to determine
+where σ-functions are needed</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">insertSigmas()</span></code> – Creates σ-functions for a value at all appropriate
+successors</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">insertPhisForSigma()</span></code> – Creates φ-functions in dominance frontiers</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">renameUsesToSigma()</span></code> / <code class="docutils literal notranslate"><span class="pre">renameUsesToPhi()</span></code> – Rename variable uses to
+reference new versions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">populatePhis()</span></code> – Fill in missing operands of φ-functions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">computeDominanceFrontier()</span></code> – Compute dominance frontier on demand</p></li>
+</ul>
+</section>
+<section id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h1>
+<p><strong>As an LLVM Pass</strong>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"IR/vSSA/vSSA.h"</span>
+
+<span class="c1">// vSSA requires DominatorTree</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">getAnalysisUsage</span><span class="p">(</span><span class="n">AnalysisUsage</span><span class="w"> </span><span class="o">&amp;</span><span class="n">AU</span><span class="p">)</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">AU</span><span class="p">.</span><span class="n">addRequired</span><span class="o">&lt;</span><span class="n">DominatorTreeWrapperPass</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="c1">// Run the pass</span>
+<span class="n">vSSA</span><span class="w"> </span><span class="o">*</span><span class="n">VSSAPass</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">vSSA</span><span class="p">();</span>
+<span class="n">VSSAPass</span><span class="o">-&gt;</span><span class="n">runOnFunction</span><span class="p">(</span><span class="n">F</span><span class="p">);</span>
+</pre></div>
+</div>
+<p><strong>Command-Line Usage</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>opt<span class="w"> </span>-load<span class="w"> </span>libCanaryvSSA.so<span class="w"> </span>-vssa<span class="w"> </span>&lt;<span class="w"> </span>input.bc<span class="w"> </span>&gt;<span class="w"> </span>output.bc
+</pre></div>
+</div>
+<p><strong>Checking for vSSA Instructions</strong>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"llvm/IR/Instructions.h"</span>
+
+<span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">I</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+<span class="n">PHINode</span><span class="w"> </span><span class="o">*</span><span class="n">PN</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dyn_cast</span><span class="o">&lt;</span><span class="n">PHINode</span><span class="o">&gt;</span><span class="p">(</span><span class="n">I</span><span class="p">);</span>
+
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">PN</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">PN</span><span class="o">-&gt;</span><span class="n">getName</span><span class="p">().</span><span class="n">startswith</span><span class="p">(</span><span class="s">"vSSA_sigma"</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// I is a vSSA sigma function</span>
+<span class="p">}</span>
+
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">PN</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">PN</span><span class="o">-&gt;</span><span class="n">getName</span><span class="p">().</span><span class="n">startswith</span><span class="p">(</span><span class="s">"vSSA_phi"</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// I is a vSSA phi function</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="integration-with-sraa">
+<h1>Integration with SRAA<a class="headerlink" href="#integration-with-sraa" title="Link to this heading"></a></h1>
+<p>vSSA is designed to work with the Strict Relations Alias Analysis (SRAA):</p>
+<ol class="arabic simple">
+<li><p><strong>Range Analysis</strong>: The range analysis component identifies σ-functions by
+their name prefix (<code class="docutils literal notranslate"><span class="pre">vSSA_sigma</span></code>) and uses them to establish constraints
+on variable ranges.</p></li>
+<li><p><strong>Symbolic Expressions</strong>: vSSA’s live-range splitting enables the range
+analysis to maintain separate symbolic expressions for each variable version.</p></li>
+<li><p><strong>Pointer Disambiguation</strong>: By providing precise range information, vSSA
+helps SRAA prove that pointers cannot alias based on their computed ranges.</p></li>
+</ol>
+</section>
+<section id="example">
+<h1>Example<a class="headerlink" href="#example" title="Link to this heading"></a></h1>
+<p>Consider the following code:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="nf">foo</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">y</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">y</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>After vSSA transformation, the IR will contain σ-functions for <code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code>
+at the branch split:</p>
+<div class="highlight-llvm notranslate"><div class="highlight"><pre><span></span><span class="k">define</span><span class="w"> </span><span class="kt">i32</span><span class="w"> </span><span class="vg">@foo</span><span class="p">(</span><span class="kt">i32</span><span class="w"> </span><span class="nv">%x</span><span class="p">,</span><span class="w"> </span><span class="kt">i32</span><span class="w"> </span><span class="nv">%y</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="nl">entry:</span>
+<span class="w">  </span><span class="nv">%cmp</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">icmp</span><span class="w"> </span><span class="k">sgt</span><span class="w"> </span><span class="kt">i32</span><span class="w"> </span><span class="nv">%x</span><span class="p">,</span><span class="w"> </span><span class="nv">%y</span>
+<span class="w">  </span><span class="k">br</span><span class="w"> </span><span class="kt">i1</span><span class="w"> </span><span class="nv">%cmp</span><span class="p">,</span><span class="w"> </span><span class="kt">label</span><span class="w"> </span><span class="nv">%if.then</span><span class="p">,</span><span class="w"> </span><span class="kt">label</span><span class="w"> </span><span class="nv">%if.else</span>
+<span class="nl">if.then:</span>
+<span class="w">  </span><span class="nv">%x.sigma</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">phi</span><span class="w"> </span><span class="kt">i32</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="nv">%x</span><span class="p">,</span><span class="w"> </span><span class="nv">%entry</span><span class="w"> </span><span class="p">]</span><span class="w">  </span><span class="c">; vSSA_sigma</span>
+<span class="w">  </span><span class="nv">%y.sigma</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">phi</span><span class="w"> </span><span class="kt">i32</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="nv">%y</span><span class="p">,</span><span class="w"> </span><span class="nv">%entry</span><span class="w"> </span><span class="p">]</span><span class="w">  </span><span class="c">; vSSA_sigma</span>
+<span class="w">  </span><span class="nv">%sub</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">sub</span><span class="w"> </span><span class="kt">i32</span><span class="w"> </span><span class="nv">%x.sigma</span><span class="p">,</span><span class="w"> </span><span class="nv">%y.sigma</span>
+<span class="w">  </span><span class="k">ret</span><span class="w"> </span><span class="kt">i32</span><span class="w"> </span><span class="nv">%sub</span>
+<span class="nl">if.else:</span>
+<span class="w">  </span><span class="nv">%x.sigma.1</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">phi</span><span class="w"> </span><span class="kt">i32</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="nv">%x</span><span class="p">,</span><span class="w"> </span><span class="nv">%entry</span><span class="w"> </span><span class="p">]</span><span class="w">  </span><span class="c">; vSSA_sigma</span>
+<span class="w">  </span><span class="nv">%y.sigma.1</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">phi</span><span class="w"> </span><span class="kt">i32</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="nv">%y</span><span class="p">,</span><span class="w"> </span><span class="nv">%entry</span><span class="w"> </span><span class="p">]</span><span class="w">  </span><span class="c">; vSSA_sigma</span>
+<span class="w">  </span><span class="nv">%sub.1</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">sub</span><span class="w"> </span><span class="kt">i32</span><span class="w"> </span><span class="nv">%y.sigma.1</span><span class="p">,</span><span class="w"> </span><span class="nv">%x.sigma.1</span>
+<span class="w">  </span><span class="k">ret</span><span class="w"> </span><span class="kt">i32</span><span class="w"> </span><span class="nv">%sub.1</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This enables the range analysis to reason separately about the values of <code class="docutils literal notranslate"><span class="pre">x</span></code>
+and <code class="docutils literal notranslate"><span class="pre">y</span></code> in each branch.</p>
+</section>
+<section id="references">
+<h1>References<a class="headerlink" href="#references" title="Link to this heading"></a></h1>
+<ul class="simple">
+<li><p>Victor Hugo Sperle Campos. <em>Range Analysis and its Application to the
+Disambiguation of Pointers in C Programs</em>. Master’s thesis, Federal
+University of Minas Gerais, 2013.</p></li>
+</ul>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="ssi.html" class="btn btn-neutral float-left" title="SSI — Static Single Information" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="svfg.html" class="btn btn-neutral float-right" title="SVFG — Sparse Value-Flow Graph" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

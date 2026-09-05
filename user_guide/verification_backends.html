@@ -1,0 +1,283 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verification Driver Abstraction &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Instrumentation Passes" href="instrumentation_passes.html" />
+    <link rel="prev" title="Property-Based Slicing" href="property_based_slicing.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Verification Driver Abstraction</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#supported-drivers">Supported Drivers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#property-classes">Property Classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#result-format">Result Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example-output">Example Output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#programmatic-usage">Programmatic Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#adding-new-drivers">Adding New Drivers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Verification Driver Abstraction</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/user_guide/verification_backends.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="verification-driver-abstraction">
+<h1>Verification Driver Abstraction<a class="headerlink" href="#verification-driver-abstraction" title="Link to this heading"></a></h1>
+<p>Lotus provides a unified driver interface to multiple verification backends, allowing you to switch between different tools seamlessly.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>The verification driver abstraction layer provides:</p>
+<ul class="simple">
+<li><p><strong>Unified interface</strong>: Same API for all verification tools</p></li>
+<li><p><strong>Automatic backend selection</strong>: Choose backend based on property type</p></li>
+<li><p><strong>Result normalization</strong>: Consistent result format across backends</p></li>
+<li><p><strong>Easy integration</strong>: Add new backends without changing client code</p></li>
+</ul>
+</section>
+<section id="supported-drivers">
+<h2>Supported Drivers<a class="headerlink" href="#supported-drivers" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>seahorn</strong>: SeaHorn CHC-based verification (supports all properties)</p></li>
+<li><p><strong>sifa</strong>: Sifa symbolic abstraction (reachability)</p></li>
+<li><p><strong>symabs_ai</strong>: SymAbsAI framework (reachability, memsafety, overflow)</p></li>
+<li><p><strong>clam</strong>: CLAM abstract interpretation (memsafety, overflow, reachability)</p></li>
+</ul>
+</section>
+<section id="property-classes">
+<h2>Property Classes<a class="headerlink" href="#property-classes" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>reachability</strong>: Target location is reachable/unreachable</p></li>
+<li><p><strong>memsafety</strong>: Memory safety (null pointer, use-after-free, etc.)</p></li>
+<li><p><strong>overflow</strong>: Integer overflow detection</p></li>
+<li><p><strong>termination</strong>: Program termination</p></li>
+</ul>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<p>Lotus builds per-backend verification frontends. The drivers are split across
+separate executables:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># SymAbsAI</span>
+./build/bin/lotus-verify-symabs-ai<span class="w"> </span>input.bc<span class="w"> </span>--property<span class="w"> </span>unreach-call
+
+<span class="c1"># Sifa</span>
+./build/bin/lotus-verify-sifa<span class="w"> </span>input.bc<span class="w"> </span>--function<span class="w"> </span>main
+
+<span class="c1"># CLAM (requires -DLOTUS_ENABLE_CLAM=ON)</span>
+./build/bin/clam<span class="w"> </span>input.bc<span class="w"> </span>--crab-check<span class="o">=</span>assert
+
+<span class="c1"># SeaHorn (requires -DLOTUS_ENABLE_SEAHORN=ON)</span>
+./build/bin/seahorn<span class="w"> </span>input.bc
+</pre></div>
+</div>
+</section>
+<section id="result-format">
+<h2>Result Format<a class="headerlink" href="#result-format" title="Link to this heading"></a></h2>
+<p>All drivers normalize results to a standard format:</p>
+<ul class="simple">
+<li><p><strong>true</strong>: Property holds (no error found)</p></li>
+<li><p><strong>false</strong>: Property violated (error found)</p></li>
+<li><p><strong>unknown</strong>: Could not determine</p></li>
+<li><p><strong>error</strong>: Verification tool error</p></li>
+<li><p><strong>timeout</strong>: Verification timed out</p></li>
+</ul>
+</section>
+<section id="example-output">
+<h2>Example Output<a class="headerlink" href="#example-output" title="Link to this heading"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>driver: seahorn
+property: unreach-call
+result: true
+message: Property holds (no error found)
+exit-code: 0
+</pre></div>
+</div>
+</section>
+<section id="programmatic-usage">
+<h2>Programmatic Usage<a class="headerlink" href="#programmatic-usage" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"Verification/Driver/Backend.h"</span>
+
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">lotus</span><span class="o">::</span><span class="nn">verification</span><span class="o">::</span><span class="nn">driver</span><span class="p">;</span>
+
+<span class="n">DriverRegistry</span><span class="w"> </span><span class="o">&amp;</span><span class="n">reg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DriverRegistry</span><span class="o">::</span><span class="n">instance</span><span class="p">();</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">driver</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reg</span><span class="p">.</span><span class="n">create</span><span class="p">(</span><span class="s">"seahorn"</span><span class="p">);</span>
+
+<span class="n">VerificationTask</span><span class="w"> </span><span class="n">task</span><span class="p">;</span>
+<span class="n">task</span><span class="p">.</span><span class="n">inputBitcode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"input.bc"</span><span class="p">;</span>
+<span class="n">task</span><span class="p">.</span><span class="n">property</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">PropertyClass</span><span class="o">::</span><span class="n">Reachability</span><span class="p">;</span>
+<span class="n">task</span><span class="p">.</span><span class="n">timeoutSeconds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">60</span><span class="p">;</span>
+
+<span class="k">auto</span><span class="w"> </span><span class="n">cmd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver</span><span class="o">-&gt;</span><span class="n">buildCommand</span><span class="p">(</span><span class="n">task</span><span class="p">);</span>
+<span class="c1">// Execute command...</span>
+<span class="n">VerificationResultInfo</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver</span><span class="o">-&gt;</span><span class="n">parseResult</span><span class="p">(</span><span class="n">output</span><span class="p">,</span><span class="w"> </span><span class="n">exitCode</span><span class="p">);</span>
+
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">result</span><span class="p">.</span><span class="n">isSafe</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="c1">// Property holds</span>
+<span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">result</span><span class="p">.</span><span class="n">hasError</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="c1">// Property violated</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="adding-new-drivers">
+<h2>Adding New Drivers<a class="headerlink" href="#adding-new-drivers" title="Link to this heading"></a></h2>
+<p>To add a new driver, implement the <code class="docutils literal notranslate"><span class="pre">IDriver</span></code> interface:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">MyDriver</span><span class="w"> </span><span class="k">final</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">IDriver</span><span class="w"> </span><span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+<span class="w">  </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">name</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s">"mydriver"</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+
+<span class="w">  </span><span class="kt">bool</span><span class="w"> </span><span class="n">supports</span><span class="p">(</span><span class="n">PropertyClass</span><span class="w"> </span><span class="n">property</span><span class="p">)</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">property</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">PropertyClass</span><span class="o">::</span><span class="n">Reachability</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span>
+<span class="w">  </span><span class="n">buildCommand</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">VerificationTask</span><span class="w"> </span><span class="o">&amp;</span><span class="n">task</span><span class="p">)</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">{</span><span class="s">"mydriver"</span><span class="p">,</span><span class="w"> </span><span class="n">task</span><span class="p">.</span><span class="n">inputBitcode</span><span class="p">};</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="n">VerificationResultInfo</span><span class="w"> </span><span class="n">parseResult</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="n">output</span><span class="p">,</span>
+<span class="w">                                     </span><span class="kt">int</span><span class="w"> </span><span class="n">exitCode</span><span class="p">)</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">VerificationResultInfo</span><span class="w"> </span><span class="n">info</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// Parse output and set info.result, info.message, etc.</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">info</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<p>Then register it in <code class="docutils literal notranslate"><span class="pre">DriverRegistry::create()</span></code>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="property_based_slicing.html" class="btn btn-neutral float-left" title="Property-Based Slicing" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="instrumentation_passes.html" class="btn btn-neutral float-right" title="Instrumentation Passes" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

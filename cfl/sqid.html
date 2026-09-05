@@ -1,0 +1,306 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sqid Efficient Relation Chaining &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Context-Sensitive Reachability Indexing" href="csindex.html" />
+    <link rel="prev" title="Stg Staged Solving" href="stg.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Context-Free Language Analysis</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="cfl_components.html">CFL Reachability Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="classical.html">Classical Grammar-Driven CFL Reachability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pocr_migration.html">POCR Migration Matrix</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="pearl_stg_sqid.html">Paper Engines: PEARL, Stg, and Sqid</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="pearl_stg_sqid.html#coverage-summary">Coverage summary</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="pearl.html">PEARL Multi-Derivation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="stg.html">Stg Staged Solving</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">Sqid Efficient Relation Chaining</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="csindex.html">Context-Sensitive Reachability Indexing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_unary.html">Exact Unary Interleaved Dyck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_staged_bounds.html">Interleaved-Dyck Staged Bounds</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_graph_reduction.html">Interleaved-Dyck Graph Reduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_mcfl.html">Multiple Context-Free Language Reachability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_mutual_refinement.html">Mutual Refinement for CFL Reachability</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Context-Free Language Analysis</a></li>
+          <li class="breadcrumb-item"><a href="pearl_stg_sqid.html">Paper Engines: PEARL, Stg, and Sqid</a></li>
+      <li class="breadcrumb-item active">Sqid Efficient Relation Chaining</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/cfl/sqid.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="sqid-efficient-relation-chaining">
+<h1>Sqid Efficient Relation Chaining<a class="headerlink" href="#sqid-efficient-relation-chaining" title="Link to this heading"></a></h1>
+<section id="paper">
+<h2>Paper<a class="headerlink" href="#paper" title="Link to this heading"></a></h2>
+<p>Lotus implements Chenghang Shi, Haofeng Li, Jie Lu, and Lian Li,
+<em>Context-Free Language Reachability via Efficient Relation Chaining</em>,
+OOPSLA 2026, PACMPL 10, OOPSLA1, Article 162
+(<a class="reference external" href="https://doi.org/10.1145/3798270">DOI 10.1145/3798270</a>).</p>
+</section>
+<section id="problem-and-relation-chaining-view">
+<h2>Problem and relation-chaining view<a class="headerlink" href="#problem-and-relation-chaining-view" title="Link to this heading"></a></h2>
+<p>For a binary production <code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">-&gt;</span> <span class="pre">Y</span> <span class="pre">Z</span></code> and middle node <code class="docutils literal notranslate"><span class="pre">v</span></code>, conventional CFL
+solving takes the Cartesian product of all incoming <code class="docutils literal notranslate"><span class="pre">Y</span></code> edges and outgoing
+<code class="docutils literal notranslate"><span class="pre">Z</span></code> edges at <code class="docutils literal notranslate"><span class="pre">v</span></code>. The paper calls this operation <strong>relation chaining</strong>.</p>
+<p>Two independent choices create avoidable work:</p>
+<ul class="simple">
+<li><p>which side of the product supplies the pivot edges; and</p></li>
+<li><p>whether old combinations are reconsidered when a delta arrives.</p></li>
+</ul>
+<p>Sqid combines adaptive chaining and differential chaining over an enhanced
+four-view graph representation. It changes the schedule and representation,
+not the least fixed point: the resulting labeled relation is identical to the
+standard CFL algorithm.</p>
+<p>Paper Algorithm 1 is that standard reference algorithm. It corresponds to
+Lotus’s existing <code class="docutils literal notranslate"><span class="pre">SolverSession</span></code> worklist backend and is intentionally
+shared rather than reimplemented inside Sqid. The new Sqid contribution is
+Algorithms 2-4 below.</p>
+</section>
+<section id="algorithm-2-adaptive-chaining">
+<h2>Algorithm 2: adaptive chaining<a class="headerlink" href="#algorithm-2-adaptive-chaining" title="Link to this heading"></a></h2>
+<p>Let <code class="docutils literal notranslate"><span class="pre">sources</span></code> be the incoming left-relation endpoints at a middle node and
+<code class="docutils literal notranslate"><span class="pre">targets</span></code> be the outgoing right-relation endpoints. Their Cartesian product
+can be enumerated in two equivalent ways:</p>
+<dl class="simple">
+<dt>Backward chaining</dt><dd><p>Use each target as a pivot and derive the complete incoming source set.</p>
+</dd>
+<dt>Forward chaining</dt><dd><p>Use each source as a pivot and derive the complete outgoing target set.</p>
+</dd>
+</dl>
+<p>Algorithm 2 chooses the side with fewer pivots:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>if |sources| &gt;= |targets|:
+    for target in targets: DeriveIn(sources -X-&gt; target)
+else:
+    for source in sources: DeriveOut(source -X-&gt; targets)
+</pre></div>
+</div>
+<p>The number of logical result pairs is unchanged, but fewer derivation calls
+and set operations are needed when the endpoint sets are skewed.</p>
+</section>
+<section id="differential-chaining">
+<h2>Differential chaining<a class="headerlink" href="#differential-chaining" title="Link to this heading"></a></h2>
+<p>For old relations <code class="docutils literal notranslate"><span class="pre">Y</span></code> and <code class="docutils literal notranslate"><span class="pre">Z</span></code> and deltas <code class="docutils literal notranslate"><span class="pre">DeltaY</span></code> and <code class="docutils literal notranslate"><span class="pre">DeltaZ</span></code>, a
+naive incremental product contains four terms. The old-old term is already
+known. In a sequential worklist, the delta-delta term also need not be
+evaluated independently: whichever delta is processed first becomes old
+before the other side is processed.</p>
+<p>At each middle node <code class="docutils literal notranslate"><span class="pre">v</span></code>, Sqid therefore computes only:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>InE(v, Y)      chain DeltaOutE(v, Z)
+DeltaInE(v, Y) chain OutE(v, Z)
+</pre></div>
+</div>
+<p>The two terms are independent and each invokes adaptive chaining.</p>
+</section>
+<section id="enhanced-graph-representation">
+<h2>Enhanced graph representation<a class="headerlink" href="#enhanced-graph-representation" title="Link to this heading"></a></h2>
+<p>Every logical edge <code class="docutils literal notranslate"><span class="pre">u</span> <span class="pre">-X-&gt;</span> <span class="pre">v</span></code> has two orientations and two ages:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">InE(v,</span> <span class="pre">X)</span></code></dt><dd><p>Processed sources of <code class="docutils literal notranslate"><span class="pre">X</span></code> edges ending at <code class="docutils literal notranslate"><span class="pre">v</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">OutE(u,</span> <span class="pre">X)</span></code></dt><dd><p>Processed targets of <code class="docutils literal notranslate"><span class="pre">X</span></code> edges beginning at <code class="docutils literal notranslate"><span class="pre">u</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DeltaInE(v,</span> <span class="pre">X)</span></code></dt><dd><p>Unprocessed sources in the head view.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">DeltaOutE(u,</span> <span class="pre">X)</span></code></dt><dd><p>Unprocessed targets in the tail view.</p>
+</dd>
+</dl>
+<p>The head and tail views are synchronized at insertion. They have separate
+key worklists because the same logical edge participates in different binary
+production positions from each orientation.</p>
+</section>
+<section id="algorithm-3-derivation-and-insertion">
+<h2>Algorithm 3: derivation and insertion<a class="headerlink" href="#algorithm-3-derivation-and-insertion" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">DeriveIn</span></code> first subtracts both <code class="docutils literal notranslate"><span class="pre">InE</span></code> and <code class="docutils literal notranslate"><span class="pre">DeltaInE</span></code> from the proposed
+source set. If anything remains, it inserts the difference into
+<code class="docutils literal notranslate"><span class="pre">DeltaInE</span></code>, schedules the head key, mirrors each edge into <code class="docutils literal notranslate"><span class="pre">DeltaOutE</span></code>, and
+schedules the corresponding tail keys.</p>
+<p><code class="docutils literal notranslate"><span class="pre">DeriveOut</span></code> performs the symmetric operation, deduplicating against
+<code class="docutils literal notranslate"><span class="pre">OutE</span></code> and <code class="docutils literal notranslate"><span class="pre">DeltaOutE</span></code> before synchronizing the head deltas. This
+view-specific duplicate check is important: one view may already have been
+flushed while the other remains pending.</p>
+</section>
+<section id="algorithm-4-overall-solver">
+<h2>Algorithm 4: overall solver<a class="headerlink" href="#algorithm-4-overall-solver" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>Insert terminal edges through <code class="docutils literal notranslate"><span class="pre">DeriveIn</span></code>.</p></li>
+<li><p>For every nullable symbol and every node, insert its self edge through
+<code class="docutils literal notranslate"><span class="pre">DeriveIn</span></code>.</p></li>
+<li><p>Drain the incoming-key worklist. Flushing moves one keyed delta from
+<code class="docutils literal notranslate"><span class="pre">DeltaInE</span></code> to <code class="docutils literal notranslate"><span class="pre">InE</span></code>. Apply unary productions, then for every
+<code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">-&gt;</span> <span class="pre">Y</span> <span class="pre">Z</span></code> chain the new incoming <code class="docutils literal notranslate"><span class="pre">Y</span></code> set with the processed outgoing
+<code class="docutils literal notranslate"><span class="pre">Z</span></code> set.</p></li>
+<li><p>Drain the outgoing-key worklist. Flushing moves one keyed delta from
+<code class="docutils literal notranslate"><span class="pre">DeltaOutE</span></code> to <code class="docutils literal notranslate"><span class="pre">OutE</span></code>. For every <code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">-&gt;</span> <span class="pre">Z</span> <span class="pre">Y</span></code>, chain the processed
+incoming <code class="docutils literal notranslate"><span class="pre">Z</span></code> set with the new outgoing <code class="docutils literal notranslate"><span class="pre">Y</span></code> set.</p></li>
+<li><p>Repeat while either worklist is nonempty.</p></li>
+</ol>
+<p>The incoming loop is deliberately drained before the outgoing loop, matching
+the paper. This sequencing is what makes a separate delta-delta product
+unnecessary in the single-threaded algorithm.</p>
+</section>
+<section id="lotus-implementation">
+<h2>Lotus implementation<a class="headerlink" href="#lotus-implementation" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>Public API</dt><dd><p><code class="docutils literal notranslate"><span class="pre">include/CFL/Classical/Solvers/Engines/SQID/SqidEngine.h</span></code></p>
+</dd>
+<dt>Algorithm</dt><dd><p><code class="docutils literal notranslate"><span class="pre">lib/CFL/Classical/Solvers/Engines/SQID/SqidEngine.cpp</span></code></p>
+</dd>
+<dt>Integration</dt><dd><p><code class="docutils literal notranslate"><span class="pre">SolverBackend::Sqid</span></code> and <code class="docutils literal notranslate"><span class="pre">--solver</span> <span class="pre">sqid</span></code> in the classical, alias, and
+value-flow drivers.</p>
+</dd>
+</dl>
+<p>The engine owns all four views, both worklists, flush operations, and adaptive
+product selection. The generic Lotus <code class="docutils literal notranslate"><span class="pre">Relation</span></code> is only the exact
+materialized result exposed to clients; Sqid does not delegate its solving to
+the generic worklist backend.</p>
+</section>
+<section id="validation">
+<h2>Validation<a class="headerlink" href="#validation" title="Link to this heading"></a></h2>
+<p>Tests force both adaptive directions, exercise unary, binary, nullable, cyclic,
+and incremental cases, and compare complete labeled relations against an
+independent cubic recognizer over generated grammars and graphs. The migrated
+POCR alias and value-flow datasets also produce the same start relations as
+the baseline solver.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="stg.html" class="btn btn-neutral float-left" title="Stg Staged Solving" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="csindex.html" class="btn btn-neutral float-right" title="Context-Sensitive Reachability Indexing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

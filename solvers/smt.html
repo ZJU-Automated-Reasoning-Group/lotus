@@ -1,0 +1,272 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SMT (Satisfiability Modulo Theories) &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="WPDS (Weighted Pushdown Systems)" href="wpds.html" />
+    <link rel="prev" title="CUDD (Binary Decision Diagrams)" href="cudd.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Solvers</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="cudd.html">CUDD (Binary Decision Diagrams)</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">SMT (Satisfiability Modulo Theories)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#typical-use-cases">Typical Use Cases</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#basic-usage-c">Basic Usage (C++)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#features">Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#symabs-smt-formula-abstraction-library">SymAbs: SMT Formula Abstraction Library</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#integration-notes">Integration Notes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="wpds.html">WPDS (Weighted Pushdown Systems)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="smtsampler.html">SMT Samplers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="symabs.html">SMT Formula Abstraction (SymAbs)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="staub.html">SMT Theory Arbitrage (STAUB)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tuna.html">TUNA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stingx.html">Stingx — String Constraint Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egraphs_simp.html">E-Graph Quantifier Simplification (EGraphsSimp)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fpsolve.html">FPsolve — Fixed-Point Equation Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="libsmt.html">LIBSMT — SMT Solver Abstraction Layer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datalog.html">Native C++ Datalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#third-party-libraries">Third-Party Libraries</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Solvers</a></li>
+      <li class="breadcrumb-item active">SMT (Satisfiability Modulo Theories)</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/solvers/smt.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="smt-satisfiability-modulo-theories">
+<h1>SMT (Satisfiability Modulo Theories)<a class="headerlink" href="#smt-satisfiability-modulo-theories" title="Link to this heading"></a></h1>
+<p>SMT solving infrastructure with Z3 integration and support for common theories.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>The SMT backend provides a unified interface for building and solving SMT
+formulas over a variety of theories.</p>
+<p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Solvers/SMT/</span></code></p>
+<p><strong>Main capabilities</strong>:</p>
+<ul class="simple">
+<li><p>Z3-based SMT solver backend.</p></li>
+<li><p>Theory support for arithmetic, arrays, bit-vectors, and uninterpreted
+functions.</p></li>
+<li><p>Utilities for incremental solving and formula construction.</p></li>
+</ul>
+</section>
+<section id="typical-use-cases">
+<h2>Typical Use Cases<a class="headerlink" href="#typical-use-cases" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Encoding verification conditions and safety properties.</p></li>
+<li><p>Solving constrained Horn clauses (CHCs) produced by analyses and front-ends.</p></li>
+<li><p>Implementing symbolic execution and path feasibility checks.</p></li>
+</ul>
+</section>
+<section id="basic-usage-c">
+<h2>Basic Usage (C++)<a class="headerlink" href="#basic-usage-c" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;Solvers/SMT/SMTContext.h&gt;</span>
+
+<span class="n">SMTContext</span><span class="w"> </span><span class="n">Ctx</span><span class="p">;</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">Solver</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Ctx</span><span class="p">.</span><span class="n">createSolver</span><span class="p">();</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">Phi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="cm">/* build formula */</span><span class="p">;</span>
+<span class="n">Solver</span><span class="o">-&gt;</span><span class="n">add</span><span class="p">(</span><span class="n">Phi</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+<section id="features">
+<h2>Features<a class="headerlink" href="#features" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Z3 integration</strong> – Tight integration with Z3 4.11 as the primary SMT
+backend.</p></li>
+<li><p><strong>Theory solvers</strong> – Support for integer and real arithmetic, arrays,
+bit-vectors, and uninterpreted functions.</p></li>
+<li><p><strong>Formula construction</strong> – Helper APIs for building and manipulating SMT
+expressions.</p></li>
+<li><p><strong>Incremental solving</strong> – Push/pop interfaces for iterative solving.</p></li>
+</ul>
+</section>
+<section id="symabs-smt-formula-abstraction-library">
+<h2>SymAbs: SMT Formula Abstraction Library<a class="headerlink" href="#symabs-smt-formula-abstraction-library" title="Link to this heading"></a></h2>
+<p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Solvers/SMT/SymAbs/</span></code></p>
+<p><strong>Important Distinction</strong>: This library is <strong>NOT</strong> the same as
+<a class="reference internal" href="../verification/symabs-ai.html"><span class="doc">SymAbsAI – Symbolic Abstraction + Abstract Interpretation</span></a>, which is a complete program
+analysis framework for LLVM IR.</p>
+<p>SymAbs implements algorithms from “Automatic Abstraction of Bit-Vector Formulae”
+for computing symbolic abstractions of <strong>SMT formulas</strong> (specifically bit-vector
+formulas). It operates at the formula/solver level, not the program level.</p>
+<p><strong>Key Differences</strong>:</p>
+<p><strong>Abstract Domains</strong>:</p>
+<ul class="simple">
+<li><p><strong>Zone Domain</strong> (Difference Bound Matrices): Constraints of the form
+<code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">-</span> <span class="pre">y</span> <span class="pre">≤</span> <span class="pre">c</span></code> and <code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">≤</span> <span class="pre">c</span></code>. More restrictive than octagons but more efficient.</p></li>
+<li><p><strong>Octagon Domain</strong>: Constraints of the form <code class="docutils literal notranslate"><span class="pre">±x</span> <span class="pre">±</span> <span class="pre">y</span> <span class="pre">≤</span> <span class="pre">c</span></code>. Relational
+numerical abstract domain.</p></li>
+<li><p><strong>Intervals</strong>: Unary constraints representing value ranges</p></li>
+<li><p><strong>Polyhedra</strong>: General convex constraints</p></li>
+<li><p><strong>Affine Equalities</strong>: Linear equality relations</p></li>
+<li><p><strong>Congruences</strong>: Modular arithmetic constraints</p></li>
+<li><p><strong>Polynomials</strong>: Non-linear polynomial constraints</p></li>
+</ul>
+<p><strong>Why Linear Integer Approximation?</strong></p>
+<p>SymAbs uses linear integer formulas to approximate bit-vector formulas because:</p>
+<ul class="simple">
+<li><p>Bit-vector arithmetic is complex (wrap-around, modular arithmetic)</p></li>
+<li><p>Linear integer arithmetic is more tractable for SMT solvers</p></li>
+<li><p>Allows reuse of efficient integer constraint algorithms</p></li>
+<li><p><strong>Trade-off</strong>: May lose precision due to the approximation</p></li>
+</ul>
+<p>The conversion uses <code class="docutils literal notranslate"><span class="pre">bv_signed_to_int()</span></code> which interprets bit-vectors in
+two’s complement to avoid wrap-around during arithmetic.</p>
+<p><strong>When to Use</strong>:</p>
+<ul class="simple">
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">lib/Solvers/SMT/SymAbs</span></code> when:
+- You have SMT formulas (bit-vectors) that need abstraction
+- You need to approximate bit-vector constraints with linear integer constraints
+- You’re working at the formula/solver level, not the program level</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">lib/Verification/SymAbsAI</span></code> when:
+- You’re analyzing LLVM IR programs
+- You need a complete abstract interpretation framework
+- You want to integrate analysis into LLVM optimization passes</p></li>
+</ul>
+</section>
+<section id="integration-notes">
+<h2>Integration Notes<a class="headerlink" href="#integration-notes" title="Link to this heading"></a></h2>
+<p>The SMT backend is used throughout Lotus by components that require reasoning
+over rich theories, including CHC-based verifiers and symbolic abstractions.
+See <a class="reference internal" href="index.html"><span class="doc">Solvers</span></a> for a high-level overview of where the SMT solver fits in
+the rest of the system.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="cudd.html" class="btn btn-neutral float-left" title="CUDD (Binary Decision Diagrams)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="wpds.html" class="btn btn-neutral float-right" title="WPDS (Weighted Pushdown Systems)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

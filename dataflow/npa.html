@@ -1,0 +1,445 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Newtonian Program Analysis (NPA) &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Intermediate Representations" href="../ir/index.html" />
+    <link rel="prev" title="WPDS Dataflow Engine" href="wpds.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Data Flow Analysis</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="apa.html">Algebraic Program Analysis (APA)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="control_flow.html">Control Flow Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html">Monotone Dataflow Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html#implementation-layout">Implementation Layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html#core-idea">Core Idea</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html#abstract-domain-contract">Abstract Domain Contract</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html#example-analyses">Example Analyses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ifds_ide.html">IFDS / IDE Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ifds_ide.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ifds_ide.html#ifds-set-valued-problems">IFDS: Set-Valued Problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ifds_ide.html#ide-value-enriched-problems">IDE: Value-Enriched Problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ifds_ide.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ifds_ide.html#command-line-tool-lotus-check-engine-taint">Command-Line Tool: lotus-check –engine=taint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html">VASCO Value-Context Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#why-vasco">Why VASCO</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#value-contexts">Value Contexts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#algorithm-sketch">Algorithm Sketch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#core-api">Core API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#results">Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#llvm-instantiation-in-lotus">LLVM Instantiation in Lotus</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#parallel-context-scheduling">Parallel Context Scheduling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#current-scope-and-caveats">Current Scope and Caveats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#relationship-to-other-lotus-engines">Relationship to Other Lotus Engines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wpds.html">WPDS Dataflow Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wpds.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wpds.html#core-idea">Core Idea</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wpds.html#example-analyses">Example Analyses</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Newtonian Program Analysis (NPA)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#conceptual-background">Conceptual Background</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#key-insight-algebraic-generalization">Key Insight: Algebraic Generalization</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#mathematical-foundation">Mathematical Foundation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#continuous-semirings">ω-Continuous Semirings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#comparison-with-kleene-s-method">Comparison with Kleene’s Method</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#examples-and-applications">Examples and Applications</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#may-alias-analysis">May-Alias Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#average-runtime-analysis">Average Runtime Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lcfl-sub-problems-and-tensor-product-regularization">LCFL Sub-Problems and Tensor-Product Regularization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#other-applications">Other Applications</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#distributive-vs-non-distributive-analyses">Distributive vs. Non-Distributive Analyses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#implementation-layout">Implementation Layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#usage-notes">Usage Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#practical-notes-for-numeric-domains">Practical notes for numeric domains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Data Flow Analysis</a></li>
+      <li class="breadcrumb-item active">Newtonian Program Analysis (NPA)</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/dataflow/npa.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="newtonian-program-analysis-npa">
+<h1>Newtonian Program Analysis (NPA)<a class="headerlink" href="#newtonian-program-analysis-npa" title="Link to this heading"></a></h1>
+</section>
+<section id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h1>
+<p>The <strong>Newtonian Program Analysis (NPA)</strong> engine in <code class="docutils literal notranslate"><span class="pre">lib/Dataflow/NPA</span></code>
+implements advanced, research-oriented techniques for compositional and
+recurrence-based data-flow reasoning.
+It is designed for <strong>numeric</strong> and <strong>relational</strong> analyses that go
+beyond classical bit-vector or IFDS/IDE formulations.</p>
+<ul class="simple">
+<li><p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Dataflow/NPA</span></code> (implementation), <code class="docutils literal notranslate"><span class="pre">include/Dataflow/NPA</span></code> (headers)</p></li>
+<li><p><strong>Purpose</strong>: library infrastructure for Newton-style program analyses</p></li>
+</ul>
+</section>
+<section id="conceptual-background">
+<h1>Conceptual Background<a class="headerlink" href="#conceptual-background" title="Link to this heading"></a></h1>
+<p>NPA is based on a sequence of works that recast program analysis as a
+form of <strong>Newton iteration</strong> over suitable abstract domains:</p>
+<ul class="simple">
+<li><p><em>Newtonian Program Analysis</em> (JACM 2010) <a class="reference internal" href="#esparzakieferluttenberger2010" id="id1"><span>[EsparzaKieferLuttenberger2010]</span></a>:
+algebraic differential <span class="math notranslate nohighlight">\(Df|_\nu\)</span>, Newton sequence, convergence to least fixed point.</p></li>
+<li><p><em>Newtonian Program Analysis via Tensor Product</em> (TOPLAS 2016) <a class="reference internal" href="#repsetaltoplas2016" id="id2"><span>[RepsEtAlTOPLAS2016]</span></a>:
+solving the <strong>LCFL</strong> (linear context-free language) sub-problems produced each
+Newton round by “regularizing” them via a <strong>tensor product</strong> (paired semiring).</p></li>
+<li><p><em>Compositional Recurrence Analysis Revisited</em>, PLDI 2017.</p></li>
+</ul>
+<p>The foundational paper <a class="reference internal" href="#esparzakieferluttenberger2010" id="id3"><span>[EsparzaKieferLuttenberger2010]</span></a> (JACM) presents a novel
+generic technique for solving interprocedural dataflow equations by generalizing
+Newton’s method to <strong>ω-continuous semirings</strong>. When the semiring multiplication
+is <strong>non-commutative</strong> (e.g. function composition in dataflow), the linearized
+system at each Newton round is an <strong>LCFL equation system</strong> (coefficients on both
+sides of variables). <a class="reference internal" href="#repsetaltoplas2016" id="id4"><span>[RepsEtAlTOPLAS2016]</span></a> shows
+how to convert such systems into left-linear (regular) form over a paired semiring,
+then solve and project back (Algorithm 3.4).</p>
+<section id="key-insight-algebraic-generalization">
+<h2>Key Insight: Algebraic Generalization<a class="headerlink" href="#key-insight-algebraic-generalization" title="Link to this heading"></a></h2>
+<p>The key insight is that Newton’s method can be reformulated <strong>purely algebraically</strong>,
+without requiring subtraction, division, or limits. This allows the method to be
+applied to arbitrary semirings, not just the real numbers.</p>
+<p>The method works as follows:</p>
+<ul class="simple">
+<li><p>Programs are encoded as systems of (possibly non-linear) recurrence equations
+over an ω-continuous semiring.</p></li>
+<li><p>At each iteration, Newton’s method linearizes the system at the current
+approximation using <strong>algebraic differentials</strong>.</p></li>
+<li><p>The differential of a power series is defined inductively using algebraic rules
+(product rule, sum rule) rather than limits.</p></li>
+<li><p>Each Newton step solves a linear system to obtain the next approximation.</p></li>
+</ul>
+<p>This yields:</p>
+<ul class="simple">
+<li><p><strong>Faster convergence</strong> than classical Kleene iteration (often exponentially faster).</p></li>
+<li><p><strong>Robustness</strong>: guaranteed convergence for any ω-continuous semiring.</p></li>
+<li><p><strong>Termination guarantees</strong>: for idempotent commutative semirings, Newton’s method
+terminates in at most <em>n</em> iterations for a system of <em>n</em> equations. In code, this
+bound is applied automatically only when the domain declares
+<code class="docutils literal notranslate"><span class="pre">static</span> <span class="pre">constexpr</span> <span class="pre">bool</span> <span class="pre">commutative_extend</span> <span class="pre">=</span> <span class="pre">true</span></code>.</p></li>
+</ul>
+</section>
+</section>
+<section id="mathematical-foundation">
+<h1>Mathematical Foundation<a class="headerlink" href="#mathematical-foundation" title="Link to this heading"></a></h1>
+<section id="continuous-semirings">
+<h2>ω-Continuous Semirings<a class="headerlink" href="#continuous-semirings" title="Link to this heading"></a></h2>
+<p>An <strong>ω-continuous semiring</strong> is a tuple <span class="math notranslate nohighlight">\(\langle S, +, \cdot, 0, 1 \rangle\)</span> where:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\((S, +, 0)\)</span> is a commutative monoid (addition/join operation)</p></li>
+<li><p><span class="math notranslate nohighlight">\((S, \cdot, 1)\)</span> is a monoid (multiplication/sequencing operation)</p></li>
+<li><p>Multiplication distributes over addition</p></li>
+<li><p>The relation <span class="math notranslate nohighlight">\(a \sqsubseteq b\)</span> (defined as <span class="math notranslate nohighlight">\(\exists d : a + d = b\)</span>) is a partial order</p></li>
+<li><p>Every ω-chain has a supremum with respect to <span class="math notranslate nohighlight">\(\sqsubseteq\)</span></p></li>
+<li><p>Infinite sums satisfy standard continuity properties</p></li>
+</ul>
+<p>This generalizes:</p>
+<ul class="simple">
+<li><p><strong>Lattices</strong> (classical dataflow analysis): idempotent semirings where <span class="math notranslate nohighlight">\(a + a = a\)</span></p></li>
+<li><p><strong>Language semirings</strong>: languages over an alphabet with union and concatenation</p></li>
+<li><p><strong>Counting semirings</strong>: sets of vectors (Parikh images) for counting occurrences</p></li>
+<li><p><strong>Probabilistic semirings</strong>: nonnegative reals for probability and expected runtime analysis</p></li>
+<li><p><strong>Relational semirings</strong>: relations over program states for may-alias and summary relations</p></li>
+</ul>
+</section>
+<section id="comparison-with-kleene-s-method">
+<h2>Comparison with Kleene’s Method<a class="headerlink" href="#comparison-with-kleene-s-method" title="Link to this heading"></a></h2>
+<p>Traditional dataflow analysis uses <strong>Kleene iteration</strong>, which:</p>
+<ul class="simple">
+<li><p>Starts at <span class="math notranslate nohighlight">\(\kappa^{(0)} = 0\)</span> (or <span class="math notranslate nohighlight">\(f(0)\)</span>)</p></li>
+<li><p>Iterates: <span class="math notranslate nohighlight">\(\kappa^{(i+1)} = f(\kappa^{(i)})\)</span></p></li>
+<li><p>Converges to the least fixed point <span class="math notranslate nohighlight">\(\mu f = \sup_i \kappa^{(i)}\)</span></p></li>
+</ul>
+<p><strong>Newton’s method</strong> instead:</p>
+<ul class="simple">
+<li><p>Starts at <span class="math notranslate nohighlight">\(\nu^{(0)} = f(0)\)</span></p></li>
+<li><p>Iterates: <span class="math notranslate nohighlight">\(\nu^{(i+1)} = \nu^{(i)} + \Delta^{(i)}\)</span> where <span class="math notranslate nohighlight">\(\Delta^{(i)}\)</span> is the
+least solution of the linearized system <span class="math notranslate nohighlight">\(Df|_{\nu^{(i)}}(X) + \delta^{(i)} = X\)</span></p></li>
+<li><p>Converges at least as fast as Kleene: <span class="math notranslate nohighlight">\(\kappa^{(i)} \sqsubseteq \nu^{(i)} \sqsubseteq \mu f\)</span></p></li>
+</ul>
+<p>For probabilistic programs, Newton’s method can achieve linear convergence (one bit
+of precision per iteration) compared to logarithmic convergence for Kleene iteration.
+For commutative idempotent semirings, Newton’s method guarantees termination in at
+most <em>n</em> iterations for <em>n</em> equations.</p>
+</section>
+</section>
+<section id="examples-and-applications">
+<h1>Examples and Applications<a class="headerlink" href="#examples-and-applications" title="Link to this heading"></a></h1>
+<p>The NPA framework supports both <strong>qualitative</strong> and <strong>quantitative</strong> analyses:</p>
+<section id="may-alias-analysis">
+<h2>May-Alias Analysis<a class="headerlink" href="#may-alias-analysis" title="Link to this heading"></a></h2>
+<p>Using the <strong>counting semiring</strong> (Parikh abstraction), NPA can perform may-alias
+analysis that tracks how many times each data access path is traversed. Unlike
+Kleene iteration, which may not terminate for recursive procedures, Newton’s method
+terminates in one iteration for this class of problems.</p>
+</section>
+<section id="average-runtime-analysis">
+<h2>Average Runtime Analysis<a class="headerlink" href="#average-runtime-analysis" title="Link to this heading"></a></h2>
+<p>Using <strong>probabilistic semirings</strong>, NPA can compute:
+* The probability that a procedure terminates
+* The expected runtime (conditional on termination)</p>
+<p>For probabilistic programs with recursive procedures, Newton’s method converges
+substantially faster than Kleene iteration, achieving linear rather than logarithmic
+convergence.</p>
+</section>
+<section id="lcfl-sub-problems-and-tensor-product-regularization">
+<h2>LCFL Sub-Problems and Tensor-Product Regularization<a class="headerlink" href="#lcfl-sub-problems-and-tensor-product-regularization" title="Link to this heading"></a></h2>
+<p>When the semiring extend (multiplication) is <strong>non-commutative</strong>, the linearized
+system at each Newton round has the form of an <strong>LCFL equation system</strong>
+<span class="math notranslate nohighlight">\(Y_j = c_j \oplus \bigoplus_{i,k} (a_{i,j,k} \otimes Y_i \otimes b_{i,j,k})\)</span>
+(Reps et al. TOPLAS 2016, Definition 3.1): coefficients appear on <strong>both sides</strong>
+of variables, corresponding to path problems described by linear context-free
+languages. Conventional intraprocedural (regular) solvers cannot be applied
+directly.</p>
+<p>The <strong>tensor-product</strong> approach (Algorithm 3.4 in <a class="reference internal" href="#repsetaltoplas2016" id="id5"><span>[RepsEtAlTOPLAS2016]</span></a>):
+(1) Convert the LCFL system into a <strong>left-linear</strong> system over a <strong>paired</strong>
+semiring <span class="math notranslate nohighlight">\((a,b) \otimes_p (a',b') = (a' \otimes a, b \otimes b')\)</span>,
+<span class="math notranslate nohighlight">\(R((w_1,w_2)) = w_1 \otimes w_2\)</span>; (2) solve the left-linear system
+(e.g. by worklist or path expressions); (3) <strong>project</strong> back via <span class="math notranslate nohighlight">\(R\)</span>.
+The paired structure maintains the mirrored correlation of left/right
+coefficients. The implementation uses <code class="docutils literal notranslate"><span class="pre">TensorProductDomain</span></code> and
+<code class="docutils literal notranslate"><span class="pre">solve_linear_tensor_impl</span></code> when the system has LCFL structure (Concat/Star).</p>
+<p><code class="docutils literal notranslate"><span class="pre">Star</span></code> is the paper-faithful Kleene-star construct used by Newton/tensor
+regularization. <code class="docutils literal notranslate"><span class="pre">Mu</span></code> remains available as a generic least-fixpoint construct
+for plain evaluation, but it is intentionally rejected on Newton/tensor paths.</p>
+<p>Implementation note: to preserve left/right correlation during projection, the
+tensor solver uses an exact correlated representation for idempotent domains
+(modeling sums as finite sets of pairs) rather than componentwise addition over a
+single pair.</p>
+</section>
+<section id="other-applications">
+<h2>Other Applications<a class="headerlink" href="#other-applications" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Language analysis</strong>: Computing the set of execution paths (context-free languages)</p></li>
+<li><p><strong>Relational analysis</strong>: Computing summary relations for interprocedural analysis</p></li>
+<li><p><strong>Cost analysis</strong>: Expected resource consumption under probabilistic execution models</p></li>
+</ul>
+</section>
+</section>
+<section id="distributive-vs-non-distributive-analyses">
+<h1>Distributive vs. Non-Distributive Analyses<a class="headerlink" href="#distributive-vs-non-distributive-analyses" title="Link to this heading"></a></h1>
+<p>NPA supports both <strong>distributive</strong> and <strong>non-distributive</strong> program analyses:</p>
+<ul class="simple">
+<li><p><strong>Distributive analyses</strong>: Multiplication distributes over addition
+(<span class="math notranslate nohighlight">\(a \cdot (b + c) = a \cdot b + a \cdot c\)</span>). In this case, the least fixed point
+coincides with the join-over-all-paths (JOP) solution.</p></li>
+<li><p><strong>Non-distributive analyses</strong>: Only subdistributivity holds
+(<span class="math notranslate nohighlight">\(a \cdot (b + c) \sqsupseteq a \cdot b + a \cdot c\)</span>). In this case, the least
+fixed point is an <strong>overapproximation</strong> of the JOP solution, but still provides a
+sound analysis result. In-tree clients such as constant propagation and interval
+analysis use <code class="docutils literal notranslate"><span class="pre">SummaryTransformerDomain</span></code> as NPA’s current abstract-summary path
+for this fragment.</p></li>
+</ul>
+</section>
+<section id="implementation-layout">
+<h1>Implementation Layout<a class="headerlink" href="#implementation-layout" title="Link to this heading"></a></h1>
+<p>The core headers implement the algorithms from Esparza et al. (JACM) and Reps et al. (TOPLAS 2016):</p>
+<ul class="simple">
+<li><p><strong>Core/Domain.h</strong>: Domain concept (ω-continuous semiring).</p></li>
+<li><p><strong>Solver/Options.h</strong>: <code class="docutils literal notranslate"><span class="pre">LinearStrategy</span></code> configuration.</p></li>
+<li><p><strong>Core/Expr/Expressions.h</strong>: <code class="docutils literal notranslate"><span class="pre">Exp0</span></code> (polynomial equation AST), <code class="docutils literal notranslate"><span class="pre">Exp1</span></code> (linearized AST);
+<code class="docutils literal notranslate"><span class="pre">Concat</span></code> encodes the LCFL form <span class="math notranslate nohighlight">\(a \cdot X \cdot b\)</span>; <code class="docutils literal notranslate"><span class="pre">Star</span></code> is the
+Newton/tensor Kleene-star fragment and <code class="docutils literal notranslate"><span class="pre">Mu</span></code> is a generic least-fixpoint node.</p></li>
+<li><p><strong>Solver/Newton/Differential.h</strong>: Builds the differential <span class="math notranslate nohighlight">\(Df|_\nu\)</span> from a polynomial expression
+(Esparza et al. JACM, Defn. 3.1, 3.5) and caches differential shape plans across
+Newton rounds.</p></li>
+<li><p><strong>Core/Expr/Eval.h</strong>: Evaluates full and linearized equation ASTs.</p></li>
+<li><p><strong>Solver/Fixpoint.h</strong>: Generic fixpoint utilities.</p></li>
+<li><p><strong>Solver/Newton/Linear/SccSolver.h</strong>: Worklist and SCC linear solvers.</p></li>
+<li><p><strong>Solver/Newton/Linear/Tensor/</strong>: Tensor-product solver machinery.</p></li>
+<li><p><strong>LLVM/</strong>: LLVM bit-vector and interprocedural integration.</p></li>
+<li><p><strong>Domains/</strong>: Concrete semiring and transformer domains.</p></li>
+<li><p><strong>Analyses/Intra/</strong> and <strong>Analyses/Inter/</strong>: Concrete LLVM analysis clients.</p></li>
+</ul>
+</section>
+<section id="usage-notes">
+<h1>Usage Notes<a class="headerlink" href="#usage-notes" title="Link to this heading"></a></h1>
+<p>In the current code base, NPA is primarily exposed as an internal
+library component.
+Clients that use NPA are expected to be familiar with the above papers
+and to instantiate the provided abstractions for their specific numeric
+domains and recurrence schemes.</p>
+<p>Interprocedural clients currently assume a closed-world LLVM module for indirect
+calls: if no stronger resolver is attached, unknown call sites are approximated
+by the set of type-compatible defined functions in the current module.</p>
+</section>
+<section id="practical-notes-for-numeric-domains">
+<h1>Practical notes for numeric domains<a class="headerlink" href="#practical-notes-for-numeric-domains" title="Link to this heading"></a></h1>
+<p>For floating-point / numeric semirings, exact equality often prevents termination
+in iterative solvers. Domains may provide an optional method
+<code class="docutils literal notranslate"><span class="pre">approx_equal(a,b)</span></code>; when present, NPA uses it for convergence checks instead
+of <code class="docutils literal notranslate"><span class="pre">equal(a,b)</span></code>.</p>
+<p>Domains may also opt into bounding iteration:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">max_fixpoint_iters</span></code> caps generic fixpoint loops (e.g. <code class="docutils literal notranslate"><span class="pre">Star</span></code> / <code class="docutils literal notranslate"><span class="pre">Mu</span></code> bodies).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_linear_steps</span></code> caps worklist/SCC steps for the linearized system.</p></li>
+</ul>
+<p>If a domain implements <code class="docutils literal notranslate"><span class="pre">project()</span></code>, Newton/tensor paths require an additional
+opt-in <code class="docutils literal notranslate"><span class="pre">project_newton_safe</span></code> contract. That contract is the domain author’s
+assertion that projection is monotone and compatible with <code class="docutils literal notranslate"><span class="pre">combine</span></code> and the
+linearized summary equations used by the Newton pipeline.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">lotus-dfa-npa</span></code> command-line tool exposes the in-tree LLVM clients; the
+generic solver APIs can also be used directly by library clients.</p>
+</section>
+<section id="references">
+<h1>References<a class="headerlink" href="#references" title="Link to this heading"></a></h1>
+<div role="list" class="citation-list">
+<div class="citation" id="repsetaltoplas2016" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>RepsEtAlTOPLAS2016<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink" href="#id2">1</a>,<a role="doc-backlink" href="#id4">2</a>,<a role="doc-backlink" href="#id5">3</a>)</span>
+<p>Thomas Reps, Emma Turetsky, and Prathmesh Prabhu.
+Newtonian Program Analysis via Tensor Product. ACM Transactions on Programming
+Languages and Systems (TOPLAS), 2016. (Portions in POPL 2016.)</p>
+</div>
+<div class="citation" id="esparzakieferluttenberger2010" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span>EsparzaKieferLuttenberger2010<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink" href="#id1">1</a>,<a role="doc-backlink" href="#id3">2</a>)</span>
+<p>Javier Esparza, Stefan Kiefer, and Michael Luttenberger.
+Newtonian Program Analysis. Journal of the ACM, 57(6):1-47, 2010.</p>
+</div>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="wpds.html" class="btn btn-neutral float-left" title="WPDS Dataflow Engine" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../ir/index.html" class="btn btn-neutral float-right" title="Intermediate Representations" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

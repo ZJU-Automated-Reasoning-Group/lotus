@@ -1,0 +1,777 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bug Detection with Lotus &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="PDG Query Language (Cypher)" href="pdg_query_language.html" />
+    <link rel="prev" title="Tutorials and Examples" href="tutorials.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Bug Detection with Lotus</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bug-categories">Bug Categories</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#memory-safety">Memory Safety</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#integer-safety">Integer Safety</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#information-flow">Information Flow</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#concurrency">Concurrency</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#tool-1-kint-integer-and-array-analysis">Tool 1: Kint - Integer and Array Analysis</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#capabilities">Capabilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#basic-usage">Basic Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-1-integer-overflow">Example 1: Integer Overflow</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-2-array-out-of-bounds">Example 2: Array Out of Bounds</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-3-division-by-zero">Example 3: Division by Zero</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#tool-2-taint-analysis">Tool 2: Taint Analysis</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1">Capabilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id2">Basic Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-1-command-injection">Example 1: Command Injection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-2-sql-injection">Example 2: SQL Injection</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#tool-3-concurrency-checker">Tool 3: Concurrency Checker</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id3">Capabilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id4">Basic Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#openmp-and-mpi-examples">OpenMP and MPI Examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-data-race">Example: Data Race</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#best-practices">Best Practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#output-formats">Output Formats</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#text-output">Text Output</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#json-output">JSON Output</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sarif-output">SARIF Output</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#integration-examples">Integration Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#ci-cd-pipeline">CI/CD Pipeline</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#vs-code-integration">VS Code Integration</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Bug Detection with Lotus</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/user_guide/bug_detection.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="bug-detection-with-lotus">
+<h1>Bug Detection with Lotus<a class="headerlink" href="#bug-detection-with-lotus" title="Link to this heading"></a></h1>
+<p>Lotus provides comprehensive bug detection capabilities for finding security vulnerabilities and safety issues in C/C++ programs.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>Lotus provides a unified checker frontend (<code class="docutils literal notranslate"><span class="pre">lotus-check</span></code>) that selects an
+analysis engine with <code class="docutils literal notranslate"><span class="pre">--engine=&lt;name&gt;</span></code>.  The engines select analysis
+categories rather than mutually exclusive bug categories: several memory-safety
+and taint-related classes are intentionally supported by more than one engine.</p>
+<ol class="arabic simple">
+<li><p><strong>kint</strong>: Integer-related bugs (overflow, division by zero, bad shift, array bounds)</p></li>
+<li><p><strong>taint</strong>: Information flow and injection vulnerabilities</p></li>
+<li><p><strong>concur</strong>: Race conditions, deadlocks, OpenMP misuse, and MPI protocol bugs</p></li>
+<li><p><strong>pulse</strong>: Pulse analysis for memory safety</p></li>
+<li><p><strong>fitx</strong>: Fast typestate-based development feedback</p></li>
+<li><p><strong>saber</strong>: Sparse value-flow resource checks (leaks and double frees)</p></li>
+<li><p><strong>ae</strong>: Broad abstract-execution memory-safety checking</p></li>
+<li><p><strong>generic</strong>: Custom checkers via declarative rules</p></li>
+<li><p><strong>symex</strong>: Symbolic execution engine</p></li>
+</ol>
+<p>See <span class="xref std std-ref">Choosing a Checker</span> for the bug-class-to-engine
+guide.  <code class="docutils literal notranslate"><span class="pre">./build/bin/lotus-check</span> <span class="pre">--list-checkers</span></code> lists checker ids for both
+the <code class="docutils literal notranslate"><span class="pre">generic</span></code> registry and native engines; use <code class="docutils literal notranslate"><span class="pre">./build/bin/lotus-check</span>
+<span class="pre">--help</span></code> to see the available engines.</p>
+</section>
+<section id="bug-categories">
+<h2>Bug Categories<a class="headerlink" href="#bug-categories" title="Link to this heading"></a></h2>
+<section id="memory-safety">
+<h3>Memory Safety<a class="headerlink" href="#memory-safety" title="Link to this heading"></a></h3>
+<p><strong>Null Pointer Dereference</strong>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">Person</span><span class="w"> </span><span class="o">*</span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">create_person</span><span class="p">(</span><span class="mi">-1</span><span class="p">);</span><span class="w">  </span><span class="c1">// May return NULL</span>
+<span class="n">printf</span><span class="p">(</span><span class="s">"%s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">);</span><span class="w">  </span><span class="c1">// Bug: potential NPD</span>
+</pre></div>
+</div>
+<p><strong>Use-After-Free</strong>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="n">free</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span>
+<span class="o">*</span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">42</span><span class="p">;</span><span class="w">  </span><span class="c1">// Bug: use after free</span>
+</pre></div>
+</div>
+<p><strong>Buffer Overflow</strong>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">char</span><span class="w"> </span><span class="n">buffer</span><span class="p">[</span><span class="mi">10</span><span class="p">];</span>
+<span class="n">strcpy</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span><span class="w"> </span><span class="n">user_input</span><span class="p">);</span><span class="w">  </span><span class="c1">// Bug: may overflow</span>
+</pre></div>
+</div>
+</section>
+<section id="integer-safety">
+<h3>Integer Safety<a class="headerlink" href="#integer-safety" title="Link to this heading"></a></h3>
+<p><strong>Integer Overflow</strong>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">INT_MAX</span><span class="p">;</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w">  </span><span class="c1">// Bug: signed overflow</span>
+</pre></div>
+</div>
+<p><strong>Division by Zero</strong>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">y</span><span class="p">;</span><span class="w">  </span><span class="c1">// Bug if y == 0</span>
+</pre></div>
+</div>
+<p><strong>Bad Shift</strong>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">32</span><span class="p">;</span><span class="w">  </span><span class="c1">// Bug: shift amount &gt;= width</span>
+</pre></div>
+</div>
+</section>
+<section id="information-flow">
+<h3>Information Flow<a class="headerlink" href="#information-flow" title="Link to this heading"></a></h3>
+<p><strong>Tainted Data Flow</strong>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">char</span><span class="w"> </span><span class="n">cmd</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+<span class="n">scanf</span><span class="p">(</span><span class="s">"%s"</span><span class="p">,</span><span class="w"> </span><span class="n">cmd</span><span class="p">);</span><span class="w">  </span><span class="c1">// Tainted source</span>
+<span class="n">system</span><span class="p">(</span><span class="n">cmd</span><span class="p">);</span><span class="w">  </span><span class="c1">// Bug: unsanitized input to sink</span>
+</pre></div>
+</div>
+<p><strong>Information Leakage</strong>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">secret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">getPassword</span><span class="p">();</span>
+<span class="n">sendToNetwork</span><span class="p">(</span><span class="n">secret</span><span class="p">);</span><span class="w">  </span><span class="c1">// Bug: confidential data leaked</span>
+</pre></div>
+</div>
+</section>
+<section id="concurrency">
+<h3>Concurrency<a class="headerlink" href="#concurrency" title="Link to this heading"></a></h3>
+<p><strong>Data Race</strong>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="n">shared_counter</span><span class="p">;</span><span class="w">  </span><span class="c1">// Global</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">thread_func</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">shared_counter</span><span class="o">++</span><span class="p">;</span><span class="w">  </span><span class="c1">// Bug: unprotected access</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Deadlock</strong>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">pthread_mutex_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lock1</span><span class="p">);</span>
+<span class="n">pthread_mutex_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lock2</span><span class="p">);</span><span class="w">  </span><span class="c1">// Bug: lock ordering issue</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="tool-1-kint-integer-and-array-analysis">
+<h2>Tool 1: Kint - Integer and Array Analysis<a class="headerlink" href="#tool-1-kint-integer-and-array-analysis" title="Link to this heading"></a></h2>
+<p>Kint detects numerical bugs using SMT solving and interprocedural function
+summaries.  Its auxiliary taint tracking is not a replacement for the
+configurable <code class="docutils literal notranslate"><span class="pre">taint</span></code> source-to-sink checker.</p>
+<section id="capabilities">
+<h3>Capabilities<a class="headerlink" href="#capabilities" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Integer Overflow Detection</strong>: Signed and unsigned overflow</p></li>
+<li><p><strong>Division by Zero</strong>: Detect potential divisions by zero</p></li>
+<li><p><strong>Bad Shift</strong>: Invalid shift amounts</p></li>
+<li><p><strong>Array Out of Bounds</strong>: Buffer overflows and underflows</p></li>
+<li><p><strong>Dead Branch</strong>: Impossible conditional branches</p></li>
+</ol>
+</section>
+<section id="basic-usage">
+<h3>Basic Usage<a class="headerlink" href="#basic-usage" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Enable all checkers</span>
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>program.ll<span class="w"> </span>--checks<span class="o">=</span>all
+
+<span class="c1"># Enable specific checkers</span>
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>program.ll<span class="w"> </span>--checks<span class="o">=</span>int-overflow,div-by-zero
+
+<span class="c1"># Set timeout for slow functions</span>
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>program.ll<span class="w"> </span>--checks<span class="o">=</span>all<span class="w"> </span>--kint.function-timeout-seconds<span class="o">=</span><span class="m">60</span>
+</pre></div>
+</div>
+</section>
+<section id="example-1-integer-overflow">
+<h3>Example 1: Integer Overflow<a class="headerlink" href="#example-1-integer-overflow" title="Link to this heading"></a></h3>
+<p><strong>Vulnerable Code</strong> (<code class="docutils literal notranslate"><span class="pre">overflow.c</span></code>):</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;limits.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">calculate_size</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">count</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">item_size</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">item_size</span><span class="p">;</span><span class="w">  </span><span class="c1">// Potential overflow</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">calculate_size</span><span class="p">(</span><span class="mi">1000000</span><span class="p">,</span><span class="w"> </span><span class="mi">1000</span><span class="p">);</span><span class="w">  </span><span class="c1">// Overflows</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">buffer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="n">size</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// Size is wrong due to overflow</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Detection</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-S<span class="w"> </span>-g<span class="w"> </span>overflow.c<span class="w"> </span>-o<span class="w"> </span>overflow.ll
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>overflow.ll<span class="w"> </span>--checks<span class="o">=</span>int-overflow
+</pre></div>
+</div>
+<p><strong>Expected Output</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>[Integer Overflow] Function: calculate_size
+Location: overflow.c:4
+Instruction: %mul = mul nsw i32 %count, %item_size
+Reason: Multiplication may overflow
+</pre></div>
+</div>
+<p><strong>Fix</strong>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;limits.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdint.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">calculate_size</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">count</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">item_size</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Check for overflow before multiplication</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">count</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">item_size</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">INT_MAX</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">count</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">-1</span><span class="p">;</span><span class="w">  </span><span class="c1">// Error: would overflow</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">item_size</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="example-2-array-out-of-bounds">
+<h3>Example 2: Array Out of Bounds<a class="headerlink" href="#example-2-array-out-of-bounds" title="Link to this heading"></a></h3>
+<p><strong>Vulnerable Code</strong> (<code class="docutils literal notranslate"><span class="pre">buffer.c</span></code>):</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">process_array</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">arr</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">index</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">value</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">arr</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">value</span><span class="p">;</span><span class="w">  </span><span class="c1">// No bounds check</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">buffer</span><span class="p">[</span><span class="mi">10</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">user_index</span><span class="p">;</span>
+<span class="w">    </span><span class="n">scanf</span><span class="p">(</span><span class="s">"%d"</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">user_index</span><span class="p">);</span>
+<span class="w">    </span><span class="n">process_array</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span><span class="w"> </span><span class="n">user_index</span><span class="p">,</span><span class="w"> </span><span class="mi">42</span><span class="p">);</span><span class="w">  </span><span class="c1">// Bug if index &gt;= 10</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Detection</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-S<span class="w"> </span>-g<span class="w"> </span>buffer.c<span class="w"> </span>-o<span class="w"> </span>buffer.ll
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>buffer.ll<span class="w"> </span>--checks<span class="o">=</span>array-oob
+</pre></div>
+</div>
+<p><strong>Expected Output</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>[Array Out of Bounds] Function: process_array
+Location: buffer.c:2
+Array size: 10 elements
+Potential overflow: index may be &gt;= 10
+</pre></div>
+</div>
+<p><strong>Fix</strong>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">process_array</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">arr</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">index</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">value</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">index</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">index</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">size</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="p">;</span><span class="w">  </span><span class="c1">// Invalid index</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">arr</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">value</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="example-3-division-by-zero">
+<h3>Example 3: Division by Zero<a class="headerlink" href="#example-3-division-by-zero" title="Link to this heading"></a></h3>
+<p><strong>Vulnerable Code</strong> (<code class="docutils literal notranslate"><span class="pre">division.c</span></code>):</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="nf">calculate_average</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">total</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">count</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">total</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">count</span><span class="p">;</span><span class="w">  </span><span class="c1">// Bug if count == 0</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">avg1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">calculate_average</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">);</span><span class="w">  </span><span class="c1">// OK</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">avg2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">calculate_average</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w">   </span><span class="c1">// Bug!</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Detection</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-S<span class="w"> </span>-g<span class="w"> </span>division.c<span class="w"> </span>-o<span class="w"> </span>division.ll
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>division.ll<span class="w"> </span>--checks<span class="o">=</span>div-by-zero
+</pre></div>
+</div>
+<p><strong>Fix</strong>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="nf">calculate_average</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">total</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">count</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">count</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w">  </span><span class="c1">// Handle zero case</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">total</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">count</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="tool-2-taint-analysis">
+<h2>Tool 2: Taint Analysis<a class="headerlink" href="#tool-2-taint-analysis" title="Link to this heading"></a></h2>
+<p>Interprocedural taint analysis using the IFDS framework to track information flow.</p>
+<section id="id1">
+<h3>Capabilities<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Source Tracking</strong>: Identify tainted data sources</p></li>
+<li><p><strong>Sink Detection</strong>: Find dangerous operations</p></li>
+<li><p><strong>Path Finding</strong>: Compute flows from sources to sinks</p></li>
+<li><p><strong>Custom Sources/Sinks</strong>: User-defined taint specifications</p></li>
+</ol>
+</section>
+<section id="id2">
+<h3>Basic Usage<a class="headerlink" href="#id2" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Basic taint analysis</span>
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>taint<span class="w"> </span>program.bc
+
+<span class="c1"># Custom sources and sinks</span>
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>taint<span class="w"> </span>program.bc<span class="w"> </span>--taint.sources<span class="o">=</span>read,scanf,recv<span class="w"> </span><span class="se">\</span>
+<span class="w">                         </span>--taint.sinks<span class="o">=</span>system,exec,printf
+
+<span class="c1"># Verbose output</span>
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>taint<span class="w"> </span>program.bc<span class="w"> </span>--verbose
+</pre></div>
+</div>
+</section>
+<section id="example-1-command-injection">
+<h3>Example 1: Command Injection<a class="headerlink" href="#example-1-command-injection" title="Link to this heading"></a></h3>
+<p><strong>Vulnerable Code</strong> (<code class="docutils literal notranslate"><span class="pre">cmd_injection.c</span></code>):</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;string.h&gt;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">execute_user_command</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">user_input</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">command</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+<span class="w">    </span><span class="n">sprintf</span><span class="p">(</span><span class="n">command</span><span class="p">,</span><span class="w"> </span><span class="s">"cat %s"</span><span class="p">,</span><span class="w"> </span><span class="n">user_input</span><span class="p">);</span>
+<span class="w">    </span><span class="n">system</span><span class="p">(</span><span class="n">command</span><span class="p">);</span><span class="w">  </span><span class="c1">// Bug: command injection</span>
+<span class="p">}</span>
+
+<span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="nf">sanitize</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">input</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Remove dangerous characters</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">strdup</span><span class="p">(</span><span class="n">input</span><span class="p">);</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">output</span><span class="p">[</span><span class="n">i</span><span class="p">];</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">output</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="sc">';'</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">output</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="sc">'|'</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">output</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="sc">'&amp;'</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">output</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sc">'_'</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">output</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">user_file</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">"Enter filename: "</span><span class="p">);</span>
+<span class="w">    </span><span class="n">scanf</span><span class="p">(</span><span class="s">"%255s"</span><span class="p">,</span><span class="w"> </span><span class="n">user_file</span><span class="p">);</span><span class="w">  </span><span class="c1">// Source of tainted data</span>
+
+<span class="w">    </span><span class="c1">// Vulnerable: direct use</span>
+<span class="w">    </span><span class="n">execute_user_command</span><span class="p">(</span><span class="n">user_file</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// Safe: sanitized</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">safe_file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sanitize</span><span class="p">(</span><span class="n">user_file</span><span class="p">);</span>
+<span class="w">    </span><span class="n">execute_user_command</span><span class="p">(</span><span class="n">safe_file</span><span class="p">);</span>
+<span class="w">    </span><span class="n">free</span><span class="p">(</span><span class="n">safe_file</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Detection</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>-g<span class="w"> </span>cmd_injection.c<span class="w"> </span>-o<span class="w"> </span>cmd_injection.bc
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>taint<span class="w"> </span>cmd_injection.bc<span class="w"> </span>--verbose
+</pre></div>
+</div>
+<p><strong>Expected Output</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>[Taint Flow Detected]
+Source: scanf at cmd_injection.c:24
+Sink: system at cmd_injection.c:8 (via execute_user_command)
+
+Flow path:
+1. scanf("%255s", user_file) - line 24
+2. user_file is tainted
+3. execute_user_command(user_file) - line 27
+4. sprintf(command, "cat %s", user_input) - line 7
+5. system(command) - line 8
+
+Vulnerability: User input flows to system() without sanitization
+</pre></div>
+</div>
+<p><strong>Fix</strong>: Always sanitize user input or use parameterized APIs:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">execute_user_command</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">user_input</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Validate input</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">strchr</span><span class="p">(</span><span class="n">user_input</span><span class="p">,</span><span class="w"> </span><span class="sc">';'</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">strchr</span><span class="p">(</span><span class="n">user_input</span><span class="p">,</span><span class="w"> </span><span class="sc">'|'</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span><span class="w"> </span><span class="s">"Invalid filename</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+<span class="w">        </span><span class="k">return</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Use safe API</span>
+<span class="w">    </span><span class="n">execlp</span><span class="p">(</span><span class="s">"cat"</span><span class="p">,</span><span class="w"> </span><span class="s">"cat"</span><span class="p">,</span><span class="w"> </span><span class="n">user_input</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="example-2-sql-injection">
+<h3>Example 2: SQL Injection<a class="headerlink" href="#example-2-sql-injection" title="Link to this heading"></a></h3>
+<p><strong>Vulnerable Code</strong> (<code class="docutils literal notranslate"><span class="pre">sql_injection.c</span></code>):</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">search_user</span><span class="p">(</span><span class="n">sqlite3</span><span class="w"> </span><span class="o">*</span><span class="n">db</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">username</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">query</span><span class="p">[</span><span class="mi">512</span><span class="p">];</span>
+<span class="w">    </span><span class="n">sprintf</span><span class="p">(</span><span class="n">query</span><span class="p">,</span><span class="w"> </span><span class="s">"SELECT * FROM users WHERE name='%s'"</span><span class="p">,</span><span class="w"> </span><span class="n">username</span><span class="p">);</span>
+<span class="w">    </span><span class="n">sqlite3_exec</span><span class="p">(</span><span class="n">db</span><span class="p">,</span><span class="w"> </span><span class="n">query</span><span class="p">,</span><span class="w"> </span><span class="n">callback</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">err</span><span class="p">);</span><span class="w">  </span><span class="c1">// Bug: SQL injection</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">input</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+<span class="w">    </span><span class="n">scanf</span><span class="p">(</span><span class="s">"%s"</span><span class="p">,</span><span class="w"> </span><span class="n">input</span><span class="p">);</span><span class="w">  </span><span class="c1">// Tainted</span>
+<span class="w">    </span><span class="n">search_user</span><span class="p">(</span><span class="n">db</span><span class="p">,</span><span class="w"> </span><span class="n">input</span><span class="p">);</span><span class="w">  </span><span class="c1">// Bug</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Detection</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>taint<span class="w"> </span>sql_injection.bc<span class="w"> </span>--taint.sources<span class="o">=</span>scanf<span class="w"> </span>--taint.sinks<span class="o">=</span>sqlite3_exec
+</pre></div>
+</div>
+<p><strong>Fix</strong>: Use parameterized queries:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">search_user</span><span class="p">(</span><span class="n">sqlite3</span><span class="w"> </span><span class="o">*</span><span class="n">db</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">username</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">sqlite3_stmt</span><span class="w"> </span><span class="o">*</span><span class="n">stmt</span><span class="p">;</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">query</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"SELECT * FROM users WHERE name=?"</span><span class="p">;</span>
+<span class="w">    </span><span class="n">sqlite3_prepare_v2</span><span class="p">(</span><span class="n">db</span><span class="p">,</span><span class="w"> </span><span class="n">query</span><span class="p">,</span><span class="w"> </span><span class="mi">-1</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">stmt</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+<span class="w">    </span><span class="n">sqlite3_bind_text</span><span class="p">(</span><span class="n">stmt</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">username</span><span class="p">,</span><span class="w"> </span><span class="mi">-1</span><span class="p">,</span><span class="w"> </span><span class="n">SQLITE_TRANSIENT</span><span class="p">);</span>
+<span class="w">    </span><span class="n">sqlite3_step</span><span class="p">(</span><span class="n">stmt</span><span class="p">);</span>
+<span class="w">    </span><span class="n">sqlite3_finalize</span><span class="p">(</span><span class="n">stmt</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="tool-3-concurrency-checker">
+<h2>Tool 3: Concurrency Checker<a class="headerlink" href="#tool-3-concurrency-checker" title="Link to this heading"></a></h2>
+<p>Detects concurrency bugs in multi-threaded programs.</p>
+<section id="id3">
+<h3>Capabilities<a class="headerlink" href="#id3" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Data Race Detection</strong>: Unprotected shared memory access</p></li>
+<li><p><strong>Deadlock Detection</strong>: Lock ordering issues</p></li>
+<li><p><strong>Atomicity Violations</strong>: Non-atomic operation sequences</p></li>
+<li><p><strong>Lock/Unlock Pairing</strong>: Mismatched lock operations</p></li>
+<li><p><strong>OpenMP Checks</strong>: Taskgroup/atomic region mismatches and partial task synchronization</p></li>
+<li><p><strong>MPI Checks</strong>: Request lifecycle bugs, collective mismatches, blocking deadlocks, and RMA issues</p></li>
+</ol>
+</section>
+<section id="id4">
+<h3>Basic Usage<a class="headerlink" href="#id4" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>concur<span class="w"> </span>program.bc
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>concur<span class="w"> </span>program.bc<span class="w"> </span>--verbose
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>concur<span class="w"> </span>program.bc<span class="w"> </span>--checks<span class="o">=</span>openmp,mpi
+</pre></div>
+</div>
+</section>
+<section id="openmp-and-mpi-examples">
+<h3>OpenMP and MPI Examples<a class="headerlink" href="#openmp-and-mpi-examples" title="Link to this heading"></a></h3>
+<p>The concurrency checker also includes dedicated runtime-aware checks for
+OpenMP and MPI programs.</p>
+<p><strong>OpenMP examples</strong>:</p>
+<ul class="simple">
+<li><p>unmatched <code class="docutils literal notranslate"><span class="pre">__kmpc_taskgroup</span></code> / <code class="docutils literal notranslate"><span class="pre">__kmpc_end_taskgroup</span></code> pairs</p></li>
+<li><p>unmatched <code class="docutils literal notranslate"><span class="pre">__kmpc_atomic_start</span></code> / <code class="docutils literal notranslate"><span class="pre">__kmpc_atomic_end</span></code> pairs</p></li>
+<li><p>selective <code class="docutils literal notranslate"><span class="pre">__kmpc_omp_wait_deps</span></code> synchronization that may not fully order sibling tasks</p></li>
+</ul>
+<p><strong>MPI examples</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">MPI_Isend</span></code> / <code class="docutils literal notranslate"><span class="pre">MPI_Irecv</span></code> requests that are never completed</p></li>
+<li><p>mismatched or rank-conditional collectives</p></li>
+<li><p>simple blocking send/recv deadlock cycles</p></li>
+<li><p>unsynchronized RMA operations or leaked windows</p></li>
+</ul>
+<p>For MPI/OpenMP-heavy codebases, a useful first pass is:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>concur<span class="w"> </span>program.bc<span class="w"> </span>--checks<span class="o">=</span>openmp,mpi<span class="w"> </span>--report-json<span class="o">=</span>parallel.json
+</pre></div>
+</div>
+</section>
+<section id="example-data-race">
+<h3>Example: Data Race<a class="headerlink" href="#example-data-race" title="Link to this heading"></a></h3>
+<p><strong>Vulnerable Code</strong> (<code class="docutils literal notranslate"><span class="pre">race.c</span></code>):</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;pthread.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="n">shared_counter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="n">pthread_mutex_t</span><span class="w"> </span><span class="n">lock</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">PTHREAD_MUTEX_INITIALIZER</span><span class="p">;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="nf">thread1</span><span class="p">(</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">arg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">shared_counter</span><span class="o">++</span><span class="p">;</span><span class="w">  </span><span class="c1">// Bug: unprotected</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="nf">thread2</span><span class="p">(</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">arg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">pthread_mutex_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lock</span><span class="p">);</span>
+<span class="w">        </span><span class="n">shared_counter</span><span class="o">++</span><span class="p">;</span><span class="w">  </span><span class="c1">// Protected</span>
+<span class="w">        </span><span class="n">pthread_mutex_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lock</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">pthread_t</span><span class="w"> </span><span class="n">t1</span><span class="p">,</span><span class="w"> </span><span class="n">t2</span><span class="p">;</span>
+<span class="w">    </span><span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">t1</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">thread1</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+<span class="w">    </span><span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">t2</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">thread2</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+<span class="w">    </span><span class="n">pthread_join</span><span class="p">(</span><span class="n">t1</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+<span class="w">    </span><span class="n">pthread_join</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">"Counter: %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="w"> </span><span class="n">shared_counter</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Detection</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>-g<span class="w"> </span>-pthread<span class="w"> </span>race.c<span class="w"> </span>-o<span class="w"> </span>race.bc
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>concur<span class="w"> </span>race.bc<span class="w"> </span>--verbose
+</pre></div>
+</div>
+<p><strong>Expected Output</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>[Data Race Detected]
+Variable: shared_counter (global)
+
+Thread 1 (thread1):
+- Location: race.c:8
+- Operation: increment (write)
+- Lock status: UNPROTECTED
+
+Thread 2 (thread2):
+- Location: race.c:16
+- Operation: increment (write)
+- Lock status: PROTECTED by lock
+
+Conflict: Both threads access shared_counter, but thread1 is unprotected
+</pre></div>
+</div>
+<p><strong>Fix</strong>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="nf">thread1</span><span class="p">(</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">arg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">pthread_mutex_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lock</span><span class="p">);</span>
+<span class="w">        </span><span class="n">shared_counter</span><span class="o">++</span><span class="p">;</span><span class="w">  </span><span class="c1">// Now protected</span>
+<span class="w">        </span><span class="n">pthread_mutex_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lock</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading"></a></h2>
+<ol class="arabic">
+<li><p><strong>Start with Fast Checks</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Quick scan with Kint</span>
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>program.ll<span class="w"> </span>--checks<span class="o">=</span>all
+</pre></div>
+</div>
+</li>
+<li><p><strong>Use Appropriate Checkers</strong>:</p>
+<ul class="simple">
+<li><p>Integer bugs → Kint</p></li>
+<li><p>Configurable information flow → Taint analysis</p></li>
+<li><p>Broad memory-safety scan → AE</p></li>
+<li><p>Witness-oriented memory-safety diagnosis → Pulse</p></li>
+<li><p>Fast development feedback → FiTx</p></li>
+<li><p>Leaks and double frees → Saber</p></li>
+<li><p>Concurrency → Concurrency checker</p></li>
+</ul>
+</li>
+<li><p><strong>Iterative Analysis</strong>:</p>
+<ul class="simple">
+<li><p>Fix obvious bugs first</p></li>
+<li><p>Re-run with higher precision</p></li>
+<li><p>Validate with dynamic analysis</p></li>
+</ul>
+</li>
+<li><p><strong>Combine with Testing</strong>:</p>
+<ul class="simple">
+<li><p>Use static analysis to find bugs</p></li>
+<li><p>Write tests for found vulnerabilities</p></li>
+<li><p>Verify fixes with both static and dynamic analysis</p></li>
+</ul>
+</li>
+<li><p><strong>Reduce False Positives</strong>:</p>
+<ul class="simple">
+<li><p>Add assertions to help analysis</p></li>
+<li><p>Use more precise analyses</p></li>
+<li><p>Validate with DynAA</p></li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="output-formats">
+<h2>Output Formats<a class="headerlink" href="#output-formats" title="Link to this heading"></a></h2>
+<section id="text-output">
+<h3>Text Output<a class="headerlink" href="#text-output" title="Link to this heading"></a></h3>
+<p>Default human-readable output:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>program.ll<span class="w"> </span>--checks<span class="o">=</span>all
+</pre></div>
+</div>
+</section>
+<section id="json-output">
+<h3>JSON Output<a class="headerlink" href="#json-output" title="Link to this heading"></a></h3>
+<p>Machine-readable JSON for integration:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>program.ll<span class="w"> </span>--checks<span class="o">=</span>all<span class="w"> </span>--report-json<span class="o">=</span>results.json
+</pre></div>
+</div>
+</section>
+<section id="sarif-output">
+<h3>SARIF Output<a class="headerlink" href="#sarif-output" title="Link to this heading"></a></h3>
+<p>Standard format for security tools:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>program.ll<span class="w"> </span>--checks<span class="o">=</span>all<span class="w"> </span>--report-sarif<span class="o">=</span>results.sarif
+</pre></div>
+</div>
+</section>
+</section>
+<section id="integration-examples">
+<h2>Integration Examples<a class="headerlink" href="#integration-examples" title="Link to this heading"></a></h2>
+<section id="ci-cd-pipeline">
+<h3>CI/CD Pipeline<a class="headerlink" href="#ci-cd-pipeline" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/bin/bash</span>
+<span class="c1"># Build program</span>
+clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>-g<span class="w"> </span>source.c<span class="w"> </span>-o<span class="w"> </span>source.bc
+
+<span class="c1"># Run checkers via the unified lotus-check frontend</span>
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>source.ll<span class="w"> </span>--checks<span class="o">=</span>all<span class="w"> </span>&gt;<span class="w"> </span>kint_results.txt
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>taint<span class="w"> </span>source.bc<span class="w"> </span>&gt;<span class="w"> </span>taint_results.txt
+
+<span class="c1"># Check for bugs</span>
+<span class="k">if</span><span class="w"> </span>grep<span class="w"> </span>-q<span class="w"> </span><span class="s2">"Bug"</span><span class="w"> </span>*.txt<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"Bugs found!"</span>
+<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+<span class="k">fi</span>
+</pre></div>
+</div>
+</section>
+<section id="vs-code-integration">
+<h3>VS Code Integration<a class="headerlink" href="#vs-code-integration" title="Link to this heading"></a></h3>
+<p>Use SARIF output with VS Code SARIF viewer extension.</p>
+</section>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="tutorials.html"><span class="doc">Tutorials and Examples</span></a> - Hands-on examples</p></li>
+<li><p><a class="reference internal" href="troubleshooting.html"><span class="doc">Troubleshooting and FAQ</span></a> - Common issues</p></li>
+<li><p><span class="xref std std-doc">../tools/checker</span> - Detailed tool documentation</p></li>
+<li><p><a class="reference internal" href="../checker/index.html"><span class="doc">Checker Framework</span></a> - Checker selection guide and engine documentation</p></li>
+<li><p><a class="reference internal" href="../developer/api_reference.html"><span class="doc">API Reference</span></a> - Programmatic usage</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="tutorials.html" class="btn btn-neutral float-left" title="Tutorials and Examples" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="pdg_query_language.html" class="btn btn-neutral float-right" title="PDG Query Language (Cypher)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

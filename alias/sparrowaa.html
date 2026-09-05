@@ -1,0 +1,285 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sparrow Pointer Analysis — Inclusion AA &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="AserPTA — Pointer Analysis" href="aserpta.html" />
+    <link rel="prev" title="AllocAA — Allocation-Based AA" href="allocaa.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Alias Analysis</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="alias_analysis.html">Alias Analysis Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="allocaa.html">AllocAA — Allocation-Based AA</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Sparrow Pointer Analysis — Inclusion AA</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#analysis-modes">Analysis Modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#constraint-types">Constraint Types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#optimizations">Optimizations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#features">Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#adaptive-context-sensitivity-via-hvn">Adaptive Context Sensitivity via HVN</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#usage">Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="aserpta.html">AserPTA — Pointer Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cclyzeraa.html">CclyzerAA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dda.html">DDA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dfpa.html">DFPA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dyckaa.html">DyckAA — Dyck-CFL Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seadsa.html">Sea-DSA — Memory Graph AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fpa.html">FPA — Function Pointer Analyses (FLTA/MLTA/MLTADF/KELP)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flowsensitive.html">Flow-Sensitive Pointer Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lotusaa.html">LotusAA — Lotus AA Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="underapproxaa.html">UnderApproxAA — Must-Alias Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dynaa.html">DynAA — Dynamic Alias AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html">Strict Relations Alias Analysis — Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#vssa-ssi-transformation">1. vSSA / SSI Transformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#symbolic-range-analysis">2. Symbolic Range Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#strict-inequality-construction">3. Strict-Inequality Construction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#constraint-propagation-solver">4. Constraint Propagation Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#alias-disambiguation-final-decision">5. Alias Disambiguation (Final Decision)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#pdg-memory-node-reduction-applicability">6. PDG Memory-Node Reduction (Applicability)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#summary-of-properties">Summary of Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#end-of-document">End of document.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metrics.html">Pointer Analysis Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptsset.html">Points-To Set Backends</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spec.html">Alias Specification Manager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tpa.html">TPA: Flow- and Contex-Sensitive Pointer Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="typequalifier.html">TypeQualifier</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Alias Analysis</a></li>
+      <li class="breadcrumb-item active">Sparrow Pointer Analysis — Inclusion AA</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/alias/sparrowaa.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="sparrow-pointer-analysis-inclusion-aa">
+<h1>Sparrow Pointer Analysis — Inclusion AA<a class="headerlink" href="#sparrow-pointer-analysis-inclusion-aa" title="Link to this heading"></a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>SparrowAA is an inclusion-based points-to analysis.</p>
+<ul class="simple">
+<li><p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Alias/InclusionBased/SparrowAA</span></code></p></li>
+<li><p><strong>Algorithm</strong>: Inclusion/subset-based pointer analysis with constraint graph construction and worklist-based solving.</p></li>
+<li><p><strong>Typical Use</strong>: Fast whole-program call-graph and mod/ref precomputation</p></li>
+</ul>
+</section>
+<section id="analysis-modes">
+<h2>Analysis Modes<a class="headerlink" href="#analysis-modes" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Flow-insensitive, context-insensitive (CI)</p></li>
+<li><p>Flow-insensitive, context-sensitive (1-CFA, 2-CFA)</p></li>
+</ul>
+</section>
+<section id="constraint-types">
+<h2>Constraint Types<a class="headerlink" href="#constraint-types" title="Link to this heading"></a></h2>
+<p>The analysis builds a constraint graph over program pointers using standard
+pointer constraints:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">=</span> <span class="pre">&amp;x</span></code> → address-of constraint</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">=</span> <span class="pre">q</span></code> → copy constraint</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">=</span> <span class="pre">*q</span></code> → load constraint</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">*p</span> <span class="pre">=</span> <span class="pre">q</span></code> → store constraint</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">=</span> <span class="pre">&amp;x-&gt;field</span></code> / GEP → field/offset constraint</p></li>
+</ul>
+<p>After collecting constraints, a worklist-based solver propagates points-to sets
+until a fixed point is reached.</p>
+</section>
+<section id="optimizations">
+<h2>Optimizations<a class="headerlink" href="#optimizations" title="Link to this heading"></a></h2>
+<p>The implementation supports several optional optimizations (see the README in
+<code class="docutils literal notranslate"><span class="pre">lib/Alias/InclusionBased/SparrowAA</span></code> for details):</p>
+<ul class="simple">
+<li><p><strong>HVN / HU</strong> – Hash-based value numbering and Heintze–Ullman style
+equivalence to collapse redundant nodes.</p></li>
+<li><p><strong>HCD / LCD</strong> – Hybrid and lazy cycle detection to identify strongly
+connected components and speed up convergence.</p></li>
+</ul>
+<p><strong>Optimizations</strong> (optional, disabled by default):
+* <strong>HVN / HU</strong> – Hash-based value numbering and Heintze–Ullman style equivalence
+* <strong>HCD / LCD</strong> – Hybrid and lazy cycle detection for SCC identification</p>
+<p>All optimizations are disabled by default and can be enabled via
+tool-specific command-line flags.</p>
+</section>
+<section id="features">
+<h2>Features<a class="headerlink" href="#features" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Inclusion-based algorithm</p></li>
+<li><p>Fast analysis for large codebases</p></li>
+<li><p>Supports multiple context sensitivities</p></li>
+<li><p>Optional optimizations for improved performance</p></li>
+</ul>
+</section>
+<section id="adaptive-context-sensitivity-via-hvn">
+<h2>Adaptive Context Sensitivity via HVN<a class="headerlink" href="#adaptive-context-sensitivity-via-hvn" title="Link to this heading"></a></h2>
+<p>Hash-based Value Numbering (HVN) in SparrowAA computes pointer-equivalence
+labels (<code class="docutils literal notranslate"><span class="pre">peLabel</span></code>) for every node in the constraint graph as a side
+effect of its offline variable-substitution pass. These labels encode
+whether different callers pass pointer-equivalent or pointer-distinct
+arguments to the same formal parameter.</p>
+<p><strong>Key insight</strong>: If two actual arguments at different call sites for the
+same formal parameter have <em>different</em> <code class="docutils literal notranslate"><span class="pre">peLabel</span></code>s, the function would
+benefit from context sensitivity (cloning per caller keeps the pointer
+facts separate). If they share the same <code class="docutils literal notranslate"><span class="pre">peLabel</span></code>, context sensitivity
+would produce redundant clones without improving precision.</p>
+<p>This enables a lightweight <em>adaptive</em> context-sensitivity strategy:</p>
+<ol class="arabic simple">
+<li><p>Run HVN (already part of SparrowAA’s constraint optimization phase).</p></li>
+<li><p>For each function, inspect the <code class="docutils literal notranslate"><span class="pre">peLabel</span></code>s of its incoming arguments
+across all call sites.</p></li>
+<li><p>If arguments from different callers are pointer-distinct, enable context
+sensitivity for that function; otherwise, keep it context-insensitive.</p></li>
+</ol>
+<p>The approach avoids the uniform k-CFA overhead by targeting context
+sensitivity only where it measurably improves precision.</p>
+<p>See <code class="docutils literal notranslate"><span class="pre">lib/Alias/InclusionBased/SparrowAA/IDEA-ADAPTIVE-CS-VIA-HVN.md</span></code>
+for the full research proposal with examples and analysis.</p>
+<p><strong>Build/run</strong>: Use <code class="docutils literal notranslate"><span class="pre">--enable-hvn</span></code> with the SparrowAA frontend to enable
+the HVN optimization pass.</p>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<p>The engine is wrapped as a reusable AA component and also exposed
+via a standalone tool:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-alias-sparrow-aa<span class="w"> </span>example.bc
+</pre></div>
+</div>
+<p>In integrated settings (e.g., Clam or LotusAA), it can be selected through
+the corresponding configuration files or command-line switches.</p>
+<p>Note: this module have some redundancies with aserpta, and reuses some header files from it (from context abstraction).</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="allocaa.html" class="btn btn-neutral float-left" title="AllocAA — Allocation-Based AA" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="aserpta.html" class="btn btn-neutral float-right" title="AserPTA — Pointer Analysis" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,286 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Instrumentation Passes &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Troubleshooting and FAQ" href="troubleshooting.html" />
+    <link rel="prev" title="Verification Driver Abstraction" href="verification_backends.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Instrumentation Passes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#available-passes">Available Passes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#breakcritloops">BreakCritLoops</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#deleteundefined">DeleteUndefined</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#initializeuninitialized">InitializeUninitialized</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#makenondet">MakeNondet</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#prepareoverflows">PrepareOverflows</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#example-workflow">Example Workflow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#all-passes-together">All Passes Together</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#integration-with-verification">Integration with Verification</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Instrumentation Passes</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/user_guide/instrumentation_passes.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="instrumentation-passes">
+<h1>Instrumentation Passes<a class="headerlink" href="#instrumentation-passes" title="Link to this heading"></a></h1>
+<p>Lotus provides several LLVM instrumentation passes for preparing programs for verification.</p>
+<section id="available-passes">
+<h2>Available Passes<a class="headerlink" href="#available-passes" title="Link to this heading"></a></h2>
+<section id="breakcritloops">
+<h3>BreakCritLoops<a class="headerlink" href="#breakcritloops" title="Link to this heading"></a></h3>
+<p>Breaks critical loops for better slicing and control dependence analysis.</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>lotus-opt<span class="w"> </span>input.bc<span class="w"> </span>-break-crit-loops<span class="w"> </span>-o<span class="w"> </span>output.bc
+</pre></div>
+</div>
+<p><strong>What it does:</strong></p>
+<ul class="simple">
+<li><p>Identifies basic blocks that jump back to themselves via critical edges</p></li>
+<li><p>Splits these blocks to improve control dependence computation</p></li>
+<li><p>Useful before running PDG-based slicing</p></li>
+</ul>
+</section>
+<section id="deleteundefined">
+<h3>DeleteUndefined<a class="headerlink" href="#deleteundefined" title="Link to this heading"></a></h3>
+<p>Deletes calls to undefined functions and replaces non-void undefined functions with nondeterministic values.</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>lotus-opt<span class="w"> </span>input.bc<span class="w"> </span>-delete-undefined<span class="w"> </span>-o<span class="w"> </span>output.bc
+</pre></div>
+</div>
+<p><strong>What it does:</strong></p>
+<ul class="simple">
+<li><p>Removes calls to undefined void functions</p></li>
+<li><p>Replaces undefined non-void functions with <code class="docutils literal notranslate"><span class="pre">verifier.nondet.undef.*</span></code> calls</p></li>
+<li><p>Preserves calls to verifier functions and standard library functions</p></li>
+<li><p>Useful for preparing programs with missing function definitions</p></li>
+</ul>
+</section>
+<section id="initializeuninitialized">
+<h3>InitializeUninitialized<a class="headerlink" href="#initializeuninitialized" title="Link to this heading"></a></h3>
+<p>Initializes stack-allocated variables with nondeterministic values.</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>lotus-opt<span class="w"> </span>input.bc<span class="w"> </span>-init-uninit<span class="w"> </span>-o<span class="w"> </span>output.bc
+</pre></div>
+</div>
+<p><strong>What it does:</strong></p>
+<ul class="simple">
+<li><p>Finds all <code class="docutils literal notranslate"><span class="pre">alloca</span></code> instructions in function entry blocks</p></li>
+<li><p>Replaces uninitialized uses with calls to <code class="docutils literal notranslate"><span class="pre">verifier.nondet.init.*</span></code> functions</p></li>
+<li><p>Useful for verification where uninitialized variables should be treated as nondeterministic</p></li>
+</ul>
+</section>
+<section id="makenondet">
+<h3>MakeNondet<a class="headerlink" href="#makenondet" title="Link to this heading"></a></h3>
+<p>Replaces selected input functions with nondeterministic value generators.</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>lotus-opt<span class="w"> </span>input.bc<span class="w"> </span>-make-nondet<span class="w"> </span>-o<span class="w"> </span>output.bc
+</pre></div>
+</div>
+<p><strong>Configuration:</strong></p>
+<p>The pass accepts a comma-separated list of function names to replace:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>lotus-opt<span class="w"> </span>input.bc<span class="w"> </span>-make-nondet<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--make-nondet-targets<span class="o">=</span>rand,getchar,fgetc,scanf<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-o<span class="w"> </span>output.bc
+</pre></div>
+</div>
+<p><strong>What it does:</strong></p>
+<ul class="simple">
+<li><p>Replaces calls to specified functions (e.g., <code class="docutils literal notranslate"><span class="pre">rand()</span></code>, <code class="docutils literal notranslate"><span class="pre">getchar()</span></code>) with nondeterministic values</p></li>
+<li><p>Preserves return type semantics</p></li>
+<li><p>Useful for abstracting away I/O and random number generation</p></li>
+</ul>
+</section>
+<section id="prepareoverflows">
+<h3>PrepareOverflows<a class="headerlink" href="#prepareoverflows" title="Link to this heading"></a></h3>
+<p>Instruments signed arithmetic operations with explicit overflow checks.</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>lotus-opt<span class="w"> </span>input.bc<span class="w"> </span>-prep-overflows<span class="w"> </span>-o<span class="w"> </span>output.bc
+</pre></div>
+</div>
+<p><strong>What it does:</strong></p>
+<ul class="simple">
+<li><p>Finds signed integer arithmetic operations (add, sub, mul)</p></li>
+<li><p>Replaces them with overflow-checking intrinsics (<code class="docutils literal notranslate"><span class="pre">llvm.sadd.with.overflow</span></code>, etc.)</p></li>
+<li><p>Calls <code class="docutils literal notranslate"><span class="pre">__VERIFIER_error()</span></code> if overflow detected</p></li>
+<li><p>Useful for overflow property checking</p></li>
+</ul>
+</section>
+</section>
+<section id="example-workflow">
+<h2>Example Workflow<a class="headerlink" href="#example-workflow" title="Link to this heading"></a></h2>
+<p>A typical verification workflow:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1. Initialize uninitialized variables</span>
+lotus-opt<span class="w"> </span>input.bc<span class="w"> </span>-init-uninit<span class="w"> </span>-o<span class="w"> </span>step1.bc
+
+<span class="c1"># 2. Replace I/O with nondet</span>
+lotus-opt<span class="w"> </span>step1.bc<span class="w"> </span>-make-nondet<span class="w"> </span>-o<span class="w"> </span>step2.bc
+
+<span class="c1"># 3. Instrument overflow checks</span>
+lotus-opt<span class="w"> </span>step2.bc<span class="w"> </span>-prep-overflows<span class="w"> </span>-o<span class="w"> </span>prepared.bc
+
+<span class="c1"># 4. Verify</span>
+lotus-verify<span class="w"> </span>prepared.bc<span class="w"> </span>--property<span class="w"> </span>overflow<span class="w"> </span>--backend<span class="w"> </span>clam<span class="w"> </span>--run
+</pre></div>
+</div>
+</section>
+<section id="all-passes-together">
+<h2>All Passes Together<a class="headerlink" href="#all-passes-together" title="Link to this heading"></a></h2>
+<p>You can enable all instrumentation passes at once:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>lotus-opt<span class="w"> </span>input.bc<span class="w"> </span>-init-uninit<span class="w"> </span>-make-nondet<span class="w"> </span>-prep-overflows<span class="w"> </span>-o<span class="w"> </span>output.bc
+</pre></div>
+</div>
+<p>Or use the convenience flag (if available):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>lotus-opt<span class="w"> </span>input.bc<span class="w"> </span>-ip-all<span class="w"> </span>-o<span class="w"> </span>output.bc
+</pre></div>
+</div>
+</section>
+<section id="integration-with-verification">
+<h2>Integration with Verification<a class="headerlink" href="#integration-with-verification" title="Link to this heading"></a></h2>
+<p>These passes are designed to work with Lotus’s verification backends:</p>
+<ul class="simple">
+<li><p><strong>InitializeUninitialized</strong>: Prepares programs for abstract interpretation (CLAM)</p></li>
+<li><p><strong>MakeNondet</strong>: Essential for symbolic execution (SeaHorn, Sifa)</p></li>
+<li><p><strong>PrepareOverflows</strong>: Required for overflow property checking</p></li>
+</ul>
+<p>See <a class="reference internal" href="verification_backends.html"><span class="doc">Verification Driver Abstraction</span></a> for more information on using these with verification tools.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="verification_backends.html" class="btn btn-neutral float-left" title="Verification Driver Abstraction" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="troubleshooting.html" class="btn btn-neutral float-right" title="Troubleshooting and FAQ" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

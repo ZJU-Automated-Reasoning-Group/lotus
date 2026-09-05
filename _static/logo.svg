@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="280 300 464 400" role="img" aria-labelledby="title desc">
+  <title id="title">淡蓝三瓣标识</title>
+  <desc id="desc">透明背景上的三片淡蓝色抽象花瓣</desc>
+  <g fill="#9DDCF2">
+    <path d="M512 648 C456 578 456 442 512 330 C568 442 568 578 512 648Z"/>
+    <path d="M480 670 C386 644 316 558 300 446 C408 474 477 558 480 670Z"/>
+    <path d="M544 670 C638 644 708 558 724 446 C616 474 547 558 544 670Z"/>
+  </g>
+</svg>

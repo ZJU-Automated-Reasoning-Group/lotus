@@ -1,0 +1,214 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interleaved-Dyck Graph Reduction &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Multiple Context-Free Language Reachability" href="interleaved_dyck_mcfl.html" />
+    <link rel="prev" title="Interleaved-Dyck Staged Bounds" href="interleaved_dyck_staged_bounds.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Context-Free Language Analysis</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="cfl_components.html">CFL Reachability Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="classical.html">Classical Grammar-Driven CFL Reachability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pocr_migration.html">POCR Migration Matrix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pearl_stg_sqid.html">Paper Engines: PEARL, Stg, and Sqid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="csindex.html">Context-Sensitive Reachability Indexing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_unary.html">Exact Unary Interleaved Dyck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_staged_bounds.html">Interleaved-Dyck Staged Bounds</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Interleaved-Dyck Graph Reduction</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pipeline">Pipeline</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bidirected-handling">Bidirected handling</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#implementation-boundary">Implementation boundary</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_mcfl.html">Multiple Context-Free Language Reachability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_mutual_refinement.html">Mutual Refinement for CFL Reachability</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Context-Free Language Analysis</a></li>
+      <li class="breadcrumb-item active">Interleaved-Dyck Graph Reduction</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/cfl/interleaved_dyck_graph_reduction.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="interleaved-dyck-graph-reduction">
+<h1>Interleaved-Dyck Graph Reduction<a class="headerlink" href="#interleaved-dyck-graph-reduction" title="Link to this heading"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">GraphReduction</span></code> packages the PLDI 2020 graph-simplification pipeline for
+interleaved-Dyck reachability. It transforms a DOT graph; it does not itself
+answer the final reachability relation.</p>
+<p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/CFL/InterleavedDyck/GraphReduction/</span></code></p>
+<section id="pipeline">
+<h2>Pipeline<a class="headerlink" href="#pipeline" title="Link to this heading"></a></h2>
+<p>The Python driver alternates two compiled phases:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">lotus-cfl-interleaved-dyck-graphaux</span></code></dt><dd><p>Builds one-color summary components and emits the color-reach graph.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">lotus-cfl-interleaved-dyck-dkmerge</span></code></dt><dd><p>Merges nodes using the specialized degree/color data structure and records
+edges that cannot be removed.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">lotus-cfl-interleaved-dyck-graph-reduction.py</span></code></dt><dd><p>Orchestrates both colors until no further edge is removed. The input file is
+updated in place, so experiments should operate on a copy.</p>
+</dd>
+</dl>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">cmake --build build --target lotus-cfl-interleaved-dyck-graph-reduction</span>
+<span class="go">cp input.dot reduced.dot</span>
+<span class="go">python3 build/bin/lotus-cfl-interleaved-dyck-graph-reduction.py reduced.dot \</span>
+<span class="go">  --graphaux build/bin/lotus-cfl-interleaved-dyck-graphaux \</span>
+<span class="go">  --dkmerge build/bin/lotus-cfl-interleaved-dyck-dkmerge</span>
+</pre></div>
+</div>
+</section>
+<section id="bidirected-handling">
+<h2>Bidirected handling<a class="headerlink" href="#bidirected-handling" title="Link to this heading"></a></h2>
+<p>The shared typed graph and the approximation/MCFL solvers preserve input arcs
+as supplied. This reducer has specialized internal orientation rules: closing
+colored edges are stored in reverse orientation, and a legacy one-color CFL
+construction can create synthetic reverse terminals. These are internal
+summary semantics, not silent bidirecting of the shared input. Pass
+<code class="docutils literal notranslate"><span class="pre">--bidirected-input</span></code> only when the dataset already represents both
+directions.</p>
+</section>
+<section id="implementation-boundary">
+<h2>Implementation boundary<a class="headerlink" href="#implementation-boundary" title="Link to this heading"></a></h2>
+<p>Artifact-era <code class="docutils literal notranslate"><span class="pre">CFLGraph</span></code>, <code class="docutils literal notranslate"><span class="pre">CFLReach</span></code>, <code class="docutils literal notranslate"><span class="pre">SummaryGraph</span></code>, and merge-list types
+live under <code class="docutils literal notranslate"><span class="pre">lib/CFL/InterleavedDyck/GraphReduction/Legacy</span></code> as private implementation
+details. They model intermediate color summaries and merge bookkeeping and
+therefore should not be unified with the immutable input representation in
+<code class="docutils literal notranslate"><span class="pre">interleaved_dyck::Graph</span></code>.</p>
+<p>See also <a class="reference internal" href="cfl_components.html"><span class="doc">CFL Reachability Components</span></a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="interleaved_dyck_staged_bounds.html" class="btn btn-neutral float-left" title="Interleaved-Dyck Staged Bounds" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="interleaved_dyck_mcfl.html" class="btn btn-neutral float-right" title="Multiple Context-Free Language Reachability" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

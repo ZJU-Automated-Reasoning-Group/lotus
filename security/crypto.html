@@ -1,0 +1,309 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Constant-Time Analysis &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="LIF" href="lif.html" />
+    <link rel="prev" title="Security Components" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Security Components</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#overview">Overview</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Constant-Time Analysis</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#main-components">Main Components</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#analysis-modes-and-options">Analysis Modes and Options</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#leak-model">Leak Model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#related-components">Related Components</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#limitations">Limitations</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="lif.html">LIF</a></li>
+<li class="toctree-l3"><a class="reference internal" href="spectre.html">Spectre Cache Analysis</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Security Components</a></li>
+      <li class="breadcrumb-item active">Constant-Time Analysis</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/security/crypto.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="constant-time-analysis">
+<h1>Constant-Time Analysis<a class="headerlink" href="#constant-time-analysis" title="Link to this heading"></a></h1>
+<p>Static analysis for verifying constant-time programming properties in
+sensitive code.</p>
+<p>This page documents the current <code class="docutils literal notranslate"><span class="pre">lib/Security/ConstantTime</span></code> subsystem. Older
+references to a separate <code class="docutils literal notranslate"><span class="pre">Crypto</span></code> analysis directory are stale; the code now
+lives under the unified <code class="docutils literal notranslate"><span class="pre">lib/Security</span></code> tree.</p>
+<p><strong>Headers</strong>: <code class="docutils literal notranslate"><span class="pre">include/Security/ConstantTime</span></code></p>
+<p><strong>Implementation</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Security/ConstantTime</span></code></p>
+<p><strong>Build target</strong>: <code class="docutils literal notranslate"><span class="pre">ConstantTimeVerify</span></code></p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>The ConstantTime module hosts Lotus’s CT-LLVM-based constant-time analysis for
+secret-dependent side channels. The pass tracks tainted values, propagates
+taint through data and alias relationships, and reports security-relevant
+behaviors such as:</p>
+<ul class="simple">
+<li><p>secret-dependent memory accesses</p></li>
+<li><p>secret-dependent branches</p></li>
+<li><p>variable-time operations influenced by secrets</p></li>
+</ul>
+<p>This analysis is useful beyond traditional cryptographic code: any sensitive
+routine that must avoid timing leakage can be checked with the same framework.</p>
+</section>
+<section id="main-components">
+<h2>Main Components<a class="headerlink" href="#main-components" title="Link to this heading"></a></h2>
+<section id="ctpass">
+<h3>CTPass<a class="headerlink" href="#ctpass" title="Link to this heading"></a></h3>
+<p><strong>Files</strong>: <code class="docutils literal notranslate"><span class="pre">ConstantTimePass.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">ConstantTimePass.h</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">CTPass</span></code> is the public pass entry point for the subsystem.</p>
+<p><strong>Public entry points</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">CTPass</span></code></p></li>
+<li><p>pipeline name <code class="docutils literal notranslate"><span class="pre">ctllvm</span></code></p></li>
+<li><p>plugin registration via <code class="docutils literal notranslate"><span class="pre">getPassPluginInfo()</span></code> and
+<code class="docutils literal notranslate"><span class="pre">llvmGetPassPluginInfo()</span></code></p></li>
+</ul>
+</section>
+<section id="core-analysis">
+<h3>Core Analysis<a class="headerlink" href="#core-analysis" title="Link to this heading"></a></h3>
+<p><strong>File</strong>: <code class="docutils literal notranslate"><span class="pre">ConstantTimeAnalysis.cpp</span></code></p>
+<p>Implements taint propagation and leak detection inside analyzed code.</p>
+<p><strong>Key responsibilities</strong>:</p>
+<ul class="simple">
+<li><p>identify secret-tainted inputs</p></li>
+<li><p>propagate taint through def-use and memory relationships</p></li>
+<li><p>classify detected leaks by channel</p></li>
+<li><p>accumulate per-function and global analysis results</p></li>
+</ul>
+</section>
+<section id="inlining-and-soundness">
+<h3>Inlining and Soundness<a class="headerlink" href="#inlining-and-soundness" title="Link to this heading"></a></h3>
+<p><strong>File</strong>: <code class="docutils literal notranslate"><span class="pre">ConstantTimeInlining.cpp</span></code></p>
+<p>Provides recursive inlining support used by the more aggressive analysis mode.
+Inlining is used to expose interprocedural flows that would otherwise be hidden
+behind call boundaries.</p>
+</section>
+<section id="targets-and-reporting">
+<h3>Targets and Reporting<a class="headerlink" href="#targets-and-reporting" title="Link to this heading"></a></h3>
+<p><strong>Files</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ConstantTimeTargets.cpp</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ConstantTimeDebugInfo.cpp</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ConstantTimeReporting.cpp</span></code></p></li>
+</ul>
+<p>These files handle source/target selection, debug-info-based lookup, report
+generation, statistics, and source-location rendering.</p>
+</section>
+</section>
+<section id="analysis-modes-and-options">
+<h2>Analysis Modes and Options<a class="headerlink" href="#analysis-modes-and-options" title="Link to this heading"></a></h2>
+<p>The subsystem is now configured through runtime options collected in
+<code class="docutils literal notranslate"><span class="pre">CTOptions</span></code> rather than the older preprocessor-driven setup.</p>
+<p>Important defaults include:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">type_system</span> <span class="pre">=</span> <span class="pre">true</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">test_all_parameters</span> <span class="pre">=</span> <span class="pre">true</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">enable_may_leak</span> <span class="pre">=</span> <span class="pre">true</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">try_hard_on_name</span> <span class="pre">=</span> <span class="pre">true</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">user_specify</span> <span class="pre">=</span> <span class="pre">false</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">soundness_mode</span> <span class="pre">=</span> <span class="pre">true</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">alias_threshold</span> <span class="pre">=</span> <span class="pre">2000</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">report_leakages</span> <span class="pre">=</span> <span class="pre">true</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">time_analysis</span> <span class="pre">=</span> <span class="pre">false</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">auto_continue</span> <span class="pre">=</span> <span class="pre">true</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">inline_threshold</span> <span class="pre">=</span> <span class="pre">10</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">debug</span> <span class="pre">=</span> <span class="pre">false</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">print_function</span> <span class="pre">=</span> <span class="pre">false</span></code></p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">file_path</span></code> remains available for source-file lookup during reporting.</p>
+</section>
+<section id="leak-model">
+<h2>Leak Model<a class="headerlink" href="#leak-model" title="Link to this heading"></a></h2>
+<p>The pass reports constant-time violations through several channels:</p>
+<ul class="simple">
+<li><p><strong>Cache timing</strong>: secret-dependent memory-access behavior</p></li>
+<li><p><strong>Branch timing</strong>: secret-dependent control flow</p></li>
+<li><p><strong>Variable timing</strong>: operations whose latency may vary with secret data</p></li>
+</ul>
+<p>In practice, this means the ConstantTime component now covers analysis that was
+historically documented under separate crypto and speculation/security topics,
+but is implemented today as one security-oriented constant-time subsystem in
+<code class="docutils literal notranslate"><span class="pre">lib/Security/ConstantTime</span></code>.</p>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<p>The pass can be added to an LLVM pass pipeline:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;Security/ConstantTime/ConstantTimePass.h&gt;</span>
+
+<span class="n">llvm</span><span class="o">::</span><span class="n">ModulePassManager</span><span class="w"> </span><span class="n">MPM</span><span class="p">;</span>
+<span class="n">MPM</span><span class="p">.</span><span class="n">addPass</span><span class="p">(</span><span class="n">CTPass</span><span class="p">());</span>
+<span class="n">MPM</span><span class="p">.</span><span class="n">run</span><span class="p">(</span><span class="n">M</span><span class="p">,</span><span class="w"> </span><span class="n">MAM</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Typical use cases:</p>
+<ul class="simple">
+<li><p>auditing cryptographic implementations</p></li>
+<li><p>validating constant-time coding discipline in security-sensitive routines</p></li>
+<li><p>integrating side-channel checks into CI</p></li>
+<li><p>experimentation with CT-LLVM-style constant-time analysis</p></li>
+</ul>
+</section>
+<section id="related-components">
+<h2>Related Components<a class="headerlink" href="#related-components" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="spectre.html"><span class="doc">Spectre Cache Analysis</span></a> documents the separate <code class="docutils literal notranslate"><span class="pre">lib/Security/Spectre</span></code> subsystem for
+Spectre-v1-style speculative cache analysis.</p></li>
+<li><p><a class="reference internal" href="lif.html"><span class="doc">LIF</span></a> documents <code class="docutils literal notranslate"><span class="pre">lib/Security/LIF</span></code>, which focuses on isochronous
+transformation and taint-driven control-flow linearization.</p></li>
+</ul>
+</section>
+<section id="limitations">
+<h2>Limitations<a class="headerlink" href="#limitations" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>precision depends on taint-source identification and alias information</p></li>
+<li><p>may-leak mode can report conservative warnings</p></li>
+<li><p>soundness-oriented inlining can fail on unsupported or difficult call
+patterns</p></li>
+<li><p>debug information improves source-level reporting quality</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Security Components" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="lif.html" class="btn btn-neutral float-right" title="LIF" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,533 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VASCO Value-Context Framework &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="WPDS Dataflow Engine" href="wpds.html" />
+    <link rel="prev" title="IFDS / IDE Engine" href="ifds_ide.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Data Flow Analysis</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="apa.html">Algebraic Program Analysis (APA)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="control_flow.html">Control Flow Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html">Monotone Dataflow Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html#implementation-layout">Implementation Layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html#core-idea">Core Idea</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html#abstract-domain-contract">Abstract Domain Contract</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html#example-analyses">Example Analyses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ifds_ide.html">IFDS / IDE Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ifds_ide.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ifds_ide.html#ifds-set-valued-problems">IFDS: Set-Valued Problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ifds_ide.html#ide-value-enriched-problems">IDE: Value-Enriched Problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ifds_ide.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ifds_ide.html#command-line-tool-lotus-check-engine-taint">Command-Line Tool: lotus-check –engine=taint</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">VASCO Value-Context Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#why-vasco">Why VASCO</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#value-contexts">Value Contexts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#algorithm-sketch">Algorithm Sketch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#core-api">Core API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#generic-interfaces">Generic Interfaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#directional-solvers">Directional Solvers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#results">Results</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#context-sensitive-results">Context-sensitive results</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#merged-meet-over-valid-paths-results">Merged meet-over-valid-paths results</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#llvm-instantiation-in-lotus">LLVM Instantiation in Lotus</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#parallel-context-scheduling">Parallel Context Scheduling</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#core-idea">Core Idea</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#versioned-summary-replay">Versioned Summary Replay</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#public-api">Public API</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#scheduleroptions">SchedulerOptions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#schedulerstats">SchedulerStats</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#usage-example">Usage Example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#correctness-invariants">Correctness Invariants</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#design-document">Design Document</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#current-scope-and-caveats">Current Scope and Caveats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#relationship-to-other-lotus-engines">Relationship to Other Lotus Engines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wpds.html">WPDS Dataflow Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wpds.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wpds.html#core-idea">Core Idea</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wpds.html#example-analyses">Example Analyses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html">Newtonian Program Analysis (NPA)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#conceptual-background">Conceptual Background</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#mathematical-foundation">Mathematical Foundation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#examples-and-applications">Examples and Applications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#distributive-vs-non-distributive-analyses">Distributive vs. Non-Distributive Analyses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#implementation-layout">Implementation Layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#usage-notes">Usage Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#practical-notes-for-numeric-domains">Practical notes for numeric domains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Data Flow Analysis</a></li>
+      <li class="breadcrumb-item active">VASCO Value-Context Framework</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/dataflow/vasco.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="vasco-value-context-framework">
+<h1>VASCO Value-Context Framework<a class="headerlink" href="#vasco-value-context-framework" title="Link to this heading"></a></h1>
+</section>
+<section id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h1>
+<p>The <strong>VASCO</strong> framework in <code class="docutils literal notranslate"><span class="pre">include/Dataflow/VASCO</span></code> and
+<code class="docutils literal notranslate"><span class="pre">lib/Dataflow/VASCO</span></code> implements the value-context interprocedural data-flow
+algorithm of Padhye and Khedker, <em>Interprocedural Data Flow Analysis in Soot
+using Value Contexts</em> (SOAP 2013).</p>
+<ul class="simple">
+<li><p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">include/Dataflow/VASCO</span></code>, <code class="docutils literal notranslate"><span class="pre">lib/Dataflow/VASCO</span></code></p></li>
+<li><p><strong>Purpose</strong>: precise, flow-sensitive, context-sensitive interprocedural
+analysis for finite lattices, including non-distributive problems</p></li>
+</ul>
+</section>
+<section id="why-vasco">
+<h1>Why VASCO<a class="headerlink" href="#why-vasco" title="Link to this heading"></a></h1>
+<p>Lotus already contains specialized interprocedural engines such as IFDS/IDE and
+WPDS. VASCO serves a different niche.</p>
+<p>VASCO is appropriate when:</p>
+<ul class="simple">
+<li><p>the analysis needs <strong>valid-path</strong>, context-sensitive propagation,</p></li>
+<li><p>transfer functions are <strong>monotone</strong> but not necessarily <strong>distributive</strong>,</p></li>
+<li><p>the abstract domain is a <strong>finite lattice</strong>, and</p></li>
+<li><p>recursive procedures must still be handled precisely.</p></li>
+</ul>
+<p>This is exactly the setting emphasized in the SOAP 2013 paper: analyses such as
+sign analysis or points-to analysis often cannot be encoded cleanly as IFDS/IDE
+because a transfer function depends on the whole abstract state, not on one fact
+at a time.</p>
+</section>
+<section id="value-contexts">
+<h1>Value Contexts<a class="headerlink" href="#value-contexts" title="Link to this heading"></a></h1>
+<p>The paper’s key idea is to use a data-flow value itself as the calling context.</p>
+<p>For a forward analysis, a value context is:</p>
+<div class="math notranslate nohighlight">
+\[X = \langle m, entry\_value \rangle\]</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">m</span></code> is a procedure and <code class="docutils literal notranslate"><span class="pre">entry_value</span></code> is the lattice value at the
+procedure entry.</p>
+<p>For backward analyses, Lotus uses the dual notion and keys contexts by exit
+values instead. In both cases, if two calls reach the same procedure with the
+same context value, they reuse the same context and therefore the same computed
+summary.</p>
+<p>This combines two ideas highlighted in the paper:</p>
+<ul class="simple">
+<li><p>the tabulation perspective of representing a procedure summary by an
+input/output pair of lattice values, and</p></li>
+<li><p>value-based termination of call-string construction, which avoids the
+exponential blow-up of raw call strings.</p></li>
+</ul>
+</section>
+<section id="algorithm-sketch">
+<h1>Algorithm Sketch<a class="headerlink" href="#algorithm-sketch" title="Link to this heading"></a></h1>
+<p>Lotus’s forward and backward solvers directly mirror Figure 1 of the paper.</p>
+<p>For a forward analysis, the solver:</p>
+<ul class="simple">
+<li><p>creates initial contexts for all entry points using <code class="docutils literal notranslate"><span class="pre">boundaryValue()</span></code>,</p></li>
+<li><p>processes CFG nodes in a per-context worklist,</p></li>
+<li><p>computes node IN values as the meet of predecessor OUT values,</p></li>
+<li><p>treats calls specially by:</p>
+<ul>
+<li><p>computing a callee entry value,</p></li>
+<li><p>looking up or creating the matching callee context,</p></li>
+<li><p>recording the caller-context/call-site to callee-context transition,</p></li>
+<li><p>reusing the callee exit value when that context has already been analyzed,</p></li>
+</ul>
+</li>
+<li><p>re-enqueues successors when a node’s output improves, and</p></li>
+<li><p>re-enqueues callers when a callee context’s exit summary changes.</p></li>
+</ul>
+<p>The backward solver is the same idea with entry/exit roles reversed.</p>
+<p>Termination follows the same argument as in the paper: monotone transfer
+functions over a finite lattice yield a finite descending chain, which also
+bounds the number of distinct value contexts.</p>
+</section>
+<section id="core-api">
+<h1>Core API<a class="headerlink" href="#core-api" title="Link to this heading"></a></h1>
+<section id="generic-interfaces">
+<h2>Generic Interfaces<a class="headerlink" href="#generic-interfaces" title="Link to this heading"></a></h2>
+<p>The framework is generic in three types:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">M</span></code>: method or procedure type,</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">N</span></code>: control-flow graph node type,</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">A</span></code>: abstract data-flow value type.</p></li>
+</ul>
+<p>The core abstractions are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Core/ProgramRepresentation.h</span></code>
+defines entry-point discovery, CFG access, call detection, and call-target
+resolution.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Core/Context.h</span></code>
+stores one value context: method, entry value, exit value, per-node IN/OUT
+maps, and a pseudo-topological worklist order.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Core/ContextTransitionTable.h</span></code>
+records transitions from a caller context at a call site to the target callee
+context.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Core/InterProceduralAnalysis.h</span></code>
+owns all contexts and shared utilities such as
+<code class="docutils literal notranslate"><span class="pre">getContexts()</span></code> and <code class="docutils literal notranslate"><span class="pre">getMeetOverValidPathsSolution()</span></code>.</p></li>
+</ul>
+</section>
+<section id="directional-solvers">
+<h2>Directional Solvers<a class="headerlink" href="#directional-solvers" title="Link to this heading"></a></h2>
+<p>Client analyses extend one of:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Solver/ForwardInterProceduralAnalysis.h</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Solver/BackwardInterProceduralAnalysis.h</span></code></p></li>
+</ul>
+<p>They must provide lattice hooks:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">topValue()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">boundaryValue(...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">copy(...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">meet(...)</span></code></p></li>
+</ul>
+<p>and transfer hooks:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">normalFlowFunction(...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">callEntryFlowFunction(...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">callExitFlowFunction(...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">callLocalFlowFunction(...)</span></code></p></li>
+</ul>
+<p>This closely follows the framework section of the paper.</p>
+</section>
+</section>
+<section id="results">
+<h1>Results<a class="headerlink" href="#results" title="Link to this heading"></a></h1>
+<p>VASCO exposes results in two forms.</p>
+<section id="context-sensitive-results">
+<h2>Context-sensitive results<a class="headerlink" href="#context-sensitive-results" title="Link to this heading"></a></h2>
+<p>Each <code class="docutils literal notranslate"><span class="pre">Context</span></code> stores:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">getEntryValue()</span></code> and <code class="docutils literal notranslate"><span class="pre">getExitValue()</span></code> for the summary of that value
+context,</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">getValueBefore(node)</span></code> and <code class="docutils literal notranslate"><span class="pre">getValueAfter(node)</span></code> for per-node facts inside
+that context.</p></li>
+</ul>
+</section>
+<section id="merged-meet-over-valid-paths-results">
+<h2>Merged meet-over-valid-paths results<a class="headerlink" href="#merged-meet-over-valid-paths-results" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">InterProceduralAnalysis::getMeetOverValidPathsSolution()</span></code> merges the results
+of all extant contexts for each node. This provides a convenient node-indexed
+view while preserving the paper’s valid-path semantics.</p>
+</section>
+</section>
+<section id="llvm-instantiation-in-lotus">
+<h1>LLVM Instantiation in Lotus<a class="headerlink" href="#llvm-instantiation-in-lotus" title="Link to this heading"></a></h1>
+<p>Lotus ships an LLVM adaptation of the generic framework.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Adapters/LLVM/DefaultLLVMProgramRepresentation.h</span></code>
+adapts LLVM IR to VASCO using instruction-level CFGs. By default it resolves
+direct calls and treats declarations or unresolved callees conservatively. It
+also accepts a custom resolver callback, which is the intended integration
+point for stronger Lotus call-graph information.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Analyses/LLVMSignAnalysis.h</span></code>
+ports the paper’s sign-analysis example.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Analyses/LLVMCopyConstantAnalysis.h</span></code>
+ports copy-constant propagation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Analyses/LLVMLiveVariablesAnalysis.h</span></code>
+adds a backward interprocedural liveness client over LLVM SSA values.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Analyses/LLVMNullnessAnalysis.h</span></code>
+tracks whether pointer-valued LLVM SSA results are null, non-null, or
+maybe-null.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Analyses/LLVMPointsToAnalysis.h</span></code>
+ports the original VASCO points-to / call-target client to LLVM.</p></li>
+</ul>
+<p>The LLVM points-to client models:</p>
+<ul class="simple">
+<li><p>pointer-like SSA values,</p></li>
+<li><p>globals and allocation-site objects,</p></li>
+<li><p>field-sensitive constant-offset memory accesses,</p></li>
+<li><p>direct calls and indirect calls through function-pointer values.</p></li>
+</ul>
+</section>
+<section id="parallel-context-scheduling">
+<h1>Parallel Context Scheduling<a class="headerlink" href="#parallel-context-scheduling" title="Link to this heading"></a></h1>
+<p>Lotus extends the sequential VASCO solver with an opt-in parallel mode that
+preserves the original value-context semantics while changing only the order in
+which contexts are processed.</p>
+<section id="core-idea">
+<h2>Core Idea<a class="headerlink" href="#core-idea" title="Link to this heading"></a></h2>
+<p>Each value context is an independent schedulable task. At most one worker thread
+owns a given context at a time, but different contexts can run concurrently on
+different threads. The solver’s worklist is shared across workers: a thread
+acquires a ready context not owned by any other worker, processes up to a
+configurable number of local work items under the context’s mutex, and then
+releases the context back to the shared pool.</p>
+</section>
+<section id="versioned-summary-replay">
+<h2>Versioned Summary Replay<a class="headerlink" href="#versioned-summary-replay" title="Link to this heading"></a></h2>
+<p>Every context carries an atomic <code class="docutils literal notranslate"><span class="pre">SummaryVersion</span></code> that starts at zero and
+increments each time the context publishes a changed summary (exit value for
+forward analyses, entry value for backward analyses). When a caller context
+consumes a summary at a call site, it records the callee’s current version in
+an <code class="docutils literal notranslate"><span class="pre">ObservedSummaryVersions</span></code> table. When the callee publishes an updated
+summary, <code class="docutils literal notranslate"><span class="pre">wakeStaleCallers()</span></code> iterates the caller list and re-enqueues only
+those call sites whose observed version is older than the current callee
+version (or that have no observation yet). This avoids waking callers that have
+already seen the latest summary.</p>
+</section>
+<section id="public-api">
+<h2>Public API<a class="headerlink" href="#public-api" title="Link to this heading"></a></h2>
+<p>The following methods on <code class="docutils literal notranslate"><span class="pre">InterProceduralAnalysis</span></code> control parallel
+scheduling:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">setParallelContextScheduling(bool</span> <span class="pre">Enable)</span></code>
+enables or disables parallel context scheduling (default: <code class="docutils literal notranslate"><span class="pre">false</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">setContextStepBudget(size_t</span> <span class="pre">Budget)</span></code>
+sets the maximum number of work items processed per context batch (default:
+<code class="docutils literal notranslate"><span class="pre">64</span></code>; a value of <code class="docutils literal notranslate"><span class="pre">0</span></code> is clamped to <code class="docutils literal notranslate"><span class="pre">1</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">getSchedulerOptions()</span></code>
+returns a <code class="docutils literal notranslate"><span class="pre">SchedulerOptions</span></code> struct describing the current configuration.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">getSchedulerStats()</span></code>
+returns a <code class="docutils literal notranslate"><span class="pre">SchedulerStats</span></code> struct holding cumulative counter values.</p></li>
+</ul>
+<section id="scheduleroptions">
+<h3>SchedulerOptions<a class="headerlink" href="#scheduleroptions" title="Link to this heading"></a></h3>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">SchedulerOptions</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kt">bool</span><span class="w"> </span><span class="n">EnableParallelContextScheduling</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="kt">size_t</span><span class="w"> </span><span class="n">ContextStepBudget</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">64</span><span class="p">;</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+<section id="schedulerstats">
+<h3>SchedulerStats<a class="headerlink" href="#schedulerstats" title="Link to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">SchedulerStats</span></code> struct exposes 11 counters:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">contexts_created</span></code> — number of new value contexts interned</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">contexts_reused</span></code> — number of existing contexts reused by a caller</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">context_steps</span></code> — total work items processed across all contexts</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">context_batches</span></code> — total context-batch invocations</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">caller_wakeups</span></code> — times a caller’s call node was re-enqueued</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">summary_publications</span></code> — times a changed summary triggered publication</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">suppressed_unchanged_wakeups</span></code> — times caller wakeup was suppressed because
+the summary did not change</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">stale_callsite_replays</span></code> — times a stale caller call site triggered replay</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">current_callsite_replays_skipped</span></code> — times a current-version call site
+skipped replay</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">parallel_worker_tasks</span></code> — worker tasks launched in the thread pool</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_ready_contexts</span></code> — peak size of the ready-context worklist</p></li>
+</ul>
+</section>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h2>
+<p>Parallel scheduling uses the <code class="docutils literal notranslate"><span class="pre">ThreadPool</span></code> singleton configured with the
+<code class="docutils literal notranslate"><span class="pre">-nworkers=N</span></code> command-line flag. The solver checks three conditions before
+entering parallel mode:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">EnableParallelContextScheduling</span></code> is <code class="docutils literal notranslate"><span class="pre">true</span></code>,</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">FreeResultsOnTheFly</span></code> is <code class="docutils literal notranslate"><span class="pre">false</span></code>, and</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ThreadPool::get()-&gt;hasWorkers()</span></code> returns <code class="docutils literal notranslate"><span class="pre">true</span></code>.</p></li>
+</ol>
+<p>If any condition fails, the solver falls back to the original sequential loop.
+Setting <code class="docutils literal notranslate"><span class="pre">-nworkers=0</span></code> effectively disables parallelism even when the option
+is enabled.</p>
+</section>
+<section id="usage-example">
+<h2>Usage Example<a class="headerlink" href="#usage-example" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">analysis</span><span class="p">.</span><span class="n">setParallelContextScheduling</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+<span class="n">analysis</span><span class="p">.</span><span class="n">setContextStepBudget</span><span class="p">(</span><span class="mi">128</span><span class="p">);</span>
+<span class="n">analysis</span><span class="p">.</span><span class="n">doAnalysis</span><span class="p">();</span>
+
+<span class="k">auto</span><span class="w"> </span><span class="n">Stats</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">analysis</span><span class="p">.</span><span class="n">getSchedulerStats</span><span class="p">();</span>
+<span class="n">llvm</span><span class="o">::</span><span class="n">outs</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Parallel batches: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">Stats</span><span class="p">.</span><span class="n">context_batches</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+</pre></div>
+</div>
+</section>
+<section id="correctness-invariants">
+<h2>Correctness Invariants<a class="headerlink" href="#correctness-invariants" title="Link to this heading"></a></h2>
+<p>The parallel scheduler relies on these invariants to guarantee that the final
+solution matches the sequential solver:</p>
+<ol class="arabic simple">
+<li><p>Only one worker mutates a context at a time (per-context
+<code class="docutils literal notranslate"><span class="pre">recursive_mutex</span></code>).</p></li>
+<li><p>Context interning by <code class="docutils literal notranslate"><span class="pre">(method,</span> <span class="pre">value)</span></code> is atomic (shared <code class="docutils literal notranslate"><span class="pre">StateMutex</span></code>).</p></li>
+<li><p>Data-flow values evolve through the existing monotone <code class="docutils literal notranslate"><span class="pre">meet</span></code> logic.</p></li>
+<li><p>A changed summary atomically increments its context version.</p></li>
+<li><p>Any caller that consumed an older summary is eventually replayed.</p></li>
+<li><p>A call site that already consumed the current summary does not need replay.</p></li>
+<li><p>The final meet-over-valid-paths solution matches the sequential solver.</p></li>
+</ol>
+</section>
+<section id="design-document">
+<h2>Design Document<a class="headerlink" href="#design-document" title="Link to this heading"></a></h2>
+<p>A standalone design document describing the scheduling algorithm, state
+organization, and implementation details can be found at:</p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">lib/Dataflow/VASCO/ParallelContextScheduler.md</span></code></p>
+</div></blockquote>
+<p>The test harness in <code class="docutils literal notranslate"><span class="pre">tests/unit/Dataflow/VASCO/VASCOParallelHarnessTest.cpp</span></code>
+exercises both sequential (<code class="docutils literal notranslate"><span class="pre">-nworkers=0</span></code>) and parallel (<code class="docutils literal notranslate"><span class="pre">-nworkers=2</span></code>)
+modes and verifies that they produce identical results.</p>
+</section>
+</section>
+<section id="current-scope-and-caveats">
+<h1>Current Scope and Caveats<a class="headerlink" href="#current-scope-and-caveats" title="Link to this heading"></a></h1>
+<p>The framework implementation is faithful to the paper’s value-context solver,
+but the LLVM instantiation is deliberately lightweight.</p>
+<ul class="simple">
+<li><p>Default call resolution is strongest for direct calls.</p></li>
+<li><p>Unresolved or external calls are handled conservatively.</p></li>
+<li><p>The points-to client is field-sensitive for constant offsets, but remains
+conservative around unknown offsets, advanced heap modeling, and external
+library summaries.</p></li>
+<li><p>Clients needing richer indirect-call precision should provide a custom
+<code class="docutils literal notranslate"><span class="pre">ProgramRepresentation</span></code> or custom target resolver rather than relying only
+on the default LLVM adapter.</p></li>
+</ul>
+</section>
+<section id="relationship-to-other-lotus-engines">
+<h1>Relationship to Other Lotus Engines<a class="headerlink" href="#relationship-to-other-lotus-engines" title="Link to this heading"></a></h1>
+<p>Use VASCO when the analysis needs a general finite-lattice solver with precise
+interprocedural valid-path handling, especially for <strong>non-distributive</strong> flow
+functions.</p>
+<p>Use <a class="reference internal" href="ifds_ide.html"><span class="doc">IFDS / IDE Engine</span></a> when the problem fits the IFDS or IDE restrictions and you
+want the specialized exploded-supergraph engine. Use <a class="reference internal" href="wpds.html"><span class="doc">WPDS Dataflow Engine</span></a> when a
+pushdown-system formulation is the better fit.</p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="ifds_ide.html" class="btn btn-neutral float-left" title="IFDS / IDE Engine" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="wpds.html" class="btn btn-neutral float-right" title="WPDS Dataflow Engine" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

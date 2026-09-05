@@ -1,0 +1,320 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CLAM – Abstract Interpretation Framework &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="SMACK Verification Frontend" href="smack.html" />
+    <link rel="prev" title="CRAB - Abstract Interpretation Library" href="crab.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Verification</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="analysis.html">Verification Support Analyses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="backend.html">Verification Backend API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="crab.html">CRAB - Abstract Interpretation Library</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">CLAM – Abstract Interpretation Framework</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#components">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#build-targets">Build Targets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#programmatic-usage">Programmatic Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#abstract-domains">Abstract Domains</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#integration-points">Integration Points</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="smack.html">SMACK Verification Frontend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sifa.html">Sifa</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seal.html">Seal — Symbolic Automata for Stateful Systems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="symabs-ai.html">SymAbsAI – Symbolic Abstraction + Abstract Interpretation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seahorn.html">SeaHorn Verification Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="failure_directed_trimming.html">Failure-Directed Trimming</a></li>
+<li class="toctree-l2"><a class="reference internal" href="frontend.html">Verification Frontend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transforms.html">Verification Transformation Passes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Verification</a></li>
+      <li class="breadcrumb-item active">CLAM – Abstract Interpretation Framework</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/verification/clam.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="clam-abstract-interpretation-framework">
+<h1>CLAM – Abstract Interpretation Framework<a class="headerlink" href="#clam-abstract-interpretation-framework" title="Link to this heading"></a></h1>
+<p>CLAM is a static analysis framework based on abstract interpretation over numerical abstract domains. It provides invariant generation and property checking for LLVM bitcode.</p>
+<p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">third-party/verification/clam/src/</span></code></p>
+<p><strong>Headers</strong>: <code class="docutils literal notranslate"><span class="pre">third-party/verification/clam/include/Verification/clam/</span></code></p>
+<p><strong>Tools</strong>: <code class="docutils literal notranslate"><span class="pre">tools/verifier/clam/</span></code> (command-line frontends)</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>CLAM computes sound over-approximations of program behaviors by interpreting programs over different numerical abstract domains. It integrates with Lotus’s alias analysis and memory modeling infrastructure.</p>
+<p><strong>Key Features</strong>:</p>
+<ul class="simple">
+<li><p>Multiple abstract domains: intervals, zones, octagons, polyhedra</p></li>
+<li><p>Memory safety checking: null pointer, buffer bounds, use-after-free</p></li>
+<li><p>Assertion checking and invariant generation</p></li>
+<li><p>Integration with Sea-DSA for precise heap abstraction</p></li>
+<li><p>Interprocedural and intraprocedural analysis modes</p></li>
+</ul>
+</section>
+<section id="components">
+<h2>Components<a class="headerlink" href="#components" title="Link to this heading"></a></h2>
+<p><strong>Core Library</strong> (<code class="docutils literal notranslate"><span class="pre">third-party/verification/clam/src/</span></code>):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Clam.cc</span></code> – Main analysis engine and pass registration</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CfgBuilder.cc</span></code> – LLVM IR to CRAB IR translation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CfgBuilderMemRegions.cc</span></code> – Memory region abstraction</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SeaDsaHeapAbstraction.cc</span></code> – Sea-DSA integration</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ClamQueryCache.cc</span></code> – Query result caching</p></li>
+</ul>
+<p><strong>Abstract Domains</strong> (<code class="docutils literal notranslate"><span class="pre">third-party/verification/clam/src/crab/domains/</span></code>):</p>
+<ul class="simple">
+<li><p>Intervals, zones, octagons, polyhedra</p></li>
+<li><p>Disjunctive domains and term domains</p></li>
+<li><p>Domain-specific optimizations</p></li>
+</ul>
+<p><strong>Property Checkers</strong> (<code class="docutils literal notranslate"><span class="pre">third-party/verification/clam/src/Properties/</span></code>):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">NullCheck.cc</span></code> – Null pointer dereference detection</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BndCheck.cc</span></code> – Buffer bounds checking</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">UafCheck.cc</span></code> – Use-after-free detection</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MemoryCheckUtils.cc</span></code> – Memory safety utilities</p></li>
+</ul>
+<p><strong>Transforms</strong> (<code class="docutils literal notranslate"><span class="pre">third-party/verification/clam/src/Transforms/</span></code>):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">DevirtFunctions.cc</span></code> – Function devirtualization</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LowerSelect.cc</span></code> – Select instruction lowering</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LowerUnsignedICmp.cc</span></code> – Unsigned comparison lowering</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PromoteMalloc.cc</span></code> – Malloc promotion</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NondetInit.cc</span></code> – Non-deterministic initialization</p></li>
+</ul>
+<p><strong>Command-Line Tools</strong> (<code class="docutils literal notranslate"><span class="pre">tools/verifier/clam/</span></code>):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">clam</span></code> – Main analyzer</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">clam-pp</span></code> – Preprocessing tool</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">clam-diff</span></code> – Differential analysis</p></li>
+</ul>
+</section>
+<section id="build-targets">
+<h2>Build Targets<a class="headerlink" href="#build-targets" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ClamAnalysis</span></code> – Core library (<code class="docutils literal notranslate"><span class="pre">third-party/verification/clam/src/</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">clam</span></code> – Command-line analyzer</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">clam-pp</span></code> – Preprocessor</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">clam-diff</span></code> – Differential analyzer</p></li>
+</ul>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<p><strong>Basic Analysis</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/clam<span class="w"> </span>program.bc
+</pre></div>
+</div>
+<p><strong>With Domain Selection</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/clam<span class="w"> </span>--crab-dom<span class="o">=</span>zones<span class="w"> </span>program.bc
+./build/bin/clam<span class="w"> </span>--crab-dom<span class="o">=</span>pk<span class="w"> </span>program.bc<span class="w">  </span><span class="c1"># Polyhedra</span>
+</pre></div>
+</div>
+<p><strong>Property Checking</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/clam<span class="w"> </span>--crab-check<span class="o">=</span>assert<span class="w"> </span>program.bc
+./build/bin/clam<span class="w"> </span>--crab-check<span class="o">=</span>null<span class="w"> </span>program.bc
+./build/bin/clam<span class="w"> </span>--crab-check<span class="o">=</span>bounds<span class="w"> </span>program.bc
+</pre></div>
+</div>
+<p><strong>Interprocedural Analysis</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/clam<span class="w"> </span>--crab-inter<span class="w"> </span>program.bc
+</pre></div>
+</div>
+<p><strong>Preprocessing</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/clam-pp<span class="w"> </span>--crab-lower-unsigned-icmp<span class="w"> </span><span class="se">\</span>
+<span class="w">                    </span>--crab-lower-select<span class="w"> </span><span class="se">\</span>
+<span class="w">                    </span>input.bc<span class="w"> </span>-o<span class="w"> </span>prep.bc
+./build/bin/clam<span class="w"> </span>prep.bc
+</pre></div>
+</div>
+</section>
+<section id="programmatic-usage">
+<h2>Programmatic Usage<a class="headerlink" href="#programmatic-usage" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"Verification/clam/Clam.hh"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"Verification/clam/CfgBuilder.hh"</span>
+
+<span class="c1">// Create CFG builder</span>
+<span class="n">CrabBuilderManager</span><span class="w"> </span><span class="nf">builder</span><span class="p">(</span><span class="k">module</span><span class="p">);</span>
+
+<span class="c1">// Create CLAM analysis</span>
+<span class="n">GlobalClam</span><span class="w"> </span><span class="nf">ga</span><span class="p">(</span><span class="k">module</span><span class="p">,</span><span class="w"> </span><span class="n">builder</span><span class="p">);</span>
+
+<span class="c1">// Run analysis</span>
+<span class="n">AnalysisParams</span><span class="w"> </span><span class="n">params</span><span class="p">;</span>
+<span class="n">params</span><span class="p">.</span><span class="n">run_inter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="n">ga</span><span class="p">.</span><span class="n">analyze</span><span class="p">(</span><span class="n">params</span><span class="p">);</span>
+
+<span class="c1">// Query invariants</span>
+<span class="k">auto</span><span class="w"> </span><span class="k">pre</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ga</span><span class="p">.</span><span class="n">getPre</span><span class="p">(</span><span class="n">bb</span><span class="p">);</span>
+<span class="k">auto</span><span class="w"> </span><span class="k">post</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ga</span><span class="p">.</span><span class="n">getPost</span><span class="p">(</span><span class="n">bb</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+<section id="abstract-domains">
+<h2>Abstract Domains<a class="headerlink" href="#abstract-domains" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Intervals (int)</strong>: Fast, value ranges <code class="docutils literal notranslate"><span class="pre">[l,</span> <span class="pre">u]</span></code></p></li>
+<li><p><strong>Zones</strong>: Difference constraints <code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">-</span> <span class="pre">y</span> <span class="pre">≤</span> <span class="pre">c</span></code></p></li>
+<li><p><strong>Octagons (oct)</strong>: Diagonal constraints <code class="docutils literal notranslate"><span class="pre">±x</span> <span class="pre">±</span> <span class="pre">y</span> <span class="pre">≤</span> <span class="pre">c</span></code></p></li>
+<li><p><strong>Polyhedra (pk)</strong>: Most precise, linear inequalities</p></li>
+<li><p><strong>Disjunctive domains</strong>: Union of abstract values</p></li>
+</ul>
+<p>See <a class="reference internal" href="../tools/verifier/clam/index.html"><span class="doc">CLAM – Numerical Abstract Interpretation</span></a> for detailed domain documentation and usage examples.</p>
+</section>
+<section id="integration-points">
+<h2>Integration Points<a class="headerlink" href="#integration-points" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Sea-DSA</strong>: Heap abstraction for memory modeling</p></li>
+<li><p><strong>Lotus Alias Analysis</strong>: Pointer analysis integration</p></li>
+<li><p><strong>CRAB Library</strong>: Abstract domain implementations</p></li>
+<li><p><strong>LLVM Pass Infrastructure</strong>: Standard pass registration</p></li>
+</ul>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../tools/verifier/clam/index.html"><span class="doc">CLAM – Numerical Abstract Interpretation</span></a> – Detailed CLAM documentation and usage guide</p></li>
+<li><p><a class="reference internal" href="../user_guide/tutorials.html"><span class="doc">Tutorials and Examples</span></a> – CLAM usage examples</p></li>
+<li><p><a class="reference internal" href="../alias/index.html"><span class="doc">Alias Analysis</span></a> – Alias analysis for pointer information</p></li>
+<li><p><a class="reference internal" href="../solvers/index.html"><span class="doc">Solvers</span></a> – Constraint solving backends</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="crab.html" class="btn btn-neutral float-left" title="CRAB - Abstract Interpretation Library" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="smack.html" class="btn btn-neutral float-right" title="SMACK Verification Frontend" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,629 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SVFG — Sparse Value-Flow Graph &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="GVFG" href="gvfg.html" />
+    <link rel="prev" title="vSSA — Variable Static Single Assignment" href="vssa.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Intermediate Representations</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="icfg.html">ICFG — Interprocedural Control Flow Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="icfg.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="icfg.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="icfg.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="icfg.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="icfg.html#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html">PDG — Program Dependence Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#core-passes">Core Passes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#unified-query-api">Unified Query API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#high-level-usage">High-Level Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#lotus-ir-pdg-query-analysis-mode"><cite>lotus-ir-pdg-query</cite> Analysis Mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html">SSI — Static Single Information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#ssi-formalism">SSI Formalism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#ssi-instructions">SSI Instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#algorithm">Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html">vSSA — Variable Static Single Assignment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#vssa-instructions">vSSA Instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#algorithm">Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#integration-with-sraa">Integration with SRAA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#references">References</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">SVFG — Sparse Value-Flow Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#node-types">Node Types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#statement-nodes-top-level-pointers">Statement Nodes (Top-Level Pointers)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#phi-nodes">PHI Nodes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#memory-ssa-nodes-address-taken-variables">Memory SSA Nodes (Address-Taken Variables)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#memory-phi-nodes">Memory PHI Nodes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#parameter-nodes">Parameter Nodes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#edge-types">Edge Types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#intra-procedural-edges">Intra-Procedural Edges</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#inter-procedural-edges">Inter-Procedural Edges</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#thread-edges">Thread Edges</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#architecture">Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#basic-construction">Basic Construction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#querying-value-flows">Querying Value Flows</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#memory-ssa-queries">Memory SSA Queries</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#interprocedural-queries">Interprocedural Queries</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#on-the-fly-call-graph-refinement">On-the-Fly Call Graph Refinement</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#type-safe-node-casting">Type-Safe Node Casting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#serialization">Serialization</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#integration">Integration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#aserpta-integration">AserPTA Integration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#icfg-integration">ICFG Integration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dda-integration">DDA Integration</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#components">Components</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#core-files">Core Files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dependencies">Dependencies</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#references">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gvfg.html">GVFG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html">GSA — Gated SSA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#core-types">Core Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#passes">Passes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#command-line-options">Command-Line Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#behavior-notes">Behavior Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html">ShadowMem SSA — Sea-DSA Shadow Memory Queries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#shadow-memory-instructions">Shadow Memory Instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="path_program.html">Path Program</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Intermediate Representations</a></li>
+      <li class="breadcrumb-item active">SVFG — Sparse Value-Flow Graph</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/ir/svfg.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="svfg-sparse-value-flow-graph">
+<h1>SVFG — Sparse Value-Flow Graph<a class="headerlink" href="#svfg-sparse-value-flow-graph" title="Link to this heading"></a></h1>
+</section>
+<section id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h1>
+<p><strong>Sparse Value-Flow Graph (SVFG)</strong> is a sparse representation of value flows
+across a whole program, enabling efficient interprocedural analysis. The SVFG
+combines Static Single Assignment (SSA) form with Memory SSA to track both
+top-level pointers (address-taken variables) and their value flows through
+memory operations.</p>
+<p>This sparse MemorySSA is constructed by the SVFG builder using AserPTA. It is
+independent of <a class="reference internal" href="shadowmemssa.html"><span class="doc">ShadowMem SSA — Sea-DSA Shadow Memory Queries</span></a>, which queries Sea-DSA <code class="docutils literal notranslate"><span class="pre">shadow.mem.*</span></code>
+instrumentation for interprocedural optimizations.</p>
+<ul class="simple">
+<li><p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/IR/SVFG/</span></code>, <code class="docutils literal notranslate"><span class="pre">include/IR/SVFG/</span></code></p></li>
+<li><p><strong>Migrated from</strong>: SVF (SVF-master, <a class="reference external" href="https://github.com/SVF-tools/SVF">https://github.com/SVF-tools/SVF</a>)</p></li>
+</ul>
+<p>The SVFG provides a unified graph structure where:</p>
+<ul class="simple">
+<li><p><strong>Top-level pointers</strong> (SSA variables) flow through copy, GEP, and arithmetic operations.</p></li>
+<li><p><strong>Address-taken variables</strong> (heap, stack, globals) flow through load/store via Memory SSA.</p></li>
+<li><p><strong>Interprocedural value flow</strong> is captured through parameter passing and return values.</p></li>
+</ul>
+</section>
+<section id="key-features">
+<h1>Key Features<a class="headerlink" href="#key-features" title="Link to this heading"></a></h1>
+<ul class="simple">
+<li><p><strong>Sparse Value-Flow Representation</strong>: Only defines and uses are connected, avoiding
+exhaustive memory modeling.</p></li>
+<li><p><strong>Memory SSA Integration</strong>: Tracks value flows through memory via Mu (use) and Chi (def) nodes.</p></li>
+<li><p><strong>Points-To Set Association</strong>: Indirect edges carry points-to sets for precise alias analysis.</p></li>
+<li><p><strong>Interprocedural Flow</strong>: Complete call/return edges connecting actual and formal parameters.</p></li>
+<li><p><strong>On-the-Fly Call Graph Refinement</strong>: Supports demand-driven indirect call resolution.</p></li>
+<li><p><strong>AserPTA Integration</strong>: Uses AserPTA for field-sensitive pointer analysis.</p></li>
+</ul>
+</section>
+<section id="node-types">
+<h1>Node Types<a class="headerlink" href="#node-types" title="Link to this heading"></a></h1>
+<section id="statement-nodes-top-level-pointers">
+<h2>Statement Nodes (Top-Level Pointers)<a class="headerlink" href="#statement-nodes-top-level-pointers" title="Link to this heading"></a></h2>
+<p>These nodes represent operations on top-level pointers (SSA variables):</p>
+<ul class="simple">
+<li><p><strong>AddrSVFGNode</strong>: Address-taking instructions (alloca, malloc, address-of).
+Creates an abstract object and defines a pointer to it.</p></li>
+<li><p><strong>CopySVFGNode</strong>: Copy operations (bitcast, inttoptr, ptrtoint).</p></li>
+<li><p><strong>LoadSVFGNode</strong>: Load instructions. Reads from memory through a pointer.</p></li>
+<li><p><strong>StoreSVFGNode</strong>: Store instructions. Writes to memory through a pointer.</p></li>
+<li><p><strong>GepSVFGNode</strong>: GetElementPtr instructions. Computes derived pointers.</p></li>
+<li><p><strong>BinaryOpSVFGNode</strong>: Binary operations on pointer values.</p></li>
+<li><p><strong>CmpSVFGNode</strong>: Comparison instructions involving pointers.</p></li>
+<li><p><strong>BranchSVFGNode</strong>: Branch instructions with pointer-dependent conditions.</p></li>
+</ul>
+</section>
+<section id="phi-nodes">
+<h2>PHI Nodes<a class="headerlink" href="#phi-nodes" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>IntraPhiSVFGNode</strong>: Intra-procedural PHI nodes for merging values at control-flow joins.</p></li>
+<li><p><strong>InterPhiSVFGNode</strong>: Inter-procedural PHI nodes for parameter/return value aggregation.</p></li>
+</ul>
+</section>
+<section id="memory-ssa-nodes-address-taken-variables">
+<h2>Memory SSA Nodes (Address-Taken Variables)<a class="headerlink" href="#memory-ssa-nodes-address-taken-variables" title="Link to this heading"></a></h2>
+<p>These nodes track value flows through memory locations:</p>
+<ul class="simple">
+<li><p><strong>FormalInSVFGNode</strong>: Memory state at function entry (formal parameter memory).</p></li>
+<li><p><strong>FormalOutSVFGNode</strong>: Memory state at function exit (formal return memory).</p></li>
+<li><p><strong>ActualInSVFGNode</strong>: Memory state before call site (actual parameter memory).</p></li>
+<li><p><strong>ActualOutSVFGNode</strong>: Memory state after call site (actual return memory).</p></li>
+<li><p><strong>LoadMuSVFGNode</strong>: Memory use (load from address-taken location).</p></li>
+<li><p><strong>StoreChiSVFGNode</strong>: Memory def (store to address-taken location).</p></li>
+<li><p><strong>CallMuSVFGNode</strong>: Memory use at call site (for functions that may read memory).</p></li>
+<li><p><strong>CallChiSVFGNode</strong>: Memory def at call site (for functions that may write memory).</p></li>
+<li><p><strong>RetMuSVFGNode</strong>: Memory use at function return.</p></li>
+<li><p><strong>EntryChiSVFGNode</strong>: Memory def at function entry.</p></li>
+</ul>
+<section id="memory-phi-nodes">
+<h3>Memory PHI Nodes<a class="headerlink" href="#memory-phi-nodes" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>IntraMSSAPhiSVFGNode</strong>: Intra-procedural memory PHI for merging memory states.</p></li>
+<li><p><strong>InterMSSAPhiSVFGNode</strong>: Inter-procedural memory PHI node kind (currently not
+materialized by default builder construction).</p></li>
+</ul>
+</section>
+</section>
+<section id="parameter-nodes">
+<h2>Parameter Nodes<a class="headerlink" href="#parameter-nodes" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>FormalParmSVFGNode</strong>: Formal parameter at function entry.</p></li>
+<li><p><strong>ActualParmSVFGNode</strong>: Actual parameter at call site.</p></li>
+<li><p><strong>FormalRetSVFGNode</strong>: Formal return value at function exit.</p></li>
+<li><p><strong>ActualRetSVFGNode</strong>: Actual return value at call site.</p></li>
+</ul>
+</section>
+</section>
+<section id="edge-types">
+<h1>Edge Types<a class="headerlink" href="#edge-types" title="Link to this heading"></a></h1>
+<section id="intra-procedural-edges">
+<h2>Intra-Procedural Edges<a class="headerlink" href="#intra-procedural-edges" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>IntraDirect</strong>: Direct value flow (copy, bitcast).</p></li>
+<li><p><strong>IntraCopy</strong>: Copy of pointer value.</p></li>
+<li><p><strong>IntraLoad</strong>: Load through pointer (defines loaded value).</p></li>
+<li><p><strong>IntraStore</strong>: Store through pointer (uses stored value).</p></li>
+<li><p><strong>IntraGep</strong>: GEP operation (derived pointer).</p></li>
+<li><p><strong>IntraPhi</strong>: PHI node value flow.</p></li>
+<li><p><strong>IntraMu</strong>: Memory use edge (LoadMu).</p></li>
+<li><p><strong>IntraChi</strong>: Memory def edge (StoreChi).</p></li>
+<li><p><strong>IntraIndirect</strong>: Indirect value flow with points-to guard.</p></li>
+</ul>
+</section>
+<section id="inter-procedural-edges">
+<h2>Inter-Procedural Edges<a class="headerlink" href="#inter-procedural-edges" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>CallDir</strong>: Direct call parameter passing.</p></li>
+<li><p><strong>CallInd</strong>: Indirect call parameter passing (with points-to guard).</p></li>
+<li><p><strong>CallAIn</strong>: Actual-in to formal-in edge (memory).</p></li>
+<li><p><strong>CallFIn</strong>: Formal-in edge (memory).</p></li>
+<li><p><strong>RetDir</strong>: Direct return value flow.</p></li>
+<li><p><strong>RetInd</strong>: Indirect return value flow (with points-to guard).</p></li>
+<li><p><strong>RetAOut</strong>: Actual-out to formal-out edge (memory).</p></li>
+<li><p><strong>RetFOut</strong>: Formal-out edge (memory).</p></li>
+<li><p><strong>ParamCall</strong>: Parameter passing edge without callsite context.</p></li>
+<li><p><strong>ParamRet</strong>: Return value edge without callsite context.</p></li>
+</ul>
+</section>
+<section id="thread-edges">
+<h2>Thread Edges<a class="headerlink" href="#thread-edges" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>ThreadMHPIndirectVF</strong>: May-happen-in-parallel indirect value flow for
+concurrent program analysis.</p></li>
+</ul>
+</section>
+</section>
+<section id="architecture">
+<h1>Architecture<a class="headerlink" href="#architecture" title="Link to this heading"></a></h1>
+<p>The SVFG builder follows a phased construction approach:</p>
+<ol class="arabic">
+<li><p><strong>Pointer Analysis Phase</strong></p>
+<p>Run AserPTA to compute points-to sets for all pointers:</p>
+<ul class="simple">
+<li><p>Field-sensitive or field-insensitive memory model.</p></li>
+<li><p>Andersen’s algorithm, Wave Propagation, or Deep Propagation.</p></li>
+<li><p>On-the-fly call graph construction for indirect calls.</p></li>
+</ul>
+</li>
+<li><p><strong>Node Construction Phase</strong></p>
+<p>Create SVFG nodes for all program values:</p>
+<ul class="simple">
+<li><p>Top-level pointer nodes (Addr, Copy, Load, Store, Gep, etc.).</p></li>
+<li><p>Parameter nodes (FormalParm, ActualParm, FormalRet, ActualRet).</p></li>
+<li><p>Memory SSA nodes (FormalIn/Out, ActualIn/Out, LoadMu, StoreChi).</p></li>
+</ul>
+</li>
+<li><p><strong>Edge Construction Phase</strong></p>
+<p>Connect nodes based on value flow:</p>
+<ul class="simple">
+<li><p>Intra-procedural direct edges.</p></li>
+<li><p>Intra-procedural indirect edges (with points-to sets).</p></li>
+<li><p>Inter-procedural call/return edges.</p></li>
+</ul>
+</li>
+<li><p><strong>Memory SSA Phase</strong></p>
+<p>Build memory SSA form for address-taken variables:</p>
+<ul class="simple">
+<li><p>Memory region identification from points-to sets.</p></li>
+<li><p>SSA versioning for memory locations.</p></li>
+<li><p>Memory PHI nodes at control-flow merges.</p></li>
+<li><p>Interprocedural memory flow through call/return edges
+(<code class="docutils literal notranslate"><span class="pre">CallAIn</span></code>/<code class="docutils literal notranslate"><span class="pre">RetAOut</span></code>).</p></li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h1>
+<section id="basic-construction">
+<h2>Basic Construction<a class="headerlink" href="#basic-construction" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"IR/SVFG/SVFG.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"IR/SVFG/SVFGBuilder.h"</span>
+
+<span class="c1">// Build SVFG from ICFG</span>
+<span class="n">SVFGBuilder</span><span class="w"> </span><span class="n">builder</span><span class="p">;</span>
+<span class="n">SVFG</span><span class="o">*</span><span class="w"> </span><span class="n">svfg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">builder</span><span class="p">.</span><span class="n">build</span><span class="p">(</span><span class="n">icfg</span><span class="p">);</span>
+
+<span class="c1">// Iterate over nodes</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">pair</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="n">svfg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">SVFGNode</span><span class="o">*</span><span class="w"> </span><span class="n">node</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pair</span><span class="p">.</span><span class="n">second</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// Process node...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"IR/SVFG/SVFGBuilder.h"</span>
+
+<span class="n">SVFGBuilderConfig</span><span class="w"> </span><span class="n">config</span><span class="p">;</span>
+<span class="n">config</span><span class="p">.</span><span class="n">buildMSSA</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="n">config</span><span class="p">.</span><span class="n">usePointerAnalysis</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="n">config</span><span class="p">.</span><span class="n">resolveIndirectCalls</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="n">config</span><span class="p">.</span><span class="n">solverType</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">SVFGBuilderConfig</span><span class="o">::</span><span class="n">SolverType</span><span class="o">::</span><span class="n">Andersen</span><span class="p">;</span>
+<span class="n">config</span><span class="p">.</span><span class="n">memModelType</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">SVFGBuilderConfig</span><span class="o">::</span><span class="n">MemModelType</span><span class="o">::</span><span class="n">FieldSensitive</span><span class="p">;</span>
+
+<span class="n">SVFGBuilder</span><span class="w"> </span><span class="nf">builder</span><span class="p">(</span><span class="n">config</span><span class="p">);</span>
+<span class="n">SVFG</span><span class="o">*</span><span class="w"> </span><span class="n">svfg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">builder</span><span class="p">.</span><span class="n">build</span><span class="p">(</span><span class="n">icfg</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+<section id="querying-value-flows">
+<h2>Querying Value Flows<a class="headerlink" href="#querying-value-flows" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"IR/SVFG/SVFG.h"</span>
+
+<span class="c1">// Get definition site for an instruction</span>
+<span class="n">SVFGNode</span><span class="o">*</span><span class="w"> </span><span class="n">def</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">svfg</span><span class="o">-&gt;</span><span class="n">getDef</span><span class="p">(</span><span class="n">instruction</span><span class="p">);</span>
+
+<span class="c1">// Get successors (forward reachability)</span>
+<span class="n">SVFGNodeSet</span><span class="w"> </span><span class="n">succs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">svfg</span><span class="o">-&gt;</span><span class="n">getSuccs</span><span class="p">(</span><span class="n">node</span><span class="p">);</span>
+
+<span class="c1">// Get predecessors (backward reachability)</span>
+<span class="n">SVFGNodeSet</span><span class="w"> </span><span class="n">preds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">svfg</span><span class="o">-&gt;</span><span class="n">getPreds</span><span class="p">(</span><span class="n">node</span><span class="p">);</span>
+
+<span class="c1">// Check path existence</span>
+<span class="kt">bool</span><span class="w"> </span><span class="n">hasPath</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">svfg</span><span class="o">-&gt;</span><span class="n">hasPath</span><span class="p">(</span><span class="n">srcNode</span><span class="p">,</span><span class="w"> </span><span class="n">dstNode</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+<section id="memory-ssa-queries">
+<h2>Memory SSA Queries<a class="headerlink" href="#memory-ssa-queries" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"IR/SVFG/SVFG.h"</span>
+
+<span class="c1">// Get LoadMu nodes for a load instruction</span>
+<span class="k">const</span><span class="w"> </span><span class="n">SVFGNodeSet</span><span class="o">&amp;</span><span class="w"> </span><span class="n">mus</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">svfg</span><span class="o">-&gt;</span><span class="n">getLoadMus</span><span class="p">(</span><span class="n">loadInst</span><span class="p">);</span>
+
+<span class="c1">// Get StoreChi nodes for a store instruction</span>
+<span class="k">const</span><span class="w"> </span><span class="n">SVFGNodeSet</span><span class="o">&amp;</span><span class="w"> </span><span class="n">chis</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">svfg</span><span class="o">-&gt;</span><span class="n">getStoreChis</span><span class="p">(</span><span class="n">storeInst</span><span class="p">);</span>
+
+<span class="c1">// Get points-to set for a memory node</span>
+<span class="k">const</span><span class="w"> </span><span class="n">SVFGNodeBS</span><span class="o">*</span><span class="w"> </span><span class="n">pts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">memNode</span><span class="o">-&gt;</span><span class="n">getPointsTo</span><span class="p">();</span>
+</pre></div>
+</div>
+</section>
+<section id="interprocedural-queries">
+<h2>Interprocedural Queries<a class="headerlink" href="#interprocedural-queries" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"IR/SVFG/SVFG.h"</span>
+
+<span class="c1">// Get formal parameters for a function</span>
+<span class="k">const</span><span class="w"> </span><span class="n">SVFGNodeSet</span><span class="o">&amp;</span><span class="w"> </span><span class="n">formalParms</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">svfg</span><span class="o">-&gt;</span><span class="n">getFormalParms</span><span class="p">(</span><span class="n">func</span><span class="p">);</span>
+
+<span class="c1">// Get actual parameters for a call site</span>
+<span class="k">const</span><span class="w"> </span><span class="n">SVFGNodeSet</span><span class="o">&amp;</span><span class="w"> </span><span class="n">actualParms</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">svfg</span><span class="o">-&gt;</span><span class="n">getActualParms</span><span class="p">(</span><span class="n">callSite</span><span class="p">);</span>
+
+<span class="c1">// Get formal return node</span>
+<span class="k">const</span><span class="w"> </span><span class="n">SVFGNodeSet</span><span class="o">&amp;</span><span class="w"> </span><span class="n">formalRets</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">svfg</span><span class="o">-&gt;</span><span class="n">getFormalRets</span><span class="p">(</span><span class="n">func</span><span class="p">);</span>
+
+<span class="c1">// Get actual return node</span>
+<span class="k">const</span><span class="w"> </span><span class="n">SVFGNodeSet</span><span class="o">&amp;</span><span class="w"> </span><span class="n">actualRets</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">svfg</span><span class="o">-&gt;</span><span class="n">getActualRets</span><span class="p">(</span><span class="n">callSite</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+<section id="on-the-fly-call-graph-refinement">
+<h2>On-the-Fly Call Graph Refinement<a class="headerlink" href="#on-the-fly-call-graph-refinement" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"IR/SVFG/SVFGBuilder.h"</span>
+
+<span class="c1">// Configure SVFG to defer indirect call resolution</span>
+<span class="n">SVFGBuilderConfig</span><span class="w"> </span><span class="n">config</span><span class="p">;</span>
+<span class="n">config</span><span class="p">.</span><span class="n">resolveIndirectCalls</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+
+<span class="n">SVFGBuilder</span><span class="w"> </span><span class="nf">builder</span><span class="p">(</span><span class="n">config</span><span class="p">);</span>
+<span class="n">SVFG</span><span class="o">*</span><span class="w"> </span><span class="n">svfg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">builder</span><span class="p">.</span><span class="n">build</span><span class="p">(</span><span class="n">icfg</span><span class="p">);</span>
+
+<span class="c1">// Later, when DDA discovers an indirect call target:</span>
+<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">SVFGEdge</span><span class="o">*&gt;</span><span class="w"> </span><span class="n">newEdges</span><span class="p">;</span>
+<span class="n">builder</span><span class="p">.</span><span class="n">connectCallSiteToCalleeOnTheFly</span><span class="p">(</span><span class="n">svfg</span><span class="p">,</span><span class="w"> </span><span class="n">callSite</span><span class="p">,</span><span class="w"> </span><span class="n">callee</span><span class="p">,</span><span class="w"> </span><span class="n">newEdges</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+<section id="type-safe-node-casting">
+<h2>Type-Safe Node Casting<a class="headerlink" href="#type-safe-node-casting" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"IR/SVFG/SVFGNode.h"</span>
+
+<span class="n">SVFGNode</span><span class="o">*</span><span class="w"> </span><span class="n">node</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">*</span><span class="w"> </span><span class="n">addrNode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">dyn_cast</span><span class="o">&lt;</span><span class="n">AddrSVFGNode</span><span class="o">&gt;</span><span class="p">(</span><span class="n">node</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">objId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">addrNode</span><span class="o">-&gt;</span><span class="n">getObjectId</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">*</span><span class="w"> </span><span class="n">loadNode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">dyn_cast</span><span class="o">&lt;</span><span class="n">LoadSVFGNode</span><span class="o">&gt;</span><span class="p">(</span><span class="n">node</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">ptrId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">loadNode</span><span class="o">-&gt;</span><span class="n">getLoadFromPtr</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">*</span><span class="w"> </span><span class="n">mssaNode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">dyn_cast</span><span class="o">&lt;</span><span class="n">MSSASVFGNode</span><span class="o">&gt;</span><span class="p">(</span><span class="n">node</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">memReg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mssaNode</span><span class="o">-&gt;</span><span class="n">getMemReg</span><span class="p">();</span>
+<span class="w">    </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mssaNode</span><span class="o">-&gt;</span><span class="n">getSSAVersion</span><span class="p">();</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">SVFGNodeBS</span><span class="o">*</span><span class="w"> </span><span class="n">pts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mssaNode</span><span class="o">-&gt;</span><span class="n">getPointsTo</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="serialization">
+<h2>Serialization<a class="headerlink" href="#serialization" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"IR/SVFG/SVFG.h"</span>
+
+<span class="c1">// Write to file</span>
+<span class="n">svfg</span><span class="o">-&gt;</span><span class="n">writeToFile</span><span class="p">(</span><span class="s">"output.svfg"</span><span class="p">);</span>
+
+<span class="c1">// Read from file</span>
+<span class="n">SVFG</span><span class="o">*</span><span class="w"> </span><span class="n">loaded</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">SVFG</span><span class="p">();</span>
+<span class="n">loaded</span><span class="o">-&gt;</span><span class="n">readFromFile</span><span class="p">(</span><span class="s">"output.svfg"</span><span class="p">);</span>
+
+<span class="c1">// Dump to DOT format</span>
+<span class="n">svfg</span><span class="o">-&gt;</span><span class="n">dump</span><span class="p">(</span><span class="s">"svfg.dot"</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="integration">
+<h1>Integration<a class="headerlink" href="#integration" title="Link to this heading"></a></h1>
+<section id="aserpta-integration">
+<h2>AserPTA Integration<a class="headerlink" href="#aserpta-integration" title="Link to this heading"></a></h2>
+<p>The SVFG builder uses <strong>AserPTA</strong> as its pointer analysis engine:</p>
+<ul class="simple">
+<li><p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Alias/InclusionBased/AserPTA/</span></code></p></li>
+<li><p><strong>Solvers</strong>: Andersen, WavePropagation, DeepPropagation, PartialUpdate</p></li>
+<li><p><strong>Memory Models</strong>: Field-sensitive (FSMemModel), Field-insensitive (FIMemModel)</p></li>
+<li><p><strong>Context Sensitivity</strong>: Context-insensitive (NoCtx), k-call-site sensitive (KCallSite&lt;N&gt;)</p></li>
+</ul>
+</section>
+<section id="icfg-integration">
+<h2>ICFG Integration<a class="headerlink" href="#icfg-integration" title="Link to this heading"></a></h2>
+<p>The SVFG is built on top of the Interprocedural Control-Flow Graph:</p>
+<ul class="simple">
+<li><p>Each SVFG node is associated with an ICFGNode.</p></li>
+<li><p>Call sites and function entries/exits are derived from ICFG.</p></li>
+</ul>
+</section>
+<section id="dda-integration">
+<h2>DDA Integration<a class="headerlink" href="#dda-integration" title="Link to this heading"></a></h2>
+<p>The Demand-Driven Alias Analysis (DDA) uses SVFG for:</p>
+<ul class="simple">
+<li><p><strong>Value-flow backtracing</strong>: Follow SVFG edges backward to find definitions.</p></li>
+<li><p><strong>Indirect call resolution</strong>: On-the-fly edge creation for discovered callees.</p></li>
+<li><p><strong>Object tracking</strong>: Points-to sets on edges enable precise alias reasoning.</p></li>
+</ul>
+</section>
+</section>
+<section id="components">
+<h1>Components<a class="headerlink" href="#components" title="Link to this heading"></a></h1>
+<section id="core-files">
+<h2>Core Files<a class="headerlink" href="#core-files" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>SVFG.h/cpp</strong>: Main graph class with node/edge management.</p></li>
+<li><p><strong>SVFGBase.h</strong>: Node/edge kind enumerations and type-checking helpers.</p></li>
+<li><p><strong>SVFGNode.h</strong>: Complete node type hierarchy.</p></li>
+<li><p><strong>SVFGEdge.h</strong>: Complete edge type hierarchy.</p></li>
+<li><p><strong>SVFGBuilder.h/cpp</strong>: Builder with AserPTA integration.</p></li>
+<li><p><strong>SVFGBuilderNodes.cpp</strong>: Node construction logic.</p></li>
+<li><p><strong>SVFGBuilderEdges.cpp</strong>: Edge construction logic.</p></li>
+<li><p><strong>SVFGBuilderMemorySSA.cpp</strong>: Memory SSA construction.</p></li>
+<li><p><strong>SVFGOPT.h/cpp</strong>: Optimization passes (dead node elimination, etc.).</p></li>
+<li><p><strong>SVFGSerializer.h/cpp</strong>: Serialization support.</p></li>
+<li><p><strong>SVFGStats.h/cpp</strong>: Statistics collection.</p></li>
+<li><p><strong>GraphTraits.h</strong>: LLVM graph traits for traversal algorithms.</p></li>
+<li><p><strong>PointsToSetHash.h</strong>: Hash functions for points-to sets.</p></li>
+</ul>
+</section>
+<section id="dependencies">
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>CanaryICFG</strong>: Control-flow graph infrastructure.</p></li>
+<li><p><strong>AserPTA</strong>: Pointer analysis engine.</p></li>
+<li><p><strong>LLVM Core/Support</strong>: LLVM IR and utilities.</p></li>
+</ul>
+</section>
+</section>
+<section id="references">
+<h1>References<a class="headerlink" href="#references" title="Link to this heading"></a></h1>
+<ul class="simple">
+<li><p>Yulei Sui, Ding Ye, Jingling Xue. “Detecting Memory Leaks Statically with
+Full-Sparse Value-Flow Analysis”. IEEE Transactions on Software Engineering
+(TSE), 2014.</p></li>
+<li><p>Yulei Sui, Jingling Xue. “On-Demand Strong Update Analysis via Value-Flow
+Refinement”. ACM SIGSOFT International Symposium on Foundations of Software
+Engineering (FSE), 2016.</p></li>
+<li><p>SVF Framework: <a class="reference external" href="https://github.com/SVF-tools/SVF">https://github.com/SVF-tools/SVF</a></p></li>
+</ul>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="vssa.html" class="btn btn-neutral float-left" title="vSSA — Variable Static Single Assignment" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="gvfg.html" class="btn btn-neutral float-right" title="GVFG" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

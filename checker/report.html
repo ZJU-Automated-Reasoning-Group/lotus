@@ -1,0 +1,206 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checker Report Infrastructure &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Saber Checker" href="saber.html" />
+    <link rel="prev" title="Pulse Checker" href="pulse.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Checker Framework</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#choosing-a-checker">Choosing a Checker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#id1">Checker Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#build-targets">Build Targets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#programmatic-usage">Programmatic Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#bug-types">Bug Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#integration-points">Integration Points</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#see-also">See Also</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="ae.html">Abstract Execution Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="concurrency.html">Concurrency Bug Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fitx.html">FiTx: Daily Development-friendly Bug Detection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kint.html">KINT Numerical Bug Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulse.html">Pulse Checker</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Checker Report Infrastructure</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#reporting-workflow">Reporting workflow</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="saber.html">Saber Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="symex.html">Symbolic Execution Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="taint.html">IFDS Taint Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tooling.html">Checker Tooling</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Checker Framework</a></li>
+      <li class="breadcrumb-item active">Checker Report Infrastructure</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/checker/report.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="checker-report-infrastructure">
+<h1>Checker Report Infrastructure<a class="headerlink" href="#checker-report-infrastructure" title="Link to this heading"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">include/Checker/Framework/</span></code> and <code class="docutils literal notranslate"><span class="pre">lib/Checker/Framework/</span></code> implement the shared
+bug-reporting layer used by all Lotus checkers.</p>
+<p><strong>Main components</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">BugReport</span></code> and <code class="docutils literal notranslate"><span class="pre">BugDiagStep</span></code> store findings and diagnostic traces.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BugReportMgr</span></code> is the central aggregation and emission entry point.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BugTypes</span></code> defines checker-visible bug categories and metadata.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SuppressionManager</span></code> filters findings by suppression rules.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SARIF</span></code> support emits standardized machine-readable reports.</p></li>
+</ul>
+<p>Every major checker family routes its output through this layer so tools can
+share JSON, SARIF, and summary reporting.</p>
+<p><code class="docutils literal notranslate"><span class="pre">BugReportMgr</span></code> aggregates reports within one checker invocation. It does
+not combine reports emitted by separate <code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=...</span></code> runs; when
+multiple engines are run separately, preserve the engine value and options with each export
+and triage overlapping findings as separate evidence.</p>
+<section id="reporting-workflow">
+<h2>Reporting workflow<a class="headerlink" href="#reporting-workflow" title="Link to this heading"></a></h2>
+<p>A checker creates a <code class="docutils literal notranslate"><span class="pre">BugReport</span></code> with a stable category and attaches
+<code class="docutils literal notranslate"><span class="pre">BugDiagStep</span></code> entries as it reconstructs the relevant path.  It submits the
+report to <code class="docutils literal notranslate"><span class="pre">BugReportMgr</span></code>, which applies suppressions and selects the output
+format.  Keep report construction separate from detection logic so a checker
+can emit the same finding to a human-readable summary and a SARIF consumer
+without maintaining two output paths.</p>
+<p>See also <a class="reference internal" href="index.html"><span class="doc">Checker Framework</span></a> and <a class="reference internal" href="../user_guide/bug_detection.html"><span class="doc">Bug Detection with Lotus</span></a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="pulse.html" class="btn btn-neutral float-left" title="Pulse Checker" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="saber.html" class="btn btn-neutral float-right" title="Saber Checker" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

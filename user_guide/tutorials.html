@@ -1,0 +1,979 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tutorials and Examples &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Bug Detection with Lotus" href="bug_detection.html" />
+    <link rel="prev" title="Installation Guide" href="installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Tutorials and Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-1-basic-alias-analysis">Tutorial 1: Basic Alias Analysis</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#example-program">Example Program</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#compile-to-llvm-ir">Compile to LLVM IR</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#run-different-alias-analyses">Run Different Alias Analyses</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#understanding-output">Understanding Output</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-2-detecting-integer-overflow">Tutorial 2: Detecting Integer Overflow</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1">Example Program</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#compile-and-analyze">Compile and Analyze</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#expected-output">Expected Output</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#advanced-all-checks">Advanced: All Checks</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-3-null-pointer-detection">Tutorial 3: Null Pointer Detection</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id2">Example Program</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id3">Compile and Analyze</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id4">Expected Output</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-4-taint-analysis">Tutorial 4: Taint Analysis</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id5">Example Program</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id6">Compile and Analyze</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#custom-sources-and-sinks">Custom Sources and Sinks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id7">Expected Output</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-5-abstract-interpretation-with-clam">Tutorial 5: Abstract Interpretation with CLAM</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id8">Example Program</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#compile-and-preprocess">Compile and Preprocess</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#run-analysis-with-different-domains">Run Analysis with Different Domains</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id9">Expected Output</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#export-to-json">Export to JSON</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-6-program-dependence-graph-queries">Tutorial 6: Program Dependence Graph Queries</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id10">Example Program</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#build-pdg-and-query">Build PDG and Query</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#interactive-queries">Interactive Queries</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#batch-query-file">Batch Query File</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-7-dynamic-validation-with-dynaa">Tutorial 7: Dynamic Validation with DynAA</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id11">Example Program</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#instrument-and-run">Instrument and Run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#view-collected-data">View Collected Data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id12">Expected Output</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-8-interprocedural-analysis">Tutorial 8: Interprocedural Analysis</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#example-programs">Example Programs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#compile-and-link">Compile and Link</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#run-interprocedural-analysis">Run Interprocedural Analysis</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-9-concurrency-analysis">Tutorial 9: Concurrency Analysis</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id13">Example Program</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id14">Compile and Analyze</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id15">Expected Output</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#best-practices">Best Practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#next-steps">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Tutorials and Examples</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/user_guide/tutorials.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="tutorials-and-examples">
+<h1>Tutorials and Examples<a class="headerlink" href="#tutorials-and-examples" title="Link to this heading"></a></h1>
+<p>This section provides hands-on tutorials for using Lotus to analyze real programs.
+For optimization passes that can reshape IR before analysis, see
+<a class="reference internal" href="../optimization/index.html"><span class="doc">Optimization</span></a> and the <a class="reference internal" href="../optimization/swprefetching.html"><span class="doc">SWPrefetching (Software Prefetching)</span></a> guide.</p>
+<section id="tutorial-1-basic-alias-analysis">
+<h2>Tutorial 1: Basic Alias Analysis<a class="headerlink" href="#tutorial-1-basic-alias-analysis" title="Link to this heading"></a></h2>
+<p>Let’s analyze a simple C program to understand pointer relationships.</p>
+<section id="example-program">
+<h3>Example Program<a class="headerlink" href="#example-program" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">example1.c</span></code>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">global_ptr</span><span class="p">;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">update_value</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">p</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">value</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="o">*</span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">value</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">20</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">ptr1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">ptr2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">y</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">update_value</span><span class="p">(</span><span class="n">ptr1</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">);</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">heap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="w">    </span><span class="o">*</span><span class="n">heap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">40</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">global_ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">heap</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">free</span><span class="p">(</span><span class="n">heap</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="compile-to-llvm-ir">
+<h3>Compile to LLVM IR<a class="headerlink" href="#compile-to-llvm-ir" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>-g<span class="w"> </span>example1.c<span class="w"> </span>-o<span class="w"> </span>example1.bc
+clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-S<span class="w"> </span>-g<span class="w"> </span>example1.c<span class="w"> </span>-o<span class="w"> </span>example1.ll
+</pre></div>
+</div>
+</section>
+<section id="run-different-alias-analyses">
+<h3>Run Different Alias Analyses<a class="headerlink" href="#run-different-alias-analyses" title="Link to this heading"></a></h3>
+<p><strong>1. SparrowAA (CI mode) Analysis (Fast)</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-alias-sparrow-aa<span class="w"> </span>example1.bc
+</pre></div>
+</div>
+<p>This performs context-insensitive, inclusion-based pointer analysis. Good for quick scans.</p>
+<p>Note: lotus-alias-sparrow-aa also has context-sensitive variants.</p>
+<p><strong>2. AserPTA with 1-CFA (Balanced)</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-alias-aser-aa<span class="w"> </span>-analysis-mode<span class="o">=</span><span class="m">1</span>-cfa<span class="w"> </span>-solver<span class="o">=</span>wave<span class="w"> </span>-dump-stats<span class="w"> </span>example1.bc
+</pre></div>
+</div>
+<p>This adds call-site sensitivity for better precision while maintaining good performance.</p>
+<p><strong>3. DyckAA (Precise)</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-alias-dyck-aa<span class="w"> </span>-print-alias-set-info<span class="w"> </span>example1.bc
+</pre></div>
+</div>
+<p>Produces the most precise alias sets using Dyck-CFL reachability.</p>
+</section>
+<section id="understanding-output">
+<h3>Understanding Output<a class="headerlink" href="#understanding-output" title="Link to this heading"></a></h3>
+<p>The analyses will report:</p>
+<ul class="simple">
+<li><p><strong>Points-to sets</strong>: What each pointer may point to</p></li>
+<li><p><strong>Alias sets</strong>: Which pointers may alias each other</p></li>
+<li><p><strong>Call graph</strong>: Which functions may be called through function pointers</p></li>
+<li><p><strong>Statistics</strong>: Number of pointers, objects, constraints solved</p></li>
+</ul>
+</section>
+</section>
+<section id="tutorial-2-detecting-integer-overflow">
+<h2>Tutorial 2: Detecting Integer Overflow<a class="headerlink" href="#tutorial-2-detecting-integer-overflow" title="Link to this heading"></a></h2>
+<p>Let’s find integer overflow bugs using Kint.</p>
+<section id="id1">
+<h3>Example Program<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">overflow.c</span></code>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;limits.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">add_values</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b</span><span class="p">;</span><span class="w">  </span><span class="c1">// Potential overflow</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">multiply_values</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">b</span><span class="p">;</span><span class="w">  </span><span class="c1">// Potential overflow</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">safe_add</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">a</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">INT_MAX</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">INT_MAX</span><span class="p">;</span><span class="w">  </span><span class="c1">// Saturate</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">a</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">INT_MIN</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">INT_MIN</span><span class="p">;</span><span class="w">  </span><span class="c1">// Saturate</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b</span><span class="p">;</span><span class="w">  </span><span class="c1">// Safe</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">INT_MAX</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">20</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">result1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">add_values</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">);</span><span class="w">  </span><span class="c1">// Bug: overflow</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">result2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">multiply_values</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span><span class="w"> </span><span class="mi">3000000</span><span class="p">);</span><span class="w">  </span><span class="c1">// Bug: overflow</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">result3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">safe_add</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">);</span><span class="w">  </span><span class="c1">// Safe</span>
+
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">"Results: %d, %d, %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="w"> </span><span class="n">result1</span><span class="p">,</span><span class="w"> </span><span class="n">result2</span><span class="p">,</span><span class="w"> </span><span class="n">result3</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="compile-and-analyze">
+<h3>Compile and Analyze<a class="headerlink" href="#compile-and-analyze" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-S<span class="w"> </span>-g<span class="w"> </span>overflow.c<span class="w"> </span>-o<span class="w"> </span>overflow.ll
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>overflow.ll<span class="w"> </span>--checks<span class="o">=</span>int-overflow<span class="w"> </span>--kint.analyze-all-functions
+</pre></div>
+</div>
+</section>
+<section id="expected-output">
+<h3>Expected Output<a class="headerlink" href="#expected-output" title="Link to this heading"></a></h3>
+<p>The tool will report:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>[Integer Overflow] Function: add_values
+Line 5: return a + b;
+Reason: Operands a and b may cause signed integer overflow
+
+[Integer Overflow] Function: multiply_values
+Line 9: return a * b;
+Reason: Operands a and b may cause signed integer overflow
+</pre></div>
+</div>
+<p>Note that <code class="docutils literal notranslate"><span class="pre">safe_add</span></code> is not reported because the checks prevent overflow.</p>
+</section>
+<section id="advanced-all-checks">
+<h3>Advanced: All Checks<a class="headerlink" href="#advanced-all-checks" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>overflow.ll<span class="w"> </span>--checks<span class="o">=</span>all<span class="w"> </span>--kint.analyze-all-functions
+</pre></div>
+</div>
+<p>This enables all checkers: integer overflow, division by zero, bad shift, array bounds, and dead branches.</p>
+</section>
+</section>
+<section id="tutorial-3-null-pointer-detection">
+<h2>Tutorial 3: Null Pointer Detection<a class="headerlink" href="#tutorial-3-null-pointer-detection" title="Link to this heading"></a></h2>
+<p>Let’s detect null pointer dereferences.
+This tutorial uses Pulse because it produces witness-oriented diagnostics;
+<code class="docutils literal notranslate"><span class="pre">ae</span></code>, <code class="docutils literal notranslate"><span class="pre">fitx</span></code>, and <code class="docutils literal notranslate"><span class="pre">symex</span></code> also support null-pointer checks with different
+trade-offs.  See <span class="xref std std-ref">Choosing a Checker</span> before choosing
+an engine for a production workflow.</p>
+<section id="id2">
+<h3>Example Program<a class="headerlink" href="#id2" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">nullpointer.c</span></code>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;string.h&gt;</span>
+
+<span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">id</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">name</span><span class="p">;</span>
+<span class="p">}</span><span class="w"> </span><span class="n">Person</span><span class="p">;</span>
+
+<span class="n">Person</span><span class="w"> </span><span class="o">*</span><span class="nf">create_person</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span><span class="w">  </span><span class="c1">// Error case</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">Person</span><span class="w"> </span><span class="o">*</span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">Person</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="n">Person</span><span class="p">));</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">p</span><span class="o">-&gt;</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">id</span><span class="p">;</span>
+<span class="w">        </span><span class="n">p</span><span class="o">-&gt;</span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">strdup</span><span class="p">(</span><span class="n">name</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">p</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">print_person</span><span class="p">(</span><span class="n">Person</span><span class="w"> </span><span class="o">*</span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">"Person %d: %s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="o">-&gt;</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">);</span><span class="w">  </span><span class="c1">// Bug if p is NULL</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Person</span><span class="w"> </span><span class="o">*</span><span class="n">p1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">create_person</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="s">"Alice"</span><span class="p">);</span>
+<span class="w">    </span><span class="n">print_person</span><span class="p">(</span><span class="n">p1</span><span class="p">);</span><span class="w">  </span><span class="c1">// Safe if malloc succeeded</span>
+
+<span class="w">    </span><span class="n">Person</span><span class="w"> </span><span class="o">*</span><span class="n">p2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">create_person</span><span class="p">(</span><span class="mi">-1</span><span class="p">,</span><span class="w"> </span><span class="s">"Bob"</span><span class="p">);</span>
+<span class="w">    </span><span class="n">print_person</span><span class="p">(</span><span class="n">p2</span><span class="p">);</span><span class="w">  </span><span class="c1">// Bug: p2 is NULL</span>
+
+<span class="w">    </span><span class="n">Person</span><span class="w"> </span><span class="o">*</span><span class="n">p3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">create_person</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="s">"Charlie"</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">p3</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">print_person</span><span class="p">(</span><span class="n">p3</span><span class="p">);</span><span class="w">  </span><span class="c1">// Safe: null check</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h3>Compile and Analyze<a class="headerlink" href="#id3" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>-g<span class="w"> </span>nullpointer.c<span class="w"> </span>-o<span class="w"> </span>nullpointer.bc
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>pulse<span class="w"> </span>nullpointer.bc<span class="w"> </span>--verbose
+</pre></div>
+</div>
+</section>
+<section id="id4">
+<h3>Expected Output<a class="headerlink" href="#id4" title="Link to this heading"></a></h3>
+<p>The analysis will report:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>[Null Pointer Dereference]
+Function: print_person
+Line 24: printf("Person %d: %s\n", p-&gt;id, p-&gt;name);
+Path: create_person returns NULL → print_person dereferences p
+
+Call site in main (line 32) passes potentially NULL pointer
+</pre></div>
+</div>
+</section>
+</section>
+<section id="tutorial-4-taint-analysis">
+<h2>Tutorial 4: Taint Analysis<a class="headerlink" href="#tutorial-4-taint-analysis" title="Link to this heading"></a></h2>
+<p>Let’s track information flow from untrusted sources to sensitive sinks.</p>
+<section id="id5">
+<h3>Example Program<a class="headerlink" href="#id5" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">taint.c</span></code>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;string.h&gt;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">execute_command</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">cmd</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">system</span><span class="p">(</span><span class="n">cmd</span><span class="p">);</span><span class="w">  </span><span class="c1">// Dangerous sink</span>
+<span class="p">}</span>
+
+<span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="nf">sanitize</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">input</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Simplified sanitization</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">strdup</span><span class="p">(</span><span class="n">input</span><span class="p">);</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">output</span><span class="p">[</span><span class="n">i</span><span class="p">];</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">output</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="sc">';'</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">output</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="sc">'|'</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">output</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sc">'_'</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">output</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">user_input</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">"Enter command: "</span><span class="p">);</span>
+<span class="w">    </span><span class="n">scanf</span><span class="p">(</span><span class="s">"%255s"</span><span class="p">,</span><span class="w"> </span><span class="n">user_input</span><span class="p">);</span><span class="w">  </span><span class="c1">// Tainted source</span>
+
+<span class="w">    </span><span class="c1">// Bug: direct flow from source to sink</span>
+<span class="w">    </span><span class="n">execute_command</span><span class="p">(</span><span class="n">user_input</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// Safe: sanitized before use</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">safe_cmd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sanitize</span><span class="p">(</span><span class="n">user_input</span><span class="p">);</span>
+<span class="w">    </span><span class="n">execute_command</span><span class="p">(</span><span class="n">safe_cmd</span><span class="p">);</span>
+<span class="w">    </span><span class="n">free</span><span class="p">(</span><span class="n">safe_cmd</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="id6">
+<h3>Compile and Analyze<a class="headerlink" href="#id6" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>-g<span class="w"> </span>taint.c<span class="w"> </span>-o<span class="w"> </span>taint.bc
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>taint<span class="w"> </span>taint.bc<span class="w"> </span>--verbose
+</pre></div>
+</div>
+</section>
+<section id="custom-sources-and-sinks">
+<h3>Custom Sources and Sinks<a class="headerlink" href="#custom-sources-and-sinks" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>taint<span class="w"> </span>taint.bc<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--taint.sources<span class="o">=</span>scanf,gets,read<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--taint.sinks<span class="o">=</span>system,exec,popen
+</pre></div>
+</div>
+</section>
+<section id="id7">
+<h3>Expected Output<a class="headerlink" href="#id7" title="Link to this heading"></a></h3>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>[Taint Flow Detected]
+Source: scanf (line 23)
+Sink: system (line 6) via execute_command
+Path: user_input → execute_command(user_input) → system(cmd)
+
+Warning: Unsanitized user input flows to dangerous system call
+</pre></div>
+</div>
+</section>
+</section>
+<section id="tutorial-5-abstract-interpretation-with-clam">
+<h2>Tutorial 5: Abstract Interpretation with CLAM<a class="headerlink" href="#tutorial-5-abstract-interpretation-with-clam" title="Link to this heading"></a></h2>
+<p>Let’s use abstract interpretation to verify program properties.</p>
+<section id="id8">
+<h3>Example Program<a class="headerlink" href="#id8" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">verify.c</span></code>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;assert.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">abs</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="o">-</span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">x</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">bounded_add</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Pre-condition: -100 &lt;= a, b &lt;= 100</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// Post-condition: -200 &lt;= result &lt;= 200</span>
+<span class="w">    </span><span class="n">assert</span><span class="p">(</span><span class="n">result</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">-200</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">200</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">div_safe</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">b</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">b</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">abs</span><span class="p">(</span><span class="mi">-10</span><span class="p">);</span>
+<span class="w">    </span><span class="n">assert</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w">  </span><span class="c1">// Should be proven</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bounded_add</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// Assertion in bounded_add should hold</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">z</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">div_safe</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// No division by zero</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="compile-and-preprocess">
+<h3>Compile and Preprocess<a class="headerlink" href="#compile-and-preprocess" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>-g<span class="w"> </span>verify.c<span class="w"> </span>-o<span class="w"> </span>verify.bc
+./build/bin/clam-pp<span class="w"> </span>--crab-lower-unsigned-icmp<span class="w"> </span>--crab-lower-select<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>verify.bc<span class="w"> </span>-o<span class="w"> </span>verify.prep.bc
+</pre></div>
+</div>
+</section>
+<section id="run-analysis-with-different-domains">
+<h3>Run Analysis with Different Domains<a class="headerlink" href="#run-analysis-with-different-domains" title="Link to this heading"></a></h3>
+<p><strong>1. Interval Domain (Fast)</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/clam<span class="w"> </span>--crab-dom<span class="o">=</span>int<span class="w"> </span>--crab-check<span class="o">=</span>assert<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--crab-print-invariants<span class="o">=</span><span class="nb">true</span><span class="w"> </span>verify.prep.bc
+</pre></div>
+</div>
+<p><strong>2. Zones Domain (Relational)</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/clam<span class="w"> </span>--crab-dom<span class="o">=</span>zones<span class="w"> </span>--crab-check<span class="o">=</span>assert<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--crab-print-invariants<span class="o">=</span><span class="nb">true</span><span class="w"> </span>verify.prep.bc
+</pre></div>
+</div>
+<p><strong>3. Polyhedra (Most Precise)</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/clam<span class="w"> </span>--crab-dom<span class="o">=</span>pk<span class="w"> </span>--crab-check<span class="o">=</span>assert<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--crab-print-invariants<span class="o">=</span><span class="nb">true</span><span class="w"> </span>verify.prep.bc
+</pre></div>
+</div>
+</section>
+<section id="id9">
+<h3>Expected Output<a class="headerlink" href="#id9" title="Link to this heading"></a></h3>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Function: abs
+Entry: x ∈ [-∞, +∞]
+After branch (x &lt; 0): x ∈ [-∞, -1]
+Return: retval ∈ [0, +∞]
+
+Function: bounded_add
+Entry: a ∈ [-100, 100], b ∈ [-100, 100]
+After add: result ∈ [-200, 200]
+Assertion PROVEN: result &gt;= -200 &amp;&amp; result &lt;= 200
+
+Function: div_safe
+Entry: a ∈ [-∞, +∞], b ∈ [-∞, +∞]
+After check: b ∈ [-∞, -1] ∪ [1, +∞] (b ≠ 0)
+Division is SAFE: no division by zero
+</pre></div>
+</div>
+</section>
+<section id="export-to-json">
+<h3>Export to JSON<a class="headerlink" href="#export-to-json" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/clam<span class="w"> </span>--crab-dom<span class="o">=</span>zones<span class="w"> </span>--crab-check<span class="o">=</span>assert<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-ojson<span class="o">=</span>verify_results.json<span class="w"> </span>verify.prep.bc
+</pre></div>
+</div>
+</section>
+</section>
+<section id="tutorial-6-program-dependence-graph-queries">
+<h2>Tutorial 6: Program Dependence Graph Queries<a class="headerlink" href="#tutorial-6-program-dependence-graph-queries" title="Link to this heading"></a></h2>
+<p>Let’s use the PDG query language to analyze dependencies.</p>
+<section id="id10">
+<h3>Example Program<a class="headerlink" href="#id10" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">security.c</span></code>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;string.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdbool.h&gt;</span>
+
+<span class="kt">bool</span><span class="w"> </span><span class="nf">authenticate</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">password</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">strcmp</span><span class="p">(</span><span class="n">password</span><span class="p">,</span><span class="w"> </span><span class="s">"secret123"</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="nf">get_secret_data</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="s">"Confidential Information"</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">log_message</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">msg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">"LOG: %s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="w"> </span><span class="n">msg</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">send_to_network</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">"NETWORK: %s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">password</span><span class="p">[</span><span class="mi">100</span><span class="p">];</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">"Enter password: "</span><span class="p">);</span>
+<span class="w">    </span><span class="n">scanf</span><span class="p">(</span><span class="s">"%99s"</span><span class="p">,</span><span class="w"> </span><span class="n">password</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">authenticate</span><span class="p">(</span><span class="n">password</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">secret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_secret_data</span><span class="p">();</span>
+<span class="w">        </span><span class="n">log_message</span><span class="p">(</span><span class="s">"Access granted"</span><span class="p">);</span>
+<span class="w">        </span><span class="c1">// Secret should not flow to network without auth</span>
+<span class="w">        </span><span class="n">send_to_network</span><span class="p">(</span><span class="n">secret</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">log_message</span><span class="p">(</span><span class="s">"Access denied"</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="build-pdg-and-query">
+<h3>Build PDG and Query<a class="headerlink" href="#build-pdg-and-query" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>-g<span class="w"> </span>security.c<span class="w"> </span>-o<span class="w"> </span>security.bc
+./build/bin/lotus-ir-pdg-query<span class="w"> </span>-i<span class="w"> </span>security.bc
+</pre></div>
+</div>
+</section>
+<section id="interactive-queries">
+<h3>Interactive Queries<a class="headerlink" href="#interactive-queries" title="Link to this heading"></a></h3>
+<p>In the interactive mode, try these Cypher queries:</p>
+<p><strong>1. View entire PDG</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="p">&gt;</span><span class="w"> </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">n</span>
+</pre></div>
+</div>
+<p><strong>2. Find returns of get_secret_data</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="p">&gt;</span><span class="w"> </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">func</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">ret</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="p">&gt;</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">func</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'get_secret_data'</span>
+<span class="p">&gt;</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">ret</span>
+</pre></div>
+</div>
+<p><strong>3. Find parameters of send_to_network</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="p">&gt;</span><span class="w"> </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">func</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">param</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="p">&gt;</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">func</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'send_to_network'</span>
+<span class="p">&gt;</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">param</span>
+</pre></div>
+</div>
+<p><strong>4. Check information flow</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="p">&gt;</span><span class="w"> </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">secretRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="p">&gt;</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">secret</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'get_secret_data'</span>
+<span class="p">&gt;</span><span class="w"> </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">network</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">networkParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="p">&gt;</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">network</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'send_to_network'</span>
+<span class="p">&gt;</span><span class="w"> </span><span class="k">MATCH</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="n">secretRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">networkParam</span><span class="p">)</span>
+<span class="p">&gt;</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">path</span>
+</pre></div>
+</div>
+<p><strong>5. Security Policy Check</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="p">&gt;</span><span class="w"> </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">secretRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="p">&gt;</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">secret</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'get_secret_data'</span>
+<span class="p">&gt;</span><span class="w"> </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">network</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">networkParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="p">&gt;</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">network</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'send_to_network'</span>
+<span class="p">&gt;</span><span class="w"> </span><span class="k">MATCH</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="n">secretRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">networkParam</span><span class="p">)</span>
+<span class="p">&gt;</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">path</span>
+</pre></div>
+</div>
+</section>
+<section id="batch-query-file">
+<h3>Batch Query File<a class="headerlink" href="#batch-query-file" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">security_policy.txt</span></code>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="err">#</span><span class="w"> </span><span class="n">Check</span><span class="w"> </span><span class="n">if</span><span class="w"> </span><span class="n">secret</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="n">flows</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">network</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">secretRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">secret</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'get_secret_data'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">network</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">networkParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">network</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'send_to_network'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="n">secretRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">networkParam</span><span class="p">)</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">path</span>
+
+<span class="err">#</span><span class="w"> </span><span class="n">Check</span><span class="w"> </span><span class="n">if</span><span class="w"> </span><span class="n">authentication</span><span class="w"> </span><span class="n">guards</span><span class="w"> </span><span class="n">sensitive</span><span class="w"> </span><span class="n">operations</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">auth</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">authRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">auth</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'authenticate'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">authRet</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">CONTROLDEP_BR</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">check</span><span class="p">)</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">sensitiveOps</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">opParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">sensitiveOps</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'send_to_network'</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">EXISTS</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">check</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">CONTROLDEP_BR</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">opParam</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">opParam</span>
+</pre></div>
+</div>
+<p>Run batch queries:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-ir-pdg-query<span class="w"> </span>-f<span class="w"> </span>security_policy.txt<span class="w"> </span>security.bc
+</pre></div>
+</div>
+</section>
+</section>
+<section id="tutorial-7-dynamic-validation-with-dynaa">
+<h2>Tutorial 7: Dynamic Validation with DynAA<a class="headerlink" href="#tutorial-7-dynamic-validation-with-dynaa" title="Link to this heading"></a></h2>
+<p>Let’s validate static analysis results against runtime behavior.</p>
+<section id="id11">
+<h3>Example Program<a class="headerlink" href="#id11" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">dynamic.c</span></code>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">process</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">p</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">q</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="o">*</span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+<span class="w">    </span><span class="o">*</span><span class="n">q</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">20</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">;</span>
+<span class="w">    </span><span class="n">process</span><span class="p">(</span><span class="o">&amp;</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">y</span><span class="p">);</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">"%d %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="instrument-and-run">
+<h3>Instrument and Run<a class="headerlink" href="#instrument-and-run" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1. Compile to bitcode</span>
+clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>-g<span class="w"> </span>dynamic.c<span class="w"> </span>-o<span class="w"> </span>dynamic.bc
+
+<span class="c1"># 2. Instrument for dynamic analysis</span>
+./build/bin/dynaa-instrument<span class="w"> </span>dynamic.bc<span class="w"> </span>-o<span class="w"> </span>dynamic.inst.bc
+
+<span class="c1"># 3. Compile instrumented code</span>
+clang<span class="w"> </span>dynamic.inst.bc<span class="w"> </span>build/libRuntime.a<span class="w"> </span>-o<span class="w"> </span>dynamic.inst
+
+<span class="c1"># 4. Run and collect traces</span>
+mkdir<span class="w"> </span>logs
+<span class="nv">LOG_DIR</span><span class="o">=</span>logs/<span class="w"> </span>./dynamic.inst
+
+<span class="c1"># 5. Check static analysis against traces</span>
+./build/bin/dynaa-check<span class="w"> </span>dynamic.bc<span class="w"> </span>logs/pts.log<span class="w"> </span>basic-aa
+</pre></div>
+</div>
+</section>
+<section id="view-collected-data">
+<h3>View Collected Data<a class="headerlink" href="#view-collected-data" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/dynaa-log-dump<span class="w"> </span>logs/pts.log
+</pre></div>
+</div>
+</section>
+<section id="id12">
+<h3>Expected Output<a class="headerlink" href="#id12" title="Link to this heading"></a></h3>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Dynamic Analysis Report:
+
+Total pointer operations: 142
+Unique pointers: 8
+Unique objects: 6
+
+Validation against basic-aa:
+- True positives: 45
+- False positives: 2
+- False negatives: 1
+
+False Positive: p and q reported as may-alias, but never alias at runtime
+</pre></div>
+</div>
+</section>
+</section>
+<section id="tutorial-8-interprocedural-analysis">
+<h2>Tutorial 8: Interprocedural Analysis<a class="headerlink" href="#tutorial-8-interprocedural-analysis" title="Link to this heading"></a></h2>
+<p>Let’s analyze a multi-file program.</p>
+<section id="example-programs">
+<h3>Example Programs<a class="headerlink" href="#example-programs" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">utils.c</span></code>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"utils.h"</span>
+
+<span class="n">Buffer</span><span class="w"> </span><span class="o">*</span><span class="nf">create_buffer</span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Buffer</span><span class="w"> </span><span class="o">*</span><span class="n">buf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">Buffer</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="n">Buffer</span><span class="p">));</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">buf</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">buf</span><span class="o">-&gt;</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="n">malloc</span><span class="p">(</span><span class="n">size</span><span class="p">);</span>
+<span class="w">        </span><span class="n">buf</span><span class="o">-&gt;</span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">size</span><span class="p">;</span>
+<span class="w">        </span><span class="n">buf</span><span class="o">-&gt;</span><span class="n">used</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">buf</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">destroy_buffer</span><span class="p">(</span><span class="n">Buffer</span><span class="w"> </span><span class="o">*</span><span class="n">buf</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">buf</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">free</span><span class="p">(</span><span class="n">buf</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">);</span>
+<span class="w">        </span><span class="n">free</span><span class="p">(</span><span class="n">buf</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">append_data</span><span class="p">(</span><span class="n">Buffer</span><span class="w"> </span><span class="o">*</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">len</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">buf</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">!</span><span class="n">buf</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="mi">-1</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">buf</span><span class="o">-&gt;</span><span class="n">used</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">len</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">buf</span><span class="o">-&gt;</span><span class="n">size</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="mi">-1</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">memcpy</span><span class="p">(</span><span class="n">buf</span><span class="o">-&gt;</span><span class="n">data</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">buf</span><span class="o">-&gt;</span><span class="n">used</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">len</span><span class="p">);</span>
+<span class="w">    </span><span class="n">buf</span><span class="o">-&gt;</span><span class="n">used</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">len</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Create <code class="docutils literal notranslate"><span class="pre">utils.h</span></code>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#ifndef UTILS_H</span>
+<span class="cp">#define UTILS_H</span>
+
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stddef.h&gt;</span>
+
+<span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">used</span><span class="p">;</span>
+<span class="p">}</span><span class="w"> </span><span class="n">Buffer</span><span class="p">;</span>
+
+<span class="n">Buffer</span><span class="w"> </span><span class="o">*</span><span class="nf">create_buffer</span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">);</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">destroy_buffer</span><span class="p">(</span><span class="n">Buffer</span><span class="w"> </span><span class="o">*</span><span class="n">buf</span><span class="p">);</span>
+<span class="kt">int</span><span class="w"> </span><span class="nf">append_data</span><span class="p">(</span><span class="n">Buffer</span><span class="w"> </span><span class="o">*</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">len</span><span class="p">);</span>
+
+<span class="cp">#endif</span>
+</pre></div>
+</div>
+<p>Create <code class="docutils literal notranslate"><span class="pre">main.c</span></code>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"utils.h"</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Buffer</span><span class="w"> </span><span class="o">*</span><span class="n">buf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">create_buffer</span><span class="p">(</span><span class="mi">1024</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">buf</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">append_data</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="s">"Hello"</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">);</span>
+<span class="w">        </span><span class="n">append_data</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="s">" World"</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// Use buffer data</span>
+<span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">"%.*s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">buf</span><span class="o">-&gt;</span><span class="n">used</span><span class="p">,</span><span class="w"> </span><span class="n">buf</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">);</span>
+
+<span class="w">        </span><span class="n">destroy_buffer</span><span class="p">(</span><span class="n">buf</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="compile-and-link">
+<h3>Compile and Link<a class="headerlink" href="#compile-and-link" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Compile each file</span>
+clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>-g<span class="w"> </span>utils.c<span class="w"> </span>-o<span class="w"> </span>utils.bc
+clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>-g<span class="w"> </span>main.c<span class="w"> </span>-o<span class="w"> </span>main.bc
+
+<span class="c1"># Link into single module</span>
+llvm-link<span class="w"> </span>utils.bc<span class="w"> </span>main.bc<span class="w"> </span>-o<span class="w"> </span>program.bc
+</pre></div>
+</div>
+</section>
+<section id="run-interprocedural-analysis">
+<h3>Run Interprocedural Analysis<a class="headerlink" href="#run-interprocedural-analysis" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Interprocedural alias analysis</span>
+./build/bin/lotus-alias-aser-aa<span class="w"> </span>-analysis-mode<span class="o">=</span><span class="m">1</span>-cfa<span class="w"> </span>-dump-stats<span class="w"> </span>program.bc
+
+<span class="c1"># Interprocedural abstract interpretation</span>
+./build/bin/clam<span class="w"> </span>--crab-inter<span class="w"> </span>--crab-dom<span class="o">=</span>zones<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--crab-check<span class="o">=</span>null<span class="w"> </span>--crab-check<span class="o">=</span>bounds<span class="w"> </span>program.bc
+</pre></div>
+</div>
+<p>The interprocedural analysis will track the buffer through function calls and verify that:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">create_buffer</span></code> allocates memory correctly</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">append_data</span></code> checks bounds before writing</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">destroy_buffer</span></code> frees allocated memory</p></li>
+<li><p>No null pointer dereferences occur</p></li>
+</ul>
+</section>
+</section>
+<section id="tutorial-9-concurrency-analysis">
+<h2>Tutorial 9: Concurrency Analysis<a class="headerlink" href="#tutorial-9-concurrency-analysis" title="Link to this heading"></a></h2>
+<p>Let’s analyze a multi-threaded program.</p>
+<section id="id13">
+<h3>Example Program<a class="headerlink" href="#id13" title="Link to this heading"></a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">concurrent.c</span></code>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;pthread.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="n">shared_counter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="n">pthread_mutex_t</span><span class="w"> </span><span class="n">lock</span><span class="p">;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="nf">increment_thread</span><span class="p">(</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">arg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">pthread_mutex_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lock</span><span class="p">);</span>
+<span class="w">        </span><span class="n">shared_counter</span><span class="o">++</span><span class="p">;</span><span class="w">  </span><span class="c1">// Protected</span>
+<span class="w">        </span><span class="n">pthread_mutex_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lock</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="nf">buggy_thread</span><span class="p">(</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">arg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">shared_counter</span><span class="o">++</span><span class="p">;</span><span class="w">  </span><span class="c1">// Bug: race condition</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">pthread_t</span><span class="w"> </span><span class="n">t1</span><span class="p">,</span><span class="w"> </span><span class="n">t2</span><span class="p">;</span>
+<span class="w">    </span><span class="n">pthread_mutex_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lock</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">t1</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">increment_thread</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+<span class="w">    </span><span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">t2</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">buggy_thread</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">pthread_join</span><span class="p">(</span><span class="n">t1</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+<span class="w">    </span><span class="n">pthread_join</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">"Counter: %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="w"> </span><span class="n">shared_counter</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">pthread_mutex_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lock</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="id14">
+<h3>Compile and Analyze<a class="headerlink" href="#id14" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>-g<span class="w"> </span>concurrent.c<span class="w"> </span>-o<span class="w"> </span>concurrent.bc
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>concur<span class="w"> </span>concurrent.bc<span class="w"> </span>--verbose
+</pre></div>
+</div>
+</section>
+<section id="id15">
+<h3>Expected Output<a class="headerlink" href="#id15" title="Link to this heading"></a></h3>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>[Data Race Detected]
+Variable: shared_counter
+Thread 1: increment_thread (line 10) - PROTECTED by lock
+Thread 2: buggy_thread (line 17) - UNPROTECTED
+
+Race condition: shared_counter++ in buggy_thread not protected by mutex
+</pre></div>
+</div>
+</section>
+</section>
+<section id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Start Simple</strong>: Begin with fast analyses to get quick feedback</p></li>
+<li><p><strong>Incremental Precision</strong>: If fast analyses report issues, use more precise analyses to reduce false positives</p></li>
+<li><p><strong>Combine Analyses</strong>: Use multiple analyses together (e.g., alias analysis + taint analysis)</p></li>
+<li><p><strong>Preprocess When Needed</strong>: Use <code class="docutils literal notranslate"><span class="pre">clam-pp</span></code> or other preprocessors to normalize code</p></li>
+<li><p><strong>Verify Results</strong>: Use dynamic validation (DynAA) to confirm static analysis findings</p></li>
+<li><p><strong>Use Configuration Files</strong>: Create YAML configs for complex analysis workflows</p></li>
+<li><p><strong>Visualize Results</strong>: Generate DOT files to visualize call graphs, PDGs, and alias sets</p></li>
+<li><p><strong>Batch Processing</strong>: Use scripts to analyze multiple files or entire codebases</p></li>
+</ol>
+</section>
+<section id="next-steps">
+<h2>Next Steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Explore <a class="reference internal" href="../tools/index.html"><span class="doc">Command-Line Tools</span></a> for detailed tool documentation</p></li>
+<li><p>Read <a class="reference internal" href="architecture.html"><span class="doc">Architecture Overview</span></a> to understand the framework design</p></li>
+<li><p>See <a class="reference internal" href="../developer/developer_guide.html"><span class="doc">Developer Guide</span></a> to extend Lotus with custom analyses</p></li>
+<li><p>Check <a class="reference internal" href="../developer/api_reference.html"><span class="doc">API Reference</span></a> for programmatic usage</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-left" title="Installation Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="bug_detection.html" class="btn btn-neutral float-right" title="Bug Detection with Lotus" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

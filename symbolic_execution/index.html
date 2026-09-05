@@ -1,0 +1,296 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Symbolic Execution &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Transforms" href="../transform/index.html" />
+    <link rel="prev" title="Native C++ Datalog" href="../solvers/datalog.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Symbolic Execution</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#core-components">Core Components</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#driver-and-state">Driver and state</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#symbolic-values-and-properties">Symbolic values and properties</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#path-conditions-and-solving">Path conditions and solving</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#memory-and-control-flow">Memory and control flow</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#taint-and-reporting">Taint and reporting</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#analysis-flow">Analysis flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#programmatic-usage">Programmatic usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tests">Tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Symbolic Execution</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/symbolic_execution/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="symbolic-execution">
+<h1>Symbolic Execution<a class="headerlink" href="#symbolic-execution" title="Link to this heading"></a></h1>
+<p>This section documents the top-level symbolic execution engine that backs the
+<code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=symex</span></code> checker and other path-sensitive analyses.</p>
+<p><strong>Headers</strong>: <code class="docutils literal notranslate"><span class="pre">include/SymbolicExecution/</span></code></p>
+<p><strong>Implementation</strong>: <code class="docutils literal notranslate"><span class="pre">lib/SymbolicExecution/</span></code></p>
+<p><strong>Build target</strong>: <code class="docutils literal notranslate"><span class="pre">CanarySymbolicExecution</span></code></p>
+<p><strong>Tool frontend</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=symex</span></code> (see <a class="reference internal" href="../checker/symex.html"><span class="doc">Symbolic Execution Checker</span></a>)</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">SymbolicExecution</span></code> subsystem is a standalone, path-sensitive symbolic
+execution engine. It operates over the guarded value-flow graph (GVFG), tracks
+symbolic scalar values and memory facts along feasible paths, and uses SMT-backed
+path-condition checks before emitting bug reports.</p>
+<p>The subsystem lives at the top level of the source tree (<code class="docutils literal notranslate"><span class="pre">lib/SymbolicExecution/</span></code>
+and <code class="docutils literal notranslate"><span class="pre">include/SymbolicExecution/</span></code>) rather than under <code class="docutils literal notranslate"><span class="pre">lib/Analysis/</span></code> because it
+owns a full driver, symbolic state model, solver bridge, memory modeling layer,
+taint model, and LLVM pass wrapper. It is consumed by the checker framework
+through <code class="docutils literal notranslate"><span class="pre">SymbolicExecutionWrapper</span></code>.</p>
+</section>
+<section id="core-components">
+<h2>Core Components<a class="headerlink" href="#core-components" title="Link to this heading"></a></h2>
+<p>The engine is composed of the following headers under
+<code class="docutils literal notranslate"><span class="pre">include/SymbolicExecution/</span></code>:</p>
+<section id="driver-and-state">
+<h3>Driver and state<a class="headerlink" href="#driver-and-state" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">AnalysisDriver</span></code> – Coordinates whole-module symbolic execution and summary
+scheduling across functions.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">AnalysisState</span></code> – Represents symbolic memory, guarded values, points-to
+items, interprocedural summaries, taint updates, and pending bug queries.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">AnalysisLimit</span></code> – Configurable resource and depth budgets that bound
+exploration.</p></li>
+</ul>
+</section>
+<section id="symbolic-values-and-properties">
+<h3>Symbolic values and properties<a class="headerlink" href="#symbolic-values-and-properties" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ProgramVar</span></code> – Names symbolic values tied to LLVM values and contexts.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PropertyAllocator</span></code> – Allocates and manages symbolic properties.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PropertyValue</span></code>, <code class="docutils literal notranslate"><span class="pre">PropertyInteger</span></code>, <code class="docutils literal notranslate"><span class="pre">PropertySym</span></code> – Represent scalar
+properties such as offsets, sizes, and affine expressions attached to
+symbolic values.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BigInteger</span></code> – Arbitrary-precision integer support for symbolic reasoning.</p></li>
+</ul>
+</section>
+<section id="path-conditions-and-solving">
+<h3>Path conditions and solving<a class="headerlink" href="#path-conditions-and-solving" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ConstraintRepr</span></code> – Encodes symbolic predicates used in path conditions.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PathCondSolver</span></code> – Discharges path-feasibility queries through the SMT
+(Z3) backend; paths proven infeasible are pruned before reporting.</p></li>
+</ul>
+</section>
+<section id="memory-and-control-flow">
+<h3>Memory and control flow<a class="headerlink" href="#memory-and-control-flow" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">MemoryAPI</span></code> – Connects symbolic execution to allocation modeling, data
+layout, and library function summaries.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GVFGUtility</span></code> – Builds and queries the guarded value-flow graph that the
+engine walks.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">InstResolver</span></code> – Resolves instruction-level targets (call targets, memory
+locations) during exploration.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DomTreePass</span></code> – Dominator-tree reasoning used for reachability and join
+handling.</p></li>
+</ul>
+</section>
+<section id="taint-and-reporting">
+<h3>Taint and reporting<a class="headerlink" href="#taint-and-reporting" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">TaintModel</span></code> – Provides source, transfer, and sink facts used by
+taint-sensitive bug checks.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SymbolicExecutionWrapper</span></code> – Integrates the engine with the LLVM pass
+pipeline and the checker report infrastructure (<code class="docutils literal notranslate"><span class="pre">BugReportMgr</span></code>).</p></li>
+</ul>
+</section>
+</section>
+<section id="analysis-flow">
+<h2>Analysis flow<a class="headerlink" href="#analysis-flow" title="Link to this heading"></a></h2>
+<p>A typical symbolic-execution run proceeds as follows:</p>
+<ol class="arabic simple">
+<li><p><strong>GVFG construction</strong> – <code class="docutils literal notranslate"><span class="pre">GVFGUtility</span></code> builds the guarded value-flow graph,
+capturing data and guarded control dependencies.</p></li>
+<li><p><strong>Driver scheduling</strong> – <code class="docutils literal notranslate"><span class="pre">AnalysisDriver</span></code> selects entry functions and
+schedules interprocedural exploration, applying summaries where available.</p></li>
+<li><p><strong>Path exploration</strong> – <code class="docutils literal notranslate"><span class="pre">AnalysisState</span></code> advances along paths, updating
+symbolic memory, properties, and taint facts.</p></li>
+<li><p><strong>Feasibility check</strong> – <code class="docutils literal notranslate"><span class="pre">PathCondSolver</span></code> queries the SMT solver; paths
+whose path conditions are unsatisfiable are pruned.</p></li>
+<li><p><strong>Bug query</strong> – At suspect instructions (e.g. dereferences, divisions), the
+engine emits bug queries through <code class="docutils literal notranslate"><span class="pre">AnalysisState</span></code>.</p></li>
+<li><p><strong>Reporting</strong> – Confirmed bugs flow through <code class="docutils literal notranslate"><span class="pre">SymbolicExecutionWrapper</span></code> into
+the centralized <code class="docutils literal notranslate"><span class="pre">BugReportMgr</span></code> (JSON/SARIF output).</p></li>
+</ol>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<p>The engine is invoked through the unified checker frontend:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>symex<span class="w"> </span>input.bc
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>symex<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>null-deref,use-after-free
+</pre></div>
+</div>
+<p>For the full list of engine options, see <a class="reference internal" href="../checker/symex.html"><span class="doc">Symbolic Execution Checker</span></a>.</p>
+</section>
+<section id="programmatic-usage">
+<h2>Programmatic usage<a class="headerlink" href="#programmatic-usage" title="Link to this heading"></a></h2>
+<p>The engine is exposed as an LLVM pass via <code class="docutils literal notranslate"><span class="pre">SymbolicExecutionWrapper</span></code> and can be
+added to a pass pipeline like other Lotus passes:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"SymbolicExecution/SymbolicExecutionWrapper.h"</span>
+
+<span class="c1">// Within a pass manager setup:</span>
+<span class="k">auto</span><span class="w"> </span><span class="o">*</span><span class="n">seWrapper</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">SymbolicExecutionWrapperPass</span><span class="p">();</span>
+<span class="n">pm</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">seWrapper</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+<section id="tests">
+<h2>Tests<a class="headerlink" href="#tests" title="Link to this heading"></a></h2>
+<p>Focused unit tests live under <code class="docutils literal notranslate"><span class="pre">tests/unit/SymbolicExecution</span></code> and build against
+<code class="docutils literal notranslate"><span class="pre">CanarySymbolicExecution</span></code>. They cover spec compatibility and the taint model.</p>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../checker/symex.html"><span class="doc">Symbolic Execution Checker</span></a> – <code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=symex</span></code> checker frontend</p></li>
+<li><p><a class="reference internal" href="../ir/gvfg.html"><span class="doc">GVFG</span></a> – Guarded Value-Flow Graph (GVFG) IR</p></li>
+<li><p><a class="reference internal" href="../solvers/smt.html"><span class="doc">SMT (Satisfiability Modulo Theories)</span></a> – SMT (Z3) solver backend</p></li>
+<li><p><a class="reference internal" href="../user_guide/architecture.html"><span class="doc">Architecture Overview</span></a> – Architecture overview</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../solvers/datalog.html" class="btn btn-neutral float-left" title="Native C++ Datalog" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../transform/index.html" class="btn btn-neutral float-right" title="Transforms" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

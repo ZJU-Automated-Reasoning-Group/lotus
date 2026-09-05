@@ -1,0 +1,246 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phoenix — Batch Analysis Runner &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Alias Analysis" href="../alias/index.html" />
+    <link rel="prev" title="Horn-ICE – CHC Verification with Learning" href="verifier/horn-ice/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Command-Line Tools</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#tools-by-subdirectory">Tools by Subdirectory</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#scripting-tools">Scripting Tools</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Phoenix — Batch Analysis Runner</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#declarative-usage">Declarative usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#result-operations">Result operations</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#available-analyzers">Available Analyzers</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#operational-notes">Operational notes</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Command-Line Tools</a></li>
+      <li class="breadcrumb-item active">Phoenix — Batch Analysis Runner</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tools/phoenix.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="phoenix-batch-analysis-runner">
+<h1>Phoenix — Batch Analysis Runner<a class="headerlink" href="#phoenix-batch-analysis-runner" title="Link to this heading"></a></h1>
+<p>Phoenix is a Python-based batch analysis runner that automates running
+multiple alias analysis tools (Phoenix, SVF, TPA, AserPTA, SparrowAA) over
+collections of LLVM bitcode files.</p>
+<p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">scripts/phoenix/</span></code></p>
+<section id="declarative-usage">
+<h2>Declarative usage<a class="headerlink" href="#declarative-usage" title="Link to this heading"></a></h2>
+<p>Phoenix supports reproducible YAML experiment specifications.  Install its
+small Python dependency, then run an experiment:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>scripts/phoenix/requirements.txt
+python<span class="w"> </span>scripts/phoenix/src/main.py<span class="w"> </span>run<span class="w"> </span>scripts/phoenix/experiments/example.yaml
+</pre></div>
+</div>
+<p>The run writes <code class="docutils literal notranslate"><span class="pre">results.jsonl</span></code> as its source of truth, keeps stdout and
+stderr logs in the result directory, and records every repetition separately.
+This means timeouts, out-of-memory failures, and crashes remain visible rather
+than being omitted from a summary average.  Use <code class="docutils literal notranslate"><span class="pre">--output</span> <span class="pre">results/my-run</span></code> to
+choose the result directory.</p>
+<p>YAML specs support <code class="docutils literal notranslate"><span class="pre">configs</span></code> for explicit analyzer options and <code class="docutils literal notranslate"><span class="pre">matrix</span></code>
+for a Cartesian product of option values.  They can also declare a
+<code class="docutils literal notranslate"><span class="pre">preprocessing</span></code> list; every command is a string list containing <code class="docutils literal notranslate"><span class="pre">{input}</span></code>
+and <code class="docutils literal notranslate"><span class="pre">{output}</span></code> placeholders.  The optional <code class="docutils literal notranslate"><span class="pre">execution.executor</span></code> mapping
+selects <code class="docutils literal notranslate"><span class="pre">local</span></code> (default), <code class="docutils literal notranslate"><span class="pre">docker</span></code> (requires <code class="docutils literal notranslate"><span class="pre">image</span></code> and optional
+mounts), or an interactive <code class="docutils literal notranslate"><span class="pre">slurm</span></code>/<code class="docutils literal notranslate"><span class="pre">srun</span></code> backend.</p>
+</section>
+<section id="result-operations">
+<h2>Result operations<a class="headerlink" href="#result-operations" title="Link to this heading"></a></h2>
+<p>Raw JSONL data can be summarized or exported without losing individual run
+outcomes:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>scripts/phoenix/src/main.py<span class="w"> </span>report<span class="w"> </span>results/my-run
+python<span class="w"> </span>scripts/phoenix/src/main.py<span class="w"> </span><span class="nb">export</span><span class="w"> </span>results/my-run<span class="w"> </span>--format<span class="w"> </span>csv
+python<span class="w"> </span>scripts/phoenix/src/main.py<span class="w"> </span>compare<span class="w"> </span>results/baseline<span class="w"> </span>results/new
+</pre></div>
+</div>
+<p>Each run writes <code class="docutils literal notranslate"><span class="pre">manifest.json</span></code> with the Lotus commit, platform details,
+experiment and benchmark hashes, preprocessing fingerprint, and executable
+hashes.  Add optional <code class="docutils literal notranslate"><span class="pre">fingerprint_files</span></code> paths (for example, external
+library-model specifications) to record their SHA-256 values too.  <code class="docutils literal notranslate"><span class="pre">compare</span></code>
+warns if benchmark or preprocessing fingerprints differ.</p>
+</section>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>Phoenix provides an interactive command-line interface that:</p>
+<ol class="arabic simple">
+<li><p>Scans a directory for <code class="docutils literal notranslate"><span class="pre">.bc</span></code> files.</p></li>
+<li><p>Lets the user select an analysis tool (Phoenix/SVF/TPA/Aser/Sparrow).</p></li>
+<li><p>Runs the selected tool on each bitcode file.</p></li>
+<li><p>Collects and writes results to structured output files.</p></li>
+</ol>
+</section>
+<section id="available-analyzers">
+<h2>Available Analyzers<a class="headerlink" href="#available-analyzers" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">phoenix_analyzer.py</span></code> — Phoenix alias analysis driver</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">svf_analyzer.py</span></code> — SVF analysis driver</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tpa_analyzer.py</span></code> — TPA (Type-based Pointer Analysis) driver</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">aser_analyzer.py</span></code> — AserPTA analysis driver</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sparrow_analyzer.py</span></code> — SparrowAA analysis driver</p></li>
+</ul>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>lotus
+python<span class="w"> </span>scripts/phoenix/src/main.py
+</pre></div>
+</div>
+<p>The script will prompt for a directory path containing <code class="docutils literal notranslate"><span class="pre">.bc</span></code> files, then ask
+which tool to run.  This legacy workflow is retained while users migrate to
+YAML experiments.</p>
+</section>
+<section id="operational-notes">
+<h2>Operational notes<a class="headerlink" href="#operational-notes" title="Link to this heading"></a></h2>
+<p>Use a directory containing bitcode built with a compatible LLVM version and
+ensure the selected analyzer is available in the expected build location.
+Phoenix is a batch runner: it records each input’s outcome, but does not make
+results from different analyzers directly comparable unless they were run with
+the same bitcode, library model, and options.  Keep generated output outside
+the input corpus when repeatability matters.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="verifier/horn-ice/index.html" class="btn btn-neutral float-left" title="Horn-ICE – CHC Verification with Learning" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../alias/index.html" class="btn btn-neutral float-right" title="Alias Analysis" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

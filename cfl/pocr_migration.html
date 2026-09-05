@@ -1,0 +1,294 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>POCR Migration Matrix &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Paper Engines: PEARL, Stg, and Sqid" href="pearl_stg_sqid.html" />
+    <link rel="prev" title="Classical Grammar-Driven CFL Reachability" href="classical.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Context-Free Language Analysis</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="cfl_components.html">CFL Reachability Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="classical.html">Classical Grammar-Driven CFL Reachability</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">POCR Migration Matrix</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#general-solvers">General solvers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#clients-and-preprocessing">Clients and preprocessing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#formats-relations-and-controls">Formats, relations, and controls</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pearl_stg_sqid.html">Paper Engines: PEARL, Stg, and Sqid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="csindex.html">Context-Sensitive Reachability Indexing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_unary.html">Exact Unary Interleaved Dyck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_staged_bounds.html">Interleaved-Dyck Staged Bounds</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_graph_reduction.html">Interleaved-Dyck Graph Reduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_mcfl.html">Multiple Context-Free Language Reachability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_mutual_refinement.html">Mutual Refinement for CFL Reachability</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Context-Free Language Analysis</a></li>
+      <li class="breadcrumb-item active">POCR Migration Matrix</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/cfl/pocr_migration.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="pocr-migration-matrix">
+<h1>POCR Migration Matrix<a class="headerlink" href="#pocr-migration-matrix" title="Link to this heading"></a></h1>
+<p>The POCR implementation is represented in Lotus without an SVF dependency.
+This page records every algorithm-bearing POCR source group and whether Lotus
+ports it directly or merges it into an equivalent existing component.</p>
+<section id="general-solvers">
+<h2>General solvers<a class="headerlink" href="#general-solvers" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">StdCFL</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">SolverBackend::SparseSet</span></code> and <code class="docutils literal notranslate"><span class="pre">SparseBitVector</span></code> implement the indexed
+classical worklist algorithm.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PocrCFL</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">SolverBackend::Pocr</span></code> uses paired predecessor and successor reachability
+trees. Primary transitive arcs are registered before tree traversal;
+closure pairs are then queued as secondary facts. The <code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">-&gt;</span> <span class="pre">X</span> <span class="pre">A</span></code> and
+<code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">-&gt;</span> <span class="pre">A</span> <span class="pre">X</span></code> cases traverse the appropriate tree and prune a subtree when
+its summary edge already exists, as in <code class="docutils literal notranslate"><span class="pre">checkStree</span></code>/<code class="docutils literal notranslate"><span class="pre">checkPtree</span></code>.
+Structural identity is kept separate from semantic epsilon, so non-nullable
+cycles correctly derive reflexive pairs.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">HPocrCFL</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">SolverBackend::HierarchicalPocr</span></code> adds POCR’s separate FIFO primary list,
+drains it before the ordinary FIFO worklist, and repeats when ordinary
+processing produces new primary facts.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">FocrCFL</span></code> and <code class="docutils literal notranslate"><span class="pre">TRFocrCFL</span></code></dt><dd><p>Merged as <code class="docutils literal notranslate"><span class="pre">SolverBackend::FullyOrdered</span></code>. Its edge-critical graph is the
+reduced storage, while its public relation exposes the exact closure. The
+TR variant’s separate secondary container is subsumed by this relation
+abstraction rather than exposed as a second selector; ECG insertion,
+redundant-critical-edge removal, and primary/secondary scheduling remain.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">TRCFL</span></code></dt><dd><p>Merged into <code class="docutils literal notranslate"><span class="pre">SolverBackend::TransitiveClosure</span></code>. Lotus’s per-symbol
+incremental closure already separates transitive pairs from the ordinary
+relation and omits the literal <code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">-&gt;</span> <span class="pre">X</span> <span class="pre">X</span></code> worklist join. POCR’s version has
+unresolved secondary-edge TODOs, so it is not retained as a duplicate mode.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">GspanAA</span></code> and <code class="docutils literal notranslate"><span class="pre">GspanVFA</span></code></dt><dd><p>Generalized as <code class="docutils literal notranslate"><span class="pre">SolverBackend::Graspan</span></code> while retaining POCR’s two
+relations and source-ordered epoch update. For every source it evaluates
+<code class="docutils literal notranslate"><span class="pre">old</span> <span class="pre">+</span> <span class="pre">new</span></code>, unary <code class="docutils literal notranslate"><span class="pre">new</span></code>, <code class="docutils literal notranslate"><span class="pre">new</span> <span class="pre">+</span> <span class="pre">old</span></code>, and <code class="docutils literal notranslate"><span class="pre">new</span> <span class="pre">+</span> <span class="pre">new</span></code>, then moves
+that source’s delta into <code class="docutils literal notranslate"><span class="pre">old</span></code> and installs its next delta. Sources with
+no local delta are still revisited for <code class="docutils literal notranslate"><span class="pre">old</span> <span class="pre">+</span> <span class="pre">new</span></code> joins through a middle
+node, matching the artifact implementation.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">GRAA</span></code>, <code class="docutils literal notranslate"><span class="pre">GRVFA</span></code>, <code class="docutils literal notranslate"><span class="pre">GRGspanAA</span></code>, and <code class="docutils literal notranslate"><span class="pre">GRGspanVFA</span></code></dt><dd><p>These classes differ only by hard-coded production tables.
+<code class="docutils literal notranslate"><span class="pre">buildPocrClientGrammar</span></code> owns exact standard and rewritten alias/value-flow
+tables; <code class="docutils literal notranslate"><span class="pre">gr-aa</span></code>/<code class="docutils literal notranslate"><span class="pre">gr-vfa</span></code> pair them with the worklist and
+<code class="docutils literal notranslate"><span class="pre">grgspan-aa</span></code>/<code class="docutils literal notranslate"><span class="pre">grgspan-vfa</span></code> pair them with Graspan. The larger artifact
+<code class="docutils literal notranslate"><span class="pre">aanew.cfg</span></code>/<code class="docutils literal notranslate"><span class="pre">vfnew.cfg</span></code> grammars also load through the canonical
+<code class="docutils literal notranslate"><span class="pre">Grammar</span></code> frontend. Both forms have regression coverage. No duplicate
+solver class is needed.</p>
+</dd>
+</dl>
+</section>
+<section id="clients-and-preprocessing">
+<h2>Clients and preprocessing<a class="headerlink" href="#clients-and-preprocessing" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">StdAA</span></code>/<code class="docutils literal notranslate"><span class="pre">PocrAA</span></code>/<code class="docutils literal notranslate"><span class="pre">FocrAA</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">StdAA</span></code> remains the grammar-driven path. <code class="docutils literal notranslate"><span class="pre">PocrAA</span></code> and <code class="docutils literal notranslate"><span class="pre">FocrAA</span></code> are
+native <code class="docutils literal notranslate"><span class="pre">PocrAliasEngine</span></code> and <code class="docutils literal notranslate"><span class="pre">FocrAliasEngine</span></code> implementations under
+<code class="docutils literal notranslate"><span class="pre">Solvers/Engines/POCR</span></code>. They preserve POCR’s horizontal propagation,
+symmetric <code class="docutils literal notranslate"><span class="pre">V</span></code>/<code class="docutils literal notranslate"><span class="pre">M</span></code> facts, dereference matching, attributed field
+matching, and one-sided hybrid-tree or ECG traversal. <code class="docutils literal notranslate"><span class="pre">AliasClient</span></code> is
+the sole alias client and selects these engines through
+<code class="docutils literal notranslate"><span class="pre">solveSpecialized</span></code>. Optional ECG cycle simplification is available for
+<code class="docutils literal notranslate"><span class="pre">FocrAliasEngine</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">StdVFA</span></code>/<code class="docutils literal notranslate"><span class="pre">PocrVFA</span></code>/<code class="docutils literal notranslate"><span class="pre">FocrVFA</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">StdVFA</span></code> remains the grammar-driven path. <code class="docutils literal notranslate"><span class="pre">PocrVFA</span></code> and <code class="docutils literal notranslate"><span class="pre">FocrVFA</span></code> are
+native <code class="docutils literal notranslate"><span class="pre">PocrValueFlowEngine</span></code> and <code class="docutils literal notranslate"><span class="pre">FocrValueFlowEngine</span></code> implementations
+under <code class="docutils literal notranslate"><span class="pre">Solvers/Engines/POCR</span></code>. They preserve online reachability insertion
+and vertical <code class="docutils literal notranslate"><span class="pre">call_i</span> <span class="pre">A</span> <span class="pre">ret_i</span></code> matching. <code class="docutils literal notranslate"><span class="pre">ValueFlowClient</span></code> is the sole
+value-flow client and selects these engines through
+<code class="docutils literal notranslate"><span class="pre">solveSpecialized</span></code>. Optional ECG cycle simplification is available for
+<code class="docutils literal notranslate"><span class="pre">FocrValueFlowEngine</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">SCCElimination</span></code>, <code class="docutils literal notranslate"><span class="pre">PEGFold</span></code>, and <code class="docutils literal notranslate"><span class="pre">IVFGFold</span></code></dt><dd><p>Ported by <code class="docutils literal notranslate"><span class="pre">GraphSimplification</span></code> using Lotus’s non-recursive Tarjan utility,
+representative maps, source-node preservation, and client-specific folding.
+Foldable direct pairs are detected once on the post-SCC graph and merged
+before the separate dynamic common-dereference phase, matching POCR’s phase
+order rather than repeatedly redetecting direct pairs.
+POCR <code class="docutils literal notranslate"><span class="pre">d</span></code> is mapped to the physical Lotus PEG <code class="docutils literal notranslate"><span class="pre">addrbar</span></code> orientation;
+<code class="docutils literal notranslate"><span class="pre">vgep</span></code> and Lotus indirect/thread flow edges participate in their
+corresponding direct-edge reductions.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">PEGInterDyck</span></code> and <code class="docutils literal notranslate"><span class="pre">IVFGInterDyck</span></code></dt><dd><p>Ported as the <code class="docutils literal notranslate"><span class="pre">prune_interdyck</span></code> graph-simplification phase. Lotus’s
+separate <code class="docutils literal notranslate"><span class="pre">InterleavedDyckGraphReduction</span></code> remains the single implementation of the
+stronger PLDI’20 reduction pipeline; it is not copied into <code class="docutils literal notranslate"><span class="pre">Classical</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">RSM</span></code> and <code class="docutils literal notranslate"><span class="pre">GFPattern</span></code></dt><dd><p>Ported as <code class="docutils literal notranslate"><span class="pre">RecursiveStateMachine</span></code>, <code class="docutils literal notranslate"><span class="pre">NodePairPattern</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">FoldabilityChecker</span></code>, with the <code class="docutils literal notranslate"><span class="pre">lotus-cfl-foldability</span></code> driver. The port
+implements the intended false-state and two-box enumeration guards instead
+of preserving the inverted/accumulating conditions in the artifact source.</p>
+</dd>
+</dl>
+</section>
+<section id="formats-relations-and-controls">
+<h2>Formats, relations, and controls<a class="headerlink" href="#formats-relations-and-controls" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">CFG</span></code> and <code class="docutils literal notranslate"><span class="pre">CFLGraph</span></code>/<code class="docutils literal notranslate"><span class="pre">PEG</span></code>/<code class="docutils literal notranslate"><span class="pre">IVFG</span></code></dt><dd><p>Merged into <code class="docutils literal notranslate"><span class="pre">Grammar</span></code> and <code class="docutils literal notranslate"><span class="pre">LabeledGraph</span></code>. Both modern Lotus formats and
+POCR’s tabular attributed formats are accepted directly. Standard and
+rewritten alias engines complete <code class="docutils literal notranslate"><span class="pre">abar</span></code>/<code class="docutils literal notranslate"><span class="pre">dbar</span></code>/<code class="docutils literal notranslate"><span class="pre">fbar_i</span></code> exactly as
+POCR’s PEG initializer does, so physical-only and already-bidirectional PEG
+files have the same result. Legacy attributed productions retain POCR’s
+runtime rule that an indexed head gets index zero when neither RHS symbol is
+indexed; omitted graph-edge indices also default to zero.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CFLData</span></code> and <code class="docutils literal notranslate"><span class="pre">HybridData</span></code></dt><dd><p>Replaced by Lotus <code class="docutils literal notranslate"><span class="pre">Relation</span></code> backends and <code class="docutils literal notranslate"><span class="pre">PocrTransitiveClosure</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ECG</span></code> and <code class="docutils literal notranslate"><span class="pre">BSECG</span></code></dt><dd><p>Merged into <code class="docutils literal notranslate"><span class="pre">FullyOrderedTransitiveClosure</span></code>. The pointer and bitset ECG
+variants do not warrant separate public algorithms. POCR’s optional
+<code class="docutils literal notranslate"><span class="pre">ecgscc</span></code> path is controlled by <code class="docutils literal notranslate"><span class="pre">SolverOptions::simplify_focr_cycles</span></code> or
+<code class="docutils literal notranslate"><span class="pre">--focr-scc</span></code> and is off by default, matching POCR. The same option applies
+to both specialized FOCR engines.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CFLOpt::ucfl</span></code></dt><dd><p>Ported through <code class="docutils literal notranslate"><span class="pre">SolverOptions::unidirectional</span></code> and the grammar’s
+<code class="docutils literal notranslate"><span class="pre">Insert</span></code>/<code class="docutils literal notranslate"><span class="pre">Follow</span></code>/<code class="docutils literal notranslate"><span class="pre">Count</span></code> metadata.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">CFLStat</span></code>, <code class="docutils literal notranslate"><span class="pre">AAStat</span></code>, <code class="docutils literal notranslate"><span class="pre">VFAStat</span></code>, and output options</dt><dd><p>Merged into <code class="docutils literal notranslate"><span class="pre">ReachabilityStats</span></code> and the existing structured command-line
+reporting. <code class="docutils literal notranslate"><span class="pre">--relation-output</span></code>, <code class="docutils literal notranslate"><span class="pre">--graph-output</span></code>, <code class="docutils literal notranslate"><span class="pre">--start-only</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">--json-stats</span></code> cover relation pairs, normalized/preprocessed graphs, count
+symbols, and reproducible algorithm counters without process-global SVF
+options.</p>
+</dd>
+</dl>
+<p>Statistics and graph/relation output use Lotus’s existing structured CLI
+reporting. Tests compare all exact solver relations with an independent cubic
+recognizer over 1,000 generated problems, cover incremental updates, ECG cycle
+simplification, primary/secondary scheduling, and tree-join execution, and run
+POCR-format and rewritten client grammars through their applicable backends.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="classical.html" class="btn btn-neutral float-left" title="Classical Grammar-Driven CFL Reachability" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="pearl_stg_sqid.html" class="btn btn-neutral float-right" title="Paper Engines: PEARL, Stg, and Sqid" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

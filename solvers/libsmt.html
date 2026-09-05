@@ -1,0 +1,283 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LIBSMT — SMT Solver Abstraction Layer &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Native C++ Datalog" href="datalog.html" />
+    <link rel="prev" title="FPsolve — Fixed-Point Equation Solver" href="fpsolve.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Solvers</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="cudd.html">CUDD (Binary Decision Diagrams)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="smt.html">SMT (Satisfiability Modulo Theories)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wpds.html">WPDS (Weighted Pushdown Systems)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="smtsampler.html">SMT Samplers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="symabs.html">SMT Formula Abstraction (SymAbs)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="staub.html">SMT Theory Arbitrage (STAUB)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tuna.html">TUNA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stingx.html">Stingx — String Constraint Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egraphs_simp.html">E-Graph Quantifier Simplification (EGraphsSimp)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fpsolve.html">FPsolve — Fixed-Point Equation Solver</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">LIBSMT — SMT Solver Abstraction Layer</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#components">Components</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#smtsolver">SMTSolver</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#smtexpr-and-smtobject">SMTExpr and SMTObject</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#smtfactory">SMTFactory</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#z3expr-and-z3plus">Z3Expr and Z3Plus</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cnf-and-satsolver">CNF and SATSolver</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#smtmodel">SMTModel</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#smtconfigure">SMTConfigure</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="datalog.html">Native C++ Datalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#third-party-libraries">Third-Party Libraries</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Solvers</a></li>
+      <li class="breadcrumb-item active">LIBSMT — SMT Solver Abstraction Layer</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/solvers/libsmt.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="libsmt-smt-solver-abstraction-layer">
+<h1>LIBSMT — SMT Solver Abstraction Layer<a class="headerlink" href="#libsmt-smt-solver-abstraction-layer" title="Link to this heading"></a></h1>
+<p>A unified abstraction layer over multiple SMT solver backends.</p>
+<p><strong>Headers</strong>: <code class="docutils literal notranslate"><span class="pre">include/Solvers/SMT/LIBSMT/</span></code></p>
+<p><strong>Implementation</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Solvers/SMT/LIBSMT/</span></code></p>
+<p><strong>Build target</strong>: <code class="docutils literal notranslate"><span class="pre">CanarySMT</span></code></p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>LIBSMT provides a solver-agnostic interface for SMT (Satisfiability Modulo
+Theories) solving. It abstracts over solver-specific details (Z3, etc.)
+so that Lotus analyses can issue SMT queries without depending on any single
+solver backend.</p>
+</section>
+<section id="components">
+<h2>Components<a class="headerlink" href="#components" title="Link to this heading"></a></h2>
+<section id="smtsolver">
+<h3>SMTSolver<a class="headerlink" href="#smtsolver" title="Link to this heading"></a></h3>
+<p>Abstract base class defining the solver interface:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">push()</span></code> / <code class="docutils literal notranslate"><span class="pre">pop()</span></code> — Assertion stack management.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">assertExpr(SMTExpr)</span></code> — Add a formula to the solver context.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">check()</span></code> — Check satisfiability of the current context.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">getModel()</span></code> — Retrieve a satisfying model.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">reset()</span></code> — Clear all assertions.</p></li>
+</ul>
+</section>
+<section id="smtexpr-and-smtobject">
+<h3>SMTExpr and SMTObject<a class="headerlink" href="#smtexpr-and-smtobject" title="Link to this heading"></a></h3>
+<p>Expression tree representation used to build formulas:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">SMTExpr</span></code> — Typed expression with a solver-specific handle.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SMTObject</span></code> — Base class for all SMT entities (sorts, functions, variables).</p></li>
+</ul>
+</section>
+<section id="smtfactory">
+<h3>SMTFactory<a class="headerlink" href="#smtfactory" title="Link to this heading"></a></h3>
+<p>Factory for creating SMT sorts, variables, and expressions:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"Solvers/SMT/LIBSMT/SMTFactory.h"</span>
+
+<span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">factory</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">SMTFactory</span><span class="o">::</span><span class="n">instance</span><span class="p">();</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">intSort</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">factory</span><span class="p">.</span><span class="n">getSort</span><span class="p">(</span><span class="s">"Int"</span><span class="p">);</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">x</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="n">factory</span><span class="p">.</span><span class="n">makeVariable</span><span class="p">(</span><span class="n">intSort</span><span class="p">,</span><span class="w"> </span><span class="s">"x"</span><span class="p">);</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">y</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="n">factory</span><span class="p">.</span><span class="n">makeVariable</span><span class="p">(</span><span class="n">intSort</span><span class="p">,</span><span class="w"> </span><span class="s">"y"</span><span class="p">);</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">expr</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="n">factory</span><span class="p">.</span><span class="n">makeEQ</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+<section id="z3expr-and-z3plus">
+<h3>Z3Expr and Z3Plus<a class="headerlink" href="#z3expr-and-z3plus" title="Link to this heading"></a></h3>
+<p>Z3-specific expression handling and extended operations (quantifier support,
+optimisation queries, model parsing).</p>
+</section>
+<section id="cnf-and-satsolver">
+<h3>CNF and SATSolver<a class="headerlink" href="#cnf-and-satsolver" title="Link to this heading"></a></h3>
+<p>CNF formula representation and SAT solver interface for boolean-level
+reasoning:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">CNF</span></code> — Conjunctive normal form representation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SATSolver</span></code> — SAT solver wrapper (useful for eager bit-blasting).</p></li>
+</ul>
+</section>
+<section id="smtmodel">
+<h3>SMTModel<a class="headerlink" href="#smtmodel" title="Link to this heading"></a></h3>
+<p>Represents a satisfying assignment from a solver query, providing value lookup
+by variable name.</p>
+</section>
+<section id="smtconfigure">
+<h3>SMTConfigure<a class="headerlink" href="#smtconfigure" title="Link to this heading"></a></h3>
+<p>Configuration and option management for solver backends.</p>
+</section>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"Solvers/SMT/LIBSMT/SMTSolver.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"Solvers/SMT/LIBSMT/SMTFactory.h"</span>
+
+<span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">factory</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">SMTFactory</span><span class="o">::</span><span class="n">instance</span><span class="p">();</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">solver</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">factory</span><span class="p">.</span><span class="n">createSolver</span><span class="p">();</span>
+
+<span class="k">auto</span><span class="w"> </span><span class="n">intSort</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">factory</span><span class="p">.</span><span class="n">getSort</span><span class="p">(</span><span class="s">"Int"</span><span class="p">);</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">x</span><span class="w">       </span><span class="o">=</span><span class="w"> </span><span class="n">factory</span><span class="p">.</span><span class="n">makeVariable</span><span class="p">(</span><span class="n">intSort</span><span class="p">,</span><span class="w"> </span><span class="s">"x"</span><span class="p">);</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">gt</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="n">factory</span><span class="p">.</span><span class="n">makeGT</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">factory</span><span class="p">.</span><span class="n">makeIntVal</span><span class="p">(</span><span class="mi">0</span><span class="p">));</span>
+
+<span class="n">solver</span><span class="o">-&gt;</span><span class="n">assertExpr</span><span class="p">(</span><span class="n">gt</span><span class="p">);</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">solver</span><span class="o">-&gt;</span><span class="n">check</span><span class="p">();</span>
+
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">result</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">SmtResult</span><span class="o">::</span><span class="n">Sat</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">model</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">solver</span><span class="o">-&gt;</span><span class="n">getModel</span><span class="p">();</span>
+<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">val</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">model</span><span class="o">-&gt;</span><span class="n">getValue</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+<span class="w">  </span><span class="c1">// ...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="smt.html"><span class="doc">SMT (Satisfiability Modulo Theories)</span></a> — SMT solver backend (Z3)</p></li>
+<li><p><a class="reference internal" href="cudd.html"><span class="doc">CUDD (Binary Decision Diagrams)</span></a> — BDD solver backend (CUDD)</p></li>
+<li><p><a class="reference internal" href="wpds.html"><span class="doc">WPDS (Weighted Pushdown Systems)</span></a> — Weighted pushdown systems</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="fpsolve.html" class="btn btn-neutral float-left" title="FPsolve — Fixed-Point Equation Solver" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="datalog.html" class="btn btn-neutral float-right" title="Native C++ Datalog" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

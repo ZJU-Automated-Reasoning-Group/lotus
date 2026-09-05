@@ -1,0 +1,227 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alias Specification Manager &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="TPA: Flow- and Contex-Sensitive Pointer Analysis" href="tpa.html" />
+    <link rel="prev" title="Points-To Set Backends" href="ptsset.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Alias Analysis</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="alias_analysis.html">Alias Analysis Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="allocaa.html">AllocAA — Allocation-Based AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sparrowaa.html">Sparrow Pointer Analysis — Inclusion AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aserpta.html">AserPTA — Pointer Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cclyzeraa.html">CclyzerAA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dda.html">DDA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dfpa.html">DFPA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dyckaa.html">DyckAA — Dyck-CFL Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seadsa.html">Sea-DSA — Memory Graph AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fpa.html">FPA — Function Pointer Analyses (FLTA/MLTA/MLTADF/KELP)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flowsensitive.html">Flow-Sensitive Pointer Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lotusaa.html">LotusAA — Lotus AA Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="underapproxaa.html">UnderApproxAA — Must-Alias Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dynaa.html">DynAA — Dynamic Alias AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html">Strict Relations Alias Analysis — Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#vssa-ssi-transformation">1. vSSA / SSI Transformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#symbolic-range-analysis">2. Symbolic Range Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#strict-inequality-construction">3. Strict-Inequality Construction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#constraint-propagation-solver">4. Constraint Propagation Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#alias-disambiguation-final-decision">5. Alias Disambiguation (Final Decision)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#pdg-memory-node-reduction-applicability">6. PDG Memory-Node Reduction (Applicability)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#summary-of-properties">Summary of Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#end-of-document">End of document.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metrics.html">Pointer Analysis Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptsset.html">Points-To Set Backends</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Alias Specification Manager</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#what-specifications-express">What specifications express</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#using-the-manager">Using the manager</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tpa.html">TPA: Flow- and Contex-Sensitive Pointer Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="typequalifier.html">TypeQualifier</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Alias Analysis</a></li>
+      <li class="breadcrumb-item active">Alias Specification Manager</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/alias/spec.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="alias-specification-manager">
+<h1>Alias Specification Manager<a class="headerlink" href="#alias-specification-manager" title="Link to this heading"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">include/Alias/Infrastructure/Spec/</span></code> and <code class="docutils literal notranslate"><span class="pre">lib/Alias/Infrastructure/Spec/</span></code> provide a unified specification
+layer for library functions used by pointer and alias analyses.</p>
+<p><strong>Main components</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">AliasSpecManager</span></code> loads and serves per-function specifications.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">FunctionCategory</span></code> classifies library routines.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">AllocatorInfo</span></code>, <code class="docutils literal notranslate"><span class="pre">CopyInfo</span></code>, <code class="docutils literal notranslate"><span class="pre">ReturnAliasInfo</span></code>, and <code class="docutils literal notranslate"><span class="pre">ModRefInfo</span></code> model
+specialized behaviors that analyses need.</p></li>
+</ul>
+<p>This layer complements the generic annotation subsystem by exposing a
+pointer-analysis-oriented API.</p>
+<section id="what-specifications-express">
+<h2>What specifications express<a class="headerlink" href="#what-specifications-express" title="Link to this heading"></a></h2>
+<p>Specifications give an analysis information that may be absent from a
+declaration-only library call.  For example, an allocator specification can
+identify the size argument, whether the allocation is zero-initialized, and
+whether the result is returned directly or written through an out parameter.
+Copy specifications record source and destination arguments, while
+return-alias specifications describe routines such as <code class="docutils literal notranslate"><span class="pre">strcpy</span></code> whose return
+value aliases an argument.</p>
+<p>The manager also recognizes deallocators, no-effect functions, exit routines,
+and mod/ref effects.  A function can have more than one applicable category;
+clients that need the complete classification should use <code class="docutils literal notranslate"><span class="pre">getCategories</span></code>
+rather than the single primary category returned by <code class="docutils literal notranslate"><span class="pre">getCategory</span></code>.</p>
+</section>
+<section id="using-the-manager">
+<h2>Using the manager<a class="headerlink" href="#using-the-manager" title="Link to this heading"></a></h2>
+<p>Construct an <code class="docutils literal notranslate"><span class="pre">AliasSpecManager</span></code> once for an analysis pass, optionally bind
+it to the module with <code class="docutils literal notranslate"><span class="pre">initialize</span></code>, and query it while modeling calls.  Both
+<code class="docutils literal notranslate"><span class="pre">llvm::Function</span></code> and function-name overloads are available, which is useful
+when an analysis first builds name-based seed sets.  The default constructor
+loads the standard specification files; callers may provide their own files or
+load additional ones with <code class="docutils literal notranslate"><span class="pre">loadSpecFile</span></code>.  After changing specifications at
+runtime, clear the query cache before relying on newly added entries.</p>
+<p>Specifications refine models; they do not replace the ordinary handling of
+defined functions.  Clients should continue to analyze available function
+bodies and use the manager to give known declarations their library semantics.</p>
+<p>See also <a class="reference internal" href="../annotation/modref.html"><span class="doc">ModRef Function Effect Specifications</span></a>, <a class="reference internal" href="../annotation/pointer_effects.html"><span class="doc">Pointer Effect Specifications</span></a>, and
+<a class="reference internal" href="alias_analysis.html"><span class="doc">Alias Analysis Components</span></a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="ptsset.html" class="btn btn-neutral float-left" title="Points-To Set Backends" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="tpa.html" class="btn btn-neutral float-right" title="TPA: Flow- and Contex-Sensitive Pointer Analysis" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

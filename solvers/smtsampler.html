@@ -1,0 +1,297 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SMT Samplers &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="SMT Formula Abstraction (SymAbs)" href="symabs.html" />
+    <link rel="prev" title="WPDS (Weighted Pushdown Systems)" href="wpds.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Solvers</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="cudd.html">CUDD (Binary Decision Diagrams)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="smt.html">SMT (Satisfiability Modulo Theories)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wpds.html">WPDS (Weighted Pushdown Systems)</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">SMT Samplers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#samplers">Samplers</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#quicksampler">QuickSampler</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#intervalsampler">IntervalSampler</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#regionsampler-polysampler">RegionSampler (PolySampler)</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#quicksampler-usage">QuickSampler Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#intervalsampler-usage">IntervalSampler Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#regionsampler-usage">RegionSampler Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#c-api-usage">C++ API Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#related-work">Related Work</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="symabs.html">SMT Formula Abstraction (SymAbs)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="staub.html">SMT Theory Arbitrage (STAUB)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tuna.html">TUNA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stingx.html">Stingx — String Constraint Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egraphs_simp.html">E-Graph Quantifier Simplification (EGraphsSimp)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fpsolve.html">FPsolve — Fixed-Point Equation Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="libsmt.html">LIBSMT — SMT Solver Abstraction Layer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datalog.html">Native C++ Datalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#third-party-libraries">Third-Party Libraries</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Solvers</a></li>
+      <li class="breadcrumb-item active">SMT Samplers</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/solvers/smtsampler.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="smt-samplers">
+<h1>SMT Samplers<a class="headerlink" href="#smt-samplers" title="Link to this heading"></a></h1>
+<p>This section documents the SMT sampling utilities in Lotus for extracting
+diverse satisfying assignments (models) from SMT formulas.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">SMTSampler</span></code> library provides multiple algorithms for sampling from the
+solution space of SMT formulas. These samplers are useful for test case generation,
+solution space exploration, and analyzing formula sensitivity.</p>
+<p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Solvers/SMT/SMTSampler/</span></code></p>
+<p><strong>Library</strong>: <code class="docutils literal notranslate"><span class="pre">SMTSampler</span></code></p>
+<p><strong>Dependencies</strong>:
+- SymAbs (symbolic abstraction library)
+- Z3 SMT solver</p>
+</section>
+<section id="samplers">
+<h2>Samplers<a class="headerlink" href="#samplers" title="Link to this heading"></a></h2>
+<section id="quicksampler">
+<h3>QuickSampler<a class="headerlink" href="#quicksampler" title="Link to this heading"></a></h3>
+<p>A mutation-based approach for generating diverse models from CNF formulas.</p>
+<p><strong>Input</strong>: CNF in DIMACS format with optional <code class="docutils literal notranslate"><span class="pre">c</span> <span class="pre">ind</span></code> lines for independent variables</p>
+<p><strong>Output</strong>: <code class="docutils literal notranslate"><span class="pre">&lt;input&gt;.samples</span></code> - one line per sample in format <code class="docutils literal notranslate"><span class="pre">&lt;mutations&gt;:</span> <span class="pre">&lt;bitstring&gt;</span></code></p>
+<p><strong>Algorithm</strong>: Uses genetic mutation operators to explore the solution space, stopping
+on time or sample limits.</p>
+<p><strong>Related Work</strong>: Based on ICSE 18 paper “Efficient Sampling of SAT Solutions for Testing”</p>
+</section>
+<section id="intervalsampler">
+<h3>IntervalSampler<a class="headerlink" href="#intervalsampler" title="Link to this heading"></a></h3>
+<p>Computes per-variable bounds using Z3’s optimize commands and samples uniformly within
+those bounds.</p>
+<p><strong>Input</strong>: SMT-LIB bit-vector formulas (single file or directory)</p>
+<p><strong>Output</strong>: <code class="docutils literal notranslate"><span class="pre">res.log</span></code> (append-only summary statistics)</p>
+<p><strong>Algorithm</strong>:
+1. Use Z3 optimize to find variable bounds
+2. Sample uniformly from computed intervals
+3. Validate samples against original formula</p>
+</section>
+<section id="regionsampler-polysampler">
+<h3>RegionSampler (PolySampler)<a class="headerlink" href="#regionsampler-polysampler" title="Link to this heading"></a></h3>
+<p>Geometry-based sampling from convex polytopes defined by linear constraints.
+Uses the SymAbs library to build linear abstractions (Zone or Octagon domains).</p>
+<p><strong>Input</strong>: SMT-LIB bit-vector formulas</p>
+<p><strong>Output</strong>: <code class="docutils literal notranslate"><span class="pre">&lt;input&gt;.abs.samples</span></code> with first line as variable name header</p>
+<p><strong>Algorithm</strong>:
+1. Build linear abstraction (Zone or Octagon) from formula
+2. Use hit-and-run (or other) random walk to propose samples
+3. Validate proposed samples against original formula</p>
+<p><strong>Available Walks</strong>:
+- <code class="docutils literal notranslate"><span class="pre">HitAndRun</span></code> - default, geometric random walk
+- <code class="docutils literal notranslate"><span class="pre">BallWalk</span></code> - ball-based random walk
+- <code class="docutils literal notranslate"><span class="pre">DikinWalk</span></code> - Dikin walk for log-concave distributions
+- <code class="docutils literal notranslate"><span class="pre">CoordinateWalk</span></code> - coordinate axis random walk
+- <code class="docutils literal notranslate"><span class="pre">ConstraintWalk</span></code> - constraint-based random walk</p>
+</section>
+</section>
+<section id="quicksampler-usage">
+<h2>QuickSampler Usage<a class="headerlink" href="#quicksampler-usage" title="Link to this heading"></a></h2>
+<p>Command-line interface (if built as a tool):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>quicksampler<span class="w"> </span>input.cnf<span class="w"> </span>-samples<span class="w"> </span><span class="m">100</span><span class="w"> </span>-timeout<span class="w"> </span><span class="m">60</span>
+</pre></div>
+</div>
+<p><strong>Output Format</strong>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">3</span><span class="p">:</span> <span class="mi">1010110101</span>
+<span class="mi">5</span><span class="p">:</span> <span class="mi">0011101010</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+<p>Each line: <code class="docutils literal notranslate"><span class="pre">&lt;number_of_mutations&gt;:</span> <span class="pre">&lt;bitstring&gt;</span></code></p>
+</section>
+<section id="intervalsampler-usage">
+<h2>IntervalSampler Usage<a class="headerlink" href="#intervalsampler-usage" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>intervalsampler<span class="w"> </span>input.smt2<span class="w"> </span>-samples<span class="w"> </span><span class="m">1000</span>
+</pre></div>
+</div>
+</section>
+<section id="regionsampler-usage">
+<h2>RegionSampler Usage<a class="headerlink" href="#regionsampler-usage" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>regionsampler<span class="w"> </span>input.smt2<span class="w"> </span>-domain<span class="w"> </span>zone<span class="w"> </span>-walk<span class="w"> </span>hitandrun<span class="w"> </span>-samples<span class="w"> </span><span class="m">500</span>
+</pre></div>
+</div>
+<p><strong>Options</strong>:
+- <code class="docutils literal notranslate"><span class="pre">-domain</span></code>: <code class="docutils literal notranslate"><span class="pre">zone</span></code> or <code class="docutils literal notranslate"><span class="pre">octagon</span></code>
+- <code class="docutils literal notranslate"><span class="pre">-walk</span></code>: <code class="docutils literal notranslate"><span class="pre">hitandrun</span></code>, <code class="docutils literal notranslate"><span class="pre">ballwalk</span></code>, <code class="docutils literal notranslate"><span class="pre">diknwalk</span></code>, <code class="docutils literal notranslate"><span class="pre">coordinate</span></code>, <code class="docutils literal notranslate"><span class="pre">constraint</span></code>
+- <code class="docutils literal notranslate"><span class="pre">-samples</span></code>: Number of samples to generate</p>
+</section>
+<section id="c-api-usage">
+<h2>C++ API Usage<a class="headerlink" href="#c-api-usage" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"Solvers/SMT/SMTSampler/SMTSampler.h"</span>
+
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">z3</span><span class="p">;</span>
+
+<span class="n">context</span><span class="w"> </span><span class="n">ctx</span><span class="p">;</span>
+<span class="n">expr</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ctx</span><span class="p">.</span><span class="n">bv_const</span><span class="p">(</span><span class="s">"x"</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">);</span>
+<span class="n">expr</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ctx</span><span class="p">.</span><span class="n">bv_const</span><span class="p">(</span><span class="s">"y"</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">);</span>
+<span class="n">expr</span><span class="w"> </span><span class="n">phi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="p">(</span><span class="n">y</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">10</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">20</span><span class="p">);</span>
+
+<span class="c1">// Create and use sampler</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">sampler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createQuickSampler</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">samples</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sampler</span><span class="o">-&gt;</span><span class="n">sample</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+<section id="related-work">
+<h2>Related Work<a class="headerlink" href="#related-work" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>FMCAD 19: GUIDEDSAMPLER - Coverage-guided Sampling of SMT Solutions</p></li>
+<li><p>ICSE 18: Efficient Sampling of SAT Solutions for Testing</p></li>
+</ul>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="smt.html"><span class="doc">SMT (Satisfiability Modulo Theories)</span></a> - SMT solver backend</p></li>
+<li><p><a class="reference internal" href="symabs.html"><span class="doc">SMT Formula Abstraction (SymAbs)</span></a> - Symbolic abstraction library (used by RegionSampler)</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="wpds.html" class="btn btn-neutral float-left" title="WPDS (Weighted Pushdown Systems)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="symabs.html" class="btn btn-neutral float-right" title="SMT Formula Abstraction (SymAbs)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

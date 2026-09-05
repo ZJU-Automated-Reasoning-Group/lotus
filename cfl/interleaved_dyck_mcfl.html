@@ -1,0 +1,353 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multiple Context-Free Language Reachability &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Mutual Refinement for CFL Reachability" href="interleaved_dyck_mutual_refinement.html" />
+    <link rel="prev" title="Interleaved-Dyck Graph Reduction" href="interleaved_dyck_graph_reduction.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Context-Free Language Analysis</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="cfl_components.html">CFL Reachability Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="classical.html">Classical Grammar-Driven CFL Reachability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pocr_migration.html">POCR Migration Matrix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pearl_stg_sqid.html">Paper Engines: PEARL, Stg, and Sqid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="csindex.html">Context-Sensitive Reachability Indexing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_unary.html">Exact Unary Interleaved Dyck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_staged_bounds.html">Interleaved-Dyck Staged Bounds</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_graph_reduction.html">Interleaved-Dyck Graph Reduction</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Multiple Context-Free Language Reachability</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#choosing-an-mcfl-api">Choosing an MCFL API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#generic-mcfl-solver">Generic MCFL Solver</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#interleaved-dyck-underapproximation">Interleaved-Dyck Underapproximation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#shared-typed-graph-adapter">Shared typed graph adapter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#command-line-tool">Command-Line Tool</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#validation-and-complexity">Validation and Complexity</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_mutual_refinement.html">Mutual Refinement for CFL Reachability</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Context-Free Language Analysis</a></li>
+      <li class="breadcrumb-item active">Multiple Context-Free Language Reachability</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/cfl/interleaved_dyck_mcfl.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="multiple-context-free-language-reachability">
+<h1>Multiple Context-Free Language Reachability<a class="headerlink" href="#multiple-context-free-language-reachability" title="Link to this heading"></a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">CFL/InterleavedDyck/MCFL</span></code> component contains two related but semantically distinct
+solvers: exact reachability for a client-supplied MCFG and dimension-indexed
+typed interleaved-Dyck underapproximations.</p>
+<p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">include/CFL/InterleavedDyck/MCFL/</span></code>, <code class="docutils literal notranslate"><span class="pre">lib/CFL/InterleavedDyck/MCFL/</span></code></p>
+<section id="choosing-an-mcfl-api">
+<h2>Choosing an MCFL API<a class="headerlink" href="#choosing-an-mcfl-api" title="Link to this heading"></a></h2>
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-text">Guarantees of the two public solver APIs</span><a class="headerlink" href="#id1" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 24.0%" />
+<col style="width: 31.0%" />
+<col style="width: 25.0%" />
+<col style="width: 20.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>API</p></th>
+<th class="head"><p>Model</p></th>
+<th class="head"><p>Guarantee</p></th>
+<th class="head"><p>Output</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">interleaved_dyck::mcfl::Solver</span></code></p></td>
+<td><p>A client-supplied supported MCFG</p></td>
+<td><p>Exact for that grammar</p></td>
+<td><p>Pair relation, tuple facts, witnesses</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">interleaved_dyck::mcfl::InterleavedDyckSolver</span></code></p></td>
+<td><p>Typed <code class="docutils literal notranslate"><span class="pre">G_d^circ</span></code> or <code class="docutils literal notranslate"><span class="pre">G_d^+</span></code> grammar</p></td>
+<td><p>Sound underapproximation</p></td>
+<td><p>Pair set and statistics per dimension</p></td>
+</tr>
+</tbody>
+</table>
+<p>Exactness of <code class="docutils literal notranslate"><span class="pre">interleaved_dyck::mcfl::Solver</span></code> is relative to its input grammar. When the input
+grammar is <code class="docutils literal notranslate"><span class="pre">G_d^circ</span></code> or <code class="docutils literal notranslate"><span class="pre">G_d^+</span></code>, the result remains an
+underapproximation of typed interleaved-Dyck reachability. Exact unary
+reachability lives in the independent <a class="reference internal" href="interleaved_dyck_unary.html"><span class="doc">Exact Unary Interleaved Dyck</span></a> module.</p>
+</section>
+<section id="generic-mcfl-solver">
+<h2>Generic MCFL Solver<a class="headerlink" href="#generic-mcfl-solver" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">lotus::cfl::interleaved_dyck::mcfl::Grammar</span></code> represents a non-deleting, non-permuting MCFG in
+the paper’s normal form. Its builders cover the five normal-form operations:
+terminal/epsilon seeds, terminal prepend, terminal append, independent
+component insertion, and component concatenation. <code class="docutils literal notranslate"><span class="pre">Grammar::validate</span></code>
+checks all arities, variable references, linearity, non-deletion, and variable
+order before analysis starts.</p>
+<p><code class="docutils literal notranslate"><span class="pre">Solver::solve</span></code> computes all derived tuples
+<code class="docutils literal notranslate"><span class="pre">A[(u1,v1),...,(uk,vk)]</span></code> with worklist saturation. Type-5 joins are indexed
+by individual component endpoints. Adjacent tuple components that cannot be
+connected in the underlying graph are pruned, as described in the paper’s
+implementation section.</p>
+<p>The result exposes:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">reachablePairs</span></code></dt><dd><p>All start-symbol endpoint pairs, including reflexive epsilon results.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">facts</span></code></dt><dd><p>The complete saturated relation for every nonterminal and tuple component.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">stats</span></code></dt><dd><p>Fact, worklist, join, duplicate, and pruning counters.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">witness(u,v)</span></code></dt><dd><p>A concrete labeled path reconstructed from the first proof DAG for the
+requested reachable pair.</p>
+</dd>
+</dl>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"CFL/InterleavedDyck/MCFL/Grammar.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"CFL/InterleavedDyck/MCFL/Graph.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"CFL/InterleavedDyck/MCFL/Solver.h"</span>
+
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">lotus</span><span class="o">::</span><span class="nn">cfl</span><span class="o">::</span><span class="nn">interleaved_dyck</span><span class="o">::</span><span class="nn">mcfl</span><span class="p">;</span>
+
+<span class="n">Grammar</span><span class="w"> </span><span class="n">grammar</span><span class="p">;</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">grammar</span><span class="p">.</span><span class="n">addNonterminal</span><span class="p">(</span><span class="s">"S"</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">atom</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">grammar</span><span class="p">.</span><span class="n">addNonterminal</span><span class="p">(</span><span class="s">"Atom"</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">tail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">grammar</span><span class="p">.</span><span class="n">addNonterminal</span><span class="p">(</span><span class="s">"Tail"</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="n">grammar</span><span class="p">.</span><span class="n">setStart</span><span class="p">(</span><span class="n">s</span><span class="p">);</span>
+<span class="n">grammar</span><span class="p">.</span><span class="n">addBasic</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span><span class="w"> </span><span class="s">"x"</span><span class="p">);</span>
+<span class="n">grammar</span><span class="p">.</span><span class="n">addAppend</span><span class="p">(</span><span class="n">tail</span><span class="p">,</span><span class="w"> </span><span class="n">atom</span><span class="p">,</span><span class="w"> </span><span class="s">"b"</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="n">grammar</span><span class="p">.</span><span class="n">addPrepend</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="n">tail</span><span class="p">,</span><span class="w"> </span><span class="s">"a"</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+
+<span class="n">Graph</span><span class="w"> </span><span class="n">graph</span><span class="p">;</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">addEdge</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="s">"a"</span><span class="p">);</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">addEdge</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="s">"x"</span><span class="p">);</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">addEdge</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="s">"b"</span><span class="p">);</span>
+
+<span class="n">ReachabilityResult</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Solver</span><span class="p">{}.</span><span class="n">solve</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span><span class="w"> </span><span class="n">grammar</span><span class="p">);</span>
+<span class="kt">bool</span><span class="w"> </span><span class="n">reachable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">result</span><span class="p">.</span><span class="n">reaches</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">);</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">result</span><span class="p">.</span><span class="n">witness</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+<section id="interleaved-dyck-underapproximation">
+<h2>Interleaved-Dyck Underapproximation<a class="headerlink" href="#interleaved-dyck-underapproximation" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">buildInterleavedDyckGrammar</span></code> creates either of the paper’s rank-2 grammar
+families for any positive dimension:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">InterleavedGrammarVariant::Simple</span></code></dt><dd><p>The bounded component-interleaving grammar <code class="docutils literal notranslate"><span class="pre">G_d^circ</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">InterleavedGrammarVariant::Full</span></code></dt><dd><p>The stronger <code class="docutils literal notranslate"><span class="pre">G_d^+</span></code> grammar with insertion and nesting productions.</p>
+</dd>
+</dl>
+<p>The staged <code class="docutils literal notranslate"><span class="pre">InterleavedDyckSolver</span></code> accepts artifact-compatible DOT labels:</p>
+<table class="docutils align-default" id="id2">
+<caption><span class="caption-text">Edge labels</span><a class="headerlink" href="#id2" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 80.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Label</p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">op--N</span></code> / <code class="docutils literal notranslate"><span class="pre">cp--N</span></code></p></td>
+<td><p>Opening/closing parenthesis of type <code class="docutils literal notranslate"><span class="pre">N</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ob--N</span></code> / <code class="docutils literal notranslate"><span class="pre">cb--N</span></code></p></td>
+<td><p>Opening/closing bracket of type <code class="docutils literal notranslate"><span class="pre">N</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">normal</span></code></p></td>
+<td><p>Neutral edge accepted by both projections.</p></td>
+</tr>
+</tbody>
+</table>
+<p>For dimensions <code class="docutils literal notranslate"><span class="pre">1</span></code> through <code class="docutils literal notranslate"><span class="pre">d</span></code>, the driver filters unmatched delimiter
+types, performs the artifact’s neutral-edge and mutual-reachability
+condensation, splits weak components, computes projected Dyck feasibility,
+runs MCFL saturation, and expands pairs to the original graph. Staged results
+omit reflexive pairs.</p>
+<p>Every reported pair is certified typed interleaved-Dyck reachable. A missing
+pair is unresolved rather than certified unreachable: it may require a larger
+dimension or a path outside the selected grammar family.</p>
+<p>The default expansion filters the Cartesian product of condensed vertices by
+plain reachability in the original graph. This avoids a reference-artifact
+quirk where contracting a one-way <code class="docutils literal notranslate"><span class="pre">normal</span></code> edge reports its reverse pair.
+Set <code class="docutils literal notranslate"><span class="pre">CondensationExpansionPolicy::ArtifactCompatible</span></code> for exact reproduction
+of that cross-product behavior.</p>
+</section>
+<section id="shared-typed-graph-adapter">
+<h2>Shared typed graph adapter<a class="headerlink" href="#shared-typed-graph-adapter" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">InterleavedDyckSolver</span></code> accepts
+<code class="docutils literal notranslate"><span class="pre">lotus::cfl::interleaved_dyck::Graph</span></code> directly. The adapter converts typed
+labels to the generic MCFL terminal strings, allowing MCFL and
+<a class="reference internal" href="interleaved_dyck_staged_bounds.html"><span class="doc">Interleaved-Dyck Staged Bounds</span></a> to consume one parsed benchmark graph.
+The generic <code class="docutils literal notranslate"><span class="pre">interleaved_dyck::mcfl::Graph</span></code> remains available for arbitrary client grammars
+whose terminals are not interleaved-Dyck labels.</p>
+</section>
+<section id="command-line-tool">
+<h2>Command-Line Tool<a class="headerlink" href="#command-line-tool" title="Link to this heading"></a></h2>
+<p>Build CFL tools and run the full hierarchy through dimension two:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">cmake -S . -B build -DLOTUS_ENABLE_CFL=ON</span>
+<span class="go">cmake --build build --target lotus-cfl-interleaved-dyck-mcfl</span>
+<span class="go">build/bin/lotus-cfl-interleaved-dyck-mcfl --dimension 2 graph.dot</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">--simple</span></code> selects <code class="docutils literal notranslate"><span class="pre">G_d^circ</span></code>. <code class="docutils literal notranslate"><span class="pre">--no-condense</span></code> disables cycle
+elimination, <code class="docutils literal notranslate"><span class="pre">--artifact-compatible</span></code> selects the artifact’s condensed
+cross-product expansion, <code class="docutils literal notranslate"><span class="pre">--stats</span></code> prints saturation counters, and
+<code class="docutils literal notranslate"><span class="pre">--print-pairs</span></code> emits the final endpoint relation.</p>
+<p>The exact unary algorithms share the separate
+<code class="docutils literal notranslate"><span class="pre">lotus-cfl-interleaved-dyck-unary</span></code> executable documented in
+<a class="reference internal" href="interleaved_dyck_unary.html"><span class="doc">Exact Unary Interleaved Dyck</span></a>.</p>
+</section>
+<section id="validation-and-complexity">
+<h2>Validation and Complexity<a class="headerlink" href="#validation-and-complexity" title="Link to this heading"></a></h2>
+<p>Unit tests cover all five rule types, empty output components, rank-three
+joins, epsilon semantics, two-dimensional copy languages, proof witnesses,
+grammar validation, DOT parsing, and the paper’s length-4 and length-6
+language-coverage counts. Artifact benchmark regression checks load the shared
+typed graph and reproduce the published MCFL pair counts.</p>
+<p>For fixed grammar dimension <code class="docutils literal notranslate"><span class="pre">d</span></code> and rank <code class="docutils literal notranslate"><span class="pre">r</span></code>, the theoretical bounds are
+those proved in the paper: polynomial grammar factors times
+<code class="docutils literal notranslate"><span class="pre">delta</span> <span class="pre">*</span> <span class="pre">n^(2d)</span></code> for rank one, and polynomial grammar factors times
+<code class="docutils literal notranslate"><span class="pre">n^(d(r+1))</span></code> for rank greater than one. The solver materializes all derived
+facts and proofs, so dense high-dimensional instances can require substantial
+time and memory.</p>
+<p>The implementation is clean-room C++ based on the published algorithm. The
+GPLv3 reference artifact is used only for observable compatibility checks; its
+Go/Python source is not copied into Lotus.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="interleaved_dyck_graph_reduction.html" class="btn btn-neutral float-left" title="Interleaved-Dyck Graph Reduction" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="interleaved_dyck_mutual_refinement.html" class="btn btn-neutral float-right" title="Mutual Refinement for CFL Reachability" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

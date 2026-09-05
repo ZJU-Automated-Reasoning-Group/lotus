@@ -1,0 +1,291 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dataflow Tools &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="PDG Query – Program Dependence Graph Queries" href="../ir/index.html" />
+    <link rel="prev" title="Checker Tools" href="../checker/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Lotus
+              <img src="../../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Command-Line Tools</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#tools-by-subdirectory">Tools by Subdirectory</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../alias/index.html">Alias Analysis Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cfl/index.html">CFL Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../checker/index.html">Checker Tools</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Dataflow Tools</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lotus-dfa">lotus-dfa</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lotus-dfa-apa">lotus-dfa-apa</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lotus-dfa-mono">lotus-dfa-mono</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lotus-dfa-ifds">lotus-dfa-ifds</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lotus-dfa-npa">lotus-dfa-npa</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#see-also">See also</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../ir/index.html">PDG Query – Program Dependence Graph Queries</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optimization/index.html">Optimization Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../solver/index.html">Solver Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../verifier/index.html">Verifier Tools</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#scripting-tools">Scripting Tools</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Command-Line Tools</a></li>
+      <li class="breadcrumb-item active">Dataflow Tools</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/tools/dataflow/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="dataflow-tools">
+<h1>Dataflow Tools<a class="headerlink" href="#dataflow-tools" title="Link to this heading"></a></h1>
+<p>This page documents the testing and comparison tools under <code class="docutils literal notranslate"><span class="pre">tools/dataflow/</span></code>.
+They are primarily intended for validating and comparing Lotus dataflow engines
+over the same LLVM IR input.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>The current front-ends focus on intraprocedural or IFDS-style benchmark runs and
+emit machine-readable summaries that are easy to diff in tests.</p>
+</section>
+<section id="lotus-dfa">
+<h2>lotus-dfa<a class="headerlink" href="#lotus-dfa" title="Link to this heading"></a></h2>
+<p>Differential-testing front-end that compares multiple engines on the same
+analysis problem.</p>
+<p><strong>Binary</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-dfa</span></code></p>
+<p><strong>Source</strong>: <code class="docutils literal notranslate"><span class="pre">tools/dataflow/lotus-dfa-diff.cpp</span></code></p>
+<p><strong>Usage</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-dfa<span class="w"> </span>--analysis<span class="o">=</span>liveness<span class="w"> </span>input.bc
+./build/bin/lotus-dfa<span class="w"> </span>--analysis<span class="o">=</span>constant_prop<span class="w"> </span>--engine<span class="o">=</span>all<span class="w"> </span>input.bc
+./build/bin/lotus-dfa<span class="w"> </span>--analysis<span class="o">=</span>reaching_defs<span class="w"> </span>--engine<span class="o">=</span>ifds<span class="w"> </span>input.bc
+</pre></div>
+</div>
+<p>Important options:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--analysis=liveness|reaching_defs|uninitialized|constant_prop|available_exprs|reachable</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--engine=elim|mono|ifds|all</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--elim-method=state|adt-simple|adt-delayed</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--out-dir=&lt;dir&gt;</span></code></p></li>
+</ul>
+</section>
+<section id="lotus-dfa-apa">
+<h2>lotus-dfa-apa<a class="headerlink" href="#lotus-dfa-apa" title="Link to this heading"></a></h2>
+<p>Standalone front-end for the elimination-based APA engine.</p>
+<p><strong>Binary</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-dfa-apa</span></code></p>
+<p><strong>Source</strong>: <code class="docutils literal notranslate"><span class="pre">tools/dataflow/lotus-dfa-apa.cpp</span></code></p>
+<p>Supports the same <code class="docutils literal notranslate"><span class="pre">--analysis</span></code> space as <code class="docutils literal notranslate"><span class="pre">lotus-dfa</span></code> plus
+<code class="docutils literal notranslate"><span class="pre">--elim-method</span></code> for choosing the elimination solver variant.</p>
+<p>Profiling-oriented dumps are available with:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--dump-profile</span></code> to emit CFG, solver, and path-expression summary metrics</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--dump-exprs</span></code> to additionally emit per-instruction path-expression stats and serialized expressions</p></li>
+</ul>
+</section>
+<section id="lotus-dfa-mono">
+<h2>lotus-dfa-mono<a class="headerlink" href="#lotus-dfa-mono" title="Link to this heading"></a></h2>
+<p>Standalone front-end for the Mono engine.</p>
+<p><strong>Binary</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-dfa-mono</span></code></p>
+<p><strong>Source</strong>: <code class="docutils literal notranslate"><span class="pre">tools/dataflow/lotus-dfa-mono.cpp</span></code></p>
+<p>Supported analyses:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">liveness</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">reachable</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">constant_prop</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">uninitialized</span></code></p></li>
+</ul>
+</section>
+<section id="lotus-dfa-ifds">
+<h2>lotus-dfa-ifds<a class="headerlink" href="#lotus-dfa-ifds" title="Link to this heading"></a></h2>
+<p>Standalone front-end for IFDS-based analyses.</p>
+<p><strong>Binary</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-dfa-ifds</span></code></p>
+<p><strong>Source</strong>: <code class="docutils literal notranslate"><span class="pre">tools/dataflow/lotus-dfa-ifds.cpp</span></code></p>
+<p>Supported analyses:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">reaching_defs</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">uninitialized</span></code></p></li>
+</ul>
+</section>
+<section id="lotus-dfa-npa">
+<h2>lotus-dfa-npa<a class="headerlink" href="#lotus-dfa-npa" title="Link to this heading"></a></h2>
+<p>Standalone front-end for the NPA (Newton Program Analysis) engine supporting
+both intraprocedural and interprocedural analyses.</p>
+<p><strong>Binary</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-dfa-npa</span></code></p>
+<p><strong>Source</strong>: <code class="docutils literal notranslate"><span class="pre">tools/dataflow/lotus-dfa-npa.cpp</span></code></p>
+<p><strong>Usage</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>lotus-dfa-npa<span class="w"> </span><span class="o">[</span>options<span class="o">]</span><span class="w"> </span>&lt;bitcode<span class="w"> </span>file&gt;
+</pre></div>
+</div>
+<p><strong>Options</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;bitcode&gt;</span></code>: positional, required, path to LLVM .bc or .ll file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--out-dir</span> <span class="pre">&lt;dir&gt;</span></code>: string, default “”, output directory (writes npa.txt)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--stdout</span></code>: bool, default false, force output to terminal</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--analysis</span> <span class="pre">&lt;name&gt;</span></code>: string, default “liveness”, one of: liveness, reaching_defs, reachable, inter_liveness, inter_reaching_defs, inter_uninitialized, inter_constant_prop, inter_interval, inter_nullability</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--solver</span> <span class="pre">&lt;name&gt;</span></code>: string, default “newton”, newton or kleene (inter analyses require newton)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--linear-solver</span> <span class="pre">&lt;name&gt;</span></code>: string, default “scc”, scc, adaptive_scc, or tensor</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-nworkers=&lt;N&gt;</span></code>: unsigned, parallel workers for function scheduling</p></li>
+</ul>
+<p>Intraprocedural analyses:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">liveness</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">reaching_defs</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">reachable</span></code></p></li>
+</ul>
+<p>Interprocedural analyses:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">inter_liveness</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">inter_reaching_defs</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">inter_uninitialized</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">inter_constant_prop</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">inter_interval</span></code> (range analysis)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">inter_nullability</span></code> (null-pointer analysis)</p></li>
+</ul>
+<p>Output format:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[npa:&lt;analysis&gt;:&lt;scope&gt;:linear=&lt;linear-solver&gt;:workers=&lt;N&gt;:parallel=&lt;on|off&gt;]
+FUNC &lt;name&gt;
+  bb&lt;N&gt; IN: &lt;comma-separated value ids&gt;
+</pre></div>
+</div>
+</section>
+<section id="see-also">
+<h2>See also<a class="headerlink" href="#see-also" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>See <a class="reference internal" href="../../dataflow/apa.html"><span class="doc">Algebraic Program Analysis (APA)</span></a>, <a class="reference internal" href="../../dataflow/mono.html"><span class="doc">Monotone Dataflow Engine</span></a>,
+<a class="reference internal" href="../../dataflow/ifds_ide.html"><span class="doc">IFDS / IDE Engine</span></a>, and <a class="reference internal" href="../../dataflow/npa.html"><span class="doc">Newtonian Program Analysis (NPA)</span></a> for the
+underlying engines.</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../checker/index.html" class="btn btn-neutral float-left" title="Checker Tools" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../ir/index.html" class="btn btn-neutral float-right" title="PDG Query – Program Dependence Graph Queries" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

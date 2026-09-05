@@ -1,0 +1,556 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Utility Libraries &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Utility ADTs and Worklists" href="adt.html" />
+    <link rel="prev" title="Utilities" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Utilities</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Utility Libraries</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#platform-utilities">Platform Utilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#random">Random</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#types">Types</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#benchmark">Benchmark</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#abstract-data-types-adt">Abstract Data Types (ADT)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#formats">Formats</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#algorithms">Algorithms</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#vendor">Vendor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#usage">Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#parallel-utilities">Parallel Utilities</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#recommended-threadpool-patterns">Recommended ThreadPool patterns</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cancellation">Cancellation</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#llvm-utilities">LLVM Utilities</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#ir-manipulation-and-analysis">IR Manipulation and Analysis</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#i-o-utilities">I/O Utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#debugging-and-profiling">Debugging and Profiling</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#work-lists">Work Lists</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#graph-utilities">Graph Utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#scheduler">Scheduler</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#multi-threading">Multi-threading</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#system-headers">System Headers</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#common-usage-patterns">Common Usage Patterns</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="adt.html">Utility ADTs and Worklists</a></li>
+<li class="toctree-l2"><a class="reference internal" href="algorithms.html">Path Expression Algorithms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark.html">Microbenchmark Helpers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="formats.html">Parsing and Serialization Utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="llvm.html">LLVM Utility Layer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parallel.html">Parallel Execution Infrastructure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="platform.html">Platform and Console Utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="random.html">Random Number Utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="types.html">Core Utility Types</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Utilities</a></li>
+      <li class="breadcrumb-item active">Utility Libraries</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/utils/utilities.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="utility-libraries">
+<h1>Utility Libraries<a class="headerlink" href="#utility-libraries" title="Link to this heading"></a></h1>
+<p>Lotus provides comprehensive utility libraries organized into categories: Platform, Random, Types, Benchmark, ADT, Formats, Algorithms, Vendor, LLVM, and Parallel.</p>
+<p>Dedicated module pages:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="adt.html"><span class="doc">Utility ADTs and Worklists</span></a></p></li>
+<li><p><a class="reference internal" href="algorithms.html"><span class="doc">Path Expression Algorithms</span></a></p></li>
+<li><p><a class="reference internal" href="benchmark.html"><span class="doc">Microbenchmark Helpers</span></a></p></li>
+<li><p><a class="reference internal" href="formats.html"><span class="doc">Parsing and Serialization Utilities</span></a></p></li>
+<li><p><a class="reference internal" href="llvm.html"><span class="doc">LLVM Utility Layer</span></a></p></li>
+<li><p><a class="reference internal" href="parallel.html"><span class="doc">Parallel Execution Infrastructure</span></a></p></li>
+<li><p><a class="reference internal" href="platform.html"><span class="doc">Platform and Console Utilities</span></a></p></li>
+<li><p><a class="reference internal" href="random.html"><span class="doc">Random Number Utilities</span></a></p></li>
+<li><p><a class="reference internal" href="types.html"><span class="doc">Core Utility Types</span></a></p></li>
+</ul>
+<section id="platform-utilities">
+<h2>Platform Utilities<a class="headerlink" href="#platform-utilities" title="Link to this heading"></a></h2>
+<p>Platform, timing, and display utilities in <code class="docutils literal notranslate"><span class="pre">lib/Utils/Platform/</span></code> and <code class="docutils literal notranslate"><span class="pre">include/Utils/Platform/</span></code>:</p>
+<ul class="simple">
+<li><p><strong>System.h</strong> - System information (OS detection, endianness, time utilities)</p></li>
+<li><p><strong>Timer.h</strong> - Timeout and timing utilities</p></li>
+<li><p><strong>ProgressBar.h</strong> - Progress bar display utilities</p></li>
+</ul>
+</section>
+<section id="random">
+<h2>Random<a class="headerlink" href="#random" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>RNG.h</strong> (<code class="docutils literal notranslate"><span class="pre">include/Utils/Random/</span></code>) - Random number generator (Mersenne Twister)</p></li>
+</ul>
+<section id="types">
+<h3>Types<a class="headerlink" href="#types" title="Link to this heading"></a></h3>
+<p>Type utilities in <code class="docutils literal notranslate"><span class="pre">include/Utils/Types/</span></code>:</p>
+<ul class="simple">
+<li><p><strong>Offset.h</strong> - Offset manipulation utilities</p></li>
+<li><p><strong>Nullable.h</strong> - Nullable type utilities</p></li>
+<li><p><strong>ScopeExit.h</strong> - RAII-style scope exit handlers</p></li>
+<li><p><strong>range.h</strong> - Range utilities</p></li>
+</ul>
+</section>
+<section id="benchmark">
+<h3>Benchmark<a class="headerlink" href="#benchmark" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Microbench.h</strong> (<code class="docutils literal notranslate"><span class="pre">include/Utils/Benchmark/</span></code>) - Microbenchmarking utilities</p></li>
+</ul>
+</section>
+<section id="abstract-data-types-adt">
+<h3>Abstract Data Types (ADT)<a class="headerlink" href="#abstract-data-types-adt" title="Link to this heading"></a></h3>
+<p>Data structures in <code class="docutils literal notranslate"><span class="pre">lib/Utils/ADT/</span></code> and <code class="docutils literal notranslate"><span class="pre">include/Utils/ADT/</span></code>:</p>
+<ul class="simple">
+<li><p><strong>BDD.h</strong> - Binary Decision Diagram implementation</p></li>
+<li><p><strong>DisjointSet.h</strong> - Disjoint set data structure (Union-Find)</p></li>
+<li><p><strong>Hashing.h</strong> - Hash utilities and helpers</p></li>
+<li><p><strong>ImmutableMap.h</strong> / <strong>ImmutableSet.h</strong> / <strong>ImmutableTree.h</strong> - Immutable collections</p></li>
+<li><p><strong>IntervalsList.h</strong> - Interval list data structure</p></li>
+<li><p><strong>MapOfSets.h</strong> - Map of sets container</p></li>
+<li><p><strong>OrderedSet.h</strong> - Ordered set container</p></li>
+<li><p><strong>PriorityWorkList.h</strong> - Priority queue work list</p></li>
+<li><p><strong>PushPopCache.h</strong> - Cache with push/pop semantics</p></li>
+<li><p><strong>SortedVector.h</strong> - Sorted vector implementation</p></li>
+<li><p><strong>TreeStream.h</strong> - Tree-structured stream output</p></li>
+<li><p><strong>TwoLevelWorkList.h</strong> - Two-level work list</p></li>
+<li><p><strong>UnionFind.h</strong> - Union-Find data structure (unsigned-based)</p></li>
+<li><p><strong>VectorMap.h</strong> / <strong>VectorSet.h</strong> - Vector-based map/set containers</p></li>
+<li><p><strong>anatree.h</strong> - Tree analysis utilities</p></li>
+<li><p><strong>GraphSlicer.h</strong> - Graph slicing utilities</p></li>
+<li><p><strong>PdQsort.h</strong> - Parallel quicksort implementation</p></li>
+</ul>
+<p>Iterator utilities (<code class="docutils literal notranslate"><span class="pre">include/Utils/ADT/Iterator/</span></code>):</p>
+<ul class="simple">
+<li><p><strong>DereferenceIterator.h</strong> - Iterator that dereferences values</p></li>
+<li><p><strong>filter_iterator.h</strong> - Filtered iterator</p></li>
+<li><p><strong>InfixOutputIterator.h</strong> - Output iterator with infix separators</p></li>
+<li><p><strong>IteratorAdaptor.h</strong> / <strong>IteratorFacade.h</strong> - Iterator base classes</p></li>
+<li><p><strong>IteratorRange.h</strong> - Range wrapper for iterators</p></li>
+<li><p><strong>IteratorTrait.h</strong> - Iterator trait utilities</p></li>
+<li><p><strong>MapValueIterator.h</strong> - Iterator over map values</p></li>
+<li><p><strong>UniquePtrIterator.h</strong> - Iterator for unique pointers</p></li>
+</ul>
+<p><strong>Usage</strong>:
+.. code-block:: cpp</p>
+<blockquote>
+<div><p>#include “Utils/ADT/DisjointSet.h”
+DisjointSet&lt;int&gt; ds;
+ds.makeSet(0);
+ds.makeSet(1);
+ds.doUnion(0, 1);
+int root = ds.findSet(0);</p>
+</div></blockquote>
+<p><strong>Note</strong>: There are two Union-Find implementations in <code class="docutils literal notranslate"><span class="pre">include/Utils/ADT/</span></code>:
+- <strong>UnionFind.h</strong> - Simple unsigned-based implementation with <code class="docutils literal notranslate"><span class="pre">mk()</span></code>, <code class="docutils literal notranslate"><span class="pre">find()</span></code>, <code class="docutils literal notranslate"><span class="pre">merge()</span></code>
+- <strong>DisjointSet.h</strong> - Template-based implementation with <code class="docutils literal notranslate"><span class="pre">makeSet()</span></code>, <code class="docutils literal notranslate"><span class="pre">findSet()</span></code>, <code class="docutils literal notranslate"><span class="pre">doUnion()</span></code></p>
+</section>
+<section id="formats">
+<h3>Formats<a class="headerlink" href="#formats" title="Link to this heading"></a></h3>
+<p>Data format parsing and serialization in <code class="docutils literal notranslate"><span class="pre">lib/Utils/Formats/</span></code> and <code class="docutils literal notranslate"><span class="pre">include/Utils/Formats/</span></code>:</p>
+<ul class="simple">
+<li><p><strong>cJSON.h</strong> - Lightweight JSON parser/generator (C library)</p></li>
+<li><p><strong>json11.hpp</strong> - C++ JSON library</p></li>
+<li><p><strong>SExpr.h</strong> - S-expression parsing</p></li>
+<li><p><strong>pcomb/</strong> - Parser combinator library</p></li>
+</ul>
+</section>
+<section id="algorithms">
+<h3>Algorithms<a class="headerlink" href="#algorithms" title="Link to this heading"></a></h3>
+<p>Algorithm implementations in <code class="docutils literal notranslate"><span class="pre">include/Utils/Algorithms/</span></code>:</p>
+<ul class="simple">
+<li><p><strong>PathExpressions/</strong> - Tarjan’s path expression algorithm over labeled graphs (regular expressions describing all paths between two nodes)</p></li>
+</ul>
+<p>Parser Combinator Framework (pcomb):
+- <strong>pcomb.h</strong> - Main header
+- <strong>Parser/</strong> - Base parser classes (Parser, ParseResult, StringParser, RegexParser, etc.)
+- <strong>Combinator/</strong> - Combinators (AltParser, SeqParser, ManyParser, LazyParser, etc.)
+- <strong>InputStream/</strong> - Input stream abstractions</p>
+</section>
+<section id="vendor">
+<h3>Vendor<a class="headerlink" href="#vendor" title="Link to this heading"></a></h3>
+<p>Third-party vendored libraries in <code class="docutils literal notranslate"><span class="pre">include/Utils/Vendor/</span></code>:</p>
+<ul class="simple">
+<li><p><strong>spdlog/</strong> - Fast C++ logging library</p></li>
+<li><p><strong>CLI11.h</strong> - Command-line argument parsing</p></li>
+</ul>
+</section>
+<section id="usage">
+<h3>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h3>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"Utils/Platform/Timer.h"</span>
+<span class="n">Timer</span><span class="w"> </span><span class="nf">timer</span><span class="p">(</span><span class="mf">5.0</span><span class="p">,</span><span class="w"> </span><span class="p">[]()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cm">/* timeout action */</span><span class="w"> </span><span class="p">});</span>
+<span class="n">timer</span><span class="p">.</span><span class="n">check</span><span class="p">();</span><span class="w"> </span><span class="c1">// Check for timeout</span>
+
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"Utils/Platform/ProgressBar.h"</span>
+<span class="n">ProgressBar</span><span class="w"> </span><span class="n">bar</span><span class="p">(</span><span class="s">"Processing"</span><span class="p">,</span><span class="w"> </span><span class="n">ProgressBar</span><span class="o">::</span><span class="n">PBS_CharacterStyle</span><span class="p">);</span>
+<span class="n">bar</span><span class="p">.</span><span class="n">showProgress</span><span class="p">(</span><span class="mf">0.5</span><span class="p">);</span><span class="w"> </span><span class="c1">// 50% complete</span>
+
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"Annotation/APISpec.h"</span>
+<span class="n">lotus</span><span class="o">::</span><span class="n">APISpec</span><span class="w"> </span><span class="n">spec</span><span class="p">;</span>
+<span class="n">spec</span><span class="p">.</span><span class="n">loadFile</span><span class="p">(</span><span class="s">"config/ptr.spec"</span><span class="p">,</span><span class="w"> </span><span class="n">errorMsg</span><span class="p">);</span>
+<span class="kt">bool</span><span class="w"> </span><span class="n">ignored</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">spec</span><span class="p">.</span><span class="n">isIgnored</span><span class="p">(</span><span class="s">"malloc"</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="parallel-utilities">
+<h2>Parallel Utilities<a class="headerlink" href="#parallel-utilities" title="Link to this heading"></a></h2>
+<p>Multi-threading utilities in <code class="docutils literal notranslate"><span class="pre">lib/Utils/Parallel/</span></code> and <code class="docutils literal notranslate"><span class="pre">include/Utils/Parallel/</span></code>:</p>
+<ul class="simple">
+<li><p><strong>ThreadPool.h</strong> - Thread pool and task group utilities</p></li>
+<li><p><strong>ThreadSafe.h</strong> - Thread-safe container wrappers</p></li>
+<li><p><strong>Cancellation.h</strong> - Cooperative cancellation tokens for parallel work</p></li>
+</ul>
+<section id="recommended-threadpool-patterns">
+<h3>Recommended ThreadPool patterns<a class="headerlink" href="#recommended-threadpool-patterns" title="Link to this heading"></a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">ThreadPool</span></code> is the preferred entry point for analysis parallelism.</p>
+<ul class="simple">
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">parallelFor()</span></code> for index-based parallel loops.</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">parallelForEach()</span></code> for container traversal when order does not matter.</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">parallelReduce()</span></code> for parallel aggregation followed by deterministic merge on the caller thread.</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">makeThreadLocal()</span></code> or <code class="docutils literal notranslate"><span class="pre">makeThreadLocalReducer()</span></code> for per-worker scratch state instead of raw <code class="docutils literal notranslate"><span class="pre">void*</span></code> thread locals.</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">CancellationSource</span></code> / <code class="docutils literal notranslate"><span class="pre">CancellationToken</span></code> for cooperative cancellation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TaskGroup::wait()</span></code> is safe to call from worker tasks; workers help drain the pool instead of purely blocking.</p></li>
+</ul>
+<p><strong>Usage</strong>:
+.. code-block:: cpp</p>
+<blockquote>
+<div><p>#include “Utils/Parallel/ThreadPool.h”
+ThreadPool* pool = ThreadPool::get();</p>
+<dl class="simple">
+<dt>pool-&gt;parallelFor&lt;int&gt;(0, work_items, 8, [&amp;](int i) {</dt><dd><p>analyze(i);</p>
+</dd>
+</dl>
+<p>});</p>
+<dl>
+<dt>auto total = pool-&gt;parallelReduce&lt;std::size_t&gt;(</dt><dd><p>0, values.size(), 16, 0ULL,
+[&amp;](std::size_t i) { return values[i]; },
+[](unsigned long long acc, unsigned long long value) {</p>
+<blockquote>
+<div><p>return acc + value;</p>
+</div></blockquote>
+<p>});</p>
+</dd>
+<dt>auto reducer = pool-&gt;makeThreadLocalReducer&lt;std::set&lt;int&gt;&gt;(</dt><dd><dl class="simple">
+<dt>[](std::set&lt;int&gt; acc, const std::set&lt;int&gt;&amp; local) {</dt><dd><p>acc.insert(local.begin(), local.end());
+return acc;</p>
+</dd>
+</dl>
+<p>});</p>
+</dd>
+<dt>pool-&gt;parallelFor&lt;int&gt;(0, 32, 4, [&amp;](int i) {</dt><dd><p>reducer.local().insert(i);</p>
+</dd>
+</dl>
+<p>});</p>
+<p>auto all_ids = reducer.reduce({});</p>
+</div></blockquote>
+</section>
+<section id="cancellation">
+<h3>Cancellation<a class="headerlink" href="#cancellation" title="Link to this heading"></a></h3>
+<p>Parallel work uses cooperative cancellation rather than thread interruption.
+Pass a token to <code class="docutils literal notranslate"><span class="pre">TaskGroup::async()</span></code>, <code class="docutils literal notranslate"><span class="pre">parallelFor()</span></code>, or <code class="docutils literal notranslate"><span class="pre">parallelForEach()</span></code>
+when the work should stop early once a scheduler or caller decides to cancel.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"Utils/Parallel/Cancellation.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"Utils/Parallel/ThreadPool.h"</span>
+
+<span class="n">lotus</span><span class="o">::</span><span class="n">CancellationSource</span><span class="w"> </span><span class="n">cancel</span><span class="p">;</span>
+<span class="n">ThreadPool</span><span class="o">*</span><span class="w"> </span><span class="n">pool</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ThreadPool</span><span class="o">::</span><span class="n">get</span><span class="p">();</span>
+<span class="n">pool</span><span class="o">-&gt;</span><span class="n">parallelFor</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">tasks</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="n">cancel</span><span class="p">.</span><span class="n">token</span><span class="p">(),</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cancel</span><span class="p">.</span><span class="n">token</span><span class="p">().</span><span class="n">isCancelled</span><span class="p">())</span>
+<span class="w">    </span><span class="k">return</span><span class="p">;</span>
+<span class="w">  </span><span class="n">process</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+<span class="p">});</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="llvm-utilities">
+<h2>LLVM Utilities<a class="headerlink" href="#llvm-utilities" title="Link to this heading"></a></h2>
+<p>LLVM-specific utilities located in <code class="docutils literal notranslate"><span class="pre">lib/Utils/LLVM/</span></code> and <code class="docutils literal notranslate"><span class="pre">include/Utils/LLVM/</span></code>.</p>
+<section id="ir-manipulation-and-analysis">
+<h3>IR Manipulation and Analysis<a class="headerlink" href="#ir-manipulation-and-analysis" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>InstructionUtils.h</strong> - LLVM instruction utilities (line numbers, names, JSON escaping)</p></li>
+<li><p><strong>Demangle.h</strong> - Name demangling utilities</p></li>
+</ul>
+</section>
+<section id="i-o-utilities">
+<h3>I/O Utilities<a class="headerlink" href="#i-o-utilities" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>FileUtils.h</strong> - File system operations (create directory, read/write files)</p></li>
+<li><p><strong>IO/FileUtils.h</strong> - Additional file utilities</p></li>
+<li><p><strong>IO/ReadFile.h</strong> - File reading utilities</p></li>
+<li><p><strong>IO/ReadIR.h</strong> - LLVM IR reading utilities</p></li>
+<li><p><strong>IO/WriteIR.h</strong> - LLVM IR writing utilities</p></li>
+<li><p><strong>StringUtils.h</strong> - String formatting and manipulation</p></li>
+</ul>
+<p><strong>Usage</strong>:
+.. code-block:: cpp</p>
+<blockquote>
+<div><p>#include “Utils/LLVM/IO/FileUtils.h”
+FileUtil::createDirectory(“output”);
+FileUtil::writeToFile(“output/result.txt”, content);</p>
+</div></blockquote>
+</section>
+<section id="debugging-and-profiling">
+<h3>Debugging and Profiling<a class="headerlink" href="#debugging-and-profiling" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Debug.h</strong> - Debug output utilities</p></li>
+<li><p><strong>Log.h</strong> - Logging infrastructure (uses spdlog from Utils/Vendor/)</p></li>
+<li><p><strong>Statistics.h</strong> - Analysis statistics collection</p></li>
+<li><p><strong>RecursiveTimer.h</strong> - Recursive timing utilities</p></li>
+</ul>
+<p><strong>Usage</strong>:
+.. code-block:: cpp</p>
+<blockquote>
+<div><p>#include “Utils/LLVM/Log.h”
+LOG_INFO(“Analysis completed”);</p>
+<p>#include “Utils/LLVM/Statistics.h”
+Statistics::counter(“functions_analyzed”)++;</p>
+</div></blockquote>
+</section>
+<section id="work-lists">
+<h3>Work Lists<a class="headerlink" href="#work-lists" title="Link to this heading"></a></h3>
+<p>Work list implementations for analysis algorithms:</p>
+<ul class="simple">
+<li><p><strong>FIFOWorkList.h</strong> (<code class="docutils literal notranslate"><span class="pre">include/Utils/LLVM/</span></code>) - First-in-first-out work list</p></li>
+<li><p><strong>PriorityWorkList.h</strong> / <strong>TwoLevelWorkList.h</strong> (<code class="docutils literal notranslate"><span class="pre">include/Utils/ADT/</span></code>) - See ADT section above</p></li>
+</ul>
+</section>
+<section id="graph-utilities">
+<h3>Graph Utilities<a class="headerlink" href="#graph-utilities" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>GenericGraph.h</strong> - Generic graph data structure</p></li>
+<li><p><strong>GraphWriter.h</strong> - Graph visualization utilities</p></li>
+<li><p><strong>LLVMBgl.h</strong> - LLVM CFG iteration adapters</p></li>
+</ul>
+</section>
+<section id="scheduler">
+<h3>Scheduler<a class="headerlink" href="#scheduler" title="Link to this heading"></a></h3>
+<p>Parallel execution scheduling:</p>
+<ul class="simple">
+<li><p><strong>Scheduler/ParallelSchedulerPass.h</strong> - Parallel scheduler pass</p></li>
+<li><p><strong>Scheduler/PipelineScheduler.h</strong> - Pipeline scheduler</p></li>
+<li><p><strong>Task.h</strong> - Task representation</p></li>
+</ul>
+</section>
+<section id="multi-threading">
+<h3>Multi-threading<a class="headerlink" href="#multi-threading" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>ThreadPool.h</strong> - Thread pool implementation for parallel execution</p></li>
+</ul>
+<p><strong>Usage</strong>:
+.. code-block:: cpp</p>
+<blockquote>
+<div><p>#include “Utils/Parallel/ThreadPool.h”
+ThreadPool* pool = ThreadPool::get();
+auto future = pool-&gt;enqueue([]() { return compute(); });
+auto result = future.get();</p>
+</div></blockquote>
+</section>
+<section id="system-headers">
+<h3>System Headers<a class="headerlink" href="#system-headers" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>SystemHeaders.h</strong> - Consolidated LLVM and system header includes</p></li>
+</ul>
+</section>
+</section>
+<section id="common-usage-patterns">
+<h2>Common Usage Patterns<a class="headerlink" href="#common-usage-patterns" title="Link to this heading"></a></h2>
+<p><strong>Timer with Timeout</strong>:
+.. code-block:: cpp</p>
+<blockquote>
+<div><p>#include “Utils/Platform/Timer.h”
+Timer timer(5.0, []() { std::cout &lt;&lt; “Timeout!”; });
+while (condition) {</p>
+<blockquote>
+<div><p>timer.check(); // Check timeout
+// … work …</p>
+</div></blockquote>
+<p>}</p>
+</div></blockquote>
+<p><strong>Progress Reporting</strong>:
+.. code-block:: cpp</p>
+<blockquote>
+<div><p>#include “Utils/Platform/ProgressBar.h”
+ProgressBar bar(“Analyzing”, ProgressBar::PBS_CharacterStyle, 0.01);
+for (size_t i = 0; i &lt; total; ++i) {</p>
+<blockquote>
+<div><p>bar.showProgress(float(i) / total);
+// … work …</p>
+</div></blockquote>
+<p>}</p>
+</div></blockquote>
+<p><strong>Thread Pool</strong>:
+.. code-block:: cpp</p>
+<blockquote>
+<div><p>#include “Utils/Parallel/ThreadPool.h”
+ThreadPool* pool = ThreadPool::get();
+std::vector&lt;std::future&lt;Result&gt;&gt; futures;
+for (auto&amp; item : items) {</p>
+<blockquote>
+<div><p>futures.push_back(pool-&gt;enqueue([&amp;item]() { return process(item); }));</p>
+</div></blockquote>
+<p>}
+for (auto&amp; f : futures) {</p>
+<blockquote>
+<div><p>results.push_back(f.get());</p>
+</div></blockquote>
+<p>}</p>
+</div></blockquote>
+<p><strong>String Formatting</strong>:
+.. code-block:: cpp</p>
+<blockquote>
+<div><p>#include “Utils/LLVM/StringUtils.h”
+std::string msg = format_str(“Function %s has %d instructions”,</p>
+<blockquote>
+<div><p>funcName.c_str(), count);</p>
+</div></blockquote>
+</div></blockquote>
+<p><strong>Logging</strong>:
+.. code-block:: cpp</p>
+<blockquote>
+<div><p>#include “Utils/LLVM/Log.h”
+LOG_INFO(“Starting analysis”);
+LOG_DEBUG(“Processing function: “ &lt;&lt; funcName);
+LOG_ERROR(“Error occurred: “ &lt;&lt; errorMsg);</p>
+</div></blockquote>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Utilities" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="adt.html" class="btn btn-neutral float-right" title="Utility ADTs and Worklists" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

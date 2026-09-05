@@ -1,0 +1,412 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TPA: Flow- and Contex-Sensitive Pointer Analysis &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="TypeQualifier" href="typequalifier.html" />
+    <link rel="prev" title="Alias Specification Manager" href="spec.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Alias Analysis</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="alias_analysis.html">Alias Analysis Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="allocaa.html">AllocAA — Allocation-Based AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sparrowaa.html">Sparrow Pointer Analysis — Inclusion AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aserpta.html">AserPTA — Pointer Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cclyzeraa.html">CclyzerAA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dda.html">DDA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dfpa.html">DFPA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dyckaa.html">DyckAA — Dyck-CFL Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seadsa.html">Sea-DSA — Memory Graph AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fpa.html">FPA — Function Pointer Analyses (FLTA/MLTA/MLTADF/KELP)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flowsensitive.html">Flow-Sensitive Pointer Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lotusaa.html">LotusAA — Lotus AA Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="underapproxaa.html">UnderApproxAA — Must-Alias Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dynaa.html">DynAA — Dynamic Alias AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html">Strict Relations Alias Analysis — Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#vssa-ssi-transformation">1. vSSA / SSI Transformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#symbolic-range-analysis">2. Symbolic Range Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#strict-inequality-construction">3. Strict-Inequality Construction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#constraint-propagation-solver">4. Constraint Propagation Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#alias-disambiguation-final-decision">5. Alias Disambiguation (Final Decision)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#pdg-memory-node-reduction-applicability">6. PDG Memory-Node Reduction (Applicability)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#summary-of-properties">Summary of Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#end-of-document">End of document.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metrics.html">Pointer Analysis Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptsset.html">Points-To Set Backends</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spec.html">Alias Specification Manager</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">TPA: Flow- and Contex-Sensitive Pointer Analysis</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#architecture">Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#core-components">Core Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#transfer-functions">Transfer Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#context-sensitivity">Context Sensitivity</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#memory-model">Memory Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#semi-sparse-representation">Semi-Sparse Representation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#analysis-algorithm">Analysis Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#integration">Integration</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="typequalifier.html">TypeQualifier</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Alias Analysis</a></li>
+      <li class="breadcrumb-item active">TPA: Flow- and Contex-Sensitive Pointer Analysis</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/alias/tpa.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="tpa-flow-and-contex-sensitive-pointer-analysis">
+<h1>TPA: Flow- and Contex-Sensitive Pointer Analysis<a class="headerlink" href="#tpa-flow-and-contex-sensitive-pointer-analysis" title="Link to this heading"></a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>TPA is an <strong>inclusion-based</strong>, <strong>flow- and context-sensitive</strong> pointer analysis framework with k-limiting support.
+It uses a <strong>semi-sparse</strong> program representation to achieve both precision and scalability for large C/C++ programs.</p>
+<ul class="simple">
+<li><p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Alias/InclusionBased/TPA</span></code></p></li>
+</ul>
+</section>
+<section id="architecture">
+<h2>Architecture<a class="headerlink" href="#architecture" title="Link to this heading"></a></h2>
+<p>The analysis pipeline is organized as:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>LLVM IR
+   ↓
+[IR Transforms]
+   ├─ Expand GEP instructions
+   ├─ Expand constant expressions
+   ├─ Expand indirect branches
+   ├─ Fold int-to-ptr casts
+   └─ Global cleanup
+   ↓
+[Front-End Processing]
+   ├─ Type collection and analysis
+   ├─ Array/pointer layout analysis
+   ├─ Struct cast analysis
+   ├─ CFG building and simplification
+   ├─ Function translation
+   └─ Semi-sparse program construction
+   ↓
+[Global Pointer Analysis]
+   ├─ Initialize global variables
+   ├─ Initialize functions
+   └─ Set up special pointers (null, universal)
+   ↓
+[Semi-Sparse Analysis]
+   ├─ Worklist-based propagation
+   ├─ Transfer function evaluation
+   ├─ Context management
+   └─ Store pruning
+   ↓
+Points-to Sets (Env and Store)
+</pre></div>
+</div>
+</section>
+<section id="core-components">
+<h2>Core Components<a class="headerlink" href="#core-components" title="Link to this heading"></a></h2>
+<ol class="arabic">
+<li><p><strong>Front-End</strong> (<code class="docutils literal notranslate"><span class="pre">FrontEnd/</span></code>)
+- <strong>TypeCollector</strong>: Collects and analyzes types from the LLVM module
+- <strong>TypeAnalysis</strong>: Performs type-based analysis
+- <strong>ArrayLayoutAnalysis</strong>: Analyzes array memory layouts
+- <strong>PointerLayoutAnalysis</strong>: Analyzes pointer memory layouts
+- <strong>StructCastAnalysis</strong>: Handles structure casting
+- <strong>CFGBuilder</strong>: Builds control-flow graphs from LLVM functions
+- <strong>CFGSimplifier</strong>: Simplifies CFGs for efficiency
+- <strong>FunctionTranslator</strong>: Translates LLVM functions to CFG representation
+- <strong>InstructionTranslator</strong>: Translates LLVM instructions to CFG nodes
+- <strong>SemiSparseProgramBuilder</strong>: Constructs the semi-sparse program representation
+- <strong>PriorityAssigner</strong>: Assigns priorities to CFG nodes</p></li>
+<li><p><strong>Program Representation</strong> (<code class="docutils literal notranslate"><span class="pre">Program/</span></code>)
+- <strong>SemiSparseProgram</strong>: Main program representation containing CFGs
+- <strong>CFG</strong>: Control-flow graph with nodes for different instruction types
+- <strong>CFGNode</strong>: Base class for CFG nodes (Entry, Alloc, Copy, Offset, Load, Store, Call, Return)</p></li>
+<li><p><strong>Memory Model</strong> (<code class="docutils literal notranslate"><span class="pre">MemoryModel/</span></code>)
+- <strong>MemoryManager</strong>: Manages memory objects and allocations
+- <strong>PointerManager</strong>: Manages pointer values and their contexts
+- <strong>TypeLayout</strong>: Represents type layouts for memory modeling
+- <strong>ArrayLayout</strong>: Handles array memory layouts
+- <strong>PointerLayout</strong>: Handles pointer memory layouts</p></li>
+<li><p><strong>Analysis Engine</strong> (<code class="docutils literal notranslate"><span class="pre">Engine/</span></code>)
+- <strong>SemiSparsePointerAnalysis</strong>: Main analysis class
+- <strong>GlobalPointerAnalysis</strong>: Initializes global state
+- <strong>TransferFunction</strong>: Evaluates transfer functions for CFG nodes
+- <strong>SemiSparsePropagator</strong>: Propagates facts through the program
+- <strong>Initializer</strong>: Sets up initial analysis state
+- <strong>StorePruner</strong>: Prunes unnecessary store information
+- <strong>ExternalCallAnalysis</strong>: Handles external function calls
+- <strong>Transfer/</strong>: Specialized transfer functions:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>AllocTransfer</strong>: Memory allocation</p></li>
+<li><p><strong>CopyTransfer</strong>: Pointer assignments</p></li>
+<li><p><strong>OffsetTransfer</strong>: Field/array offset operations</p></li>
+<li><p><strong>LoadTransfer</strong>: Pointer dereferences (loads)</p></li>
+<li><p><strong>StoreTransfer</strong>: Pointer stores</p></li>
+<li><p><strong>CallTransfer</strong>: Function calls</p></li>
+<li><p><strong>ReturnTransfer</strong>: Function returns</p></li>
+<li><p><strong>EntryTransfer</strong>: Function entry points</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p><strong>Context Management</strong> (<code class="docutils literal notranslate"><span class="pre">Context/</span></code>)
+- <strong>Context</strong>: Base context representation (call stack)
+- <strong>KLimitContext</strong>: K-limiting context sensitivity (limits call stack depth)
+- <strong>AdaptiveContext</strong>: Adaptive context sensitivity (selective tracking)</p></li>
+<li><p><strong>Precision Tracking</strong> (<code class="docutils literal notranslate"><span class="pre">Precision/</span></code>)
+- <strong>PrecisionLossTracker</strong>: Tracks precision loss during analysis
+- <strong>ValueDependenceTracker</strong>: Tracks value dependencies</p></li>
+<li><p><strong>Output</strong> (<code class="docutils literal notranslate"><span class="pre">Output/</span></code>)
+- <strong>CFGNodePrinter</strong>: Prints CFG nodes
+- <strong>ContextPrinter</strong>: Prints contexts
+- <strong>MemoryPrinter</strong>: Prints memory objects
+- <strong>NodePrinter</strong>: General node printing
+- <strong>WriteDotFile</strong>: Writes DOT graph files</p></li>
+</ol>
+</section>
+<section id="transfer-functions">
+<h2>Transfer Functions<a class="headerlink" href="#transfer-functions" title="Link to this heading"></a></h2>
+<p>TPA uses transfer functions to model the effect of each CFG node on the
+points-to information:</p>
+<ol class="arabic simple">
+<li><p><strong>Entry</strong>: Initialize function parameters</p></li>
+<li><p><strong>Alloc</strong>: Create new memory objects (heap/stack allocations)</p></li>
+<li><p><strong>Copy</strong>: Pointer assignment (<code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">=</span> <span class="pre">q</span></code>)</p></li>
+<li><p><strong>Offset</strong>: Field/array access (<code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">=</span> <span class="pre">&amp;obj-&gt;field</span></code> or <code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">=</span> <span class="pre">&amp;arr[i]</span></code>)</p></li>
+<li><p><strong>Load</strong>: Pointer dereference (<code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">=</span> <span class="pre">*q</span></code>)</p></li>
+<li><p><strong>Store</strong>: Store through pointer (<code class="docutils literal notranslate"><span class="pre">*p</span> <span class="pre">=</span> <span class="pre">q</span></code>)</p></li>
+<li><p><strong>Call</strong>: Function call handling with context sensitivity</p></li>
+<li><p><strong>Return</strong>: Return value propagation</p></li>
+</ol>
+</section>
+<section id="context-sensitivity">
+<h2>Context Sensitivity<a class="headerlink" href="#context-sensitivity" title="Link to this heading"></a></h2>
+<p>TPA supports multiple context sensitivity models:</p>
+<ol class="arabic simple">
+<li><p><strong>Basic Context</strong> (<code class="docutils literal notranslate"><span class="pre">Context</span></code>)
+- Full call stack tracking
+- Unbounded context depth
+- Most precise but potentially expensive</p></li>
+<li><p><strong>K-Limited Context</strong> (<code class="docutils literal notranslate"><span class="pre">KLimitContext</span></code>)
+- Limits call stack depth to K
+- Configurable limit (default can be set)
+- Balances precision and scalability</p></li>
+<li><p><strong>Adaptive Context</strong> (<code class="docutils literal notranslate"><span class="pre">AdaptiveContext</span></code>)
+- Selectively tracks important call sites
+- Reduces context explosion for less critical paths
+- Configurable tracking policy</p></li>
+</ol>
+</section>
+<section id="memory-model">
+<h2>Memory Model<a class="headerlink" href="#memory-model" title="Link to this heading"></a></h2>
+<p>TPA uses a field-sensitive memory model:</p>
+<ul class="simple">
+<li><p><strong>Type-based Layout</strong>: Memory objects are organized by type</p></li>
+<li><p><strong>Array Layout</strong>: Arrays are modeled with element-level precision</p></li>
+<li><p><strong>Pointer Layout</strong>: Pointer fields are tracked separately</p></li>
+<li><p><strong>Struct Layout</strong>: Structure fields are modeled individually</p></li>
+</ul>
+<p>The memory model distinguishes between:
+- <strong>Top-level pointers</strong>: Variables and function parameters
+- <strong>Memory objects</strong>: Heap allocations, stack allocations, globals
+- <strong>Store</strong>: Maps memory objects to their points-to sets</p>
+</section>
+<section id="semi-sparse-representation">
+<h2>Semi-Sparse Representation<a class="headerlink" href="#semi-sparse-representation" title="Link to this heading"></a></h2>
+<p>The semi-sparse representation reduces the number of program points that need
+to be analyzed:</p>
+<ul class="simple">
+<li><p>Only <strong>def-use</strong> chains are tracked (not all program points)</p></li>
+<li><p>CFG nodes are classified by their effect on pointer information</p></li>
+<li><p>The worklist algorithm processes only relevant nodes</p></li>
+<li><p>Store pruning removes redundant information</p></li>
+</ul>
+</section>
+<section id="analysis-algorithm">
+<h2>Analysis Algorithm<a class="headerlink" href="#analysis-algorithm" title="Link to this heading"></a></h2>
+<p>The analysis follows this workflow:</p>
+<ol class="arabic">
+<li><p><strong>Initialization</strong>:
+- Build semi-sparse program from LLVM IR
+- Initialize global variables and functions
+- Set up special pointers (null, universal)</p></li>
+<li><p><strong>Worklist Processing</strong>:
+- Start from entry function with initial store
+- For each program point in worklist:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Evaluate transfer function</p></li>
+<li><p>Update points-to information</p></li>
+<li><p>Propagate to successors</p></li>
+<li><p>Add changed successors to worklist</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p><strong>Context Handling</strong>:
+- At call sites: push new context
+- At returns: pop context and merge results
+- K-limiting or adaptive strategies control context growth</p></li>
+<li><p><strong>Convergence</strong>:
+- Analysis terminates when worklist is empty
+- Memoization prevents redundant computations</p></li>
+</ol>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<p>TPA is typically used through the Lotus alias analysis wrapper. It can be
+configured via:</p>
+<ul class="simple">
+<li><p><strong>Context sensitivity mode</strong>: Basic, K-limited, or adaptive</p></li>
+<li><p><strong>K-limit value</strong>: For K-limited context sensitivity</p></li>
+<li><p><strong>External pointer table</strong>: For modeling external library functions</p></li>
+<li><p><strong>Precision tracking</strong>: Enable precision loss tracking</p></li>
+</ul>
+</section>
+<section id="integration">
+<h2>Integration<a class="headerlink" href="#integration" title="Link to this heading"></a></h2>
+<p>TPA integrates with other Lotus components:</p>
+<ul class="simple">
+<li><p><strong>Annotation System</strong>: Uses external pointer annotations for library functions</p></li>
+<li><p><strong>Alias Analysis Wrapper</strong>: Provides unified interface for alias queries</p></li>
+<li><p><strong>Type System</strong>: Leverages LLVM type information for memory modeling</p></li>
+</ul>
+<p>The analysis results (points-to sets) can be queried through the
+<code class="docutils literal notranslate"><span class="pre">PointerAnalysis</span></code> base class interface, which provides methods to:
+- Get points-to sets for pointers
+- Resolve indirect call targets
+- Query alias relationships</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="spec.html" class="btn btn-neutral float-left" title="Alias Specification Manager" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="typequalifier.html" class="btn btn-neutral float-right" title="TypeQualifier" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

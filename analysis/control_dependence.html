@@ -1,0 +1,263 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Control-Dependence Analysis &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Debug Info" href="debug_info.html" />
+    <link rel="prev" title="CFG Analysis" href="cfg.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Analysis Framework</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#overview">Overview</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="cfg.html">CFG Analysis</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Control-Dependence Analysis</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#supported-algorithms">Supported algorithms</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#whole-icfg-analysis">Whole-ICFG analysis</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#basic-usage-c">Basic usage (C++)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#interpretation">Interpretation</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="debug_info.html">Debug Info</a></li>
+<li class="toctree-l3"><a class="reference internal" href="loop.html">Loop Analysis Framework</a></li>
+<li class="toctree-l3"><a class="reference internal" href="null_pointer.html">Null Pointer Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="type_hierarchy.html">Type Hierarchy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sccp.html">SCCP — Sparse Conditional Constant Propagation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="parameter_summary.html">ParameterSummary — Parameter Effect Summary Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="multiplicity.html">Multiplicity — Allocation Multiplicity Classification</a></li>
+<li class="toctree-l3"><a class="reference internal" href="purity.html">Purity Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="profile.html">Profile Analysis</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Analysis Framework</a></li>
+      <li class="breadcrumb-item active">Control-Dependence Analysis</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/analysis/control_dependence.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="control-dependence-analysis">
+<h1>Control-Dependence Analysis<a class="headerlink" href="#control-dependence-analysis" title="Link to this heading"></a></h1>
+<p>Control-dependence analysis over LLVM basic blocks and Lotus ICFGs.</p>
+<p><strong>Headers</strong>: <code class="docutils literal notranslate"><span class="pre">include/Analysis/ControlDependence</span></code></p>
+<p><strong>Implementation</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Analysis/ControlDependence</span></code></p>
+<p><strong>Main components</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ControlDependenceAnalysis</span></code> – block-level adapter for one LLVM function</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ICFGControlDependenceAnalysis</span></code> – whole-ICFG adapter over a Lotus ICFG</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Algorithm</span></code> – selects the control-dependence variant to compute</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Graph</span></code> / <code class="docutils literal notranslate"><span class="pre">GraphNode</span></code> – generic graph shared by the algorithms and adapters</p></li>
+</ul>
+<p>The library provides Lotus-native LLVM basic-block adapters for baseline
+control-dependence algorithms migrated from
+<a class="reference external" href="https://github.com/mchalupa/dg">dg</a> and newer compact
+inevitability/biclique algorithms. Baseline implementations are split into
+<code class="docutils literal notranslate"><span class="pre">SCD.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">NTSCD.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">DOD.cpp</span></code>, and <code class="docutils literal notranslate"><span class="pre">ControlClosure.cpp</span></code>. The
+compact algorithms live separately in <code class="docutils literal notranslate"><span class="pre">CompactNTSCD.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">CompactDOD.cpp</span></code>,
+and <code class="docutils literal notranslate"><span class="pre">CompactClosure.cpp</span></code>, preserving the old implementations as experimental
+baselines. <code class="docutils literal notranslate"><span class="pre">ControlDependence.cpp</span></code> and <code class="docutils literal notranslate"><span class="pre">ICFGControlDependence.cpp</span></code> are the
+LLVM/Lotus graph adapters.</p>
+<p>The core algorithms and function adapter are linked as
+<code class="docutils literal notranslate"><span class="pre">CanaryControlDependence</span></code>. The optional whole-ICFG adapter is isolated in
+<code class="docutils literal notranslate"><span class="pre">CanaryICFGControlDependence</span></code>, so function-level users such as the PDG do not
+acquire an unnecessary ICFG dependency.</p>
+<section id="supported-algorithms">
+<h2>Supported algorithms<a class="headerlink" href="#supported-algorithms" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">Algorithm</span></code> enum selects the variant to compute:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Standard</span></code> / <code class="docutils literal notranslate"><span class="pre">SCD</span></code> – Ferrante-Ottenstein-Warren standard control dependence</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NTSCD</span></code> – non-termination-sensitive control dependence</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NTSCD2</span></code> – backwards-counter NTSCD implementation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NTSCDLegacy</span></code> – compatibility name for dg’s legacy backwards-counter implementation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NTSCDRanganath</span></code> – fixed-point form of Ranganath et al.’s NTSCD algorithm</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NTSCDRanganathOriginal</span></code> – original order-sensitive algorithm, retained for comparison</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DOD</span></code> – decisive-order dependence</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DODRanganath</span></code> – Ranganath et al.’s DOD algorithm</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DODNTSCD</span></code> – combined DOD and NTSCD relation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">StrongControlClosure</span></code> – experimental strong control closure</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NTSCDCompact</span></code> – all-target inevitability matrix plus multiway NTSCD</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DODCompact</span></code> – SCC-based canonical DOD bicliques</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DODNTSCDCompact</span></code> – shared inevitability, compact DOD, and incidence closure</p></li>
+</ul>
+<p>The function API is intraprocedural and block-granular.
+<code class="docutils literal notranslate"><span class="pre">getDependencies(block)</span></code> returns the predicate blocks on which <code class="docutils literal notranslate"><span class="pre">block</span></code>
+depends; <code class="docutils literal notranslate"><span class="pre">getDependents(predicate)</span></code> returns the inverse relation. Results use
+LLVM function order. Strong closure is queried with <code class="docutils literal notranslate"><span class="pre">getClosure()</span></code> and has no
+binary dependence relation.</p>
+<p>Compact DOD additionally exposes <code class="docutils literal notranslate"><span class="pre">hasDODBiclique</span></code>, <code class="docutils literal notranslate"><span class="pre">getDODLeft</span></code>,
+<code class="docutils literal notranslate"><span class="pre">getDODRight</span></code>, and exact pair membership through <code class="docutils literal notranslate"><span class="pre">isDOD</span></code>. These queries
+keep the canonical complete-bipartite representation instead of enumerating its
+Cartesian product. <code class="docutils literal notranslate"><span class="pre">getDependencyClosure</span></code> computes the least seed superset
+closed under compact NTSCD and DOD using reverse incidences and two side-hit
+bits per decision.</p>
+</section>
+<section id="whole-icfg-analysis">
+<h2>Whole-ICFG analysis<a class="headerlink" href="#whole-icfg-analysis" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">ICFGControlDependenceAnalysis</span></code> runs every graph-based variant over an
+existing Lotus ICFG, corresponding to dg’s whole-ICFG mode. Standard CD remains
+function-only because it requires a function post-dominator tree. The ICFG
+directly models calls, returns, exceptional returns, and non-returning calls.
+Fully resolved call-to-return summary edges are excluded from whole-ICFG
+analysis; summary edges are retained for unresolved or external callees.</p>
+</section>
+<section id="basic-usage-c">
+<h2>Basic usage (C++)<a class="headerlink" href="#basic-usage-c" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;Analysis/ControlDependence/ControlDependence.h&gt;</span>
+
+<span class="n">llvm</span><span class="o">::</span><span class="n">Function</span><span class="w"> </span><span class="o">&amp;</span><span class="n">F</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+<span class="n">lotus</span><span class="o">::</span><span class="n">cd</span><span class="o">::</span><span class="n">ControlDependenceOptions</span><span class="w"> </span><span class="n">options</span><span class="p">;</span>
+<span class="n">options</span><span class="p">.</span><span class="n">algorithm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lotus</span><span class="o">::</span><span class="n">cd</span><span class="o">::</span><span class="n">Algorithm</span><span class="o">::</span><span class="n">NTSCD</span><span class="p">;</span>
+<span class="n">lotus</span><span class="o">::</span><span class="n">cd</span><span class="o">::</span><span class="n">ControlDependenceAnalysis</span><span class="w"> </span><span class="nf">cd</span><span class="p">(</span><span class="n">F</span><span class="p">,</span><span class="w"> </span><span class="n">options</span><span class="p">);</span>
+
+<span class="n">llvm</span><span class="o">::</span><span class="n">BasicBlock</span><span class="w"> </span><span class="o">*</span><span class="n">B</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">BasicBlock</span><span class="w"> </span><span class="o">*</span><span class="n">predicate</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">cd</span><span class="p">.</span><span class="n">getDependencies</span><span class="p">(</span><span class="n">B</span><span class="p">))</span>
+<span class="w">  </span><span class="c1">// B is control dependent on predicate's terminator.</span>
+</pre></div>
+</div>
+</section>
+<section id="interpretation">
+<h2>Interpretation<a class="headerlink" href="#interpretation" title="Link to this heading"></a></h2>
+<p>DOD is represented as a binary over-approximation of its underlying ternary
+relation, as in dg. The migrated DOD implementation accepts binary predicates;
+multi-way switches are skipped. The original Ranganath NTSCD variant is known
+to be incorrect and is exposed only for parity and experimentation. For a graph
+with <code class="docutils literal notranslate"><span class="pre">n</span></code> vertices and <code class="docutils literal notranslate"><span class="pre">m</span></code> edges, compact preprocessing takes <code class="docutils literal notranslate"><span class="pre">O(n(n+m))</span></code>
+time; on binary CFGs this is <code class="docutils literal notranslate"><span class="pre">O(n^2)</span></code>. Exact enumeration of <code class="docutils literal notranslate"><span class="pre">K</span></code> DOD triples
+takes <code class="docutils literal notranslate"><span class="pre">O(n(n+m)+K)</span></code>, while membership does not enumerate pairs.</p>
+<p>See also <a class="reference internal" href="cfg.html"><span class="doc">CFG Analysis</span></a> and <a class="reference internal" href="../tools/ir/index.html"><span class="doc">PDG Query – Program Dependence Graph Queries</span></a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="cfg.html" class="btn btn-neutral float-left" title="CFG Analysis" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="debug_info.html" class="btn btn-neutral float-right" title="Debug Info" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

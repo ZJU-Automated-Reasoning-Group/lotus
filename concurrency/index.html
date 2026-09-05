@@ -1,0 +1,249 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Concurrency Analysis &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Concurrency Analysis" href="analysis.html" />
+    <link rel="prev" title="Mutual Refinement for CFL Reachability" href="../cfl/interleaved_dyck_mutual_refinement.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Concurrency Analysis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#directory-layout">Directory layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#clients">Clients</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html">Concurrency Analysis</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Concurrency Analysis</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/concurrency/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="concurrency-analysis">
+<h1>Concurrency Analysis<a class="headerlink" href="#concurrency-analysis" title="Link to this heading"></a></h1>
+<p>This section documents the concurrency analysis subsystem, the shared
+thread-aware analysis layer used by Lotus concurrency checking and by clients
+that need May-Happen-in-Parallel (MHP), lock-set, or happens-before reasoning.</p>
+<p><strong>Headers</strong>: <code class="docutils literal notranslate"><span class="pre">include/Concurrency/</span></code></p>
+<p><strong>Implementation</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Concurrency/</span></code></p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>The concurrency analysis module provides the shared analysis layer used by Lotus
+concurrency checking. It centers on thread creation, synchronization operations,
+memory accesses, and communication structure that can be recovered from LLVM IR.</p>
+<p>The module supports multiple concurrency models:</p>
+<ul class="simple">
+<li><p><strong>POSIX threads (pthreads)</strong>: standard pthread APIs</p></li>
+<li><p><strong>Modern C++ concurrency</strong>: <code class="docutils literal notranslate"><span class="pre">std::thread</span></code>, mutexes, condition variables,
+futures/promises, atomics, and several C++20 primitives that are recognized</p></li>
+<li><p><strong>OpenMP</strong>: parallel regions, barriers, tasks, and lock operations
+(see <code class="docutils literal notranslate"><span class="pre">lib/Concurrency/OpenMP/</span></code>)</p></li>
+<li><p><strong>MPI</strong>: a separate SPMD communication analysis in <code class="docutils literal notranslate"><span class="pre">Concurrency/MPI/</span></code></p></li>
+<li><p><strong>CUDA</strong>: thread/block hierarchy and PTX-level reasoning
+(see <code class="docutils literal notranslate"><span class="pre">lib/Concurrency/CUDA/</span></code>, including <code class="docutils literal notranslate"><span class="pre">PTXAnalyzer</span></code>)</p></li>
+<li><p><strong>Linux kernel</strong>: kernel concurrency primitives
+(see <code class="docutils literal notranslate"><span class="pre">lib/Concurrency/LinuxKernel/</span></code>)</p></li>
+<li><p><strong>Custom APIs</strong>: configurable through <code class="docutils literal notranslate"><span class="pre">config/thread.spec</span></code> and <code class="docutils literal notranslate"><span class="pre">ThreadAPI</span></code></p></li>
+</ul>
+<p><strong>Key capabilities</strong>:</p>
+<ul class="simple">
+<li><p>May-Happen-in-Parallel (MHP) analysis for shared-memory overlap reasoning</p></li>
+<li><p>Lock-set analysis for race and deadlock checking</p></li>
+<li><p>Happens-before computation from thread-flow and synchronizes-with edges</p></li>
+<li><p>Escape and thread-sharing analyses for shared-memory filtering</p></li>
+<li><p>Join-target reasoning for refining <code class="docutils literal notranslate"><span class="pre">pthread_join</span></code> effects</p></li>
+<li><p>Thread flow graph construction and thread API classification utilities</p></li>
+</ul>
+</section>
+<section id="directory-layout">
+<h2>Directory layout<a class="headerlink" href="#directory-layout" title="Link to this heading"></a></h2>
+<p>The source tree is grouped by subdirectory under <code class="docutils literal notranslate"><span class="pre">include/Concurrency/</span></code> and
+<code class="docutils literal notranslate"><span class="pre">lib/Concurrency/</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Utils/</span></code>: <code class="docutils literal notranslate"><span class="pre">ThreadAPI</span></code>, <code class="docutils literal notranslate"><span class="pre">ThreadFlowGraph</span></code>, vector-clock utilities,
+RAII lock tracking, and language models for C++, OpenMP, MPI, and Linux kernel
+APIs</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MHP/</span></code>: <code class="docutils literal notranslate"><span class="pre">MHPAnalysis</span></code>, <code class="docutils literal notranslate"><span class="pre">StaticVectorClockMHP</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">HappensBeforeAnalysis</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LockSet/</span></code>: <code class="docutils literal notranslate"><span class="pre">LockSetAnalysis</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Memory/</span></code>: <code class="docutils literal notranslate"><span class="pre">EscapeAnalysis</span></code> and <code class="docutils literal notranslate"><span class="pre">StaticThreadSharingAnalysis</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">JoinTarget/</span></code>: <code class="docutils literal notranslate"><span class="pre">JoinTargetAnalysis</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MPI/</span></code>: <code class="docutils literal notranslate"><span class="pre">MPIAnalysis</span></code> and its process, collective, rank, and RMA analyses</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CUDA/</span></code>: <code class="docutils literal notranslate"><span class="pre">CUDAAnalysis</span></code>, <code class="docutils literal notranslate"><span class="pre">CUDAFunctionSummary</span></code>, <code class="docutils literal notranslate"><span class="pre">CUDASemantics</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">PTXAnalyzer</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">OpenMP/</span></code>: <code class="docutils literal notranslate"><span class="pre">OpenMPModel</span></code>, <code class="docutils literal notranslate"><span class="pre">OpenMPSemantics</span></code>, and <code class="docutils literal notranslate"><span class="pre">OpenMPTaskGraph</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LinuxKernel/</span></code>: <code class="docutils literal notranslate"><span class="pre">LinuxKernelAnalysis</span></code>, <code class="docutils literal notranslate"><span class="pre">LinuxKernelLockAnalysis</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">LinuxKernelRCUAnalysis</span></code></p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">Concurrency/MPI/</span></code> models MPI communication in the SPMD setting. It complements
+the shared-memory analyses above, but it is not another thread library layered on
+top of <code class="docutils literal notranslate"><span class="pre">MHPAnalysis</span></code>.</p>
+</section>
+<section id="clients">
+<h2>Clients<a class="headerlink" href="#clients" title="Link to this heading"></a></h2>
+<p>The concurrency analyses feed two main consumers:</p>
+<ul class="simple">
+<li><p>The <strong>concurrency bug checkers</strong> (data races, deadlocks, atomicity violations,
+OpenMP and MPI bugs) exposed through <code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=concur</span></code>. See
+<a class="reference internal" href="../checker/concurrency.html"><span class="doc">Concurrency Bug Checker</span></a> for the checker side.</p></li>
+<li><p>Any analysis client that needs MHP, lock-set, or happens-before queries via
+<code class="docutils literal notranslate"><span class="pre">ConcurrencyFacade</span></code>.</p></li>
+</ul>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="analysis.html">Concurrency Analysis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html#directory-layout">Directory layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html#main-components">Main Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html#limitations">Limitations</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../checker/concurrency.html"><span class="doc">Concurrency Bug Checker</span></a> – Concurrency bug checkers (<code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=concur</span></code>)</p></li>
+<li><p><a class="reference internal" href="../analysis/index.html"><span class="doc">Analysis Framework</span></a> – Other analysis utilities</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../cfl/interleaved_dyck_mutual_refinement.html" class="btn btn-neutral float-left" title="Mutual Refinement for CFL Reachability" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="analysis.html" class="btn btn-neutral float-right" title="Concurrency Analysis" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

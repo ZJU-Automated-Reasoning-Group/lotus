@@ -1,0 +1,576 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Architecture Overview &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Quick Start Guide" href="quickstart.html" />
+    <link rel="prev" title="Major Components Overview" href="major_components.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Architecture Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#system-architecture">System Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#core-components">Core Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#analysis-flow">Analysis Flow</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#typical-analysis-pipeline">Typical Analysis Pipeline</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-null-pointer-detection">Example: Null Pointer Detection</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#pointer-analysis-architectures">Pointer Analysis Architectures</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#aserpta-architecture">AserPTA Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lotusaa-architecture">LotusAA Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dyckaa-architecture">DyckAA Architecture</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#abstract-interpretation-flow-clam">Abstract Interpretation Flow (CLAM)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#data-structures">Data Structures</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#constraint-graphs">Constraint Graphs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#value-flow-graphs">Value Flow Graphs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#program-dependence-graphs">Program Dependence Graphs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#standalone-tools">Standalone Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#python-integration">Python Integration</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#performance-considerations">Performance Considerations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#scalability-strategies">Scalability Strategies</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#extension-points">Extension Points</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#adding-new-analyses">Adding New Analyses</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#adding-new-checkers">Adding New Checkers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#adding-new-abstract-domains">Adding New Abstract Domains</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Architecture Overview</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/user_guide/architecture.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="architecture-overview">
+<h1>Architecture Overview<a class="headerlink" href="#architecture-overview" title="Link to this heading"></a></h1>
+<p>This document provides a comprehensive overview of the Lotus architecture, describing how the different components interact and how they are organized.</p>
+<section id="system-architecture">
+<h2>System Architecture<a class="headerlink" href="#system-architecture" title="Link to this heading"></a></h2>
+<p>Lotus is organized into several major subsystems that work together to provide a comprehensive program analysis framework:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>┌──────────────────────────────────────────────────────────────┐
+│                      Command-Line Tools                       │
+│  (lotus-alias-aser-aa, lotus-alias-dyck-aa, lotus-check, clam, etc.) │
+└────────────────┬─────────────────────────────────────────────┘
+                 │
+┌────────────────┴─────────────────────────────────────────────┐
+│                    Analysis Applications                      │
+│  - Bug Checkers (AE, FiTx, Kint, Taint, Concurrency,        │
+│                  Pulse, Saber, SymEx, Generic)               │
+│  - Abstract Interpreters (CLAM, SymAbsAI)                               │
+│  - Fuzzing Support (Titan)                                   │
+└────┬────────────┬────────────┬────────────┬─────────────────┘
+     │            │            │            │
+┌────┴────┐  ┌───┴────┐  ┌───┴────┐  ┌────┴─────┐
+│ Alias   │  │  IR    │  │ Data   │  │ Solvers  │
+│ Analysis│  │ (PDG,  │  │ Flow   │  │ (SMT,    │
+│         │  │  VFG)  │  │        │  │  BDD)    │
+└────┬────┘  └───┬────┘  └───┬────┘  └────┬─────┘
+     │           │           │            │
+┌────┴───────────┴───────────┴────────────┴─────────────────┐
+│                    LLVM Infrastructure                      │
+│            (Module, Function, BasicBlock, etc.)            │
+└────────────────────────────────────────────────────────────┘
+</pre></div>
+</div>
+</section>
+<section id="core-components">
+<h2>Core Components<a class="headerlink" href="#core-components" title="Link to this heading"></a></h2>
+<ol class="arabic">
+<li><p><strong>Alias Analysis</strong> (<code class="docutils literal notranslate"><span class="pre">lib/Alias/</span></code>, <code class="docutils literal notranslate"><span class="pre">include/Alias/</span></code>)</p>
+<p>Multiple pointer analysis algorithms with different precision-performance trade-offs:</p>
+<ul class="simple">
+<li><p><strong>DyckAA</strong>: Unification-based, exhaustive alias analysis with Dyck-CFL reachability</p></li>
+<li><p><strong>AserPTA</strong>: Constraint-based pointer analysis with multiple context sensitivities (including k-callsite and k-origin/thread-creation sensitivity)</p></li>
+<li><p><strong>LotusAA</strong>: Flow-sensitive, field-sensitive interprocedural analysis</p></li>
+<li><p><strong>Sea-DSA</strong>: Context-sensitive DSA-based memory analysis</p></li>
+<li><p><strong>SparrowAA</strong>: Inclusion-based pointer analysis</p></li>
+<li><p><strong>FPA</strong>: Function pointer analysis (FLTA, MLTA, MLTADF, KELP)</p></li>
+<li><p><strong>SRAA</strong>: Strict Relation Alias Analysis using range analysis</p></li>
+<li><p><strong>DynAA</strong>: Dynamic validation of static alias analysis results</p></li>
+</ul>
+</li>
+<li><p><strong>Intermediate Representations</strong> (<code class="docutils literal notranslate"><span class="pre">lib/IR/</span></code>, <code class="docutils literal notranslate"><span class="pre">include/IR/</span></code>)</p>
+<p>Specialized graph representations for program analysis:</p>
+<ul class="simple">
+<li><p><strong>PDG (Program Dependence Graph)</strong>: Captures data and control dependencies</p></li>
+<li><p><strong>DyckVFG (Value Flow Graph)</strong>: Tracks value flow for Dyck-based analyses</p></li>
+<li><p><strong>Call Graphs</strong>: Multiple call graph implementations (PDG, Dyck, AserPTA)</p></li>
+</ul>
+</li>
+<li><p><strong>Data Flow Analysis</strong> (<code class="docutils literal notranslate"><span class="pre">lib/Dataflow/</span></code>, <code class="docutils literal notranslate"><span class="pre">include/Dataflow/</span></code>)</p>
+<p>IFDS/IDE framework for interprocedural data flow problems:</p>
+<ul class="simple">
+<li><p><strong>Taint Analysis</strong>: Tracks tainted data from sources to sinks</p></li>
+<li><p><strong>Reaching Definitions</strong>: Identifies definition-use chains</p></li>
+</ul>
+</li>
+<li><p><strong>Constraint Solving</strong> (<code class="docutils literal notranslate"><span class="pre">lib/Solvers/</span></code>, <code class="docutils literal notranslate"><span class="pre">include/Solvers/</span></code>)</p>
+<p>Multiple solver backends for different analysis needs:</p>
+<ul class="simple">
+<li><p><strong>SMT Solver</strong>: Z3-based reasoning for precise constraint solving</p></li>
+<li><p><strong>BDD Solver</strong>: CUDD-based symbolic set operations</p></li>
+<li><p><strong>WPDS</strong>: Weighted pushdown systems for interprocedural reachability</p></li>
+</ul>
+</li>
+<li><p><strong>Abstract Interpretation</strong> (<code class="docutils literal notranslate"><span class="pre">third-party/verification/clam/</span></code>, <code class="docutils literal notranslate"><span class="pre">lib/Verification/SymAbsAI/</span></code>)</p>
+<p>Numerical and symbolic abstract domains:</p>
+<ul class="simple">
+<li><p><strong>CLAM</strong>: Abstract interpretation with multiple domains (intervals, zones, octagons, polyhedra)</p></li>
+<li><p><strong>SymAbsAI</strong>: Configurable abstract interpretation with domain composition</p></li>
+</ul>
+</li>
+<li><p><strong>Symbolic Execution</strong> (<code class="docutils literal notranslate"><span class="pre">lib/SymbolicExecution/</span></code>, <code class="docutils literal notranslate"><span class="pre">include/SymbolicExecution/</span></code>)</p>
+<p>Path-sensitive symbolic execution infrastructure used by the <code class="docutils literal notranslate"><span class="pre">symex</span></code>
+checker frontend. See <a class="reference internal" href="../symbolic_execution/index.html"><span class="doc">Symbolic Execution</span></a> for the engine
+documentation.</p>
+<ul class="simple">
+<li><p><strong>AnalysisDriver</strong>: Coordinates whole-module symbolic execution and summaries</p></li>
+<li><p><strong>AnalysisState</strong>: Tracks symbolic memory, guarded facts, and path conditions</p></li>
+<li><p><strong>PathCondSolver</strong>: Discharges symbolic path feasibility queries through SMT</p></li>
+<li><p><strong>SymbolicExecutionWrapper</strong>: Connects the engine to the LLVM pass pipeline</p></li>
+</ul>
+</li>
+<li><p><strong>Analysis Utilities</strong> (<code class="docutils literal notranslate"><span class="pre">lib/Analysis/</span></code>, <code class="docutils literal notranslate"><span class="pre">include/Analysis/</span></code>)</p>
+<p>Supporting analysis components:</p>
+<ul class="simple">
+<li><p><strong>CFG Analysis</strong>: Control flow graph utilities</p></li>
+<li><p><strong>Concurrency Analysis</strong>: Thread-aware analysis (MHP, lock sets)</p></li>
+<li><p><strong>Null Pointer Analysis</strong>: Multiple null checking algorithms</p></li>
+<li><p><strong>Range Analysis</strong>: Value range analysis for integers</p></li>
+</ul>
+</li>
+<li><p><strong>Bug Detection</strong> (<code class="docutils literal notranslate"><span class="pre">lib/Checker/</span></code>)</p>
+<p>Security and safety bug detection:</p>
+<ul class="simple">
+<li><p><strong>Kint</strong>: Integer overflow, division by zero, array bounds checking</p></li>
+<li><p><strong>Taint</strong>: Information flow and taint-style vulnerabilities</p></li>
+<li><p><strong>Concurrency</strong>: Race conditions and deadlock detection</p></li>
+<li><p><strong>AE</strong>: Abstract-execution memory-safety checks</p></li>
+<li><p><strong>FiTx</strong>: Fast typestate-based development feedback</p></li>
+<li><p><strong>Pulse</strong>: Witness-oriented memory-safety checks</p></li>
+<li><p><strong>Saber</strong>: Sparse value-flow resource checks</p></li>
+<li><p><strong>Generic</strong>: Declarative project-specific checks</p></li>
+<li><p><strong>SymEx</strong>: Symbolic-execution checks through the top-level
+<code class="docutils literal notranslate"><span class="pre">SymbolicExecution</span></code> engine</p></li>
+</ul>
+</li>
+<li><p><strong>CFL Reachability</strong> (<code class="docutils literal notranslate"><span class="pre">lib/CFL/</span></code>, <code class="docutils literal notranslate"><span class="pre">include/CFL/</span></code>)</p>
+<p>Context-Free Language reachability engines:</p>
+<ul class="simple">
+<li><p><strong>CSR</strong>: graph indexing for CFL Reachability</p></li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="analysis-flow">
+<h2>Analysis Flow<a class="headerlink" href="#analysis-flow" title="Link to this heading"></a></h2>
+<section id="typical-analysis-pipeline">
+<h3>Typical Analysis Pipeline<a class="headerlink" href="#typical-analysis-pipeline" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>LLVM IR Input</strong>: Start with LLVM bitcode (<code class="docutils literal notranslate"><span class="pre">.bc</span></code>) or IR (<code class="docutils literal notranslate"><span class="pre">.ll</span></code>)</p></li>
+<li><p><strong>Preprocessing</strong> (Optional):</p>
+<ul class="simple">
+<li><p>Lower unsupported constructs</p></li>
+<li><p>Canonicalize representations</p></li>
+<li><p>Devirtualization</p></li>
+<li><p>Memory operation normalization</p></li>
+</ul>
+</li>
+<li><p><strong>Core Analysis</strong>:</p>
+<ul class="simple">
+<li><p>Build call graph</p></li>
+<li><p>Perform alias analysis</p></li>
+<li><p>Construct intermediate representations (PDG, VFG)</p></li>
+<li><p>Run specialized analyses (taint, null pointer, etc.)</p></li>
+</ul>
+</li>
+<li><p><strong>Bug Detection/Verification</strong>:</p>
+<ul class="simple">
+<li><p>Apply checkers</p></li>
+<li><p>Validate properties</p></li>
+<li><p>Generate reports</p></li>
+</ul>
+</li>
+<li><p><strong>Output</strong>:</p>
+<ul class="simple">
+<li><p>Text reports</p></li>
+<li><p>JSON/SARIF output</p></li>
+<li><p>DOT graphs for visualization</p></li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="example-null-pointer-detection">
+<h3>Example: Null Pointer Detection<a class="headerlink" href="#example-null-pointer-detection" title="Link to this heading"></a></h3>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Input: program.bc
+   ↓
+[Preprocessing]
+   ↓
+[Alias Analysis] → Points-to sets
+   ↓
+[Build VFG] → Value flow graph
+   ↓
+[Null Flow Analysis] → Track null values
+   ↓
+[Check Dereferences] → Identify potential NPDs
+   ↓
+Output: Bug report
+</pre></div>
+</div>
+</section>
+</section>
+<section id="pointer-analysis-architectures">
+<h2>Pointer Analysis Architectures<a class="headerlink" href="#pointer-analysis-architectures" title="Link to this heading"></a></h2>
+<section id="aserpta-architecture">
+<h3>AserPTA Architecture<a class="headerlink" href="#aserpta-architecture" title="Link to this heading"></a></h3>
+<p>AserPTA uses a constraint-based approach with multiple solver strategies:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>LLVM IR
+   ↓
+[Preprocessing]
+   ├─ Canonicalize GEP
+   ├─ Lower memcpy
+   ├─ Remove exception handlers
+   └─ Normalize heap APIs
+   ↓
+[Constraint Collection]
+   ├─ addr_of: p = &amp;obj
+   ├─ copy: p = q
+   ├─ load: p = *q
+   ├─ store: *p = q
+   └─ offset: p = &amp;obj-&gt;field
+   ↓
+[Constraint Graph]
+   ├─ Nodes: Pointers and Objects
+   └─ Edges: Constraints
+   ↓
+[Solver] (WavePropagation / DeepPropagation)
+   ├─ SCC detection
+   ├─ Differential propagation
+   └─ Cycle elimination
+   ↓
+Points-to Sets
+</pre></div>
+</div>
+</section>
+<section id="lotusaa-architecture">
+<h3>LotusAA Architecture<a class="headerlink" href="#lotusaa-architecture" title="Link to this heading"></a></h3>
+<p>LotusAA provides flow-sensitive, field-sensitive analysis:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>LLVM Module
+   ↓
+[Global Analysis]
+   ↓
+[Iterative Analysis Loop]
+   ├─ [Bottom-Up Traversal]
+   │     ├─ Process each function
+   │     ├─ Build summaries
+   │     └─ Collect interfaces
+   │
+   ├─ [Call Graph Construction]
+   │     ├─ Resolve indirect calls
+   │     └─ Update call graph
+   │
+   └─ [Fixpoint Check]
+         ├─ Detect changes
+         └─ Reanalyze if needed
+   ↓
+Final Points-to Sets + Call Graph
+</pre></div>
+</div>
+</section>
+<section id="dyckaa-architecture">
+<h3>DyckAA Architecture<a class="headerlink" href="#dyckaa-architecture" title="Link to this heading"></a></h3>
+<p>DyckAA uses Dyck-CFL reachability for precise alias analysis:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>LLVM IR
+   ↓
+[Build Dyck Graph]
+   ├─ Field edges: *[field]*
+   ├─ Dereference edges: *(*
+   └─ Assignment edges: *()*
+   ↓
+[Dyck-CFL Reachability]
+   ├─ Compute reachability
+   └─ Unify nodes
+   ↓
+[Alias Sets]
+   ↓
+[Applications]
+   ├─ Call graph construction
+   ├─ ModRef analysis
+   └─ Value flow analysis
+</pre></div>
+</div>
+</section>
+</section>
+<section id="abstract-interpretation-flow-clam">
+<h2>Abstract Interpretation Flow (CLAM)<a class="headerlink" href="#abstract-interpretation-flow-clam" title="Link to this heading"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>LLVM Bitcode
+   ↓
+[clam-pp Preprocessing]
+   ├─ Lower unsigned comparisons
+   ├─ Lower select instructions
+   └─ Devirtualization
+   ↓
+[CrabIR Translation]
+   ├─ Convert LLVM IR to CrabIR
+   ├─ Apply memory abstraction
+   └─ Integrate heap analysis (Sea-DSA)
+   ↓
+[Abstract Interpretation]
+   ├─ Select domain (int, zones, oct, pk)
+   ├─ Compute fixpoint
+   └─ Generate invariants
+   ↓
+[Property Checking]
+   ├─ Check assertions
+   ├─ Check null pointers
+   ├─ Check buffer bounds
+   └─ Check use-after-free
+   ↓
+[Output]
+   ├─ Invariants (text/JSON)
+   ├─ Verification results
+   └─ Warnings/errors
+</pre></div>
+</div>
+</section>
+<section id="data-structures">
+<h2>Data Structures<a class="headerlink" href="#data-structures" title="Link to this heading"></a></h2>
+<section id="constraint-graphs">
+<h3>Constraint Graphs<a class="headerlink" href="#constraint-graphs" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Nodes</strong>: Represent pointers and objects</p></li>
+<li><p><strong>Edges</strong>: Represent constraints (copy, load, store, offset)</p></li>
+<li><p><strong>Super Nodes</strong>: Collapsed SCCs for efficiency</p></li>
+</ul>
+</section>
+<section id="value-flow-graphs">
+<h3>Value Flow Graphs<a class="headerlink" href="#value-flow-graphs" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Nodes</strong>: Values and memory locations</p></li>
+<li><p><strong>Edges</strong>: Data flow and pointer propagation</p></li>
+<li><p><strong>Contexts</strong>: Call-site or object sensitivity</p></li>
+</ul>
+</section>
+<section id="program-dependence-graphs">
+<h3>Program Dependence Graphs<a class="headerlink" href="#program-dependence-graphs" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Nodes</strong>: Instructions, functions, parameters</p></li>
+<li><p><strong>Edges</strong>: Data dependencies, control dependencies, parameter bindings</p></li>
+<li><p><strong>Trees</strong>: Hierarchical parameter representations for field sensitivity</p></li>
+</ul>
+</section>
+<section id="standalone-tools">
+<h3>Standalone Tools<a class="headerlink" href="#standalone-tools" title="Link to this heading"></a></h3>
+<p>Each major component has standalone command-line tools. The bug-detection
+frontends have been unified under a single <code class="docutils literal notranslate"><span class="pre">lotus-check</span></code> binary with an
+explicit <code class="docutils literal notranslate"><span class="pre">--engine=&lt;name&gt;</span></code> selector:</p>
+<p><strong>Alias analysis:</strong>
+- <code class="docutils literal notranslate"><span class="pre">lotus-alias-aser-aa</span></code>, <code class="docutils literal notranslate"><span class="pre">lotus-alias-dyck-aa</span></code>, <code class="docutils literal notranslate"><span class="pre">lotus-alias-lotus-aa</span></code></p>
+<p><strong>Unified checker frontend (``lotus-check``):</strong>
+- <code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=kint</span></code> — Integer overflow, division by zero, array bounds
+- <code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=taint</span></code> — Interprocedural taint analysis
+- <code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=concur</span></code> — Concurrency bug detection (races, deadlocks, OpenMP, MPI)
+- <code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=pulse</span></code> — Biabductive memory-safety analysis
+- <code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=fitx</span></code> — Typestate-based bug detection
+- <code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=saber</span></code> — Source-sink bug detection (leaks, double-free)
+- <code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=ae</span></code> — Abstract-execution-based checking
+- <code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=symex</span></code> — Symbolic-execution bug checking</p>
+<p><strong>PDG query:</strong>
+- <code class="docutils literal notranslate"><span class="pre">lotus-ir-pdg-query</span></code> — PDG Cypher queries, slicing, chopping, resource-flow analysis</p>
+<p><strong>Abstract interpretation:</strong>
+- <code class="docutils literal notranslate"><span class="pre">clam</span></code>, <code class="docutils literal notranslate"><span class="pre">clam-pp</span></code>, <code class="docutils literal notranslate"><span class="pre">clam-diff</span></code></p>
+</section>
+<section id="python-integration">
+<h3>Python Integration<a class="headerlink" href="#python-integration" title="Link to this heading"></a></h3>
+<p>Python scripts provide high-level interfaces:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">clam.py</span></code>: Full analysis pipeline with compilation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">clam-yaml.py</span></code>: Configuration-based analysis</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">seapy</span></code>: SeaHorn integration</p></li>
+</ul>
+</section>
+</section>
+<section id="performance-considerations">
+<h2>Performance Considerations<a class="headerlink" href="#performance-considerations" title="Link to this heading"></a></h2>
+<section id="scalability-strategies">
+<h3>Scalability Strategies<a class="headerlink" href="#scalability-strategies" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Context Pruning</strong>: Limit context depth (K in K-CFA)</p></li>
+<li><p><strong>SCC Collapsing</strong>: Merge strongly connected components</p></li>
+<li><p><strong>Lazy Evaluation</strong>: Compute results on demand</p></li>
+</ol>
+</section>
+</section>
+<section id="extension-points">
+<h2>Extension Points<a class="headerlink" href="#extension-points" title="Link to this heading"></a></h2>
+<section id="adding-new-analyses">
+<h3>Adding New Analyses<a class="headerlink" href="#adding-new-analyses" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Create LLVM ModulePass or FunctionPass</p></li>
+<li><p>Implement <code class="docutils literal notranslate"><span class="pre">runOnModule()</span></code> or <code class="docutils literal notranslate"><span class="pre">runOnFunction()</span></code></p></li>
+<li><p>Query existing analyses (AA, PDG, etc.)</p></li>
+<li><p>Register pass in <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code></p></li>
+<li><p>Add tool in <code class="docutils literal notranslate"><span class="pre">tools/</span></code> directory</p></li>
+</ol>
+</section>
+<section id="adding-new-checkers">
+<h3>Adding New Checkers<a class="headerlink" href="#adding-new-checkers" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Extend <code class="docutils literal notranslate"><span class="pre">BugDetectorPass</span></code> base class</p></li>
+<li><p>Implement checker logic</p></li>
+<li><p>Report bugs via <code class="docutils literal notranslate"><span class="pre">BugReportMgr</span></code></p></li>
+<li><p>Add a <code class="docutils literal notranslate"><span class="pre">lotus-check</span></code> engine runner or create a new tool</p></li>
+</ol>
+</section>
+<section id="adding-new-abstract-domains">
+<h3>Adding New Abstract Domains<a class="headerlink" href="#adding-new-abstract-domains" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Extend CRAB domain interface</p></li>
+<li><p>Implement lattice operations</p></li>
+<li><p>Register with CLAM</p></li>
+<li><p>Add command-line option</p></li>
+</ol>
+<p>See <a class="reference internal" href="../developer/developer_guide.html"><span class="doc">Developer Guide</span></a> for detailed instructions.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="major_components.html" class="btn btn-neutral float-left" title="Major Components Overview" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="quickstart.html" class="btn btn-neutral float-right" title="Quick Start Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

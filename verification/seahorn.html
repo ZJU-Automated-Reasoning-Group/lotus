@@ -1,0 +1,381 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SeaHorn Verification Framework &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Failure-Directed Trimming" href="failure_directed_trimming.html" />
+    <link rel="prev" title="SymAbsAI – Symbolic Abstraction + Abstract Interpretation" href="symabs-ai.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Verification</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="analysis.html">Verification Support Analyses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="backend.html">Verification Backend API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="crab.html">CRAB - Abstract Interpretation Library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="clam.html">CLAM – Abstract Interpretation Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="smack.html">SMACK Verification Frontend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sifa.html">Sifa</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seal.html">Seal — Symbolic Automata for Stateful Systems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="symabs-ai.html">SymAbsAI – Symbolic Abstraction + Abstract Interpretation</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">SeaHorn Verification Framework</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#structure">Structure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#components">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#seahorn-verification">SeaHorn Verification</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#counterexample-analysis">Counterexample Analysis</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="failure_directed_trimming.html">Failure-Directed Trimming</a></li>
+<li class="toctree-l2"><a class="reference internal" href="frontend.html">Verification Frontend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transforms.html">Verification Transformation Passes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Verification</a></li>
+      <li class="breadcrumb-item active">SeaHorn Verification Framework</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/verification/seahorn.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="seahorn-verification-framework">
+<h1>SeaHorn Verification Framework<a class="headerlink" href="#seahorn-verification-framework" title="Link to this heading"></a></h1>
+<p>Large-scale SMT-based verification framework built on constrained Horn clauses
+(CHC), symbolic execution, and abstraction-refinement.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>SeaHorn performs bounded and unbounded model checking on LLVM bitcode using SMT
+solvers to prove program correctness or produce counterexamples. It integrates
+with Lotus analyses and solver backends to support complex verification
+pipelines.</p>
+<p><strong>Vendored source</strong>: <code class="docutils literal notranslate"><span class="pre">third-party/verification/seahorn/</span></code></p>
+<p><strong>Lotus adapter</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Verification/Backends/</span></code></p>
+<p><strong>Build Targets</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">tools/verifier/seahorn/seahorn</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tools/verifier/seahorn/seapp</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tools/verifier/seahorn/seainspect</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">third-party/horn-ice/chc_verifier</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">third-party/horn-ice/hice-dt</span></code></p></li>
+</ul>
+</section>
+<section id="structure">
+<h2>Structure<a class="headerlink" href="#structure" title="Link to this heading"></a></h2>
+<p>The SeaHorn framework is organized into the following subdirectories:</p>
+<ul>
+<li><p><strong>seahorn/</strong> – Core SeaHorn verification engine
+* Horn clause generation and solving (HornifyFunction, HornifyModule)
+* Symbolic execution engines (BvOpSem, ClpOpSem, UfoOpSem)
+* Bounded model checking (Bmc, PathBmc)
+* <strong>K-Induction</strong> – Production k-induction engine reusing PathBMC (in <code class="docutils literal notranslate"><span class="pre">KInduction/</span></code>)
+* Counterexample generation (CexHarness, CexExeGenerator)
+* <strong>Smt/</strong> – SMT solver integration (Z3, Yices2)</p></li>
+<li><p><strong>Analysis/</strong> – Analysis passes for verification
+* <code class="docutils literal notranslate"><span class="pre">CrabAnalysis.cc</span></code> – CRAB abstract interpretation integration
+* <code class="docutils literal notranslate"><span class="pre">CanAccessMemory.cc</span></code> – Memory access analysis
+* <code class="docutils literal notranslate"><span class="pre">CanFail.cc</span></code> – Failure point analysis
+* <code class="docutils literal notranslate"><span class="pre">CanReadUndef.cc</span></code> – Undefined value read analysis
+* <code class="docutils literal notranslate"><span class="pre">ClassHierarchyAnalysis.cc</span></code> – C++ class hierarchy analysis
+* <code class="docutils literal notranslate"><span class="pre">ControlDependenceAnalysis.cc</span></code> – Control dependence computation
+* <code class="docutils literal notranslate"><span class="pre">CutPointGraph.cc</span></code> – Cut point graph construction
+* <code class="docutils literal notranslate"><span class="pre">GateAnalysis.cc</span></code> – Gate analysis for verification
+* <code class="docutils literal notranslate"><span class="pre">StaticTaint.cc</span></code> – Static taint analysis
+* <code class="docutils literal notranslate"><span class="pre">TopologicalOrder.cc</span></code>, <code class="docutils literal notranslate"><span class="pre">WeakTopologicalOrder.cc</span></code> – Ordering analyses</p></li>
+<li><p><strong>Transforms/Kernel/</strong> – DrvHorn: Kernel Driver Verification</p>
+<p>DrvHorn is a set of LLVM IR transformation passes enabling SeaHorn to verify
+reference-count correctness (kref/kobject) in Linux kernel drivers. The passes
+run as preprocessing before Horn clause generation, transforming kernel driver
+LLVM IR into a verification-friendly form.</p>
+<p><strong>Pipeline order</strong>: KernelSetup → InitGlobalKrefs → Device/Devm/Platform/
+I2CDriver/FileOperations/DsaSwitchOps (modeling) → HandleInlineAsm →
+AssumeNonNull → NondetMalloc → Slicer → IntoBinary → AssertKrefs</p>
+<dl class="simple">
+<dt><strong>KernelSetup</strong> (<em>KernelSetup.cc</em>)</dt><dd><p>Foundational kernel environment setup. Stubs ~13 allocation functions
+(kmalloc, vmalloc, etc.) through drvhorn.alloc. Builds replacements for
+kref_init/get/put and kobject_get/put. Handles kmem_cache, IS_ERR/ERR_PTR
+patterns, and stubs __cpu_possible_mask.</p>
+</dd>
+<dt><strong>InitGlobalKrefs</strong> (<em>InitGlobalKrefs.cc</em>)</dt><dd><p>Initializes all global kref instances. Scans global variables, creates
+drvhorn.kref.* snapshot globals, and inserts a drvhorn.prelude function for
+initialization.</p>
+</dd>
+<dt><strong>Device</strong> (<em>Device.cc</em>)</dt><dd><p>Central kernel device lifecycle modeling (~1741 lines). Models device finding
+(class_find_device, bus_find_device), storage-backed allocation,
+container_of pattern handling, device initialization (kref, release
+functions), OF/fwnode management (~40 functions), device links, wakeup, devm
+functions, CPU freq, regulator, and LED registration.</p>
+</dd>
+<dt><strong>Devm</strong> (<em>Devm.cc</em>)</dt><dd><p>Managed device resource modeling. Replaces devres_add by immediately calling
+the release function with a nondeterministically allocated resource.</p>
+</dd>
+<dt><strong>Acpi</strong> (<em>Acpi.cc</em>)</dt><dd><p>ACPI driver modeling. Replaces the placeholder acpi_driver.add with the
+actual driver callback from the acpi_driver global initializer.</p>
+</dd>
+<dt><strong>Platform</strong> (<em>Platform.cc</em>)</dt><dd><p>Platform driver entry point generation. Creates main() that allocates a
+platform_device, initializes embedded device (kref, wakeup, driver_data,
+of_node), and calls probe.</p>
+</dd>
+<dt><strong>I2CDriver</strong> (<em>I2CDriver.cc</em>)</dt><dd><p>I2C driver entry point generation. Creates main() that allocates an
+i2c_client and calls the I2C probe function.</p>
+</dd>
+<dt><strong>FileOperations</strong> (<em>FileOperations.cc</em>)</dt><dd><p>File operations driver entry point generation. Creates main() that allocates
+inode + file structs, initializes krefs in private data, and calls .open
+callback.</p>
+</dd>
+<dt><strong>DsaSwitchOps</strong> (<em>DsaSwitchOps.cc</em>)</dt><dd><p>DSA switch driver entry point generation. Creates main() that allocates a
+DSA switch struct and calls the setup callback.</p>
+</dd>
+<dt><strong>SpecificFunction</strong> (<em>SpecificFunction.cc</em>)</dt><dd><p>Generic fallback entry point generation. Creates main() that calls any named
+function with nondeterministically-initialized arguments.</p>
+</dd>
+<dt><strong>HandleInlineAsm</strong> (<em>HandleInlineAsm.cc</em>)</dt><dd><p>Inline assembly replacement (~1533 lines). Replaces ~50 categories of Linux
+kernel inline assembly with equivalent LLVM IR: bitops, atomics, barriers,
+MSR, CPUID, TSC, serialization, string ops, control registers, I/O ports,
+get_user, static branches, and more.</p>
+</dd>
+<dt><strong>AssumeNonNull</strong> (<em>AssumeNonNull.cc</em>)</dt><dd><p>Assumes container_of results are non-null. Detects negative-index GEPs
+(container_of pattern) and inserts verifier assumptions that the pointer is
+not null.</p>
+</dd>
+<dt><strong>NondetMalloc</strong> (<em>NondetMalloc.cc</em>)</dt><dd><p>Nondeterministic allocation handling. Routes nondet.malloc to either
+drvhorn.malloc (nullable) or plain malloc depending on downstream null
+checks.</p>
+</dd>
+<dt><strong>Slicer</strong> (<em>Slicer.cc</em>)</dt><dd><p>Driver-specific program slicer. Identifies instructions influencing
+kref/kobject reference counting and removes everything else, replacing
+removed instructions with nondeterministic values.</p>
+</dd>
+<dt><strong>IntoBinary</strong> (<em>IntoBinary.cc</em>)</dt><dd><p>Boolean simplification. Replaces nondet calls used only in branches with
+booleans. Converts nonzero returns used as conditions to 0/1.</p>
+</dd>
+<dt><strong>AssertKrefs</strong> (<em>AssertKrefs.cc</em>)</dt><dd><p>Final verification assertion generation. Builds drvhorn.assert_kref (asserts
+refcount==1), drvhorn.assert_wakeup (asserts wakeup==0), storage checker
+functions, and injects assertions at driver fail blocks.</p>
+</dd>
+<dt><strong>Debug</strong> (<em>Debug.cc</em>)</dt><dd><p>Debugging utilities. Stubs OF functions, prints inline asm statistics, dumps
+IR to file, runs LLVM verifier.</p>
+</dd>
+<dt><strong>ListOps</strong> (<em>ListOps.cc</em>)</dt><dd><p>Operation discovery. Scans globals matching a struct type and prints their
+names.</p>
+</dd>
+<dt><strong>SetupEntrypoint</strong> (<em>SetupEntrypoint.hh</em> / <em>SetupEntrypoint.cc</em>)</dt><dd><p>Shared entry-point helpers: device pointer setup (kref init, wakeup disable,
+driver_data, of_node), fail block construction, return block construction.</p>
+</dd>
+<dt><strong>Util</strong> (<em>Util.hh</em> / <em>Util.cc</em>)</dt><dd><p>Shared utilities: type equivalence, call extraction, nondet/allocation
+function creation, GEP index computation, struct embedding detection.</p>
+</dd>
+<dt><strong>SlimDown</strong> (<em>SlimDown.hh</em>)</dt><dd><p>Declared but unimplemented. Intended for module-level pruning by root
+reachability.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Added in commit 909d6e9c.</p>
+</div>
+</li>
+<li><p><strong>Transforms/</strong> – LLVM IR transformations for verification
+* <strong>Instrumentation/</strong> – Property instrumentation</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">BufferBoundsCheck.cc</span></code>, <code class="docutils literal notranslate"><span class="pre">FatBufferBoundsCheck.cc</span></code> – Buffer bounds checking</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NullCheck.cc</span></code> – Null pointer checking</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SimpleMemoryCheck.cc</span></code> – Memory safety checks</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MixedSemantics.cc</span></code> – Mixed operational semantics</p></li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li><p><strong>Scalar/</strong> – Scalar optimizations
+* <code class="docutils literal notranslate"><span class="pre">CutLoops.cc</span></code> – Loop cutting
+* <code class="docutils literal notranslate"><span class="pre">LoopPeeler.cc</span></code> – Loop peeling
+* <code class="docutils literal notranslate"><span class="pre">LowerCstExpr.cc</span></code> – Constant expression lowering
+* <code class="docutils literal notranslate"><span class="pre">LowerGvInitializers.cc</span></code> – Global variable initializer lowering
+* <code class="docutils literal notranslate"><span class="pre">PromoteVerifierCalls.cc</span></code> – Verifier call promotion
+* <code class="docutils literal notranslate"><span class="pre">BackedgeCutter.cc</span></code> – Backedge cutting</p></li>
+<li><p><strong>Utils/</strong> – Transformation utilities
+* <code class="docutils literal notranslate"><span class="pre">DevirtFunctions.cc</span></code> – Function devirtualization
+* <code class="docutils literal notranslate"><span class="pre">ExternalizeFunctions.cc</span></code> – Function externalization
+* <code class="docutils literal notranslate"><span class="pre">Mem2Reg.cc</span></code> – Memory-to-register promotion
+* <code class="docutils literal notranslate"><span class="pre">SliceFunctions.cc</span></code> – Function slicing</p></li>
+</ul>
+</li>
+<li><p><strong>Support/</strong> – Utility functions
+* <code class="docutils literal notranslate"><span class="pre">CFGPrinter.cc</span></code> – Control flow graph printing
+* <code class="docutils literal notranslate"><span class="pre">GitSHA1.cc</span></code> – Version information
+* <code class="docutils literal notranslate"><span class="pre">Profiler.cc</span></code> – Profiling support
+* <code class="docutils literal notranslate"><span class="pre">Stats.cc</span></code> – Statistics collection</p></li>
+</ul>
+</section>
+<section id="components">
+<h2>Components<a class="headerlink" href="#components" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>SeaHorn</strong> – LLVM-based front-end, symbolic execution, and encoding of
+verification problems as CHCs.</p></li>
+<li><p><strong>Horn-ICE</strong> – CHC solving with invariant learning (in <code class="docutils literal notranslate"><span class="pre">third-party/horn-ice/</span></code>).</p></li>
+<li><p><strong>Sea-rt</strong> – Runtime components for executing counterexample harnesses (in <code class="docutils literal notranslate"><span class="pre">tools/verifier/seahorn/sea-rt/</span></code>).</p></li>
+</ul>
+</section>
+<section id="seahorn-verification">
+<h2>SeaHorn Verification<a class="headerlink" href="#seahorn-verification" title="Link to this heading"></a></h2>
+<p>Main verification tool for C programs.</p>
+<p><strong>Basic usage</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/seahorn<span class="w"> </span><span class="o">[</span>options<span class="o">]</span><span class="w"> </span>&lt;input.c&gt;
+</pre></div>
+</div>
+<p><strong>Common modes</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--bmc=&lt;N&gt;</span></code> – Bounded model checking up to <code class="docutils literal notranslate"><span class="pre">N</span></code> steps.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--horn-kinduction</span></code> – K-induction (PathBMC-based): incrementally peel loops
+and run PathBMC until UNSAT (safe) or SAT (bug). Requires CLAM.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--horn</span></code> – CHC-based (unbounded) verification.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--abstractor=clam</span></code> – Use CLAM-based abstract interpretation as an
+abstractor.</p></li>
+</ul>
+<p><strong>Frequently used options</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--cex=&lt;file&gt;</span></code> – Dump a counterexample harness to <code class="docutils literal notranslate"><span class="pre">&lt;file&gt;</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--track=mem</span></code> – Track memory (heap/stack) explicitly.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--horn-solver=spacer|ice</span></code> – Select CHC solving engine.</p></li>
+</ul>
+<section id="counterexample-analysis">
+<h3>Counterexample Analysis<a class="headerlink" href="#counterexample-analysis" title="Link to this heading"></a></h3>
+<p>Generate executable counterexamples:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/seahorn<span class="w"> </span>--cex<span class="o">=</span>harness.ll<span class="w"> </span>program.c
+clang<span class="w"> </span>-m64<span class="w"> </span>-g<span class="w"> </span>program.c<span class="w"> </span>harness.ll<span class="w"> </span>-o<span class="w"> </span>counterexample
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="symabs-ai.html" class="btn btn-neutral float-left" title="SymAbsAI – Symbolic Abstraction + Abstract Interpretation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="failure_directed_trimming.html" class="btn btn-neutral float-right" title="Failure-Directed Trimming" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

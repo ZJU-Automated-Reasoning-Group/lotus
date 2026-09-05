@@ -1,0 +1,967 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Troubleshooting and FAQ &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Command-Line Tools" href="../tools/index.html" />
+    <link rel="prev" title="Instrumentation Passes" href="instrumentation_passes.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Troubleshooting and FAQ</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#installation-issues">Installation Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#llvm-version-mismatch">LLVM Version Mismatch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#z3-not-found">Z3 Not Found</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#boost-not-found">Boost Not Found</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#compilation-errors">Compilation Errors</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#analysis-issues">Analysis Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#analysis-crashes">Analysis Crashes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#analysis-takes-too-long">Analysis Takes Too Long</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#out-of-memory">Out of Memory</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#false-positives">False Positives</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#missing-bugs-false-negatives">Missing Bugs (False Negatives)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#tool-specific-issues">Tool-Specific Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#clam-issues">CLAM Issues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dyckaa-issues">DyckAA Issues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pdg-query-issues">PDG Query Issues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#taint-analysis-issues">Taint Analysis Issues</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#performance-tuning">Performance Tuning</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#speeding-up-analysis">Speeding Up Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#reducing-memory-usage">Reducing Memory Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#frequently-asked-questions">Frequently Asked Questions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#general-questions">General Questions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#analysis-questions">Analysis Questions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#clam-questions">CLAM Questions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bug-detection-questions">Bug Detection Questions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#compilation-questions">Compilation Questions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#common-error-messages">Common Error Messages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#module-verification-failed">“Module verification failed”</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pass-x-is-not-initialized">“Pass ‘X’ is not initialized”</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#couldn-t-find-alias-information">“Couldn’t find alias information”</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#out-of-range-access-or-vector-index-out-of-bounds">“Out of range access” or “Vector index out of bounds”</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#getting-help">Getting Help</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#documentation">Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#support-channels">Support Channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#reporting-bugs">Reporting Bugs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#contributing">Contributing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Troubleshooting and FAQ</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/user_guide/troubleshooting.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="troubleshooting-and-faq">
+<h1>Troubleshooting and FAQ<a class="headerlink" href="#troubleshooting-and-faq" title="Link to this heading"></a></h1>
+<p>This document helps resolve common issues and answers frequently asked questions.</p>
+<section id="installation-issues">
+<h2>Installation Issues<a class="headerlink" href="#installation-issues" title="Link to this heading"></a></h2>
+<section id="llvm-version-mismatch">
+<h3>LLVM Version Mismatch<a class="headerlink" href="#llvm-version-mismatch" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: CMake can’t find LLVM or finds wrong version.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>CMake Error: Could not find LLVM
+-- or --
+Found LLVM 15.0.0 but need 14.0.0
+</pre></div>
+</div>
+<p><strong>Solution</strong>:</p>
+<ol class="arabic simple">
+<li><p>Check that LLVM 14.x is installed and visible on <code class="docutils literal notranslate"><span class="pre">PATH</span></code>:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>llvm-config<span class="w"> </span>--version
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>If multiple LLVM versions are installed, point CMake to the desired one explicitly:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>../<span class="w"> </span>-DLLVM_BUILD_PATH<span class="o">=</span>/path/to/llvm-14/lib/cmake/llvm
+</pre></div>
+</div>
+</section>
+<section id="z3-not-found">
+<h3>Z3 Not Found<a class="headerlink" href="#z3-not-found" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Z3 library or headers not found during build.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Could not find Z3 libraries
+fatal error: z3.h: No such file or directory
+</pre></div>
+</div>
+<p><strong>Solution</strong>:</p>
+<ol class="arabic simple">
+<li><p>Install Z3 development package:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Ubuntu/Debian</span>
+sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>libz3-dev
+
+<span class="c1"># macOS</span>
+brew<span class="w"> </span>install<span class="w"> </span>z3
+
+<span class="c1"># Or build from source</span>
+git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Z3Prover/z3
+<span class="nb">cd</span><span class="w"> </span>z3
+python<span class="w"> </span>scripts/mk_make.py
+<span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>make<span class="w"> </span>install
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Specify Z3 path:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>../<span class="w"> </span>-DZ3_ROOT<span class="o">=</span>/path/to/z3/install
+</pre></div>
+</div>
+</section>
+<section id="boost-not-found">
+<h3>Boost Not Found<a class="headerlink" href="#boost-not-found" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Boost libraries required for SeaHorn, CLAM, and/or CclyzerAA not found.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Could NOT find Boost
+</pre></div>
+</div>
+<p><strong>Solution</strong>:</p>
+<ol class="arabic simple">
+<li><p>Install Boost:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Ubuntu/Debian</span>
+sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>libboost-all-dev
+
+<span class="c1"># macOS</span>
+brew<span class="w"> </span>install<span class="w"> </span>boost
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Or specify custom Boost:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>../<span class="w"> </span>-DCUSTOM_BOOST_ROOT<span class="o">=</span>/path/to/boost
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Lotus can auto-download Boost:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>../<span class="w"> </span>-DAUTO_DOWNLOAD_BOOST<span class="o">=</span>ON
+</pre></div>
+</div>
+</section>
+<section id="compilation-errors">
+<h3>Compilation Errors<a class="headerlink" href="#compilation-errors" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Undefined reference errors during linking.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>undefined reference to `llvm::PassRegistry::registerPass'
+</pre></div>
+</div>
+<p><strong>Solution</strong>:</p>
+<ol class="arabic simple">
+<li><p>Ensure LLVM was built with:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>-DLLVM_ENABLE_RTTI<span class="o">=</span>ON<span class="w"> </span>-DLLVM_ENABLE_EH<span class="o">=</span>ON<span class="w"> </span>../llvm
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Clean and rebuild:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>build
+rm<span class="w"> </span>-rf<span class="w"> </span>*
+cmake<span class="w"> </span>../
+make<span class="w"> </span>-j<span class="k">$(</span>nproc<span class="k">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="analysis-issues">
+<h2>Analysis Issues<a class="headerlink" href="#analysis-issues" title="Link to this heading"></a></h2>
+<section id="analysis-crashes">
+<h3>Analysis Crashes<a class="headerlink" href="#analysis-crashes" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Tool crashes with segmentation fault.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Segmentation fault (core dumped)
+</pre></div>
+</div>
+<p><strong>Solution</strong>:</p>
+<ol class="arabic simple">
+<li><p>Run with debug build:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>../<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Debug
+make
+gdb<span class="w"> </span>--args<span class="w"> </span>./bin/tool<span class="w"> </span>input.bc
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>run
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>backtrace
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Check input validity:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>opt<span class="w"> </span>-verify<span class="w"> </span>input.bc<span class="w"> </span>-o<span class="w"> </span>/dev/null
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Common causes:</p>
+<ul class="simple">
+<li><p>Malformed LLVM IR</p></li>
+<li><p>Null pointer dereference in analysis</p></li>
+<li><p>Stack overflow (increase limit: <code class="docutils literal notranslate"><span class="pre">ulimit</span> <span class="pre">-s</span> <span class="pre">unlimited</span></code>)</p></li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="analysis-takes-too-long">
+<h3>Analysis Takes Too Long<a class="headerlink" href="#analysis-takes-too-long" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Analysis runs indefinitely or for hours.</p>
+<p><strong>Solution</strong>:</p>
+<ol class="arabic simple">
+<li><p>Use faster analysis mode:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># For alias analysis, use context-insensitive</span>
+./bin/lotus-alias-aser-aa<span class="w"> </span>-analysis-mode<span class="o">=</span>ci<span class="w"> </span>input.bc
+
+<span class="c1"># For CLAM, use interval domain</span>
+./bin/clam<span class="w"> </span>--crab-dom<span class="o">=</span>int<span class="w"> </span>input.bc
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Set timeout:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>timeout<span class="w"> </span><span class="m">300</span><span class="w"> </span>./bin/tool<span class="w"> </span>input.bc<span class="w">  </span><span class="c1"># 5 minutes</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>For Kint, set function timeout:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.ll<span class="w"> </span>--kint.function-timeout-seconds<span class="o">=</span><span class="m">30</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>Reduce precision:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Disable field sensitivity</span>
+./bin/lotus-alias-aser-aa<span class="w"> </span>-field-sensitive<span class="o">=</span><span class="nb">false</span><span class="w"> </span>input.bc
+
+<span class="c1"># Limit context depth</span>
+./bin/lotus-alias-aser-aa<span class="w"> </span>-analysis-mode<span class="o">=</span><span class="m">1</span>-cfa<span class="w"> </span>-max-context-depth<span class="o">=</span><span class="m">2</span><span class="w"> </span>input.bc
+</pre></div>
+</div>
+</section>
+<section id="out-of-memory">
+<h3>Out of Memory<a class="headerlink" href="#out-of-memory" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Analysis exhausts system memory.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>std::bad_alloc
+Killed
+</pre></div>
+</div>
+<p><strong>Solution</strong>:</p>
+<ol class="arabic simple">
+<li><p>Increase available memory (if possible)</p></li>
+<li><p>Use more scalable analysis:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./bin/lotus-alias-dyck-aa<span class="w"> </span>input.bc
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Analyze incrementally:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Split module into parts</span>
+llvm-extract<span class="w"> </span>-func<span class="o">=</span>main<span class="w"> </span>input.bc<span class="w"> </span>-o<span class="w"> </span>main.bc
+./bin/tool<span class="w"> </span>main.bc
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>Limit analysis scope:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Intraprocedural only</span>
+./bin/clam<span class="w"> </span>--crab-inter<span class="o">=</span><span class="nb">false</span><span class="w"> </span>input.bc
+</pre></div>
+</div>
+</section>
+<section id="false-positives">
+<h3>False Positives<a class="headerlink" href="#false-positives" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Analysis reports bugs that don’t exist.</p>
+<p><strong>Solution</strong>:</p>
+<ol class="arabic simple">
+<li><p>Use more precise analysis:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1-CFA instead of CI</span>
+./bin/lotus-alias-aser-aa<span class="w"> </span>-analysis-mode<span class="o">=</span><span class="m">1</span>-cfa<span class="w"> </span>input.bc
+
+<span class="c1"># Zones domain instead of intervals</span>
+./bin/clam<span class="w"> </span>--crab-dom<span class="o">=</span>zones<span class="w"> </span>input.bc
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Validate with dynamic analysis:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./bin/dynaa-instrument<span class="w"> </span>input.bc<span class="w"> </span>-o<span class="w"> </span>inst.bc
+clang<span class="w"> </span>inst.bc<span class="w"> </span>libRuntime.a<span class="w"> </span>-o<span class="w"> </span>inst
+<span class="nv">LOG_DIR</span><span class="o">=</span>logs<span class="w"> </span>./inst
+./bin/dynaa-check<span class="w"> </span>input.bc<span class="w"> </span>logs/pts.log<span class="w"> </span>basic-aa
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Add annotations to code:</p></li>
+</ol>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">my_function</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">__builtin_assume</span><span class="p">(</span><span class="n">p</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span><span class="w">  </span><span class="c1">// Help analysis</span>
+<span class="w">    </span><span class="o">*</span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="missing-bugs-false-negatives">
+<h3>Missing Bugs (False Negatives)<a class="headerlink" href="#missing-bugs-false-negatives" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: Analysis doesn’t detect known bugs.</p>
+<p><strong>Solution</strong>:</p>
+<ol class="arabic simple">
+<li><p>Enable all checkers:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.ll<span class="w"> </span>--checks<span class="o">=</span>all
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Use more comprehensive analysis:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Interprocedural</span>
+./bin/clam<span class="w"> </span>--crab-inter<span class="w"> </span>--crab-check<span class="o">=</span>all<span class="w"> </span>input.bc
+
+<span class="c1"># Context-sensitive taint</span>
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>taint<span class="w"> </span>input.bc<span class="w"> </span>--verbose
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Check if bug type is supported:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>--help<span class="w">  </span><span class="c1"># See supported checks</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="tool-specific-issues">
+<h2>Tool-Specific Issues<a class="headerlink" href="#tool-specific-issues" title="Link to this heading"></a></h2>
+<section id="clam-issues">
+<h3>CLAM Issues<a class="headerlink" href="#clam-issues" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: CLAM fails with “unsupported instruction”.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Unsupported LLVM instruction: &lt;instruction&gt;
+</pre></div>
+</div>
+<p><strong>Solution</strong>:</p>
+<ol class="arabic simple">
+<li><p>Preprocess bitcode:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./bin/clam-pp<span class="w"> </span>--crab-lower-unsigned-icmp<span class="w"> </span><span class="se">\</span>
+<span class="w">               </span>--crab-lower-select<span class="w"> </span><span class="se">\</span>
+<span class="w">               </span>input.bc<span class="w"> </span>-o<span class="w"> </span>prep.bc
+./bin/clam<span class="w"> </span>prep.bc
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Use suitable domain:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Some domains don't support all operations</span>
+./bin/clam<span class="w"> </span>--crab-dom<span class="o">=</span>int<span class="w"> </span>input.bc<span class="w">  </span><span class="c1"># Basic support</span>
+</pre></div>
+</div>
+<p><strong>Problem</strong>: CLAM reports “Could not allocate memory”.</p>
+<p><strong>Solution</strong>:</p>
+<ol class="arabic simple">
+<li><p>Use less expensive domain:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Polyhedra is expensive</span>
+./bin/clam<span class="w"> </span>--crab-dom<span class="o">=</span>zones<span class="w"> </span>input.bc<span class="w">  </span><span class="c1"># Use zones instead</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Disable tracking:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./bin/clam<span class="w"> </span>--crab-track<span class="o">=</span>num<span class="w"> </span>input.bc<span class="w">  </span><span class="c1"># Track only numbers</span>
+</pre></div>
+</div>
+</section>
+<section id="dyckaa-issues">
+<h3>DyckAA Issues<a class="headerlink" href="#dyckaa-issues" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: DyckAA produces too many alias pairs.</p>
+<p><strong>Solution</strong>:</p>
+<ol class="arabic simple">
+<li><p>Enable function type checking:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Don't use -no-function-type-check</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>The analysis is very precise but conservative. This is expected behavior.</p></li>
+</ol>
+<p><strong>Problem</strong>: Call graph is incomplete.</p>
+<p><strong>Solution</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Ensure indirect calls are analyzed</span>
+./bin/lotus-alias-dyck-aa<span class="w"> </span>-dot-dyck-callgraph<span class="w"> </span>input.bc
+</pre></div>
+</div>
+</section>
+<section id="pdg-query-issues">
+<h3>PDG Query Issues<a class="headerlink" href="#pdg-query-issues" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: PDG query returns empty set unexpectedly.</p>
+<p><strong>Solution</strong>:</p>
+<ol class="arabic simple">
+<li><p>Check node names:</p></li>
+</ol>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="err">#</span><span class="w"> </span><span class="n">Function</span><span class="w"> </span><span class="n">names</span><span class="w"> </span><span class="n">are</span><span class="w"> </span><span class="k">case</span><span class="err">-</span><span class="n">sensitive</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'Main'</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">n</span><span class="w">  </span><span class="err">#</span><span class="w"> </span><span class="n">Wrong</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'main'</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">n</span><span class="w">  </span><span class="err">#</span><span class="w"> </span><span class="n">Correct</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Verify PDG was built:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./bin/lotus-ir-pdg-query<span class="w"> </span>-q<span class="w"> </span><span class="s2">"MATCH (n) RETURN n"</span><span class="w"> </span>input.bc<span class="w">  </span><span class="c1"># Should show nodes</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Use verbose mode:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./bin/lotus-ir-pdg-query<span class="w"> </span>-v<span class="w"> </span>-q<span class="w"> </span><span class="s2">"MATCH (n) RETURN n"</span><span class="w"> </span>input.bc
+</pre></div>
+</div>
+<p><strong>Problem</strong>: Query parser error.</p>
+<p><strong>Solution</strong>:</p>
+<ol class="arabic simple">
+<li><p>Check query syntax:</p></li>
+</ol>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="err">#</span><span class="w"> </span><span class="n">Wrong</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">main</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">n</span>
+
+<span class="err">#</span><span class="w"> </span><span class="n">Correct</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'main'</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">n</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Use interactive mode to test:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./bin/lotus-ir-pdg-query<span class="w"> </span>-i<span class="w"> </span>input.bc
+&gt;<span class="w"> </span>MATCH<span class="w"> </span><span class="o">(</span>n:FUNC_ENTRY<span class="o">)</span><span class="w"> </span>WHERE<span class="w"> </span>n.name<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'main'</span><span class="w"> </span>RETURN<span class="w"> </span>n
+</pre></div>
+</div>
+</section>
+<section id="taint-analysis-issues">
+<h3>Taint Analysis Issues<a class="headerlink" href="#taint-analysis-issues" title="Link to this heading"></a></h3>
+<p><strong>Problem</strong>: No taint flows detected but vulnerability exists.</p>
+<p><strong>Solution</strong>:</p>
+<ol class="arabic simple">
+<li><p>Specify custom sources/sinks:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>taint<span class="w"> </span>input.bc<span class="w"> </span>--taint.sources<span class="o">=</span>my_input_func<span class="w"> </span><span class="se">\</span>
+<span class="w">                   </span>--taint.sinks<span class="o">=</span>my_output_func
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Check that source and sink functions are actually called</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=taint</span></code> for interprocedural flow:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>taint<span class="w"> </span>input.bc
+</pre></div>
+</div>
+</section>
+</section>
+<section id="performance-tuning">
+<h2>Performance Tuning<a class="headerlink" href="#performance-tuning" title="Link to this heading"></a></h2>
+<section id="speeding-up-analysis">
+<h3>Speeding Up Analysis<a class="headerlink" href="#speeding-up-analysis" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Choose appropriate analysis</strong></p></li>
+<li><p><strong>Reduce scope</strong>:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Analyze specific function</span>
+llvm-extract<span class="w"> </span>-func<span class="o">=</span>main<span class="w"> </span>input.bc<span class="w"> </span>-o<span class="w"> </span>main.bc
+./bin/tool<span class="w"> </span>main.bc
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p><strong>Use preprocessing</strong>:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Simplify IR first</span>
+opt<span class="w"> </span>-mem2reg<span class="w"> </span>-simplifycfg<span class="w"> </span>input.bc<span class="w"> </span>-o<span class="w"> </span>simplified.bc
+./bin/tool<span class="w"> </span>simplified.bc
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p><strong>Parallel analysis</strong> (if tool supports):</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</section>
+<section id="reducing-memory-usage">
+<h3>Reducing Memory Usage<a class="headerlink" href="#reducing-memory-usage" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Use sparse representations</strong>:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Field-insensitive uses less memory</span>
+./bin/lotus-alias-aser-aa<span class="w"> </span>-field-sensitive<span class="o">=</span><span class="nb">false</span><span class="w"> </span>input.bc
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p><strong>Limit analysis depth</strong>:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./bin/lotus-alias-aser-aa<span class="w"> </span>-analysis-mode<span class="o">=</span><span class="m">1</span>-cfa<span class="w"> </span>input.bc<span class="w">  </span><span class="c1"># Not 2-cfa</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p><strong>Process in batches</strong>:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Analyze files separately</span>
+<span class="k">for</span><span class="w"> </span>f<span class="w"> </span><span class="k">in</span><span class="w"> </span>*.bc<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span>./bin/tool<span class="w"> </span><span class="s2">"</span><span class="nv">$f</span><span class="s2">"</span>
+<span class="k">done</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="frequently-asked-questions">
+<h2>Frequently Asked Questions<a class="headerlink" href="#frequently-asked-questions" title="Link to this heading"></a></h2>
+<section id="general-questions">
+<h3>General Questions<a class="headerlink" href="#general-questions" title="Link to this heading"></a></h3>
+<p><strong>Q: Which alias analysis should I use?</strong></p>
+<p>A: Depends on your needs</p>
+<p><strong>Q: Can Lotus analyze C++ code?</strong></p>
+<p>A: Yes! Compile to LLVM IR:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>clang++<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>code.cpp<span class="w"> </span>-o<span class="w"> </span>code.bc
+./bin/tool<span class="w"> </span>code.bc
+</pre></div>
+</div>
+<p><strong>Q: Does Lotus support multi-threaded programs?</strong></p>
+<p>A: Yes, use:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=concur</span></code> for concurrency bugs</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lotus-alias-aser-aa</span> <span class="pre">-analysis-mode=origin</span></code> for thread-aware analysis</p></li>
+<li><p>MHP analysis in concurrency module</p></li>
+</ul>
+<p><strong>Q: How do I visualize results?</strong></p>
+<p>A: Generate DOT files:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Call graph</span>
+./bin/lotus-alias-dyck-aa<span class="w"> </span>-dot-dyck-callgraph<span class="w"> </span>input.bc
+
+<span class="c1"># PDG</span>
+./bin/lotus-ir-pdg-query<span class="w"> </span>-dump-dot<span class="w"> </span>input.bc
+
+<span class="c1"># Sea-DSA memory graph</span>
+./bin/lotus-alias-seadsa-tool<span class="w"> </span>--sea-dsa-dot<span class="w"> </span>--outdir<span class="o">=</span>output/<span class="w"> </span>input.bc
+
+<span class="c1"># Convert to PDF</span>
+dot<span class="w"> </span>-Tpdf<span class="w"> </span>output.dot<span class="w"> </span>-o<span class="w"> </span>output.pdf
+</pre></div>
+</div>
+<p><strong>Q: Can I integrate Lotus into my own tool?</strong></p>
+<p>A: Yes! See <a class="reference internal" href="../developer/api_reference.html"><span class="doc">API Reference</span></a> for programmatic usage.</p>
+</section>
+<section id="analysis-questions">
+<h3>Analysis Questions<a class="headerlink" href="#analysis-questions" title="Link to this heading"></a></h3>
+<p><strong>Q: What’s the difference between flow-sensitive and flow-insensitive?</strong></p>
+<p>A:</p>
+<ul class="simple">
+<li><p><strong>Flow-insensitive</strong>: Single points-to set per variable for entire program. Faster but less precise.</p></li>
+<li><p><strong>Flow-sensitive</strong>: Different points-to sets at different program points. Slower but more precise.</p></li>
+</ul>
+<p>Example:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">;</span>
+<span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">p</span><span class="p">;</span>
+<span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">x</span><span class="p">;</span><span class="w">  </span><span class="c1">// p points to x</span>
+<span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">y</span><span class="p">;</span><span class="w">  </span><span class="c1">// p points to y</span>
+
+<span class="c1">// Flow-insensitive: p may point to {x, y} everywhere</span>
+<span class="c1">// Flow-sensitive: p points to {x} at line 4, {y} at line 5</span>
+</pre></div>
+</div>
+<p><strong>Q: What’s context sensitivity?</strong></p>
+<p>A: Distinguishing different calling contexts:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">foo</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">*</span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">;</span>
+<span class="w">    </span><span class="n">foo</span><span class="p">(</span><span class="o">&amp;</span><span class="n">x</span><span class="p">);</span><span class="w">  </span><span class="c1">// Context 1</span>
+<span class="w">    </span><span class="n">foo</span><span class="p">(</span><span class="o">&amp;</span><span class="n">y</span><span class="p">);</span><span class="w">  </span><span class="c1">// Context 2</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><strong>Context-insensitive</strong>: Analyzes <code class="docutils literal notranslate"><span class="pre">foo</span></code> once, <code class="docutils literal notranslate"><span class="pre">p</span></code> may point to {x, y}</p></li>
+<li><p><strong>Context-sensitive</strong>: Analyzes <code class="docutils literal notranslate"><span class="pre">foo</span></code> twice, <code class="docutils literal notranslate"><span class="pre">p</span></code> points to {x} in context 1, {y} in context 2</p></li>
+</ul>
+<p><strong>Q: How accurate is the analysis?</strong></p>
+<p>A: Lotus analyses are <strong>sound</strong> (no false negatives for most analyses) but may have <strong>false positives</strong>. Trade-off between precision and performance.</p>
+<p><strong>Q: Can I customize source/sink definitions?</strong></p>
+<p>A: Yes:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>taint<span class="w"> </span>input.bc<span class="w"> </span>--taint.sources<span class="o">=</span>my_source1,my_source2<span class="w"> </span><span class="se">\</span>
+<span class="w">                   </span>--taint.sinks<span class="o">=</span>my_sink1,my_sink2
+</pre></div>
+</div>
+<p>Or create custom analysis (see <a class="reference internal" href="../developer/developer_guide.html"><span class="doc">Developer Guide</span></a>).</p>
+</section>
+<section id="clam-questions">
+<h3>CLAM Questions<a class="headerlink" href="#clam-questions" title="Link to this heading"></a></h3>
+<p><strong>Q: Which abstract domain should I use?</strong></p>
+<p>A:</p>
+<ul class="simple">
+<li><p><strong>Intervals</strong> (<code class="docutils literal notranslate"><span class="pre">int</span></code>): Fast, simple ranges [l, u]</p></li>
+<li><p><strong>Zones</strong> (<code class="docutils literal notranslate"><span class="pre">zones</span></code>): Moderate, difference constraints (x - y ≤ c)</p></li>
+<li><p><strong>Octagons</strong> (<code class="docutils literal notranslate"><span class="pre">oct</span></code>): More precise, diagonal constraints (±x ± y ≤ c)</p></li>
+<li><p><strong>Polyhedra</strong> (<code class="docutils literal notranslate"><span class="pre">pk</span></code>): Most precise, but expensive</p></li>
+</ul>
+<p>Start with <code class="docutils literal notranslate"><span class="pre">zones</span></code> as good balance.</p>
+<p><strong>Q: What’s interprocedural analysis?</strong></p>
+<p>A: Analyzes across function boundaries:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Intraprocedural: each function separately</span>
+./bin/clam<span class="w"> </span>input.bc
+
+<span class="c1"># Interprocedural: considers call context</span>
+./bin/clam<span class="w"> </span>--crab-inter<span class="w"> </span>input.bc
+</pre></div>
+</div>
+<p>Interprocedural is more precise but slower.</p>
+<p><strong>Q: Can CLAM verify my assertions?</strong></p>
+<p>A: Yes:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+<span class="w">    </span><span class="n">assert</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">10</span><span class="p">);</span><span class="w">  </span><span class="c1">// CLAM can verify this</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./bin/clam<span class="w"> </span>--crab-check<span class="o">=</span>assert<span class="w"> </span>input.bc
+</pre></div>
+</div>
+</section>
+<section id="bug-detection-questions">
+<h3>Bug Detection Questions<a class="headerlink" href="#bug-detection-questions" title="Link to this heading"></a></h3>
+<p><strong>Q: Why does Kint report false positives?</strong></p>
+<p>A: Kint uses bounded SMT-based reasoning and library/function summaries.  A
+timeout, incomplete model, or unconstrained input can leave a possible bug
+path.  Add assertions or improve models to constrain the relevant behavior:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">process</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">100</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// Now Kint knows 0 &lt;= x &lt;= 100</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">50</span><span class="p">;</span><span class="w">  </span><span class="c1">// No overflow warning</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Q: How do I reduce false positives?</strong></p>
+<p>A:</p>
+<ol class="arabic simple">
+<li><p>Use preprocessing:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./bin/clam-pp<span class="w"> </span>--crab-lower-unsigned-icmp<span class="w"> </span>input.bc<span class="w"> </span>-o<span class="w"> </span>prep.bc
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Use more precise analysis</p></li>
+<li><p>Add annotations/assertions</p></li>
+<li><p>Validate with dynamic analysis (DynAA)</p></li>
+</ol>
+<p><strong>Q: Can I output results in JSON/SARIF?</strong></p>
+<p>A: Yes:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># CLAM JSON output</span>
+./bin/clam<span class="w"> </span>-ojson<span class="o">=</span>results.json<span class="w"> </span>input.bc
+
+<span class="c1"># Kint with SARIF (via BugReportMgr)</span>
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.ll<span class="w"> </span>--checks<span class="o">=</span>all<span class="w"> </span>--report-sarif<span class="o">=</span>results.sarif
+</pre></div>
+</div>
+</section>
+<section id="compilation-questions">
+<h3>Compilation Questions<a class="headerlink" href="#compilation-questions" title="Link to this heading"></a></h3>
+<p><strong>Q: How do I compile multi-file projects?</strong></p>
+<p>A:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Compile each file</span>
+clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>file1.c<span class="w"> </span>-o<span class="w"> </span>file1.bc
+clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>file2.c<span class="w"> </span>-o<span class="w"> </span>file2.bc
+
+<span class="c1"># Link into single module</span>
+llvm-link<span class="w"> </span>file1.bc<span class="w"> </span>file2.bc<span class="w"> </span>-o<span class="w"> </span>program.bc
+
+<span class="c1"># Analyze</span>
+./bin/tool<span class="w"> </span>program.bc
+</pre></div>
+</div>
+<p><strong>Q: Should I use .bc or .ll files?</strong></p>
+<p>A:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">.bc</span></code>: Binary format, faster to load, smaller</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.ll</span></code>: Text format, human-readable, easier to debug</p></li>
+</ul>
+<p>Both work with Lotus. Use <code class="docutils literal notranslate"><span class="pre">.bc</span></code> for production, <code class="docutils literal notranslate"><span class="pre">.ll</span></code> for debugging.</p>
+<p><strong>Q: What optimization level should I use?</strong></p>
+<p>A:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># For analysis, usually no optimization or -O1</span>
+clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>-O0<span class="w"> </span>code.c<span class="w"> </span>-o<span class="w"> </span>code.bc<span class="w">  </span><span class="c1"># No optimization</span>
+clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>-O1<span class="w"> </span>code.c<span class="w"> </span>-o<span class="w"> </span>code.bc<span class="w">  </span><span class="c1"># Light optimization</span>
+
+<span class="c1"># Higher optimization may complicate analysis</span>
+clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>-O3<span class="w"> </span>code.c<span class="w"> </span>-o<span class="w"> </span>code.bc<span class="w">  </span><span class="c1"># Not recommended</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="common-error-messages">
+<h2>Common Error Messages<a class="headerlink" href="#common-error-messages" title="Link to this heading"></a></h2>
+<section id="module-verification-failed">
+<h3>“Module verification failed”<a class="headerlink" href="#module-verification-failed" title="Link to this heading"></a></h3>
+<p><strong>Error</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Module verification failed: &lt;details&gt;
+</pre></div>
+</div>
+<p><strong>Solution</strong>: Your LLVM IR is malformed. Verify with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>opt<span class="w"> </span>-verify<span class="w"> </span>input.bc<span class="w"> </span>-o<span class="w"> </span>/dev/null
+</pre></div>
+</div>
+<p>Fix the IR or recompile from source.</p>
+</section>
+<section id="pass-x-is-not-initialized">
+<h3>“Pass ‘X’ is not initialized”<a class="headerlink" href="#pass-x-is-not-initialized" title="Link to this heading"></a></h3>
+<p><strong>Error</strong>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Pass 'X' is not initialized
+</pre></div>
+</div>
+<p><strong>Solution</strong>: Initialize pass registry:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">initializeCore</span><span class="p">(</span><span class="o">*</span><span class="n">PassRegistry</span><span class="o">::</span><span class="n">getPassRegistry</span><span class="p">());</span>
+</pre></div>
+</div>
+</section>
+<section id="couldn-t-find-alias-information">
+<h3>“Couldn’t find alias information”<a class="headerlink" href="#couldn-t-find-alias-information" title="Link to this heading"></a></h3>
+<p><strong>Error</strong>: Pass expects alias analysis but none provided.</p>
+<p><strong>Solution</strong>: Add alias analysis to pass manager:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">PM</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">createBasicAAWrapperPass</span><span class="p">());</span>
+<span class="n">PM</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">myPass</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+<section id="out-of-range-access-or-vector-index-out-of-bounds">
+<h3>“Out of range access” or “Vector index out of bounds”<a class="headerlink" href="#out-of-range-access-or-vector-index-out-of-bounds" title="Link to this heading"></a></h3>
+<p><strong>Error</strong>: Accessing invalid array/vector index.</p>
+<p><strong>Solution</strong>: This is usually a bug in the analysis. Report it with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Minimal reproducible example</span>
+clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>minimal.c<span class="w"> </span>-o<span class="w"> </span>minimal.bc
+./bin/tool<span class="w"> </span>minimal.bc
+</pre></div>
+</div>
+</section>
+</section>
+<section id="getting-help">
+<h2>Getting Help<a class="headerlink" href="#getting-help" title="Link to this heading"></a></h2>
+<section id="documentation">
+<h3>Documentation<a class="headerlink" href="#documentation" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><a class="reference internal" href="../index.html"><span class="doc">Lotus: Program Analysis Framework</span></a> - Main documentation</p></li>
+<li><p><a class="reference internal" href="architecture.html"><span class="doc">Architecture Overview</span></a> - Framework architecture</p></li>
+<li><p><a class="reference internal" href="../developer/api_reference.html"><span class="doc">API Reference</span></a> - API documentation</p></li>
+<li><p><a class="reference internal" href="tutorials.html"><span class="doc">Tutorials and Examples</span></a> - Usage examples</p></li>
+<li><p><a class="reference internal" href="../developer/developer_guide.html"><span class="doc">Developer Guide</span></a> - Extending Lotus</p></li>
+</ul>
+</section>
+<section id="support-channels">
+<h3>Support Channels<a class="headerlink" href="#support-channels" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>GitHub Issues</strong>: <a class="reference external" href="https://github.com/ZJU-PL/lotus/issues">https://github.com/ZJU-PL/lotus/issues</a></p>
+<ul class="simple">
+<li><p>Bug reports</p></li>
+<li><p>Feature requests</p></li>
+<li><p>Help with errors</p></li>
+</ul>
+</li>
+<li><p><strong>GitHub Discussions</strong>: <a class="reference external" href="https://github.com/ZJU-PL/lotus/discussions">https://github.com/ZJU-PL/lotus/discussions</a></p>
+<ul class="simple">
+<li><p>General questions</p></li>
+<li><p>Best practices</p></li>
+<li><p>Show and tell</p></li>
+</ul>
+</li>
+<li><p><strong>Stack Overflow</strong>: Tag questions with <code class="docutils literal notranslate"><span class="pre">[lotus-analysis]</span></code> and <code class="docutils literal notranslate"><span class="pre">[llvm]</span></code></p></li>
+</ol>
+</section>
+<section id="reporting-bugs">
+<h3>Reporting Bugs<a class="headerlink" href="#reporting-bugs" title="Link to this heading"></a></h3>
+<p>When reporting bugs, include:</p>
+<ol class="arabic simple">
+<li><p><strong>Lotus version</strong>: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">rev-parse</span> <span class="pre">HEAD</span></code></p></li>
+<li><p><strong>LLVM version</strong>: <code class="docutils literal notranslate"><span class="pre">llvm-config</span> <span class="pre">--version</span></code></p></li>
+<li><p><strong>System</strong>: OS, compiler version</p></li>
+<li><p><strong>Input file</strong>: Minimal reproducible example</p></li>
+<li><p><strong>Command</strong>: Exact command that fails</p></li>
+<li><p><strong>Output</strong>: Full error message</p></li>
+<li><p><strong>Backtrace</strong>: If crashed, GDB backtrace</p></li>
+</ol>
+<p>Example bug report:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>**Description**: DyckAA crashes on input file
+
+**Environment**:
+- Lotus: commit abc123def
+- LLVM: 14.0.0
+- OS: Ubuntu 22.04
+- GCC: 11.3.0
+
+**To Reproduce**:
+1. Compile: clang -emit-llvm -c test.c -o test.bc
+2. Run: ./bin/lotus-alias-dyck-aa test.bc
+
+**Error**:
+Segmentation fault (core dumped)
+
+**Backtrace**:
+#0 DyckGraph::addEdge (this=0x0, ...)
+...
+
+**Input file**: [attach test.c]
+</pre></div>
+</div>
+</section>
+<section id="contributing">
+<h3>Contributing<a class="headerlink" href="#contributing" title="Link to this heading"></a></h3>
+<p>See <a class="reference internal" href="../developer/developer_guide.html"><span class="doc">Developer Guide</span></a> for how to contribute code, documentation, or tests.</p>
+</section>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="installation.html"><span class="doc">Installation Guide</span></a> - Installation guide</p></li>
+<li><p><a class="reference internal" href="quickstart.html"><span class="doc">Quick Start Guide</span></a> - Quick start guide</p></li>
+<li><p><a class="reference internal" href="../tools/index.html"><span class="doc">Command-Line Tools</span></a> - Tool documentation</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="instrumentation_passes.html" class="btn btn-neutral float-left" title="Instrumentation Passes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../tools/index.html" class="btn btn-neutral float-right" title="Command-Line Tools" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

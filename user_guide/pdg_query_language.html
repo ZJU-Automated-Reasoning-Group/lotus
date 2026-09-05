@@ -1,0 +1,839 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDG Query Language (Cypher) &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Property-Based Slicing" href="property_based_slicing.html" />
+    <link rel="prev" title="Bug Detection with Lotus" href="bug_detection.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">PDG Query Language (Cypher)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#getting-started">Getting Started</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#building-the-pdg">Building the PDG</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#interactive-mode">Interactive Mode</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#single-query-mode">Single Query Mode</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#batch-query-mode">Batch Query Mode</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#language-reference">Language Reference</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#basic-node-queries">Basic Node Queries</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#get-all-nodes">Get All Nodes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#query-nodes-by-type">Query Nodes by Type</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#function-specific-queries">Function-Specific Queries</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#return-values-of-a-function">Return Values of a Function</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#formal-parameters-of-a-function">Formal Parameters of a Function</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#function-entry-points">Function Entry Points</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#edge-queries">Edge Queries</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#query-edges-by-type">Query Edges by Type</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#connected-nodes">Connected Nodes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#slicing-operations">Slicing Operations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#forward-slice">Forward Slice</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#backward-slice">Backward Slice</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#path-between-nodes">Path Between Nodes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#shortest-path">Shortest Path</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#set-operations">Set Operations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#union">Union</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#intersection">Intersection</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#difference">Difference</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#filtering-with-where">Filtering with WHERE</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#property-filtering">Property Filtering</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#multiple-conditions">Multiple Conditions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#security-analysis-examples">Security Analysis Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#information-flow-analysis">Information Flow Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sanitization-verification">Sanitization Verification</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#access-control-policy">Access Control Policy</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#null-pointer-analysis">Null Pointer Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#control-flow-analysis">Control Flow Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#parameter-dependency">Parameter Dependency</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#taint-analysis">Taint Analysis</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#query-file-format">Query File Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#best-practices">Best Practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#limitations">Limitations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#performance-tips">Performance Tips</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#query-returns-empty-set">Query Returns Empty Set</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#query-too-slow">Query Too Slow</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#syntax-errors">Syntax Errors</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">PDG Query Language (Cypher)</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/user_guide/pdg_query_language.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="pdg-query-language-cypher">
+<h1>PDG Query Language (Cypher)<a class="headerlink" href="#pdg-query-language-cypher" title="Link to this heading"></a></h1>
+<p>The Program Dependence Graph (PDG) Query Language uses Cypher, a declarative graph query language, to query dependencies, perform slicing, and verify security policies on program dependence graphs.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The Cypher query rule set was expanded in a recent update
+(commit 3217fac4) with additional rules for pattern matching over
+the PDG IR. New security-focused query templates are available in
+<code class="docutils literal notranslate"><span class="pre">tools/ir/examples/security/</span></code>.</p>
+</div>
+<p>Cypher provides a declarative way to:</p>
+<ul class="simple">
+<li><p>Query program dependencies (data and control)</p></li>
+<li><p>Perform forward and backward slicing</p></li>
+<li><p>Check information flow properties</p></li>
+<li><p>Verify security policies</p></li>
+<li><p>Find shortest paths between program elements</p></li>
+<li><p>Analyze parameter dependencies</p></li>
+</ul>
+<p>The language supports:</p>
+<ul class="simple">
+<li><p>Pattern matching (nodes and relationships)</p></li>
+<li><p>WHERE clauses for filtering</p></li>
+<li><p>Path queries with variable-length patterns</p></li>
+<li><p>Set operations (UNION, intersection via WHERE EXISTS)</p></li>
+<li><p>Aggregations and ordering</p></li>
+</ul>
+</section>
+<section id="getting-started">
+<h2>Getting Started<a class="headerlink" href="#getting-started" title="Link to this heading"></a></h2>
+<section id="building-the-pdg">
+<h3>Building the PDG<a class="headerlink" href="#building-the-pdg" title="Link to this heading"></a></h3>
+<p>First, compile your program and build the PDG:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Compile to LLVM IR</span>
+clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-g<span class="w"> </span>-c<span class="w"> </span>program.c<span class="w"> </span>-o<span class="w"> </span>program.bc
+
+<span class="c1"># Run PDG query tool</span>
+./build/bin/lotus-ir-pdg-query<span class="w"> </span>program.bc
+</pre></div>
+</div>
+</section>
+<section id="interactive-mode">
+<h3>Interactive Mode<a class="headerlink" href="#interactive-mode" title="Link to this heading"></a></h3>
+<p>Use <code class="docutils literal notranslate"><span class="pre">-i</span></code> flag for interactive queries:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-ir-pdg-query<span class="w"> </span>-i<span class="w"> </span>program.bc
+
+PDG&gt;<span class="w"> </span>MATCH<span class="w"> </span><span class="o">(</span>n:FUNC_ENTRY<span class="o">)</span><span class="w"> </span>WHERE<span class="w"> </span>n.name<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'main'</span><span class="w"> </span>RETURN<span class="w"> </span>n
+<span class="o">[</span>Results<span class="w"> </span>displayed<span class="o">]</span>
+
+PDG&gt;<span class="w"> </span>MATCH<span class="w"> </span><span class="o">(</span>input:FUNC_ENTRY<span class="o">)</span>-<span class="o">[</span>:PARAMETER_OUT<span class="o">]</span>-&gt;<span class="o">(</span>ret:INST_RET<span class="o">)</span>-<span class="o">[</span>*<span class="o">]</span>-&gt;<span class="o">(</span>n<span class="o">)</span>
+PDG&gt;<span class="w"> </span>WHERE<span class="w"> </span>input.name<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'getInput'</span>
+PDG&gt;<span class="w"> </span>RETURN<span class="w"> </span>n
+<span class="o">[</span>Slice<span class="w"> </span>displayed<span class="o">]</span>
+
+PDG&gt;<span class="w"> </span><span class="nb">exit</span>
+</pre></div>
+</div>
+</section>
+<section id="single-query-mode">
+<h3>Single Query Mode<a class="headerlink" href="#single-query-mode" title="Link to this heading"></a></h3>
+<p>Use <code class="docutils literal notranslate"><span class="pre">-q</span></code> flag for single query:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-ir-pdg-query<span class="w"> </span>-q<span class="w"> </span><span class="s2">"MATCH (n:FUNC_ENTRY) WHERE n.name = 'main' RETURN n"</span><span class="w"> </span>program.bc
+</pre></div>
+</div>
+</section>
+<section id="batch-query-mode">
+<h3>Batch Query Mode<a class="headerlink" href="#batch-query-mode" title="Link to this heading"></a></h3>
+<p>Use <code class="docutils literal notranslate"><span class="pre">-f</span></code> flag to run queries from file:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-ir-pdg-query<span class="w"> </span>-f<span class="w"> </span>queries.txt<span class="w"> </span>program.bc
+</pre></div>
+</div>
+</section>
+</section>
+<section id="language-reference">
+<h2>Language Reference<a class="headerlink" href="#language-reference" title="Link to this heading"></a></h2>
+<section id="basic-node-queries">
+<h3>Basic Node Queries<a class="headerlink" href="#basic-node-queries" title="Link to this heading"></a></h3>
+<section id="get-all-nodes">
+<h4>Get All Nodes<a class="headerlink" href="#get-all-nodes" title="Link to this heading"></a></h4>
+<p>Returns all nodes in the PDG.</p>
+<p><strong>Syntax</strong>: <code class="docutils literal notranslate"><span class="pre">MATCH</span> <span class="pre">(n)</span> <span class="pre">RETURN</span> <span class="pre">n</span></code></p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">n</span>
+</pre></div>
+</div>
+<p><strong>Returns</strong>: All nodes in the PDG.</p>
+</section>
+<section id="query-nodes-by-type">
+<h4>Query Nodes by Type<a class="headerlink" href="#query-nodes-by-type" title="Link to this heading"></a></h4>
+<p>Select nodes by their label (type).</p>
+<p><strong>Syntax</strong>: <code class="docutils literal notranslate"><span class="pre">MATCH</span> <span class="pre">(n:LABEL)</span> <span class="pre">RETURN</span> <span class="pre">n</span></code></p>
+<p><strong>Node Types (Labels)</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">INST_FUNCALL</span></code> - Function call instructions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">INST_RET</span></code> - Return instructions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">INST_BR</span></code> - Branch instructions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">INST_LOAD</span></code> - Load instructions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">INST_STORE</span></code> - Store instructions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">INST_ALLOCA</span></code> - Alloca instructions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">INST_GEP</span></code> - GetElementPtr instructions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">INST_OTHER</span></code> - Other instructions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">FUNC_ENTRY</span></code> - Function entry points</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PARAM_FORMALIN</span></code> - Formal input parameters</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PARAM_FORMALOUT</span></code> - Formal output parameters (return values)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PARAM_ACTUALIN</span></code> - Actual input parameters</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PARAM_ACTUALOUT</span></code> - Actual output parameters</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GLOBAL</span></code> - Global variables</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">FUNC</span></code> - Function nodes</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CLASS</span></code> - Class nodes</p></li>
+</ul>
+<p><strong>Example</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">INST_FUNCALL</span><span class="p">)</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">n</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">INST_BR</span><span class="p">)</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">n</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="function-specific-queries">
+<h3>Function-Specific Queries<a class="headerlink" href="#function-specific-queries" title="Link to this heading"></a></h3>
+<section id="return-values-of-a-function">
+<h4>Return Values of a Function<a class="headerlink" href="#return-values-of-a-function" title="Link to this heading"></a></h4>
+<p>Returns the return values of a function.</p>
+<p><strong>Syntax</strong>: <code class="docutils literal notranslate"><span class="pre">MATCH</span> <span class="pre">(n:FUNC_ENTRY)-[:PARAMETER_OUT]-&gt;(ret:INST_RET)</span> <span class="pre">WHERE</span> <span class="pre">n.name</span> <span class="pre">=</span> <span class="pre">'functionName'</span> <span class="pre">RETURN</span> <span class="pre">ret</span></code></p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">ret</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'main'</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">ret</span>
+
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">ret</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'getInput'</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">ret</span>
+</pre></div>
+</div>
+<p><strong>Returns</strong>: Nodes representing return values of the specified function.</p>
+</section>
+<section id="formal-parameters-of-a-function">
+<h4>Formal Parameters of a Function<a class="headerlink" href="#formal-parameters-of-a-function" title="Link to this heading"></a></h4>
+<p>Returns the formal parameters of a function.</p>
+<p><strong>Syntax</strong>: <code class="docutils literal notranslate"><span class="pre">MATCH</span> <span class="pre">(n:FUNC_ENTRY)-[:PARAMETER_IN]-&gt;(param:PARAM_FORMALIN)</span> <span class="pre">WHERE</span> <span class="pre">n.name</span> <span class="pre">=</span> <span class="pre">'functionName'</span> <span class="pre">RETURN</span> <span class="pre">param</span></code></p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">param</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'process_data'</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">param</span>
+</pre></div>
+</div>
+<p><strong>Returns</strong>: Nodes representing formal input parameters.</p>
+</section>
+<section id="function-entry-points">
+<h4>Function Entry Points<a class="headerlink" href="#function-entry-points" title="Link to this heading"></a></h4>
+<p>Returns the entry points of a function.</p>
+<p><strong>Syntax</strong>: <code class="docutils literal notranslate"><span class="pre">MATCH</span> <span class="pre">(n:FUNC_ENTRY)</span> <span class="pre">WHERE</span> <span class="pre">n.name</span> <span class="pre">=</span> <span class="pre">'functionName'</span> <span class="pre">RETURN</span> <span class="pre">n</span></code></p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'main'</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">n</span>
+</pre></div>
+</div>
+<p><strong>Returns</strong>: Function entry nodes.</p>
+</section>
+</section>
+<section id="edge-queries">
+<h3>Edge Queries<a class="headerlink" href="#edge-queries" title="Link to this heading"></a></h3>
+<section id="query-edges-by-type">
+<h4>Query Edges by Type<a class="headerlink" href="#query-edges-by-type" title="Link to this heading"></a></h4>
+<p>Select edges by their relationship type.</p>
+<p><strong>Syntax</strong>: <code class="docutils literal notranslate"><span class="pre">MATCH</span> <span class="pre">()-[r:TYPE]-&gt;()</span> <span class="pre">RETURN</span> <span class="pre">r</span></code></p>
+<p><strong>Edge Types (Relationship Types)</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">DATA_DEF_USE</span></code> - Data definition-use edges</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DATA_RAW</span></code> - Read-after-write edges</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DATA_READ</span></code> - Read edges</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DATA_WRITE</span></code> - Write edges</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DATA_ALIAS</span></code> - Alias edges</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CONTROL_DEP</span></code> - Control dependency edges</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CONTROLDEP_BR</span></code> - Control dependency from branches</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CONTROLDEP_ENTRY</span></code> - Control dependency from entry</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PARAMETER_IN</span></code> - Parameter input edges</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PARAMETER_OUT</span></code> - Parameter output edges</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PARAMETER_FIELD</span></code> - Field parameter edges</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CALL_DEP</span></code> - Call dependency edges</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GLOBAL_DEP</span></code> - Global dependency edges</p></li>
+</ul>
+<p><strong>Example</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">()</span><span class="o">-[</span><span class="n">r</span><span class="p">:</span><span class="n">DATA_DEF_USE</span><span class="o">]-&gt;</span><span class="p">()</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">r</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">()</span><span class="o">-[</span><span class="n">r</span><span class="p">:</span><span class="n">CONTROLDEP_BR</span><span class="o">]-&gt;</span><span class="p">()</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">r</span>
+</pre></div>
+</div>
+</section>
+<section id="connected-nodes">
+<h4>Connected Nodes<a class="headerlink" href="#connected-nodes" title="Link to this heading"></a></h4>
+<p>Get nodes connected by edges.</p>
+<p><strong>Syntax</strong>: <code class="docutils literal notranslate"><span class="pre">MATCH</span> <span class="pre">(a)-[r]-&gt;(b)</span> <span class="pre">RETURN</span> <span class="pre">a,</span> <span class="pre">b</span></code></p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">-[</span><span class="n">r</span><span class="p">:</span><span class="n">DATA_DEF_USE</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">b</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">-[</span><span class="n">r</span><span class="p">:</span><span class="n">CONTROLDEP_BR</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">b</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="slicing-operations">
+<h3>Slicing Operations<a class="headerlink" href="#slicing-operations" title="Link to this heading"></a></h3>
+<section id="forward-slice">
+<h4>Forward Slice<a class="headerlink" href="#forward-slice" title="Link to this heading"></a></h4>
+<p>Compute forward slice from given nodes (all nodes reachable from source).</p>
+<p><strong>Syntax</strong>: <code class="docutils literal notranslate"><span class="pre">MATCH</span> <span class="pre">(source)-[*]-&gt;(n)</span> <span class="pre">RETURN</span> <span class="pre">DISTINCT</span> <span class="pre">n</span></code></p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">input</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">inputRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">input</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'getInput'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">inputRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">n</span>
+</pre></div>
+</div>
+<p><strong>Returns</strong>: All nodes reachable from the input nodes.</p>
+<p><strong>Use Case</strong>: Find what program elements are affected by a source.</p>
+</section>
+<section id="backward-slice">
+<h4>Backward Slice<a class="headerlink" href="#backward-slice" title="Link to this heading"></a></h4>
+<p>Compute backward slice from given nodes (all nodes that can reach the sink).</p>
+<p><strong>Syntax</strong>: <code class="docutils literal notranslate"><span class="pre">MATCH</span> <span class="pre">(n)-[*]-&gt;(sink)</span> <span class="pre">RETURN</span> <span class="pre">DISTINCT</span> <span class="pre">n</span></code></p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">output</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">outputParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">output</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'printOutput'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">outputParam</span><span class="p">)</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">n</span>
+</pre></div>
+</div>
+<p><strong>Returns</strong>: All nodes that can reach the input nodes.</p>
+<p><strong>Use Case</strong>: Find what program elements influence a sink.</p>
+</section>
+<section id="path-between-nodes">
+<h4>Path Between Nodes<a class="headerlink" href="#path-between-nodes" title="Link to this heading"></a></h4>
+<p>Find nodes on paths between two sets of nodes.</p>
+<p><strong>Syntax</strong>: <code class="docutils literal notranslate"><span class="pre">MATCH</span> <span class="pre">path</span> <span class="pre">=</span> <span class="pre">(start)-[*]-&gt;(end)</span> <span class="pre">RETURN</span> <span class="pre">path</span></code></p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">input</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">inputRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">input</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'getInput'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">output</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">outputParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">output</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'system'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="n">inputRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">outputParam</span><span class="p">)</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">path</span>
+</pre></div>
+</div>
+<p><strong>Returns</strong>: Paths from sources to sinks.</p>
+<p><strong>Use Case</strong>: Information flow analysis.</p>
+</section>
+<section id="shortest-path">
+<h4>Shortest Path<a class="headerlink" href="#shortest-path" title="Link to this heading"></a></h4>
+<p>Find shortest path between two sets of nodes.</p>
+<p><strong>Syntax</strong>: <code class="docutils literal notranslate"><span class="pre">MATCH</span> <span class="pre">path</span> <span class="pre">=</span> <span class="pre">shortestPath((start)-[*]-&gt;(end))</span> <span class="pre">RETURN</span> <span class="pre">path</span></code></p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">malloc</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">mallocRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">malloc</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'malloc'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">free</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">freeParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">free</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'free'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">shortestPath</span><span class="p">((</span><span class="n">mallocRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">freeParam</span><span class="p">))</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">path</span>
+</pre></div>
+</div>
+<p><strong>Returns</strong>: Shortest path between nodes.</p>
+</section>
+</section>
+<section id="set-operations">
+<h3>Set Operations<a class="headerlink" href="#set-operations" title="Link to this heading"></a></h3>
+<section id="union">
+<h4>Union<a class="headerlink" href="#union" title="Link to this heading"></a></h4>
+<p>Union of two sets using <code class="docutils literal notranslate"><span class="pre">UNION</span></code> keyword.</p>
+<p><strong>Syntax</strong>: <code class="docutils literal notranslate"><span class="pre">MATCH</span> <span class="pre">...</span> <span class="pre">RETURN</span> <span class="pre">...</span> <span class="pre">UNION</span> <span class="pre">MATCH</span> <span class="pre">...</span> <span class="pre">RETURN</span> <span class="pre">...</span></code></p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">func1</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">ret1</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">func1</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'func1'</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">ret1</span>
+<span class="k">UNION</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">func2</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">ret2</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">func2</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'func2'</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">ret2</span>
+</pre></div>
+</div>
+<p><strong>Returns</strong>: All nodes in either set.</p>
+</section>
+<section id="intersection">
+<h4>Intersection<a class="headerlink" href="#intersection" title="Link to this heading"></a></h4>
+<p>Intersection using <code class="docutils literal notranslate"><span class="pre">WHERE</span> <span class="pre">EXISTS</span></code> subquery.</p>
+<p><strong>Syntax</strong>: <code class="docutils literal notranslate"><span class="pre">MATCH</span> <span class="pre">(n)</span> <span class="pre">WHERE</span> <span class="pre">EXISTS</span> <span class="pre">{</span> <span class="pre">MATCH</span> <span class="pre">(m)</span> <span class="pre">WHERE</span> <span class="pre">...</span> <span class="pre">}</span> <span class="pre">RETURN</span> <span class="pre">n</span></code></p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">dataNodes</span><span class="p">:</span><span class="n">INST_FUNCALL</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">EXISTS</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">controlNodes</span><span class="p">:</span><span class="n">INST_BR</span><span class="p">)</span>
+<span class="w">  </span><span class="k">WHERE</span><span class="w"> </span><span class="n">dataNodes</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">controlNodes</span><span class="p">.</span><span class="n">id</span>
+<span class="p">}</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">dataNodes</span>
+</pre></div>
+</div>
+<p><strong>Returns</strong>: Nodes in both sets.</p>
+<p><strong>Use Case</strong>: Find nodes that are both data and control dependent.</p>
+</section>
+<section id="difference">
+<h4>Difference<a class="headerlink" href="#difference" title="Link to this heading"></a></h4>
+<p>Set difference using <code class="docutils literal notranslate"><span class="pre">WHERE</span> <span class="pre">NOT</span></code>.</p>
+<p><strong>Syntax</strong>: <code class="docutils literal notranslate"><span class="pre">MATCH</span> <span class="pre">(n)</span> <span class="pre">WHERE</span> <span class="pre">NOT</span> <span class="pre">(condition)</span> <span class="pre">RETURN</span> <span class="pre">n</span></code></p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">calls</span><span class="p">:</span><span class="n">INST_FUNCALL</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="p">(</span><span class="n">calls</span><span class="p">:</span><span class="n">INST_BR</span><span class="p">)</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">calls</span>
+</pre></div>
+</div>
+<p><strong>Returns</strong>: Nodes in first set but not matching condition.</p>
+</section>
+</section>
+<section id="filtering-with-where">
+<h3>Filtering with WHERE<a class="headerlink" href="#filtering-with-where" title="Link to this heading"></a></h3>
+<section id="property-filtering">
+<h4>Property Filtering<a class="headerlink" href="#property-filtering" title="Link to this heading"></a></h4>
+<p>Filter nodes by properties.</p>
+<p><strong>Syntax</strong>: <code class="docutils literal notranslate"><span class="pre">MATCH</span> <span class="pre">(n)</span> <span class="pre">WHERE</span> <span class="pre">n.property</span> <span class="pre">=</span> <span class="pre">value</span> <span class="pre">RETURN</span> <span class="pre">n</span></code></p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'main'</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">n</span>
+
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">line</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="m">100</span><span class="w"> </span><span class="n">AND</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">line</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="m">200</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">n</span>
+</pre></div>
+</div>
+</section>
+<section id="multiple-conditions">
+<h4>Multiple Conditions<a class="headerlink" href="#multiple-conditions" title="Link to this heading"></a></h4>
+<p>Combine conditions with AND, OR, NOT.</p>
+<p><strong>Syntax</strong>: <code class="docutils literal notranslate"><span class="pre">MATCH</span> <span class="pre">(n)</span> <span class="pre">WHERE</span> <span class="pre">condition1</span> <span class="pre">AND</span> <span class="pre">condition2</span> <span class="pre">RETURN</span> <span class="pre">n</span></code></p>
+<p><strong>Example</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">INST_FUNCALL</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'malloc'</span><span class="w"> </span><span class="n">OR</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'calloc'</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">n</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+<section id="security-analysis-examples">
+<h2>Security Analysis Examples<a class="headerlink" href="#security-analysis-examples" title="Link to this heading"></a></h2>
+<section id="information-flow-analysis">
+<h3>Information Flow Analysis<a class="headerlink" href="#information-flow-analysis" title="Link to this heading"></a></h3>
+<p>Check if secret data flows to network:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">secretRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">secret</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'getPassword'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">network</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">networkParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">network</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'sendToNetwork'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="n">secretRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">networkParam</span><span class="p">)</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">path</span>
+</pre></div>
+</div>
+<p>If result is non-empty, there’s a potential information leak.</p>
+</section>
+<section id="sanitization-verification">
+<h3>Sanitization Verification<a class="headerlink" href="#sanitization-verification" title="Link to this heading"></a></h3>
+<p>Verify all user inputs are sanitized before use in SQL:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">sources</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sourceRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">sources</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'getUserInput'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">sanitizers</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sanitizerRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">sanitizers</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'sanitizeSQL'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">sinks</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sinkParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">sinks</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'executeSQL'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="n">sourceRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sinkParam</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="n">EXISTS</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">sourceRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sanitizerRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sinkParam</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">path</span>
+</pre></div>
+</div>
+<p>If result is empty, all flows are sanitized.</p>
+</section>
+<section id="access-control-policy">
+<h3>Access Control Policy<a class="headerlink" href="#access-control-policy" title="Link to this heading"></a></h3>
+<p>Verify sensitive file operations require authorization:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">auth</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">authRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">auth</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'checkPermission'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">authRet</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">CONTROLDEP_BR</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">check</span><span class="p">)</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">fileOps</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">fileParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">fileOps</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'openFile'</span><span class="w"> </span><span class="n">OR</span><span class="w"> </span><span class="n">fileOps</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'writeFile'</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="n">EXISTS</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">check</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">CONTROLDEP_BR</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">fileParam</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">fileParam</span>
+</pre></div>
+</div>
+</section>
+<section id="null-pointer-analysis">
+<h3>Null Pointer Analysis<a class="headerlink" href="#null-pointer-analysis" title="Link to this heading"></a></h3>
+<p>Find potential null dereferences:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">nullRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">nullRet</span><span class="p">.</span><span class="n">function</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'malloc'</span><span class="w"> </span><span class="n">OR</span><span class="w"> </span><span class="n">nullRet</span><span class="p">.</span><span class="n">function</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'fopen'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">nullRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">deref</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">deref</span><span class="p">:</span><span class="n">INST_LOAD</span><span class="w"> </span><span class="n">OR</span><span class="w"> </span><span class="n">deref</span><span class="p">:</span><span class="n">INST_STORE</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">deref</span>
+</pre></div>
+</div>
+</section>
+<section id="control-flow-analysis">
+<h3>Control Flow Analysis<a class="headerlink" href="#control-flow-analysis" title="Link to this heading"></a></h3>
+<p>Find which conditionals affect a computation:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">branches</span><span class="p">:</span><span class="n">INST_BR</span><span class="p">)</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">computation</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">compParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">computation</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'compute'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">branches</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">compParam</span><span class="p">)</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">branches</span>
+</pre></div>
+</div>
+</section>
+<section id="parameter-dependency">
+<h3>Parameter Dependency<a class="headerlink" href="#parameter-dependency" title="Link to this heading"></a></h3>
+<p>Find dependencies between function parameters:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">inputs</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">inputParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">inputs</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'processData'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">outputs</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">outputRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">outputs</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'processData'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="n">inputParam</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">outputRet</span><span class="p">)</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">path</span>
+</pre></div>
+</div>
+</section>
+<section id="taint-analysis">
+<h3>Taint Analysis<a class="headerlink" href="#taint-analysis" title="Link to this heading"></a></h3>
+<p>Complete taint analysis from sources to sinks:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">sources</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sourceRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">sources</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'read'</span><span class="w"> </span><span class="n">OR</span><span class="w"> </span><span class="n">sources</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'recv'</span><span class="w"> </span><span class="n">OR</span><span class="w"> </span><span class="n">sources</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'scanf'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">sinks</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sinkParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">sinks</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'system'</span><span class="w"> </span><span class="n">OR</span><span class="w"> </span><span class="n">sinks</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'exec'</span><span class="w"> </span><span class="n">OR</span><span class="w"> </span><span class="n">sinks</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'popen'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="n">sourceRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sinkParam</span><span class="p">)</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">path</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="query-file-format">
+<h2>Query File Format<a class="headerlink" href="#query-file-format" title="Link to this heading"></a></h2>
+<p>Batch query files support:</p>
+<ul class="simple">
+<li><p>Comments (<code class="docutils literal notranslate"><span class="pre">#</span></code> prefix)</p></li>
+<li><p>Multiple queries (one per line or separated by <code class="docutils literal notranslate"><span class="pre">;</span></code>)</p></li>
+<li><p>Multi-line queries</p></li>
+</ul>
+<p>Example query file (<code class="docutils literal notranslate"><span class="pre">security_policy.txt</span></code>):</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="err">#</span><span class="w"> </span><span class="n">Security</span><span class="w"> </span><span class="n">Policy</span><span class="w"> </span><span class="n">Verification</span>
+
+<span class="err">#</span><span class="w"> </span><span class="n">Check</span><span class="w"> </span><span class="n">for</span><span class="w"> </span><span class="n">direct</span><span class="w"> </span><span class="n">flows</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">sources</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">sinks</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">sources</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sourceRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">sources</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'read'</span><span class="w"> </span><span class="n">OR</span><span class="w"> </span><span class="n">sources</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'recv'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">sinks</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sinkParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">sinks</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'system'</span><span class="w"> </span><span class="n">OR</span><span class="w"> </span><span class="n">sinks</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'exec'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="n">sourceRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sinkParam</span><span class="p">)</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">path</span>
+
+<span class="err">#</span><span class="w"> </span><span class="n">Check</span><span class="w"> </span><span class="n">sensitive</span><span class="w"> </span><span class="n">operations</span><span class="w"> </span><span class="n">are</span><span class="w"> </span><span class="n">authorized</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">auth</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">authRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">auth</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'checkAuth'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">authRet</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">CONTROLDEP_BR</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">check</span><span class="p">)</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">sensitiveOps</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">opParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">sensitiveOps</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'deleteFile'</span><span class="w"> </span><span class="n">OR</span><span class="w"> </span><span class="n">sensitiveOps</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'changePassword'</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="n">EXISTS</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">check</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">CONTROLDEP_BR</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">opParam</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">opParam</span>
+</pre></div>
+</div>
+<p>Run with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-ir-pdg-query<span class="w"> </span>-f<span class="w"> </span>security_policy.txt<span class="w"> </span>program.bc
+</pre></div>
+</div>
+</section>
+<section id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading"></a></h2>
+<ol class="arabic">
+<li><p><strong>Use Descriptive Variable Names</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="err">#</span><span class="w"> </span><span class="n">Good</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">userInput</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">inputRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">userInput</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'scanf'</span>
+
+<span class="err">#</span><span class="w"> </span><span class="n">Bad</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">y</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">x</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'scanf'</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Break Complex Queries</strong>:</p>
+<p>Use multiple MATCH clauses for clarity:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">sources</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sourceRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">sources</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'getInput'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">sanitizers</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sanitizerRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">sanitizers</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'sanitize'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">sinks</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sinkParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">sinks</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'output'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="n">sourceRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sinkParam</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="n">EXISTS</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">sourceRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sanitizerRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sinkParam</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">path</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Comment Your Policies</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="err">#</span><span class="w"> </span><span class="n">Policy</span><span class="p">:</span><span class="w"> </span><span class="n">User</span><span class="w"> </span><span class="n">input</span><span class="w"> </span><span class="n">must</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">sanitized</span><span class="w"> </span><span class="n">before</span><span class="w"> </span><span class="n">database</span><span class="w"> </span><span class="n">queries</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">input</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">inputRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">input</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'getUserInput'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">sanitize</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sanitizerRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">sanitize</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'sanitizeSQL'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">dbQuery</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">queryParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">dbQuery</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'executeQuery'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="n">inputRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">queryParam</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="n">EXISTS</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">inputRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">sanitizerRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">queryParam</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">path</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Test Incrementally</strong>:</p>
+<p>Start with simple queries and build up:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="err">#</span><span class="w"> </span><span class="n">Step</span><span class="w"> </span><span class="m">1</span><span class="p">:</span><span class="w"> </span><span class="n">Verify</span><span class="w"> </span><span class="n">sources</span><span class="w"> </span><span class="n">exist</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'getInput'</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">n</span>
+
+<span class="err">#</span><span class="w"> </span><span class="n">Step</span><span class="w"> </span><span class="m">2</span><span class="p">:</span><span class="w"> </span><span class="n">Verify</span><span class="w"> </span><span class="n">sinks</span><span class="w"> </span><span class="n">exist</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'system'</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">n</span>
+
+<span class="err">#</span><span class="w"> </span><span class="n">Step</span><span class="w"> </span><span class="m">3</span><span class="p">:</span><span class="w"> </span><span class="n">Check</span><span class="w"> </span><span class="n">flows</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">input</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">inputRet</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">input</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'getInput'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">output</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_IN</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">outputParam</span><span class="p">:</span><span class="n">PARAM_FORMALIN</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">output</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'system'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="n">inputRet</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">outputParam</span><span class="p">)</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">path</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Use DISTINCT for Slices</strong>:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="k">start</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">n</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+<section id="limitations">
+<h2>Limitations<a class="headerlink" href="#limitations" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Imprecision</strong>: PDG construction uses alias analysis which may be imprecise, leading to spurious dependencies.</p></li>
+<li><p><strong>Scalability</strong>: Large programs with complex dependencies may result in very large PDGs.</p></li>
+<li><p><strong>Context Sensitivity</strong>: PDG is context-insensitive by default. Multiple calls to the same function are merged.</p></li>
+<li><p><strong>Array Handling</strong>: Array dependencies may be approximated.</p></li>
+<li><p><strong>Pointer Analysis</strong>: Depends on underlying pointer analysis precision.</p></li>
+</ol>
+</section>
+<section id="performance-tips">
+<h2>Performance Tips<a class="headerlink" href="#performance-tips" title="Link to this heading"></a></h2>
+<ol class="arabic">
+<li><p><strong>Limit Path Length</strong>: Use bounded variable-length patterns when possible:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="k">start</span><span class="p">)</span><span class="o">-[</span><span class="p">*</span><span class="m">1</span><span class="p">..</span><span class="m">5</span><span class="o">]-&gt;</span><span class="p">(</span><span class="k">end</span><span class="p">)</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">path</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Use Specific Labels</strong>: Always specify node labels when possible:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="err">#</span><span class="w"> </span><span class="n">Good</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">INST_FUNCALL</span><span class="p">)</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">n</span>
+
+<span class="err">#</span><span class="w"> </span><span class="n">Less</span><span class="w"> </span><span class="n">efficient</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">n</span><span class="p">:</span><span class="n">INST_FUNCALL</span><span class="w"> </span><span class="k">RETURN</span><span class="w"> </span><span class="n">n</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Filter Early</strong>: Apply WHERE clauses as early as possible:</p>
+<div class="highlight-cypher notranslate"><div class="highlight"><pre><span></span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">FUNC_ENTRY</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">'main'</span>
+<span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">PARAMETER_OUT</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">ret</span><span class="p">:</span><span class="n">INST_RET</span><span class="p">)</span>
+<span class="k">RETURN</span><span class="w"> </span><span class="n">ret</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<section id="query-returns-empty-set">
+<h3>Query Returns Empty Set<a class="headerlink" href="#query-returns-empty-set" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Check function names are correct (case-sensitive)</p></li>
+<li><p>Verify PDG was built successfully</p></li>
+<li><p>Try simpler queries first (<code class="docutils literal notranslate"><span class="pre">MATCH</span> <span class="pre">(n:FUNC_ENTRY)</span> <span class="pre">WHERE</span> <span class="pre">n.name</span> <span class="pre">=</span> <span class="pre">'main'</span> <span class="pre">RETURN</span> <span class="pre">n</span></code>)</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">-v</span></code> verbose flag</p></li>
+</ol>
+</section>
+<section id="query-too-slow">
+<h3>Query Too Slow<a class="headerlink" href="#query-too-slow" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Reduce scope of query</p></li>
+<li><p>Use more specific node/edge selection</p></li>
+<li><p>Limit path length with <code class="docutils literal notranslate"><span class="pre">[*1..10]</span></code></p></li>
+<li><p>Analyze smaller program subset</p></li>
+</ol>
+</section>
+<section id="syntax-errors">
+<h3>Syntax Errors<a class="headerlink" href="#syntax-errors" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Check quotes around string values: <code class="docutils literal notranslate"><span class="pre">WHERE</span> <span class="pre">n.name</span> <span class="pre">=</span> <span class="pre">'main'</span></code></p></li>
+<li><p>Ensure proper Cypher syntax</p></li>
+<li><p>Balance parentheses and brackets</p></li>
+<li><p>Check relationship types are correct</p></li>
+</ol>
+</section>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../ir/pdg.html"><span class="doc">PDG — Program Dependence Graph</span></a> - PDG construction details</p></li>
+<li><p><a class="reference internal" href="tutorials.html"><span class="doc">Tutorials and Examples</span></a> - PDG usage examples</p></li>
+<li><p><a class="reference internal" href="../developer/api_reference.html"><span class="doc">API Reference</span></a> - Programmatic PDG access</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tools/ir/examples/</span></code> - In-repo example query cookbook</p></li>
+<li><p><a class="reference internal" href="../tools/ir/examples.html"><span class="doc">PDG Query Example Cookbook</span></a> - Rendered documentation for the example queries</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="bug_detection.html" class="btn btn-neutral float-left" title="Bug Detection with Lotus" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="property_based_slicing.html" class="btn btn-neutral float-right" title="Property-Based Slicing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

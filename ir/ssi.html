@@ -1,0 +1,449 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SSI — Static Single Information &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="vSSA — Variable Static Single Assignment" href="vssa.html" />
+    <link rel="prev" title="PDG — Program Dependence Graph" href="pdg.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Intermediate Representations</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="icfg.html">ICFG — Interprocedural Control Flow Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="icfg.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="icfg.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="icfg.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="icfg.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="icfg.html#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html">PDG — Program Dependence Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#core-passes">Core Passes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#unified-query-api">Unified Query API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#high-level-usage">High-Level Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#lotus-ir-pdg-query-analysis-mode"><cite>lotus-ir-pdg-query</cite> Analysis Mode</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">SSI — Static Single Information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ssi-formalism">SSI Formalism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ssi-instructions">SSI Instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#algorithm">Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html">vSSA — Variable Static Single Assignment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#vssa-instructions">vSSA Instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#algorithm">Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#integration-with-sraa">Integration with SRAA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#references">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html">SVFG — Sparse Value-Flow Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#node-types">Node Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#edge-types">Edge Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#architecture">Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#references">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gvfg.html">GVFG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html">GSA — Gated SSA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#core-types">Core Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#passes">Passes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#command-line-options">Command-Line Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#behavior-notes">Behavior Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html">ShadowMem SSA — Sea-DSA Shadow Memory Queries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#shadow-memory-instructions">Shadow Memory Instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="path_program.html">Path Program</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Intermediate Representations</a></li>
+      <li class="breadcrumb-item active">SSI — Static Single Information</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/ir/ssi.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ssi-static-single-information">
+<h1>SSI — Static Single Information<a class="headerlink" href="#ssi-static-single-information" title="Link to this heading"></a></h1>
+</section>
+<section id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h1>
+<p><strong>Static Single Information (SSI)</strong> is an extension of SSA (Static Single
+Assignment) that augments variables with additional predicate and path
+information. While SSA ensures that every definition of a variable dominates
+all its uses, SSI additionally guarantees that <strong>every use of a variable
+post-dominates all its reaching definitions</strong>. This dual property enables more
+precise path-sensitive and condition-sensitive analyses.</p>
+<ul class="simple">
+<li><p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/IR/SSI/</span></code>, <code class="docutils literal notranslate"><span class="pre">include/IR/SSI/</span></code></p></li>
+</ul>
+<p>The SSI transformation converts SSA-form IR into SSI form by introducing
+<strong>sigma (σ) functions</strong> at control-flow splits, analogous to how SSA introduces
+phi (φ) functions at control-flow joins. This symmetric treatment of forward
+(domination) and backward (post-domination) properties makes SSI particularly
+useful for analyses that need to reason about value relationships across
+conditional branches.</p>
+</section>
+<section id="key-features">
+<h1>Key Features<a class="headerlink" href="#key-features" title="Link to this heading"></a></h1>
+<ul class="simple">
+<li><p><strong>Dual Dominance Property</strong>: Extends SSA’s dominance property with
+post-dominance, ensuring that uses post-dominate their reaching definitions.</p></li>
+<li><p><strong>Sigma Functions</strong>: Introduces σ-functions at control-flow splits to encode
+predicate information and value versions along different paths.</p></li>
+<li><p><strong>Path-Sensitive Analysis</strong>: Provides explicit representation of values along
+different control-flow paths, enabling more precise analysis.</p></li>
+<li><p><strong>Condition-Sensitive Reasoning</strong>: Encodes relationships between values
+guarded by conditions, making it easier to reason about conditional value
+relationships.</p></li>
+<li><p><strong>Live-Range Splitting</strong>: Splits variable live ranges at strategic program
+points to maintain SSI properties.</p></li>
+</ul>
+</section>
+<section id="ssi-formalism">
+<h1>SSI Formalism<a class="headerlink" href="#ssi-formalism" title="Link to this heading"></a></h1>
+<p>SSI form is constructed as follows:</p>
+<ol class="arabic simple">
+<li><p><strong>Start from SSA form</strong>: The transformation assumes input IR is already in
+SSA form (with φ-functions at joins).</p></li>
+<li><p><strong>Compute iterated post-dominance frontier</strong>: Similar to how SSA uses the
+dominance frontier to determine where φ-functions are needed, SSI uses the
+iterated post-dominance frontier to determine where σ-functions are needed.</p></li>
+<li><p><strong>Insert σ-functions</strong>: At each control-flow split whose successors are not
+in the same post-domination tree region, insert σ-functions that create new
+variable versions for each outgoing path.</p></li>
+<li><p><strong>Rename variables</strong>: Perform a renaming pass to assign unique names to σ
+results, mirroring the SSA renaming process.</p></li>
+</ol>
+<p>The transformation maintains two key invariants:</p>
+<ul class="simple">
+<li><p>Every definition of a variable dominates all its uses (SSA property).</p></li>
+<li><p>Every use of a variable post-dominates all its reaching definitions (SSI
+property).</p></li>
+</ul>
+</section>
+<section id="components">
+<h1>Components<a class="headerlink" href="#components" title="Link to this heading"></a></h1>
+<p><strong>SSIfy</strong> (<code class="docutils literal notranslate"><span class="pre">SSI.h</span></code>, <code class="docutils literal notranslate"><span class="pre">SSIPass.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">SSITransform.cpp</span></code>):</p>
+<p>The main transformation pass that converts SSA to SSI form:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">runOnFunction()</span></code> – Main entry point that processes a function</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">run()</span></code> – Determines the splitting strategy for a variable and invokes
+split and rename operations</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">split()</span></code> – Splits live ranges of variables at strategic program points</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rename_initial()</span></code> and <code class="docutils literal notranslate"><span class="pre">rename()</span></code> – Rename variables to maintain SSI
+invariants after splitting</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">clean()</span></code> – Removes unnecessary SSI nodes (σ-functions, φ-functions, copies)</p></li>
+</ul>
+<p><strong>ProgramPoint</strong> (<code class="docutils literal notranslate"><span class="pre">SSIUtils.cpp</span></code>):</p>
+<p>Represents a location in the program where SSI transformations may occur:</p>
+<ul class="simple">
+<li><p><strong>In</strong>: Entry point of a block (join point, φ insertion)</p></li>
+<li><p><strong>Self</strong>: Middle of a block (parallel copy insertion)</p></li>
+<li><p><strong>Out</strong>: Exit point of a block (branch point, σ insertion)</p></li>
+</ul>
+<p>Program points are identified by an instruction and a position, and are used to
+determine where σ-functions, φ-functions, and copy instructions should be
+inserted.</p>
+<p><strong>RenamingStack</strong> (<code class="docutils literal notranslate"><span class="pre">SSIUtils.cpp</span></code>):</p>
+<p>Manages the stack of variable definitions during renaming. Maintains the
+current version of a variable for each basic block visited during the
+topological traversal.</p>
+<p><strong>PostDominanceFrontier</strong> (<code class="docutils literal notranslate"><span class="pre">SSI.h</span></code>):</p>
+<p>Computes the post-dominance frontier for basic blocks, which is used to
+determine where σ-functions must be inserted. The post-dominance frontier is
+analogous to the dominance frontier used in SSA construction, but operates in
+reverse control flow.</p>
+</section>
+<section id="ssi-instructions">
+<h1>SSI Instructions<a class="headerlink" href="#ssi-instructions" title="Link to this heading"></a></h1>
+<p>The SSI transformation introduces three types of special instructions:</p>
+<p><strong>SSI Phi (φ) Functions</strong>:</p>
+<ul class="simple">
+<li><p>Named with prefix <code class="docutils literal notranslate"><span class="pre">SSIfy_phi</span></code></p></li>
+<li><p>Similar to SSA φ-functions, used at join points to merge values from
+different control-flow paths</p></li>
+<li><p>May be inserted at dominance frontiers to maintain SSI properties</p></li>
+</ul>
+<p><strong>SSI Sigma (σ) Functions</strong>:</p>
+<ul class="simple">
+<li><p>Named with prefix <code class="docutils literal notranslate"><span class="pre">SSIfy_sigma</span></code></p></li>
+<li><p>Inserted at control-flow splits (branch points) to create separate variable
+versions for each outgoing path</p></li>
+<li><p>A σ-function takes one input value and produces a versioned output for each
+successor block of the branch</p></li>
+<li><p>These functions encode predicate information by associating values with the
+conditions that guard their paths</p></li>
+</ul>
+<p><strong>SSI Copy Instructions</strong>:</p>
+<ul class="simple">
+<li><p>Named with prefix <code class="docutils literal notranslate"><span class="pre">SSIfy_copy</span></code></p></li>
+<li><p>Identity operations (add with zero) inserted at use points to split live
+ranges</p></li>
+<li><p>Used when fine-grained splitting is needed at specific instruction locations</p></li>
+</ul>
+</section>
+<section id="algorithm">
+<h1>Algorithm<a class="headerlink" href="#algorithm" title="Link to this heading"></a></h1>
+<p>The SSI transformation algorithm proceeds in several stages:</p>
+<ol class="arabic">
+<li><p><strong>Program Point Identification</strong>:</p>
+<p>For each variable, identify initial program points where splitting may be
+needed:</p>
+<ul class="simple">
+<li><p><strong>Conditional exits</strong> (downwards/upwards): Points where variables are
+used in branch conditions</p></li>
+<li><p><strong>Uses</strong> (downwards/upwards): Points where variables are used in
+instructions</p></li>
+</ul>
+</li>
+<li><p><strong>Live Range Splitting</strong>:</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">split()</span></code> function computes two sets of program points:</p>
+<ul class="simple">
+<li><p><strong>Sup</strong>: Points derived from upward program points using iterated
+post-dominance frontiers</p></li>
+<li><p><strong>Sdown</strong>: Points derived from downward program points using iterated
+dominance frontiers</p></li>
+</ul>
+<p>At each identified point, insert the appropriate SSI instruction:
+* σ-functions at branch points (Out positions)
+* φ-functions at join points (In positions)
+* Copy instructions at use points (Self positions)</p>
+</li>
+<li><p><strong>Variable Renaming</strong>:</p>
+<p>After splitting, rename all variable versions to maintain SSI invariants:</p>
+<ul class="simple">
+<li><p>Traverse the CFG in topological order (respecting dominator tree)</p></li>
+<li><p>Maintain a renaming stack for each variable</p></li>
+<li><p>Update uses to reference the most recent definition that dominates them</p></li>
+<li><p>Handle σ-functions and φ-functions during renaming</p></li>
+</ul>
+</li>
+<li><p><strong>Cleanup</strong>:</p>
+<p>Remove unnecessary SSI instructions:</p>
+<ul class="simple">
+<li><p>Remove σ-functions, φ-functions, and copies that don’t contribute to the
+final SSI form</p></li>
+<li><p>Use topological sorting to safely remove instructions in dependency order</p></li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h1>
+<p><strong>As an LLVM Pass</strong>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"IR/SSI/SSI.h"</span>
+
+<span class="c1">// SSI transformation is typically run as part of a pass pipeline</span>
+<span class="c1">// The pass requires DominatorTree, PostDominatorTree, and DominanceFrontier</span>
+<span class="n">FunctionPass</span><span class="w"> </span><span class="o">*</span><span class="nf">createSSIfyPass</span><span class="p">();</span>
+</pre></div>
+</div>
+<p><strong>Command-Line Options</strong>:</p>
+<p>The SSI transformation accepts several command-line options:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">-v</span></code> – Enable verbose mode, printing detailed information about
+transformations</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-set</span> <span class="pre">xxxx</span></code> – Configure initial program points (each x is either 0 or 1):</p>
+<ul class="simple">
+<li><p><strong>1st bit</strong>: Exit of conditionals, downwards</p></li>
+<li><p><strong>2nd bit</strong>: Exit of conditionals, upwards</p></li>
+<li><p><strong>3rd bit</strong>: Uses, downwards</p></li>
+<li><p><strong>4th bit</strong>: Uses, upwards</p></li>
+</ul>
+<p>For example, <code class="docutils literal notranslate"><span class="pre">-set</span> <span class="pre">1100</span></code> enables splitting at conditional exits (both
+directions) but not at uses.</p>
+</li>
+</ul>
+<p><strong>Checking for SSI Instructions</strong>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"IR/SSI/SSI.h"</span>
+
+<span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">I</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">SSIfy</span><span class="o">::</span><span class="n">is_SSIphi</span><span class="p">(</span><span class="n">I</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// I is an SSI phi function</span>
+<span class="p">}</span>
+
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">SSIfy</span><span class="o">::</span><span class="n">is_SSIsigma</span><span class="p">(</span><span class="n">I</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// I is an SSI sigma function</span>
+<span class="p">}</span>
+
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">SSIfy</span><span class="o">::</span><span class="n">is_SSIcopy</span><span class="p">(</span><span class="n">I</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// I is an SSI copy instruction</span>
+<span class="p">}</span>
+
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">SSIfy</span><span class="o">::</span><span class="n">is_actual</span><span class="p">(</span><span class="n">I</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// I is not an SSI-created instruction (actual program instruction)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="integration">
+<h1>Integration<a class="headerlink" href="#integration" title="Link to this heading"></a></h1>
+<p>SSI is used by several analyses and transformations in Lotus:</p>
+<ul class="simple">
+<li><p><strong>Strict Relations Alias Analysis (SRAA)</strong>: Uses a variant of SSI called
+<strong>vSSA</strong> (variable SSA) to enable precise symbolic range analysis for
+pointer disambiguation. The vSSA transformation splits live ranges at
+control-flow joins, forks, and uses of pointer-index expressions, providing
+fine-grained version information for symbolic analysis.</p></li>
+<li><p><strong>Path-Sensitive Analyses</strong>: Analyses that need to reason about values along
+different control-flow paths benefit from SSI’s explicit encoding of
+predicate and path information.</p></li>
+<li><p><strong>Range Analysis</strong>: Symbolic range analysis uses SSI/vSSA to maintain
+precise bounds for variables along different execution paths, enabling
+stronger constraints for proving pointer disjointness.</p></li>
+<li><p><strong>Constraint-Based Analyses</strong>: Analyses that construct constraint systems
+benefit from SSI’s ability to associate values with the conditions that
+guard them, allowing for more precise constraint generation.</p></li>
+</ul>
+<p>The SSI transformation provides a foundation for analyses that require
+path-sensitive and condition-sensitive reasoning, making it easier to prove
+properties about programs with complex control flow and conditional
+dependencies.</p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="pdg.html" class="btn btn-neutral float-left" title="PDG — Program Dependence Graph" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="vssa.html" class="btn btn-neutral float-right" title="vSSA — Variable Static Single Assignment" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

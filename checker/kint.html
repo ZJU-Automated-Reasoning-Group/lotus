@@ -1,0 +1,476 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KINT Numerical Bug Checker &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Pulse Checker" href="pulse.html" />
+    <link rel="prev" title="FiTx: Daily Development-friendly Bug Detection" href="fitx.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Checker Framework</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#choosing-a-checker">Choosing a Checker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#id1">Checker Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#build-targets">Build Targets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#programmatic-usage">Programmatic Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#bug-types">Bug Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#integration-points">Integration Points</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#see-also">See Also</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="ae.html">Abstract Execution Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="concurrency.html">Concurrency Bug Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fitx.html">FiTx: Daily Development-friendly Bug Detection</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">KINT Numerical Bug Checker</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#components">Components</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#command-line-options">Command-Line Options</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#bug-types">Bug Types</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#analysis-process">Analysis Process</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#programmatic-usage">Programmatic Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#smt-based-numerical-reasoning">SMT-based numerical reasoning</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#taint-analysis">Taint Analysis</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#limitations">Limitations</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#performance">Performance</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#integration">Integration</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pulse.html">Pulse Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="report.html">Checker Report Infrastructure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="saber.html">Saber Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="symex.html">Symbolic Execution Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="taint.html">IFDS Taint Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tooling.html">Checker Tooling</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Checker Framework</a></li>
+      <li class="breadcrumb-item active">KINT Numerical Bug Checker</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/checker/kint.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="kint-numerical-bug-checker">
+<h1>KINT Numerical Bug Checker<a class="headerlink" href="#kint-numerical-bug-checker" title="Link to this heading"></a></h1>
+<p>Static analysis tool for detecting numerical bugs: integer overflow, division
+by zero, array bounds violations, and related issues.</p>
+<p><strong>Library Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Checker/KINT/</span></code></p>
+<p><strong>Headers</strong>: <code class="docutils literal notranslate"><span class="pre">include/Checker/KINT/</span></code></p>
+<p><strong>Tool Location</strong>: <code class="docutils literal notranslate"><span class="pre">tools/checker/lotus-check-kint.cpp</span></code></p>
+<p><strong>Frontend</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=kint</span></code></p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>KINT (Kint Is Not Taint) uses SMT solving and summary encoding to detect
+numerical bugs in LLVM bitcode. It combines:</p>
+<ul class="simple">
+<li><p><strong>SMT Solving</strong>: Z3-based path-sensitive verification for precise bug detection</p></li>
+<li><p><strong>Summary Encoding</strong>: Inter-procedural constraint encoding via function summaries</p></li>
+<li><p><strong>Taint Analysis</strong>: Tracking of untrusted data sources</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Range analysis was removed (commit 88adc045) and replaced with a pure
+SMT-based approach using per-object memory arrays and inter-procedural
+function summaries.</p>
+</div>
+<p>All detected bugs are reported through the centralized <code class="docutils literal notranslate"><span class="pre">BugReportMgr</span></code> system, enabling unified JSON and SARIF output.</p>
+</section>
+<section id="components">
+<h2>Components<a class="headerlink" href="#components" title="Link to this heading"></a></h2>
+<p><strong>MKintPass</strong> (<code class="docutils literal notranslate"><span class="pre">MKintPass.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">MKintPass.h</span></code>):</p>
+<ul class="simple">
+<li><p>Main LLVM pass that orchestrates all KINT analyses</p></li>
+<li><p>Integrates SMT solving, summary encoding, taint analysis, and bug detection</p></li>
+<li><p>Reports bugs through <code class="docutils literal notranslate"><span class="pre">BugReportMgr</span></code></p></li>
+</ul>
+<p><strong>SummaryEncoding</strong> (<code class="docutils literal notranslate"><span class="pre">SummaryEncoding.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">SummaryEncoding.h</span></code>):</p>
+<ul class="simple">
+<li><p>Defines <code class="docutils literal notranslate"><span class="pre">FunctionSummary</span></code>, <code class="docutils literal notranslate"><span class="pre">SummaryObjectBinding</span></code>, <code class="docutils literal notranslate"><span class="pre">SummaryCacheEntry</span></code></p></li>
+<li><p>Built by <code class="docutils literal notranslate"><span class="pre">MKintSummary.cpp</span></code> (1032 lines) — the summary building pipeline</p></li>
+<li><p>Supports <code class="docutils literal notranslate"><span class="pre">--kint.summary-mode</span> <span class="pre">off|on|required</span></code> (default: on)</p></li>
+<li><p>Building workflow: <code class="docutils literal notranslate"><span class="pre">canSummarizeFunction()</span></code> → <code class="docutils literal notranslate"><span class="pre">collectSummaryObjects()</span></code> → <code class="docutils literal notranslate"><span class="pre">buildSummary()</span></code> (symbolic execution of callee) → <code class="docutils literal notranslate"><span class="pre">applySummary()</span></code> (instantiation at call site)</p></li>
+<li><p>Per-summary timeout via <code class="docutils literal notranslate"><span class="pre">--kint.summary-timeout-seconds</span> <span class="pre">&lt;seconds&gt;</span></code> (default: 5)</p></li>
+<li><p>Path budget via <code class="docutils literal notranslate"><span class="pre">--kint.summary-max-paths</span> <span class="pre">&lt;N&gt;</span></code> (default: 64)</p></li>
+</ul>
+<p><strong>KINTTaintAnalysis</strong> (<code class="docutils literal notranslate"><span class="pre">KINTTaintAnalysis.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">KINTTaintAnalysis.h</span></code>):</p>
+<ul class="simple">
+<li><p>Tracks taint sources (untrusted inputs)</p></li>
+<li><p>Propagates taint through the program</p></li>
+<li><p>Identifies tainted values used in security-critical operations</p></li>
+</ul>
+<p><strong>BugDetection</strong> (<code class="docutils literal notranslate"><span class="pre">BugDetection.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">BugDetection.h</span></code>):</p>
+<ul class="simple">
+<li><p>Detects specific bug patterns:
+* Integer overflow
+* Division by zero
+* Bad shift operations
+* Array out-of-bounds access
+* Dead branches (unreachable code)</p></li>
+</ul>
+<p><strong>MKintSummary</strong> (<code class="docutils literal notranslate"><span class="pre">MKintSummary.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">MKintSummary.h</span></code>):</p>
+<ul class="simple">
+<li><p>Builds and applies inter-procedural function summaries as Z3 contracts</p></li>
+<li><p>Captures integer/pointer parameters, return values, memory side effects, and path constraints</p></li>
+<li><p>Handles summary caching with <code class="docutils literal notranslate"><span class="pre">building</span></code> flag for recursive call cycle detection</p></li>
+</ul>
+<p><strong>Options</strong> (<code class="docutils literal notranslate"><span class="pre">Options.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">Options.h</span></code>):</p>
+<ul class="simple">
+<li><p>Command-line option parsing and configuration</p></li>
+<li><p>Checker enable/disable flags</p></li>
+<li><p>Performance tuning options</p></li>
+</ul>
+<p><strong>Log</strong> (<code class="docutils literal notranslate"><span class="pre">Log.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">Log.h</span></code>):</p>
+<ul class="simple">
+<li><p>Logging infrastructure with configurable levels</p></li>
+<li><p>Uses the shared checker <code class="docutils literal notranslate"><span class="pre">--log-level</span></code> policy and writes diagnostics to stderr</p></li>
+</ul>
+<p><strong>Utils</strong> (<code class="docutils literal notranslate"><span class="pre">Utils.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">Utils.h</span></code>):</p>
+<ul class="simple">
+<li><p>Utility functions for analysis</p></li>
+</ul>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<p><strong>Enable All Checkers</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.bc
+</pre></div>
+</div>
+<p><strong>Enable Specific Checkers</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>int-overflow
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>div-by-zero
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>bad-shift
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>array-oob
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>dead-branch
+</pre></div>
+</div>
+<p><strong>Enable Multiple Checkers</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>int-overflow,div-by-zero
+</pre></div>
+</div>
+<p><strong>Generate JSON Report</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>all<span class="w"> </span>--report-json<span class="o">=</span>report.json
+</pre></div>
+</div>
+<p><strong>Generate SARIF Report</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>all<span class="w"> </span>--report-sarif<span class="o">=</span>report.sarif
+</pre></div>
+</div>
+<p><strong>Verbose Logging</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>all<span class="w"> </span>--log-level<span class="o">=</span>debug
+</pre></div>
+</div>
+<p><strong>Function Timeout</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>all<span class="w"> </span>--kint.function-timeout-seconds<span class="o">=</span><span class="m">60</span>
+</pre></div>
+</div>
+<p><strong>Analyze All Functions</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>int-overflow<span class="w"> </span>--kint.analyze-all-functions<span class="o">=</span><span class="nb">true</span>
+</pre></div>
+</div>
+<p><strong>Summary Encoding Options</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>all<span class="w"> </span>--kint.summary-mode<span class="o">=</span>on
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>all<span class="w"> </span>--kint.summary-timeout-seconds<span class="o">=</span><span class="m">10</span>
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>kint<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>all<span class="w"> </span>--kint.summary-max-paths<span class="o">=</span><span class="m">128</span>
+</pre></div>
+</div>
+</section>
+<section id="command-line-options">
+<h2>Command-Line Options<a class="headerlink" href="#command-line-options" title="Link to this heading"></a></h2>
+<p><strong>Checker Options</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--checks=&lt;id[,id...]&gt;</span></code> – Select <code class="docutils literal notranslate"><span class="pre">int-overflow</span></code>, <code class="docutils literal notranslate"><span class="pre">div-by-zero</span></code>,
+<code class="docutils literal notranslate"><span class="pre">bad-shift</span></code>, <code class="docutils literal notranslate"><span class="pre">array-oob</span></code>, or <code class="docutils literal notranslate"><span class="pre">dead-branch</span></code>. Omitting this option, or
+passing <code class="docutils literal notranslate"><span class="pre">--checks=all</span></code>, enables all KINT checks.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--kint.analyze-all-functions=&lt;true|false&gt;</span></code> – Run SMT checks for all functions instead of only taint/main entry points (default: false)</p></li>
+</ul>
+<p><strong>Performance Options</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--kint.function-timeout-seconds=&lt;seconds&gt;</span></code> – Timeout per function for SMT solving (0 = no limit, default: varies)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--kint.summary-mode=&lt;off|on|required&gt;</span></code> – Control inter-procedural summary building (default: on)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--kint.summary-timeout-seconds=&lt;seconds&gt;</span></code> – Per-summary timeout (default: 5)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--kint.summary-max-paths=&lt;N&gt;</span></code> – Path budget for summary construction (default: 64)</p></li>
+</ul>
+<p><strong>Logging Options</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--log-level=&lt;debug|info|warning|error|none&gt;</span></code> – Set logging level (default: warning)</p></li>
+</ul>
+<p><strong>Robust reachability options</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--kint.robust-checks=&lt;id[,id...]&gt;</span></code> – Restrict robust reachability to a subset
+of the canonical IDs selected by <code class="docutils literal notranslate"><span class="pre">--checks</span></code>.</p></li>
+</ul>
+<p><strong>Report Options</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--report-json=&lt;file&gt;</span></code> – Output JSON report to file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--report-sarif=&lt;file&gt;</span></code> – Output SARIF report to file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--report-min-score=&lt;n&gt;</span></code> – Minimum confidence score for reporting (0-100)</p></li>
+</ul>
+</section>
+<section id="bug-types">
+<h2>Bug Types<a class="headerlink" href="#bug-types" title="Link to this heading"></a></h2>
+<p><strong>Integer Overflow</strong> (<code class="docutils literal notranslate"><span class="pre">Integer</span> <span class="pre">Overflow</span></code>):</p>
+<ul class="simple">
+<li><p><strong>CWE</strong>: CWE-190</p></li>
+<li><p><strong>Importance</strong>: HIGH</p></li>
+<li><p><strong>Classification</strong>: SECURITY</p></li>
+<li><p><strong>Description</strong>: Arithmetic operations that may overflow integer bounds</p></li>
+</ul>
+<p><strong>Divide by Zero</strong> (<code class="docutils literal notranslate"><span class="pre">Divide</span> <span class="pre">by</span> <span class="pre">Zero</span></code>):</p>
+<ul class="simple">
+<li><p><strong>CWE</strong>: CWE-369</p></li>
+<li><p><strong>Importance</strong>: MEDIUM</p></li>
+<li><p><strong>Classification</strong>: ERROR</p></li>
+<li><p><strong>Description</strong>: Division operations where the divisor may be zero</p></li>
+</ul>
+<p><strong>Bad Shift</strong> (<code class="docutils literal notranslate"><span class="pre">Bad</span> <span class="pre">Shift</span></code>):</p>
+<ul class="simple">
+<li><p><strong>Importance</strong>: MEDIUM</p></li>
+<li><p><strong>Classification</strong>: ERROR</p></li>
+<li><p><strong>Description</strong>: Shift operations with invalid shift amounts</p></li>
+</ul>
+<p><strong>Array Out of Bounds</strong> (<code class="docutils literal notranslate"><span class="pre">Array</span> <span class="pre">Out</span> <span class="pre">of</span> <span class="pre">Bounds</span></code>):</p>
+<ul class="simple">
+<li><p><strong>CWE</strong>: CWE-119, CWE-125</p></li>
+<li><p><strong>Importance</strong>: HIGH</p></li>
+<li><p><strong>Classification</strong>: SECURITY</p></li>
+<li><p><strong>Description</strong>: Array accesses that may be outside array bounds</p></li>
+</ul>
+<p><strong>Dead Branch</strong> (<code class="docutils literal notranslate"><span class="pre">Dead</span> <span class="pre">Branch</span></code>):</p>
+<ul class="simple">
+<li><p><strong>Importance</strong>: LOW</p></li>
+<li><p><strong>Classification</strong>: ERROR</p></li>
+<li><p><strong>Description</strong>: Unreachable code branches</p></li>
+</ul>
+</section>
+<section id="analysis-process">
+<h2>Analysis Process<a class="headerlink" href="#analysis-process" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Taint Source Identification</strong>: Mark taint sources (untrusted inputs)</p></li>
+<li><p><strong>Summary Building</strong>: Build inter-procedural function summaries for all functions</p></li>
+<li><p><strong>SMT Solving</strong>: Use Z3 with per-object memory model and summary application at call sites</p></li>
+<li><p><strong>Bug Detection</strong>: Identify specific bug patterns based on SMT results</p></li>
+<li><p><strong>Report Generation</strong>: Generate reports through centralized <code class="docutils literal notranslate"><span class="pre">BugReportMgr</span></code></p></li>
+</ol>
+</section>
+<section id="programmatic-usage">
+<h2>Programmatic Usage<a class="headerlink" href="#programmatic-usage" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"Checker/KINT/MKintPass.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"Checker/Framework/BugReportMgr.h"</span>
+
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">kint</span><span class="p">;</span>
+
+<span class="c1">// Create and run the pass</span>
+<span class="n">llvm</span><span class="o">::</span><span class="n">ModuleAnalysisManager</span><span class="w"> </span><span class="n">MAM</span><span class="p">;</span>
+<span class="n">llvm</span><span class="o">::</span><span class="n">ModulePassManager</span><span class="w"> </span><span class="n">MPM</span><span class="p">;</span>
+<span class="n">llvm</span><span class="o">::</span><span class="n">PassBuilder</span><span class="w"> </span><span class="n">PB</span><span class="p">;</span>
+
+<span class="n">PB</span><span class="p">.</span><span class="n">registerModuleAnalyses</span><span class="p">(</span><span class="n">MAM</span><span class="p">);</span>
+<span class="n">MPM</span><span class="p">.</span><span class="n">addPass</span><span class="p">(</span><span class="n">kint</span><span class="o">::</span><span class="n">MKintPass</span><span class="p">());</span>
+
+<span class="c1">// Run analysis (automatically reports to BugReportMgr)</span>
+<span class="n">MPM</span><span class="p">.</span><span class="n">run</span><span class="p">(</span><span class="o">*</span><span class="n">M</span><span class="p">,</span><span class="w"> </span><span class="n">MAM</span><span class="p">);</span>
+
+<span class="c1">// Access centralized reports</span>
+<span class="n">BugReportMgr</span><span class="o">&amp;</span><span class="w"> </span><span class="n">mgr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">BugReportMgr</span><span class="o">::</span><span class="n">get_instance</span><span class="p">();</span>
+<span class="n">mgr</span><span class="p">.</span><span class="n">print_summary</span><span class="p">(</span><span class="n">outs</span><span class="p">());</span>
+<span class="n">mgr</span><span class="p">.</span><span class="n">generate_json_report</span><span class="p">(</span><span class="n">jsonFile</span><span class="p">,</span><span class="w"> </span><span class="n">BugReportMgr</span><span class="o">::</span><span class="n">ReportFilter</span><span class="p">{});</span>
+</pre></div>
+</div>
+</section>
+<section id="smt-based-numerical-reasoning">
+<h2>SMT-based numerical reasoning<a class="headerlink" href="#smt-based-numerical-reasoning" title="Link to this heading"></a></h2>
+<p>For path-sensitive verification, KINT uses Z3:</p>
+<ul class="simple">
+<li><p><strong>Path Constraints</strong>: Builds constraints along execution paths</p></li>
+<li><p><strong>Symbolic Execution</strong>: Creates symbolic expressions for variables</p></li>
+<li><p><strong>Satisfiability Checking</strong>: Verifies if bug conditions are satisfiable</p></li>
+<li><p><strong>Timeout Handling</strong>: Limits analysis time per function</p></li>
+</ul>
+<p>Memory modeling was improved (commit b4cef8a1) with per-object SMT arrays: each allocation site gets its own byte array (<code class="docutils literal notranslate"><span class="pre">obj_base</span></code>, <code class="docutils literal notranslate"><span class="pre">obj_size</span></code>, <code class="docutils literal notranslate"><span class="pre">obj_mem</span></code>), with <code class="docutils literal notranslate"><span class="pre">ObjectStateFrame</span></code> snapshots for path branching, alias tracking (<code class="docutils literal notranslate"><span class="pre">m_obj_alias</span></code>, <code class="docutils literal notranslate"><span class="pre">m_int_alias</span></code>), and selective havoc for unknown calls.</p>
+</section>
+<section id="taint-analysis">
+<h2>Taint Analysis<a class="headerlink" href="#taint-analysis" title="Link to this heading"></a></h2>
+<p>KINT tracks taint sources and propagation to focus its numerical-bug analysis:</p>
+<ul class="simple">
+<li><p><strong>Taint Sources</strong>: Functions that read untrusted input (e.g., <code class="docutils literal notranslate"><span class="pre">read()</span></code>, <code class="docutils literal notranslate"><span class="pre">recv()</span></code>)</p></li>
+<li><p><strong>Taint Propagation</strong>: Tracks how tainted values flow through the program</p></li>
+<li><p><strong>Taint Sinks</strong>: Security-critical operations that use tainted data</p></li>
+</ul>
+<p>This auxiliary tracking is not a general-purpose taint-reporting frontend.  To
+ask whether configured data sources reach configured sinks, use
+<a class="reference internal" href="taint.html"><span class="doc">IFDS Taint Checker</span></a> instead.</p>
+</section>
+<section id="limitations">
+<h2>Limitations<a class="headerlink" href="#limitations" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>SMT Solver Timeout</strong>: Complex functions may timeout, leading to incomplete analysis</p></li>
+<li><p><strong>Loop Handling</strong>: Complex loops may require manual widening hints</p></li>
+<li><p><strong>Floating Point</strong>: Limited support for floating-point operations</p></li>
+<li><p><strong>Context Sensitivity</strong>: Intraprocedural analysis may miss interprocedural bugs</p></li>
+</ul>
+</section>
+<section id="performance">
+<h2>Performance<a class="headerlink" href="#performance" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>SMT solving can be slow for complex functions (use timeouts)</p></li>
+<li><p>Function timeout helps prevent analysis from getting stuck</p></li>
+<li><p>Statistics can help identify performance bottlenecks</p></li>
+</ul>
+</section>
+<section id="integration">
+<h2>Integration<a class="headerlink" href="#integration" title="Link to this heading"></a></h2>
+<p>KINT integrates with:</p>
+<ul class="simple">
+<li><p><strong>Z3 SMT Solver</strong>: Path-sensitive verification</p></li>
+<li><p><strong>LLVM Pass Infrastructure</strong>: Standard pass registration</p></li>
+<li><p><strong>BugReportMgr</strong>: Centralized bug reporting system</p></li>
+<li><p><strong>Auxiliary Taint Analysis</strong>: Focuses numerical analysis on untrusted data</p></li>
+</ul>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="index.html"><span class="doc">Checker Framework</span></a> – Checker Framework overview</p></li>
+<li><p><a class="reference internal" href="../solvers/index.html"><span class="doc">Solvers</span></a> – SMT solver integration</p></li>
+<li><p><a class="reference internal" href="../analysis/index.html"><span class="doc">Analysis Framework</span></a> – Analysis infrastructure</p></li>
+<li><p><a class="reference internal" href="taint.html"><span class="doc">IFDS Taint Checker</span></a> – configurable IFDS source-to-sink analysis</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="fitx.html" class="btn btn-neutral float-left" title="FiTx: Daily Development-friendly Bug Detection" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="pulse.html" class="btn btn-neutral float-right" title="Pulse Checker" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

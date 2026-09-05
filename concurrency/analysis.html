@@ -1,0 +1,657 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Concurrency Analysis &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Data Flow Analysis" href="../dataflow/index.html" />
+    <link rel="prev" title="Concurrency Analysis" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Concurrency Analysis</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#directory-layout">Directory layout</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#clients">Clients</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Concurrency Analysis</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#directory-layout">Directory layout</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#main-components">Main Components</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#limitations">Limitations</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Concurrency Analysis</a></li>
+      <li class="breadcrumb-item active">Concurrency Analysis</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/concurrency/analysis.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="concurrency-analysis">
+<h1>Concurrency Analysis<a class="headerlink" href="#concurrency-analysis" title="Link to this heading"></a></h1>
+<p>Thread-aware analyses for concurrent programs.</p>
+<p><strong>Headers</strong>: <code class="docutils literal notranslate"><span class="pre">include/Concurrency</span></code></p>
+<p><strong>Implementation</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Concurrency</span></code></p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>The concurrency analysis module provides the shared analysis layer used by Lotus
+concurrency checking. It centers on thread creation, synchronization operations,
+memory accesses, and communication structure that can be recovered from LLVM IR.</p>
+<p>The module supports multiple concurrency models:</p>
+<ul class="simple">
+<li><p><strong>POSIX threads (pthreads)</strong>: standard pthread APIs</p></li>
+<li><p><strong>Modern C++ concurrency</strong>: <code class="docutils literal notranslate"><span class="pre">std::thread</span></code>, mutexes, condition variables,
+futures/promises, atomics, and several C++20 primitives that are recognized</p></li>
+<li><p><strong>OpenMP</strong>: parallel regions, barriers, tasks, and lock operations</p></li>
+<li><p><strong>MPI</strong>: a separate SPMD communication analysis in <code class="docutils literal notranslate"><span class="pre">Concurrency/MPI/</span></code></p></li>
+<li><p><strong>Custom APIs</strong>: configurable through <code class="docutils literal notranslate"><span class="pre">config/thread.spec</span></code> and
+<code class="docutils literal notranslate"><span class="pre">ThreadAPI</span></code></p></li>
+</ul>
+<p><strong>Key capabilities</strong>:</p>
+<ul class="simple">
+<li><p>May-Happen-in-Parallel (MHP) analysis for shared-memory overlap reasoning</p></li>
+<li><p>Lock-set analysis for race and deadlock checking</p></li>
+<li><p>Happens-before computation from thread-flow and synchronizes-with edges</p></li>
+<li><p>Escape and thread-sharing analyses for shared-memory filtering</p></li>
+<li><p>Join-target reasoning for refining <code class="docutils literal notranslate"><span class="pre">pthread_join</span></code> effects</p></li>
+<li><p>Thread flow graph construction and thread API classification utilities</p></li>
+</ul>
+</section>
+<section id="directory-layout">
+<h2>Directory layout<a class="headerlink" href="#directory-layout" title="Link to this heading"></a></h2>
+<p>The source tree is grouped by subdirectory under <code class="docutils literal notranslate"><span class="pre">include/Concurrency/</span></code> and
+<code class="docutils literal notranslate"><span class="pre">lib/Concurrency/</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Utils/</span></code>: <code class="docutils literal notranslate"><span class="pre">ThreadAPI</span></code>, <code class="docutils literal notranslate"><span class="pre">ThreadFlowGraph</span></code>, vector-clock utilities,
+RAII lock tracking, and language models for C++, OpenMP, MPI, and Linux kernel
+APIs</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MHP/</span></code>: <code class="docutils literal notranslate"><span class="pre">MHPAnalysis</span></code>, <code class="docutils literal notranslate"><span class="pre">StaticVectorClockMHP</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">HappensBeforeAnalysis</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LockSet/</span></code>: <code class="docutils literal notranslate"><span class="pre">LockSetAnalysis</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Memory/</span></code>: <code class="docutils literal notranslate"><span class="pre">EscapeAnalysis</span></code> and <code class="docutils literal notranslate"><span class="pre">StaticThreadSharingAnalysis</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">JoinTarget/</span></code>: <code class="docutils literal notranslate"><span class="pre">JoinTargetAnalysis</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MPI/</span></code>: <code class="docutils literal notranslate"><span class="pre">MPIAnalysis</span></code> and its process, collective, rank, and RMA analyses</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CUDA/</span></code>: <code class="docutils literal notranslate"><span class="pre">CUDAAnalysis</span></code>, <code class="docutils literal notranslate"><span class="pre">CUDAFunctionSummary</span></code>, <code class="docutils literal notranslate"><span class="pre">CUDASemantics</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">PTXAnalyzer</span></code> for GPU thread/block hierarchy reasoning</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LinuxKernel/</span></code>: <code class="docutils literal notranslate"><span class="pre">LinuxKernelAnalysis</span></code>, <code class="docutils literal notranslate"><span class="pre">LinuxKernelLockAnalysis</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">LinuxKernelRCUAnalysis</span></code> for kernel concurrency primitives</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ValueFlow/</span></code>: thread-aware sparse value-flow refinement
+(<code class="docutils literal notranslate"><span class="pre">ThreadAwareSVFG</span></code>, <code class="docutils literal notranslate"><span class="pre">SparseValueFlowRefinement</span></code>,
+<code class="docutils literal notranslate"><span class="pre">WholeProgramSparseRefinement</span></code>, <code class="docutils literal notranslate"><span class="pre">FSMPTA</span></code>, and <code class="docutils literal notranslate"><span class="pre">MultiStageSlicer</span></code>)</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">Concurrency/MPI/</span></code> models MPI communication in the SPMD setting. It complements
+the shared-memory analyses above, but it is not another thread library layered on
+top of <code class="docutils literal notranslate"><span class="pre">MHPAnalysis</span></code>.</p>
+</section>
+<section id="main-components">
+<h2>Main Components<a class="headerlink" href="#main-components" title="Link to this heading"></a></h2>
+<section id="mhpanalysis">
+<h3>MHPAnalysis<a class="headerlink" href="#mhpanalysis" title="Link to this heading"></a></h3>
+<p><strong>File</strong>: <code class="docutils literal notranslate"><span class="pre">MHP/MHPAnalysis.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">MHP/MHPAnalysis.h</span></code></p>
+<p>The core May-Happen-in-Parallel analysis determines which pairs of program
+statements may execute concurrently in a multithreaded program.</p>
+<p><strong>Analysis Process</strong>:</p>
+<ol class="arabic simple">
+<li><p><strong>Thread Flow Graph Construction</strong>: Builds a graph representation of thread
+creation, synchronization operations, and their ordering relationships</p></li>
+<li><p><strong>Thread Region Analysis</strong>: Identifies regions of code that execute in
+different threads</p></li>
+<li><p><strong>Happens-Before Analysis</strong>: Computes happens-before relationships using
+fork-join semantics, locks, condition variables, and barriers</p></li>
+<li><p><strong>MHP Pair Computation</strong>: Precomputes pairs of instructions that may execute
+in parallel</p></li>
+</ol>
+<p><strong>Key Features</strong>:</p>
+<ul class="simple">
+<li><p>Fork-join analysis for thread creation and termination</p></li>
+<li><p>Lock-based synchronization analysis (optional integration with LockSetAnalysis)</p></li>
+<li><p>Condition variable analysis (wait/signal/broadcast)</p></li>
+<li><p>Barrier synchronization support</p></li>
+<li><p>Multi-instance thread tracking (e.g., threads created in loops)</p></li>
+<li><p>Efficient query interface with precomputed results</p></li>
+</ul>
+<p><strong>Query Interface</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">mayHappenInParallel(I1,</span> <span class="pre">I2)</span></code> – Check if two instructions may execute concurrently</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mustBeSequential(I1,</span> <span class="pre">I2)</span></code> – Check if two instructions must execute sequentially</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">getParallelInstructions(inst)</span></code> – Get all instructions that may run in parallel</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">isPrecomputedMHP(I1,</span> <span class="pre">I2)</span></code> – Check if a pair is in the precomputed MHP set</p></li>
+</ul>
+</section>
+<section id="locksetanalysis">
+<h3>LockSetAnalysis<a class="headerlink" href="#locksetanalysis" title="Link to this heading"></a></h3>
+<p><strong>File</strong>: <code class="docutils literal notranslate"><span class="pre">LockSet/LockSetAnalysis.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">LockSet/LockSetAnalysis.h</span></code></p>
+<p>Computes the sets of locks that may or must be held at each program point.
+Essential for data race detection, deadlock detection, and precise MHP analysis.</p>
+<p><strong>Analysis Modes</strong>:</p>
+<ol class="arabic simple">
+<li><p><strong>May-Lockset Analysis</strong> (over-approximation):
+- Computes the set of locks that <em>may</em> be held at each program point
+- Uses union operation at control flow merge points
+- Used for conservative data race detection</p></li>
+<li><p><strong>Must-Lockset Analysis</strong> (under-approximation):
+- Computes the set of locks that <em>must</em> be held at each program point
+- Uses intersection operation at control flow merge points
+- Used for proving absence of data races</p></li>
+</ol>
+<p><strong>Supported Operations</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pthread_mutex_lock/unlock</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pthread_rwlock_rdlock/wrlock/unlock</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sem_wait/post</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pthread_mutex_trylock</span></code> (try-lock operations)</p></li>
+<li><p>Reentrant lock handling</p></li>
+<li><p>Lock aliasing support</p></li>
+</ul>
+<p><strong>Features</strong>:</p>
+<ul class="simple">
+<li><p>Intraprocedural lock set computation using dataflow analysis</p></li>
+<li><p>Interprocedural lock set propagation across function calls</p></li>
+<li><p>Lock ordering tracking for deadlock detection</p></li>
+<li><p>Integration with alias analysis for precise lock identification</p></li>
+</ul>
+<p><strong>Query Interface</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">getMayLockSetAt(inst)</span></code> – Get may-lockset at an instruction</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">getMustLockSetAt(inst)</span></code> – Get must-lockset at an instruction</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">isLockHeldAt(lock,</span> <span class="pre">inst)</span></code> – Check if a specific lock is held</p></li>
+</ul>
+</section>
+<section id="jointargetanalysis">
+<h3>JoinTargetAnalysis<a class="headerlink" href="#jointargetanalysis" title="Link to this heading"></a></h3>
+<p><strong>File</strong>: <code class="docutils literal notranslate"><span class="pre">JoinTarget/JoinTargetAnalysis.cpp</span></code>,
+<code class="docutils literal notranslate"><span class="pre">JoinTarget/JoinTargetAnalysis.h</span></code></p>
+<p>Computes which <code class="docutils literal notranslate"><span class="pre">pthread_create</span></code> sites may match a given <code class="docutils literal notranslate"><span class="pre">pthread_join</span></code> by
+reasoning about the joined thread handle. This is used to refine thread
+termination effects beyond a simple name-based match.</p>
+<p><strong>Use cases</strong>:</p>
+<ul class="simple">
+<li><p>Refining join reasoning when multiple thread handles may alias</p></li>
+<li><p>Supporting more precise MHP pruning around thread termination</p></li>
+<li><p>Providing a dedicated analysis for the <code class="docutils literal notranslate"><span class="pre">JoinTarget/</span></code> subdirectory that now
+exists in the source tree</p></li>
+</ul>
+</section>
+<section id="threadapi">
+<h3>ThreadAPI<a class="headerlink" href="#threadapi" title="Link to this heading"></a></h3>
+<p><strong>File</strong>: <code class="docutils literal notranslate"><span class="pre">Utils/ThreadAPI.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">Utils/ThreadAPI.h</span></code></p>
+<p>Provides a unified interface for identifying and categorizing thread-related
+operations in LLVM IR. Acts as an abstraction layer over different threading
+models.</p>
+<p><strong>Supported Operations</strong>:</p>
+<ul class="simple">
+<li><p><strong>Thread Management</strong>: Fork, join, detach, exit, cancel</p></li>
+<li><p><strong>Synchronization</strong>: Lock acquire/release, try-lock</p></li>
+<li><p><strong>Condition Variables</strong>: Wait, signal, broadcast</p></li>
+<li><p><strong>Barriers</strong>: Init, wait</p></li>
+<li><p><strong>Mutex Management</strong>: Init, destroy</p></li>
+</ul>
+<p><strong>Threading Model Support</strong>:</p>
+<ul class="simple">
+<li><p><strong>POSIX threads</strong>: pthread_create, pthread_join, pthread_mutex_lock, etc.</p></li>
+<li><p><strong>C++11 threads</strong>: std::thread, std::mutex, std::condition_variable</p></li>
+<li><p><strong>OpenMP</strong>: Parallel regions, barriers, critical sections</p></li>
+<li><p><strong>Custom APIs</strong>: Configurable via configuration files</p></li>
+</ul>
+<p><strong>Key Methods</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">isTDFork(inst)</span></code> – Check if instruction creates a thread</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">isTDJoin(inst)</span></code> – Check if instruction joins a thread</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">isTDAcquire(inst)</span></code> – Check if instruction acquires a lock</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">isTDRelease(inst)</span></code> – Check if instruction releases a lock</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">getForkedThread(inst)</span></code> – Get the pthread_t value for a fork</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">getForkedFun(inst)</span></code> – Get the function executed by a thread</p></li>
+</ul>
+</section>
+<section id="happensbeforeanalysis">
+<h3>HappensBeforeAnalysis<a class="headerlink" href="#happensbeforeanalysis" title="Link to this heading"></a></h3>
+<p><strong>File</strong>: <code class="docutils literal notranslate"><span class="pre">MHP/HappensBeforeAnalysis.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">MHP/HappensBeforeAnalysis.h</span></code></p>
+<p>Determines happens-before relationships between instructions using MHP analysis
+and synchronization operations. The happens-before relation is fundamental for
+reasoning about memory ordering and data races.</p>
+<p><strong>Happens-Before Sources</strong>:</p>
+<ol class="arabic simple">
+<li><p><strong>Program Order</strong>: Sequential execution within a thread</p></li>
+<li><p><strong>Fork-Join</strong>: Thread creation and join edges</p></li>
+<li><p><strong>Locks</strong>: lock and unlock synchronization</p></li>
+<li><p><strong>Condition Variables</strong>: wait, signal, and broadcast are recognized as thread
+flow boundaries</p></li>
+<li><p><strong>Barriers and atomics</strong>: barriers, fences, and selected atomic patterns</p></li>
+</ol>
+<p><strong>Features</strong>:</p>
+<ul class="simple">
+<li><p>Graph reachability over thread-flow and explicit synchronizes-with edges</p></li>
+<li><p>Efficient query interface</p></li>
+<li><p>Integration with MHP analysis</p></li>
+</ul>
+<p>Some synchronization constructs are recognized more precisely than they are
+fully proved. For example, <code class="docutils literal notranslate"><span class="pre">std::call_once</span></code>, <code class="docutils literal notranslate"><span class="pre">std::latch</span></code>,
+<code class="docutils literal notranslate"><span class="pre">std::barrier</span></code>, and condition-variable signaling are modeled conservatively,
+and definite happens-before edges are still limited for some of them.</p>
+</section>
+<section id="threadflowgraph">
+<h3>ThreadFlowGraph<a class="headerlink" href="#threadflowgraph" title="Link to this heading"></a></h3>
+<p><strong>File</strong>: <code class="docutils literal notranslate"><span class="pre">Utils/ThreadFlowGraph.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">Utils/ThreadFlowGraph.h</span></code></p>
+<p>Implements a graph representation of thread synchronization operations and their
+ordering relationships. Used as an intermediate representation for MHP and
+happens-before analyses.</p>
+<p><strong>Node Types</strong>:</p>
+<ul class="simple">
+<li><p>Thread fork/join nodes</p></li>
+<li><p>Lock acquire/release nodes</p></li>
+<li><p>Condition variable nodes</p></li>
+<li><p>Barrier nodes</p></li>
+<li><p>Thread exit nodes</p></li>
+</ul>
+<p><strong>Features</strong>:</p>
+<ul class="simple">
+<li><p>Graph construction from thread API calls</p></li>
+<li><p>Edge representation of ordering relationships</p></li>
+<li><p>Support for visualization and debugging</p></li>
+</ul>
+</section>
+<section id="escapeanalysis">
+<h3>EscapeAnalysis<a class="headerlink" href="#escapeanalysis" title="Link to this heading"></a></h3>
+<p><strong>File</strong>: <code class="docutils literal notranslate"><span class="pre">Memory/EscapeAnalysis.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">Memory/EscapeAnalysis.h</span></code></p>
+<p>Determines which values escape their thread-local scope and become shared between
+threads. Essential for identifying which memory locations may be accessed by
+multiple threads.</p>
+<p><strong>Analysis Process</strong>:</p>
+<ol class="arabic simple">
+<li><p><strong>Thread-Local Identification</strong>: Identifies values that are thread-local</p></li>
+<li><p><strong>Escape Detection</strong>: Tracks when values are passed to other threads</p></li>
+<li><p><strong>Shared Memory Identification</strong>: Marks memory locations as shared</p></li>
+</ol>
+<p><strong>Use Cases</strong>:</p>
+<ul class="simple">
+<li><p>Data race detection (only shared memory can have races)</p></li>
+<li><p>Memory safety analysis in concurrent contexts</p></li>
+<li><p>Optimizing thread-local storage</p></li>
+</ul>
+</section>
+<section id="staticvectorclockmhp">
+<h3>StaticVectorClockMHP<a class="headerlink" href="#staticvectorclockmhp" title="Link to this heading"></a></h3>
+<p><strong>File</strong>: <code class="docutils literal notranslate"><span class="pre">MHP/StaticVectorClockMHP.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">MHP/StaticVectorClockMHP.h</span></code></p>
+<p>Implements a static vector clock-based approach for MHP analysis. Uses vector
+clocks to efficiently track happens-before relationships and compute MHP pairs.</p>
+<p><strong>Features</strong>:</p>
+<ul class="simple">
+<li><p>Map-based static vector clocks over abstract logic-clock elements</p></li>
+<li><p>Efficient MHP computation</p></li>
+<li><p>Scalable to large programs</p></li>
+</ul>
+</section>
+<section id="staticthreadsharinganalysis">
+<h3>StaticThreadSharingAnalysis<a class="headerlink" href="#staticthreadsharinganalysis" title="Link to this heading"></a></h3>
+<p><strong>File</strong>: <code class="docutils literal notranslate"><span class="pre">Memory/StaticThreadSharingAnalysis.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">Memory/StaticThreadSharingAnalysis.h</span></code></p>
+<p>Analyzes which memory locations are shared between threads using static analysis.
+Combines escape analysis with thread flow information to identify shared memory.</p>
+<p><strong>Features</strong>:</p>
+<ul class="simple">
+<li><p>Static identification of shared memory</p></li>
+<li><p>Integration with alias analysis</p></li>
+<li><p>Support for complex pointer structures</p></li>
+</ul>
+</section>
+<section id="thread-aware-sparse-value-flow-refinement">
+<h3>Thread-Aware Sparse Value-Flow Refinement<a class="headerlink" href="#thread-aware-sparse-value-flow-refinement" title="Link to this heading"></a></h3>
+<p><strong>Files</strong>: <code class="docutils literal notranslate"><span class="pre">ValueFlow/ThreadAwareSVFG.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">ValueFlow/ThreadAwareSVFG.h</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ValueFlow/SparseValueFlowRefinement.cpp</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ValueFlow/SparseValueFlowRefinement.h</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ValueFlow/WholeProgramSparseRefinement.cpp</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ValueFlow/WholeProgramSparseRefinement.h</span></code>, <code class="docutils literal notranslate"><span class="pre">ValueFlow/FSMPTA.cpp</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ValueFlow/FSMPTA.h</span></code>, <code class="docutils literal notranslate"><span class="pre">ValueFlow/MultiStageSlicer.cpp</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ValueFlow/MultiStageSlicer.h</span></code></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">ValueFlow/</span></code> subdirectory implements the optional whole-program refinement
+used by the concurrency checker: a thread-aware sparse value-flow analysis that
+refines data-race alias pairs with a flow-sensitive points-to solve over the
+SVFG. It was introduced by the thread-aware sparse SVFG refinement commit
+(<code class="docutils literal notranslate"><span class="pre">d13d1543</span></code>). The general solver lives in
+<code class="docutils literal notranslate"><span class="pre">Alias/InclusionBased/FlowSensitive/</span></code> and is composed with the thread-aware
+SVFG by <code class="docutils literal notranslate"><span class="pre">FSMPTA</span></code>; the concurrency layer does not duplicate it.</p>
+<p><strong>ThreadAwareSVFGBuilder</strong> (<code class="docutils literal notranslate"><span class="pre">ThreadAwareSVFG.h</span></code>): adds guarded Store-to-Load
+and symmetric Store-to-Store <code class="docutils literal notranslate"><span class="pre">ThreadMHPIndirectVF</span></code> edges for accesses that may
+run in parallel. The base SVFG remains owned by the caller and can be restored
+with <code class="docutils literal notranslate"><span class="pre">clear()</span></code>. A <code class="docutils literal notranslate"><span class="pre">FilteredSVFGView</span></code> can restrict construction to an induced
+subgraph without copying graph nodes. Fork and join memory flow is connected
+through dedicated passes (<code class="docutils literal notranslate"><span class="pre">connectForkFlow</span></code>, <code class="docutils literal notranslate"><span class="pre">connectJoinFlow</span></code>).</p>
+<p><strong>SparseValueFlowRefinement</strong> (<code class="docutils literal notranslate"><span class="pre">SparseValueFlowRefinement.h</span></code>): a lightweight
+concurrency-specific diagnostic refinement, introduced as
+<code class="docutils literal notranslate"><span class="pre">SparseFlowSensitivePTA</span></code> in the original commit and later renamed. It solves
+pointer-value flow over the SVFG and its thread-interference overlay, attaching
+memory values to sparse MemorySSA definitions rather than to every LLVM
+instruction. It is not the alias-analysis oracle and cannot suppress race
+candidates on its own. Queries include <code class="docutils literal notranslate"><span class="pre">pointsTo</span></code>, <code class="docutils literal notranslate"><span class="pre">memoryValue</span></code>,
+<code class="docutils literal notranslate"><span class="pre">hasCompletePointsTo</span></code>, <code class="docutils literal notranslate"><span class="pre">accessTargets</span></code>, and <code class="docutils literal notranslate"><span class="pre">mayAliasAccesses</span></code> (which
+returns <code class="docutils literal notranslate"><span class="pre">nullopt</span></code> when refinement is unavailable, otherwise whether two
+accesses may still address a common abstract object). Mutable and hash-consed
+points-to set backends are supported.</p>
+<p><strong>FlowSensitivePTA</strong> (<code class="docutils literal notranslate"><span class="pre">Alias/InclusionBased/FlowSensitive/FlowSensitivePTA.h</span></code>):
+the general sparse flow-sensitive inclusion-based pointer analysis. It owns the
+top-level points-to sets and per-node MemorySSA <code class="docutils literal notranslate"><span class="pre">IN</span></code>/<code class="docutils literal notranslate"><span class="pre">OUT</span></code> state.</p>
+<p><strong>FSMPTA</strong> (<code class="docutils literal notranslate"><span class="pre">FSMPTA.h</span></code>): composes <code class="docutils literal notranslate"><span class="pre">FlowSensitivePTA</span></code> with the thread-aware
+SVFG and an optional sliced solve scope.</p>
+<p><strong>WholeProgramSparseRefinement</strong> (<code class="docutils literal notranslate"><span class="pre">WholeProgramSparseRefinement.h</span></code>): ownership
+wrapper for a complete analysis run. It owns the ICFG, SVFG, overlay, and
+solver, and supports two modes: <code class="docutils literal notranslate"><span class="pre">WholeProgram</span></code> and <code class="docutils literal notranslate"><span class="pre">MultiStageSlicing</span></code>.
+Configuration covers the memory-region partition strategy, the thread context
+limit (default 2), and the points-to set backend.</p>
+<p><strong>MultiStageSlicer</strong> (<code class="docutils literal notranslate"><span class="pre">MultiStageSlicer.h</span></code>): implements the MSli pipeline:
+candidate closure, synchronization/call expansion, and a bounded PTA closure.
+The pre-analysis overlay is discarded; MHP and lock queries are evaluated again
+while constructing the filtered main-phase overlay.</p>
+<p><strong>ThreadCallGraph / ThreadCreationTree</strong>
+(<code class="docutils literal notranslate"><span class="pre">Concurrency/Thread/ThreadCreationTree.h</span></code>): rebuild context-bounded thread
+instances for both the pre-analysis and sliced main phase. Forks in loops or
+recursive contexts are marked multi-instance, and joins are resolved through
+canonicalized thread handles.</p>
+<p><strong>Thread-aware MemorySSA</strong>: treats a fork as forward-only and a join as
+return-only. Caller memory definitions and payloads flow into the start routine,
+while joined <code class="docutils literal notranslate"><span class="pre">FormalOut</span></code> definitions flow to synthetic <code class="docutils literal notranslate"><span class="pre">ActualOut</span></code> nodes and
+dominated post-join accesses.</p>
+<p><strong>Memory region partition policies</strong>: <code class="docutils literal notranslate"><span class="pre">distinct</span></code> preserves each exact
+points-to set; <code class="docutils literal notranslate"><span class="pre">intra-disjoint</span></code> merges overlapping sets independently per
+function; <code class="docutils literal notranslate"><span class="pre">inter-disjoint</span></code> merges overlapping sets over the whole module.
+Freezing the partition before MemorySSA construction prevents overlapping
+points-to sets from silently receiving unrelated SSA version streams.</p>
+<p><strong>Checker integration</strong>: <code class="docutils literal notranslate"><span class="pre">ConcurrencyChecker</span></code> owns a
+<code class="docutils literal notranslate"><span class="pre">WholeProgramSparseRefinement</span></code> and builds it when sparse flow-sensitive
+refinement is enabled and data-race checking is active, recording statistics
+such as interference edges and points-to facts. The original commit wired the
+sparse solver into <code class="docutils literal notranslate"><span class="pre">DataRaceChecker</span></code>, which consults <code class="docutils literal notranslate"><span class="pre">mayAliasAccesses</span></code>
+while deciding whether two accesses may share a location. Incomplete or
+wildcard points-to results never suppress a race candidate; the checker only
+removes a pair when complete sparse results prove its access-target sets
+disjoint.</p>
+<p><strong>Enabling</strong>: the path is opt-in. Run:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>lotus-check --engine=concur --checks=data-race \
+  --concur.sparse-flow-sensitive input.bc
+</pre></div>
+</div>
+<p>Multi-stage slicing is enabled with:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>lotus-check --engine=concur --checks=data-race --concur.msli \
+  --concur.memory-partition=inter-disjoint \
+  --concur.points-to-sets=hash-consed input.bc
+</pre></div>
+</div>
+<p>The sparse analysis and hash-consed backend are both opt-in; mutable ordered
+sets remain the default.</p>
+<p>See also <a class="reference internal" href="../ir/svfg.html"><span class="doc">SVFG — Sparse Value-Flow Graph</span></a> for the underlying sparse value-flow graph and
+<a class="reference internal" href="../checker/concurrency.html"><span class="doc">Concurrency Bug Checker</span></a> for the checker that consumes this refinement.</p>
+</section>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<p><strong>Basic MHP Analysis</strong>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;Concurrency/MHP/MHPAnalysis.h&gt;</span>
+
+<span class="n">llvm</span><span class="o">::</span><span class="n">Module</span><span class="w"> </span><span class="o">&amp;</span><span class="n">M</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+<span class="n">mhp</span><span class="o">::</span><span class="n">MHPAnalysis</span><span class="w"> </span><span class="nf">mhp</span><span class="p">(</span><span class="n">M</span><span class="p">);</span>
+<span class="n">mhp</span><span class="p">.</span><span class="n">analyze</span><span class="p">();</span>
+
+<span class="k">const</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">I1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+<span class="k">const</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">I2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">mhp</span><span class="p">.</span><span class="n">mayHappenInParallel</span><span class="p">(</span><span class="n">I1</span><span class="p">,</span><span class="w"> </span><span class="n">I2</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="c1">// I1 and I2 may execute concurrently</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>LockSet Analysis</strong>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;Concurrency/LockSet/LockSetAnalysis.h&gt;</span>
+
+<span class="n">llvm</span><span class="o">::</span><span class="n">Module</span><span class="w"> </span><span class="o">&amp;</span><span class="n">M</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+<span class="n">mhp</span><span class="o">::</span><span class="n">LockSetAnalysis</span><span class="w"> </span><span class="nf">lsa</span><span class="p">(</span><span class="n">M</span><span class="p">);</span>
+<span class="n">lsa</span><span class="p">.</span><span class="n">analyze</span><span class="p">();</span>
+
+<span class="k">const</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">Instruction</span><span class="w"> </span><span class="o">*</span><span class="n">inst</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+<span class="n">mhp</span><span class="o">::</span><span class="n">LockSet</span><span class="w"> </span><span class="n">mayLocks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lsa</span><span class="p">.</span><span class="n">getMayLockSetAt</span><span class="p">(</span><span class="n">inst</span><span class="p">);</span>
+<span class="n">mhp</span><span class="o">::</span><span class="n">LockSet</span><span class="w"> </span><span class="n">mustLocks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lsa</span><span class="p">.</span><span class="n">getMustLockSetAt</span><span class="p">(</span><span class="n">inst</span><span class="p">);</span>
+</pre></div>
+</div>
+<p><strong>Combined Analysis for Data Race Detection</strong>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;Concurrency/MHP/MHPAnalysis.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;Concurrency/LockSet/LockSetAnalysis.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;Concurrency/Memory/EscapeAnalysis.h&gt;</span>
+
+<span class="n">llvm</span><span class="o">::</span><span class="n">Module</span><span class="w"> </span><span class="o">&amp;</span><span class="n">M</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+
+<span class="c1">// Setup analyses</span>
+<span class="n">mhp</span><span class="o">::</span><span class="n">MHPAnalysis</span><span class="w"> </span><span class="nf">mhp</span><span class="p">(</span><span class="n">M</span><span class="p">);</span>
+<span class="n">mhp</span><span class="p">.</span><span class="n">enableLockSetAnalysis</span><span class="p">();</span>
+<span class="n">mhp</span><span class="p">.</span><span class="n">analyze</span><span class="p">();</span>
+
+<span class="n">mhp</span><span class="o">::</span><span class="n">EscapeAnalysis</span><span class="w"> </span><span class="nf">escape</span><span class="p">(</span><span class="n">M</span><span class="p">);</span>
+<span class="n">escape</span><span class="p">.</span><span class="n">analyze</span><span class="p">();</span>
+
+<span class="c1">// Check for data races</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">I1</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">instructions</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">I2</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">instructions</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">mhp</span><span class="p">.</span><span class="n">mayHappenInParallel</span><span class="p">(</span><span class="n">I1</span><span class="p">,</span><span class="w"> </span><span class="n">I2</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;&amp;</span>
+<span class="w">        </span><span class="n">isMemoryAccess</span><span class="p">(</span><span class="n">I1</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">isMemoryAccess</span><span class="p">(</span><span class="n">I2</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;&amp;</span>
+<span class="w">        </span><span class="n">mayAlias</span><span class="p">(</span><span class="n">I1</span><span class="p">,</span><span class="w"> </span><span class="n">I2</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;&amp;</span>
+<span class="w">        </span><span class="p">(</span><span class="n">isWrite</span><span class="p">(</span><span class="n">I1</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">isWrite</span><span class="p">(</span><span class="n">I2</span><span class="p">))</span><span class="w"> </span><span class="o">&amp;&amp;</span>
+<span class="w">        </span><span class="o">!</span><span class="n">isProtectedByCommonLock</span><span class="p">(</span><span class="n">I1</span><span class="p">,</span><span class="w"> </span><span class="n">I2</span><span class="p">,</span><span class="w"> </span><span class="n">lsa</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;&amp;</span>
+<span class="w">        </span><span class="n">escape</span><span class="p">.</span><span class="n">isShared</span><span class="p">(</span><span class="n">getMemoryLocation</span><span class="p">(</span><span class="n">I1</span><span class="p">)))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="c1">// Potential data race detected</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>ThreadAPI Usage</strong>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;Concurrency/Utils/ThreadAPI.h&gt;</span>
+
+<span class="n">ThreadAPI</span><span class="w"> </span><span class="o">*</span><span class="n">api</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ThreadAPI</span><span class="o">::</span><span class="n">getThreadAPI</span><span class="p">();</span>
+
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">F</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">M</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="n">I</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">instructions</span><span class="p">(</span><span class="n">F</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">api</span><span class="o">-&gt;</span><span class="n">isTDFork</span><span class="p">(</span><span class="o">&amp;</span><span class="n">I</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">const</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">Value</span><span class="w"> </span><span class="o">*</span><span class="kr">thread</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">api</span><span class="o">-&gt;</span><span class="n">getForkedThread</span><span class="p">(</span><span class="o">&amp;</span><span class="n">I</span><span class="p">);</span>
+<span class="w">      </span><span class="k">const</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">Value</span><span class="w"> </span><span class="o">*</span><span class="n">func</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">api</span><span class="o">-&gt;</span><span class="n">getForkedFun</span><span class="p">(</span><span class="o">&amp;</span><span class="n">I</span><span class="p">);</span>
+<span class="w">      </span><span class="c1">// Process thread creation</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<section id="data-race-detection-when-we-report">
+<h3>Data race detection: when we report<a class="headerlink" href="#data-race-detection-when-we-report" title="Link to this heading"></a></h3>
+<p>The data race checker reports one bug per <strong>racy component</strong> (a connected set of
+conflicting accesses), not one per instruction pair. This reduces noise and
+matches the “one report per logical race” idea used in tools like Goblint.</p>
+<p><strong>When two accesses are considered a race</strong></p>
+<p>A potential data race is reported only when all of the following hold:</p>
+<ol class="arabic simple">
+<li><p><strong>May happen in parallel (MHP)</strong> – The two instructions may execute concurrently.</p></li>
+<li><p><strong>At least one is a write</strong> – Read-only pairs are not races.</p></li>
+<li><p><strong>Not ordered by happens-before</strong> – e.g. C11 synchronizes-with; if one is guaranteed to happen before the other, no race.</p></li>
+<li><p><strong>May access the same location</strong> – Alias analysis says the two memory locations may overlap.</p></li>
+<li><p><strong>Not protected by a common lock</strong> – Lock-set analysis shows no lock is held for both.</p></li>
+<li><p><strong>Location is shared</strong> – Escape analysis says the memory may be shared (e.g. escaped, or global).</p></li>
+</ol>
+<p><strong>Same location</strong></p>
+<p>“Same location” means: the two instructions’ memory locations <strong>may alias</strong> and the
+location is <strong>escaped</strong> (or otherwise shared). Accesses to thread-local, non-escaped
+storage are skipped. Accesses to <strong>ignorable types</strong> (sync objects, <code class="docutils literal notranslate"><span class="pre">FILE</span></code>, atomics,
+etc.) are never considered for races; see the checker’s ignorable-type list.</p>
+<p><strong>One report per component</strong></p>
+<p>Racy pairs are grouped into <strong>components</strong>: two accesses are in the same component if
+they are connected by a chain of “may race” pairs. The checker emits <strong>one report per
+component</strong>, with a representative pair and a step for each conflicting access. So
+multiple overlapping pairs on the same variable yield a single report.</p>
+<p><strong>Example</strong></p>
+<p>Two threads both write to <code class="docutils literal notranslate"><span class="pre">shared_counter</span></code> without a lock: the checker finds one
+racy component (both writes), and reports one data race with two steps (one per
+write). If a third thread also wrote to <code class="docutils literal notranslate"><span class="pre">shared_counter</span></code>, the same single report
+would list all three accesses as steps.</p>
+<p><strong>Typical use cases</strong>:</p>
+<ul class="simple">
+<li><p>Data race detection in multithreaded programs</p></li>
+<li><p>Deadlock detection through lock ordering analysis</p></li>
+<li><p>Verifying thread safety of concurrent data structures</p></li>
+<li><p>Identifying potentially racy memory accesses</p></li>
+<li><p>Providing concurrency-aware information to higher-level analyses</p></li>
+<li><p>Security analysis of concurrent code</p></li>
+</ul>
+</section>
+</section>
+<section id="limitations">
+<h2>Limitations<a class="headerlink" href="#limitations" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Atomic Operations</strong>: Limited support for fine-grained memory ordering
+(std::memory_order_relaxed, acquire, release, etc.). The ThreadAPI maps
+atomics roughly to locks/barriers but doesn’t handle the fine-grained
+“synchronizes-with” relationships of weak atomics.</p></li>
+<li><p><strong>Dynamic Thread Creation</strong>: Analysis may be conservative for threads created
+in loops or conditionally, potentially leading to false positives in MHP
+analysis.</p></li>
+<li><p><strong>Interprocedural Precision</strong>: Some analyses (e.g., LockSetAnalysis) support
+interprocedural analysis, but precision may be limited for complex call
+patterns or indirect calls.</p></li>
+<li><p><strong>Alias Analysis Dependency</strong>: Accurate results require precise alias analysis.
+Imprecise alias analysis can lead to false positives in data race detection.</p></li>
+<li><p><strong>Language Model Coverage</strong>: While supporting pthreads, C++11, and OpenMP,
+some less common threading APIs may not be recognized without configuration.</p></li>
+<li><p><strong>Real-Time Constraints</strong>: The analysis does not model real-time scheduling
+constraints or priority-based execution ordering.</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Concurrency Analysis" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../dataflow/index.html" class="btn btn-neutral float-right" title="Data Flow Analysis" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

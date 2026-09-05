@@ -1,0 +1,277 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Overview &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Optimization" href="../optimization/index.html" />
+    <link rel="prev" title="Path Program" href="../ir/path_program.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Overview</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/ml/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <dl class="simple">
+<dt>Machine Learning Features (CanaryML)</dt><dd></dd>
+</dl>
+<p>This section documents the machine learning feature extraction capabilities in Lotus,
+specifically the <code class="docutils literal notranslate"><span class="pre">CanaryML</span></code> library for memory-related feature extraction using Sea-DSA.</p>
+<section id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">CanaryML</span></code> library (built from <code class="docutils literal notranslate"><span class="pre">lib/Analysis/FeatureExtraction/</span></code>) provides utilities for extracting
+memory-related features from program call sites. These features are designed for
+machine learning applications, particularly for predicting memory safety properties
+or learning memory access patterns.</p>
+<p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Analysis/FeatureExtraction/</span></code></p>
+<p><strong>Library Name</strong>: <code class="docutils literal notranslate"><span class="pre">CanaryML</span></code></p>
+<p><strong>Dependencies</strong>:
+- Sea-DSA for points-to graph construction
+- LLVM analysis passes (CallGraph, TargetLibraryInfo, AllocWrapInfo)</p>
+</section>
+<section id="memorymlfeaturespass">
+<h1>MemoryMLFeaturesPass<a class="headerlink" href="#memorymlfeaturespass" title="Link to this heading"></a></h1>
+<p>The primary component is <code class="docutils literal notranslate"><span class="pre">MemoryMLFeaturesPass</span></code>, an LLVM ModulePass that extracts
+features for each call site in a module.</p>
+<p><strong>LLVM Pass Name</strong>: <code class="docutils literal notranslate"><span class="pre">-Pmem-ml-features</span></code></p>
+<p><strong>Header</strong>:
+.. code-block:: cpp</p>
+<blockquote>
+<div><p>#include “Analysis/FeatureExtraction/MemoryMLFeatures.h”</p>
+</div></blockquote>
+<p><strong>Basic Usage</strong>:
+.. code-block:: cpp</p>
+<blockquote>
+<div><p>#include “Analysis/FeatureExtraction/MemoryMLFeatures.h”</p>
+<p>// Create and run the pass
+previrt::MemoryMLFeaturesPass ml_features_pass;
+ml_features_pass.runOnModule(M);</p>
+<p>// Extract features for a specific call site
+for (auto &amp;F : M) {</p>
+<blockquote>
+<div><blockquote>
+<div><dl>
+<dt>for (auto &amp;B<span class="classifier">F) {</span></dt><dd><dl>
+<dt>for (auto &amp;I<span class="classifier">B) {</span></dt><dd><dl class="simple">
+<dt>if (auto <a href="#id1"><span class="problematic" id="id2">*</span></a>CB = dyn_cast&lt;llvm::CallBase&gt;(&amp;I)) {</dt><dd><p>auto features = ml_features_pass.extractMLFeatures(<a href="#id3"><span class="problematic" id="id4">*</span></a>CB);
+features.write(errs());</p>
+</dd>
+</dl>
+<p>}</p>
+</dd>
+</dl>
+<p>}</p>
+</dd>
+</dl>
+<p>}</p>
+</div></blockquote>
+<p>}</p>
+</div></blockquote>
+</div></blockquote>
+<p><strong>Command-Line Options</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-Pinclude-expensive-ml-features</span></code> (default: true)
+Include expensive-to-compute memory access features.</p></li>
+</ul>
+</section>
+<section id="features-extracted">
+<h1>Features Extracted<a class="headerlink" href="#features-extracted" title="Link to this heading"></a></h1>
+<p>The pass extracts two sets of features for each call site:</p>
+<ol class="arabic simple">
+<li><p><strong>Callee Summary Graph Features</strong> (prefix <code class="docutils literal notranslate"><span class="pre">callee_</span></code>)</p></li>
+<li><p><strong>Top-Down Unification Features</strong> (prefix <code class="docutils literal notranslate"><span class="pre">td_callee_</span></code>)</p></li>
+</ol>
+<p><strong>Available Feature Accessors</strong>:</p>
+<p>Graph Structure:
+- <code class="docutils literal notranslate"><span class="pre">getCalleeNumNodes()</span></code> / <code class="docutils literal notranslate"><span class="pre">getTdCalleeNumNodes()</span></code>
+- <code class="docutils literal notranslate"><span class="pre">getCalleeNumAccessed()</span></code> / <code class="docutils literal notranslate"><span class="pre">getTdCalleeNumAccessed()</span></code>
+- <code class="docutils literal notranslate"><span class="pre">getCalleeNumCollapsed()</span></code> / <code class="docutils literal notranslate"><span class="pre">getTdCalleeNumCollapsed()</span></code>
+- <code class="docutils literal notranslate"><span class="pre">getCalleeNumSequence()</span></code> / <code class="docutils literal notranslate"><span class="pre">getTdCalleeNumSequence()</span></code></p>
+<p>Memory Allocation:
+- <code class="docutils literal notranslate"><span class="pre">getCalleeNumAlloca()</span></code> / <code class="docutils literal notranslate"><span class="pre">getTdCalleeNumAlloca()</span></code> (stack)
+- <code class="docutils literal notranslate"><span class="pre">getCalleeNumHeap()</span></code> / <code class="docutils literal notranslate"><span class="pre">getTdCalleeNumHeap()</span></code> (heap)
+- <code class="docutils literal notranslate"><span class="pre">getCalleeNumExternal()</span></code> / <code class="docutils literal notranslate"><span class="pre">getTdCalleeNumExternal()</span></code> (external)
+- <code class="docutils literal notranslate"><span class="pre">getCalleeNumAllocSites()</span></code> / <code class="docutils literal notranslate"><span class="pre">getTdCalleeNumAllocSites()</span></code></p>
+<p>Pointers and Accesses:
+- <code class="docutils literal notranslate"><span class="pre">getCalleeNumPointers()</span></code> / <code class="docutils literal notranslate"><span class="pre">getTdCalleeNumPointers()</span></code>
+- <code class="docutils literal notranslate"><span class="pre">getCalleePointersPerNode()</span></code> / <code class="docutils literal notranslate"><span class="pre">getTdCalleePointersPerNode()</span></code></p>
+</section>
+<section id="feature-output">
+<h1>Feature Output<a class="headerlink" href="#feature-output" title="Link to this heading"></a></h1>
+<p>Features can be written to a stream:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">features</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="n">llvm</span><span class="o">::</span><span class="n">errs</span><span class="p">());</span>
+</pre></div>
+</div>
+<p>Output format:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1">## ML features for call @function_name</span>
+<span class="n">Callee</span><span class="s1">'s Summary graph</span>
+  <span class="n">Number</span> <span class="n">of</span> <span class="n">nodes</span>          <span class="p">:</span> <span class="o">&lt;</span><span class="n">N</span><span class="o">&gt;</span>
+  <span class="n">Number</span> <span class="n">of</span> <span class="n">collapsed</span> <span class="n">nodes</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">N</span><span class="o">&gt;</span>
+  <span class="n">Number</span> <span class="n">of</span> <span class="n">accessed</span> <span class="n">nodes</span> <span class="p">:</span> <span class="o">&lt;</span><span class="n">N</span><span class="o">&gt;</span>
+   <span class="o">...</span>
+</pre></div>
+</div>
+</section>
+<section id="analysis-dependencies">
+<h1>Analysis Dependencies<a class="headerlink" href="#analysis-dependencies" title="Link to this heading"></a></h1>
+<p>The pass requires the following LLVM analyses:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">TargetLibraryInfoWrapperPass</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CallGraphWrapperPass</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">AllocWrapInfo</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DsaLibFuncInfo</span></code></p></li>
+</ul>
+</section>
+<section id="integration-notes">
+<h1>Integration Notes<a class="headerlink" href="#integration-notes" title="Link to this heading"></a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">MemoryMLFeaturesPass</span></code> is part of the <code class="docutils literal notranslate"><span class="pre">previrt</span></code> namespace and integrates
+Sea-DSA for memory modeling. It is particularly useful for:</p>
+<ol class="arabic simple">
+<li><p>Building datasets for memory safety prediction</p></li>
+<li><p>Learning patterns in library function effects</p></li>
+<li><p>Analyzing memory access characteristics of call sites</p></li>
+<li><p>Generating features for ML-based bug detection</p></li>
+</ol>
+</section>
+<section id="related-components">
+<h1>Related Components<a class="headerlink" href="#related-components" title="Link to this heading"></a></h1>
+<ul class="simple">
+<li><p>See <a class="reference internal" href="../alias/seadsa.html"><span class="doc">Sea-DSA — Memory Graph AA</span></a> for Sea-DSA documentation</p></li>
+<li><p>See <a class="reference internal" href="../analysis/index.html"><span class="doc">Analysis Framework</span></a> for related analysis passes</p></li>
+</ul>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../ir/path_program.html" class="btn btn-neutral float-left" title="Path Program" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../optimization/index.html" class="btn btn-neutral float-right" title="Optimization" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,324 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PEARL Multi-Derivation &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Stg Staged Solving" href="stg.html" />
+    <link rel="prev" title="Paper Engines: PEARL, Stg, and Sqid" href="pearl_stg_sqid.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Context-Free Language Analysis</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="cfl_components.html">CFL Reachability Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="classical.html">Classical Grammar-Driven CFL Reachability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pocr_migration.html">POCR Migration Matrix</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="pearl_stg_sqid.html">Paper Engines: PEARL, Stg, and Sqid</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="pearl_stg_sqid.html#coverage-summary">Coverage summary</a><ul class="current">
+<li class="toctree-l4 current"><a class="current reference internal" href="#">PEARL Multi-Derivation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="stg.html">Stg Staged Solving</a></li>
+<li class="toctree-l4"><a class="reference internal" href="sqid.html">Sqid Efficient Relation Chaining</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="csindex.html">Context-Sensitive Reachability Indexing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_unary.html">Exact Unary Interleaved Dyck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_staged_bounds.html">Interleaved-Dyck Staged Bounds</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_graph_reduction.html">Interleaved-Dyck Graph Reduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_mcfl.html">Multiple Context-Free Language Reachability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_mutual_refinement.html">Mutual Refinement for CFL Reachability</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Context-Free Language Analysis</a></li>
+          <li class="breadcrumb-item"><a href="pearl_stg_sqid.html">Paper Engines: PEARL, Stg, and Sqid</a></li>
+      <li class="breadcrumb-item active">PEARL Multi-Derivation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/cfl/pearl.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="pearl-multi-derivation">
+<h1>PEARL Multi-Derivation<a class="headerlink" href="#pearl-multi-derivation" title="Link to this heading"></a></h1>
+<section id="paper">
+<h2>Paper<a class="headerlink" href="#paper" title="Link to this heading"></a></h2>
+<p>Lotus implements the algorithm from Chenghang Shi, Haofeng Li, Yulei Sui,
+Jie Lu, Lian Li, and Jingling Xue, <em>Two Birds with One Stone:
+Multi-Derivation for Fast Context-Free Language Reachability Analysis</em>,
+ASE 2023 (<a class="reference external" href="https://doi.org/10.1109/ASE56229.2023.00118">DOI 10.1109/ASE56229.2023.00118</a>).</p>
+<p>The implementation is independent of the paper artifact’s SVF utilities. It
+uses the Lotus <code class="docutils literal notranslate"><span class="pre">Grammar</span></code>, <code class="docutils literal notranslate"><span class="pre">Relation</span></code>, and sparse-bitvector containers.</p>
+</section>
+<section id="problem-and-key-idea">
+<h2>Problem and key idea<a class="headerlink" href="#problem-and-key-idea" title="Link to this heading"></a></h2>
+<p>The conventional CFL worklist derives one labeled edge at a time. For a
+partially transitive production such as <code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">-&gt;</span> <span class="pre">X</span> <span class="pre">A</span></code>, many <code class="docutils literal notranslate"><span class="pre">X</span></code> facts ending
+at the same node are consequently propagated along the same <code class="docutils literal notranslate"><span class="pre">A</span></code> edge in
+separate operations. Fully transitive rules such as <code class="docutils literal notranslate"><span class="pre">A</span> <span class="pre">-&gt;</span> <span class="pre">A</span> <span class="pre">A</span></code> also create
+secondary <code class="docutils literal notranslate"><span class="pre">A</span></code> edges that repeat reachability already implied by an
+<code class="docutils literal notranslate"><span class="pre">A</span></code>-path.</p>
+<p>PEARL addresses both forms of redundancy:</p>
+<ul class="simple">
+<li><p><strong>relation packing</strong> groups the sources of many <code class="docutils literal notranslate"><span class="pre">X</span></code> edges ending at one
+node into a set and propagates that set in one operation; and</p></li>
+<li><p><strong>primary-edge propagation graphs</strong> retain a sparse skeleton for each fully
+transitive relation. Reachability is propagated through that skeleton, so
+derived secondary edges do not trigger the same transitive work again.</p></li>
+</ul>
+<p>For a symbol <code class="docutils literal notranslate"><span class="pre">X</span></code> and node <code class="docutils literal notranslate"><span class="pre">v</span></code>, the paper writes the packed predecessor
+relation as <code class="docutils literal notranslate"><span class="pre">R(X,</span> <span class="pre">v)</span> <span class="pre">=</span> <span class="pre">{u</span> <span class="pre">|</span> <span class="pre">u</span> <span class="pre">-X-&gt;</span> <span class="pre">v}</span></code>. A production <code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">-&gt;</span> <span class="pre">X</span> <span class="pre">A</span></code> therefore
+induces a set constraint <code class="docutils literal notranslate"><span class="pre">R(X,</span> <span class="pre">u)</span> <span class="pre">subseteq</span> <span class="pre">R(X,</span> <span class="pre">v)</span></code> for every <code class="docutils literal notranslate"><span class="pre">A</span></code> edge
+<code class="docutils literal notranslate"><span class="pre">u</span> <span class="pre">-A-&gt;</span> <span class="pre">v</span></code>.</p>
+</section>
+<section id="production-classification">
+<h2>Production classification<a class="headerlink" href="#production-classification" title="Link to this heading"></a></h2>
+<p>PEARL assumes the weak-Chomsky-normal-form grammar used by classical CFL
+reachability. Lotus’s canonical grammar frontend performs that normalization.
+Binary rules are classified as follows:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">A</span> <span class="pre">-&gt;</span> <span class="pre">A</span> <span class="pre">A</span></code></dt><dd><p>A fully transitive production. <code class="docutils literal notranslate"><span class="pre">A</span></code> is maintained using <code class="docutils literal notranslate"><span class="pre">PG(A)</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">-&gt;</span> <span class="pre">X</span> <span class="pre">A</span></code></dt><dd><p>A left-partially-transitive production when <code class="docutils literal notranslate"><span class="pre">A</span></code> is fully transitive.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">-&gt;</span> <span class="pre">A</span> <span class="pre">X</span></code></dt><dd><p>A right-partially-transitive production when <code class="docutils literal notranslate"><span class="pre">A</span></code> is fully transitive.
+The paper handles this by reversing the relation. Lotus implements the
+symmetric propagation directly and also supports explicit <code class="docutils literal notranslate"><span class="pre">X</span></code>/<code class="docutils literal notranslate"><span class="pre">Xbar</span></code>
+pairs when a client uses the paper’s inverse-relation representation.</p>
+</dd>
+<dt>All other unary and binary rules</dt><dd><p>Non-transitive rules handled by ordinary indexed worklist joins.</p>
+</dd>
+</dl>
+<p>Paper Algorithm 1 is the standard CFL-reachability baseline. Lotus already
+implements the same nullable, unary, and binary saturation in
+<code class="docutils literal notranslate"><span class="pre">SolverSession</span></code>. PEARL’s non-transitive phase applies the same indexed join
+semantics to <code class="docutils literal notranslate"><span class="pre">CFGnt</span></code>; the paper’s reference algorithm is not exposed as a
+redundant second baseline backend.</p>
+</section>
+<section id="algorithm-2-overall-solver">
+<h2>Algorithm 2: overall solver<a class="headerlink" href="#algorithm-2-overall-solver" title="Link to this heading"></a></h2>
+<p>The implementation preserves the paper’s three kinds of pending work:</p>
+<ol class="arabic simple">
+<li><p>Initialize terminal facts and per-node facts for nullable symbols.</p></li>
+<li><p>Remove full and partial transitive productions from <code class="docutils literal notranslate"><span class="pre">CFGnt</span></code>.</p></li>
+<li><p>Saturate <code class="docutils literal notranslate"><span class="pre">CFGnt</span></code> using the standard worklist algorithm.</p></li>
+<li><p>Pack newly produced partial-transitive facts and run Algorithm 3.</p></li>
+<li><p>Insert newly produced full-transitive facts into propagation graphs and
+run Algorithm 4.</p></li>
+<li><p>Return transitive facts to the ordinary worklist because they may enable
+non-transitive productions. Repeat until all three work classes are empty.</p></li>
+</ol>
+<p>Lotus realizes these roles as the non-transitive edge worklist, the keyed
+partial-relation worklist, and the full-primary-edge worklist. Facts remain in
+one exact public <code class="docutils literal notranslate"><span class="pre">Relation</span></code> throughout the fixed-point computation.</p>
+</section>
+<section id="algorithm-3-partially-transitive-relations">
+<h2>Algorithm 3: partially transitive relations<a class="headerlink" href="#algorithm-3-partially-transitive-relations" title="Link to this heading"></a></h2>
+<p>For every partial symbol and endpoint, the engine maintains an old packed set
+and a delta packed set. Processing follows the paper’s <code class="docutils literal notranslate"><span class="pre">PackRR</span></code>,
+<code class="docutils literal notranslate"><span class="pre">PropRRs</span></code>, and <code class="docutils literal notranslate"><span class="pre">DiffProp</span></code> operations:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">PackRR</span></code> inserts a newly derived source into the endpoint’s delta set.
+For an explicit inverse pair, it also packs the reversed fact.</p></li>
+<li><p>A keyed node worklist ensures that multiple insertions are combined before
+propagation.</p></li>
+<li><p>On a pop, the delta is removed from the new set and merged into the old
+set.</p></li>
+<li><p>The complete delta set is propagated along every applicable outgoing
+primary edge in <code class="docutils literal notranslate"><span class="pre">PG(A)</span></code>. Right-partial rules use the symmetric incoming
+primary-edge traversal.</p></li>
+<li><p>Only set differences absent from the destination’s old relation are
+scheduled again.</p></li>
+</ol>
+<p>One <code class="docutils literal notranslate"><span class="pre">X</span></code> relation may participate in several rules, such as <code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">-&gt;</span> <span class="pre">X</span> <span class="pre">A1</span></code>
+and <code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">-&gt;</span> <span class="pre">X</span> <span class="pre">A2</span></code>. The same packed delta is propagated through every
+applicable propagation graph before it is discarded.</p>
+</section>
+<section id="algorithm-4-fully-transitive-relations">
+<h2>Algorithm 4: fully transitive relations<a class="headerlink" href="#algorithm-4-fully-transitive-relations" title="Link to this heading"></a></h2>
+<p>For a candidate full-transitive edge <code class="docutils literal notranslate"><span class="pre">u</span> <span class="pre">-A-&gt;</span> <span class="pre">v</span></code>:</p>
+<ol class="arabic simple">
+<li><p>Reject it as a primary edge if <code class="docutils literal notranslate"><span class="pre">u</span></code> already reaches <code class="docutils literal notranslate"><span class="pre">v</span></code> in <code class="docutils literal notranslate"><span class="pre">PG(A)</span></code>.</p></li>
+<li><p>Otherwise add it to <code class="docutils literal notranslate"><span class="pre">PG(A)</span></code> and, when configured, add the reversed
+primary edge to <code class="docutils literal notranslate"><span class="pre">PG(Abar)</span></code>.</p></li>
+<li><p>Immediately propagate existing partial relations at <code class="docutils literal notranslate"><span class="pre">u</span></code> across the new
+primary edge.</p></li>
+<li><p>Form <code class="docutils literal notranslate"><span class="pre">srcSet</span></code> from <code class="docutils literal notranslate"><span class="pre">u</span></code> and all existing predecessors of <code class="docutils literal notranslate"><span class="pre">u</span></code>.</p></li>
+<li><p>Run difference DFS from <code class="docutils literal notranslate"><span class="pre">v</span></code> through primary successors. At each visited
+node, only sources not already present in the full relation continue.</p></li>
+<li><p>Materialize every newly discovered full <code class="docutils literal notranslate"><span class="pre">A</span></code> fact in the public relation,
+but never insert secondary closure facts into the primary graph.</p></li>
+</ol>
+<p>The paper notes that insertion order can leave an edge that later becomes
+redundant in the primary graph. Lotus follows that online rule rather than
+attempting a more expensive dynamic transitive reduction.</p>
+</section>
+<section id="full-and-partial-corner-case">
+<h2>Full-and-partial corner case<a class="headerlink" href="#full-and-partial-corner-case" title="Link to this heading"></a></h2>
+<p>A symbol can have both <code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">-&gt;</span> <span class="pre">X</span> <span class="pre">X</span></code> and <code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">-&gt;</span> <span class="pre">X</span> <span class="pre">A</span></code>. The paper gives two
+ways to restore completeness; Lotus implements <strong>Option 2</strong>:</p>
+<ul class="simple">
+<li><p>an <code class="docutils literal notranslate"><span class="pre">X</span></code> fact produced by partial propagation is offered to <code class="docutils literal notranslate"><span class="pre">PG(X)</span></code> as a
+new full-transitive primary candidate; and</p></li>
+<li><p>an <code class="docutils literal notranslate"><span class="pre">X</span></code> fact produced by full closure is packed into the partial relation
+and propagated through <code class="docutils literal notranslate"><span class="pre">PG(A)</span></code>.</p></li>
+</ul>
+<p>This cross-feeding continues until neither worklist changes.</p>
+</section>
+<section id="lotus-implementation">
+<h2>Lotus implementation<a class="headerlink" href="#lotus-implementation" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>Public API</dt><dd><p><code class="docutils literal notranslate"><span class="pre">include/CFL/Classical/Solvers/Engines/PEARL/PearlEngine.h</span></code></p>
+</dd>
+<dt>Algorithm</dt><dd><p><code class="docutils literal notranslate"><span class="pre">lib/CFL/Classical/Solvers/Engines/PEARL/PearlEngine.cpp</span></code></p>
+</dd>
+<dt>General integration</dt><dd><p><code class="docutils literal notranslate"><span class="pre">SolverBackend::Pearl</span></code> in <code class="docutils literal notranslate"><span class="pre">SolverSession</span></code> and <code class="docutils literal notranslate"><span class="pre">--solver</span> <span class="pre">pearl</span></code> in the
+classical, alias, and value-flow drivers.</p>
+</dd>
+<dt>Inverse relations</dt><dd><p><code class="docutils literal notranslate"><span class="pre">SolverOptions::pearl_inverse_relations</span></code> or repeated
+<code class="docutils literal notranslate"><span class="pre">--pearl-inverse</span> <span class="pre">X,XBAR</span></code> options in <code class="docutils literal notranslate"><span class="pre">lotus-cfl-classical</span></code>. Pairing is
+explicit; symbol names are never guessed.</p>
+</dd>
+</dl>
+<p>The engine is not a wrapper around the generic solver. It owns the packed
+relations, propagation graphs, difference propagation, and PEARL worklists.</p>
+</section>
+<section id="validation">
+<h2>Validation<a class="headerlink" href="#validation" title="Link to this heading"></a></h2>
+<p>The Classical CFL tests cover left and right partial rules, several guards
+for one packed relation, primary versus secondary full edges, explicit inverse
+packing, inherited transitivity of a paired inverse relation, the
+full-and-partial Option 2 case, nullable initialization, incremental solving,
+and generated problems compared with the independent cubic recognizer.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="pearl_stg_sqid.html" class="btn btn-neutral float-left" title="Paper Engines: PEARL, Stg, and Sqid" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="stg.html" class="btn btn-neutral float-right" title="Stg Staged Solving" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

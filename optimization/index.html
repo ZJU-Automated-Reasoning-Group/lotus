@@ -1,0 +1,297 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Optimization &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Scalar Optimizations" href="scalar.html" />
+    <link rel="prev" title="Overview" href="../ml/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#subdirectories">Subdirectories</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#moduleoptimizer">ModuleOptimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scalar-passes">Scalar passes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#interprocedural-memoryssa-optimizations">Interprocedural MemorySSA optimizations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#partial-evaluation">Partial evaluation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#software-prefetching">Software prefetching</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#integration-pattern">Integration pattern</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="scalar.html">Scalar Optimizations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ip.html">Interprocedural MemorySSA Optimizations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pe.html">PE</a></li>
+<li class="toctree-l3"><a class="reference internal" href="swprefetching.html">SWPrefetching (Software Prefetching)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pass_ordering.html">Pass Ordering Utilities</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Optimization</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/optimization/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="optimization">
+<h1>Optimization<a class="headerlink" href="#optimization" title="Link to this heading"></a></h1>
+<p>This section documents the optimization libraries under <code class="docutils literal notranslate"><span class="pre">lib/Optimization/</span></code>.
+They complement the transformation utilities in <a class="reference internal" href="../transform/index.html"><span class="doc">Transforms</span></a> and
+provide both standalone passes and reusable integration helpers.</p>
+<p><strong>Headers</strong>: <code class="docutils literal notranslate"><span class="pre">include/Optimization/</span></code></p>
+<p><strong>Implementation</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Optimization/</span></code></p>
+<section id="subdirectories">
+<h2>Subdirectories<a class="headerlink" href="#subdirectories" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">PassOrdering/</span></code> exposes a small API for running LLVM’s default O0-O3 pass ordering.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Scalar/</span></code> contains LLVM-style scalar passes such as aggressive inlining,
+dead-store elimination, GVN, and LICM.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">IPO/</span></code> contains interprocedural optimizations built on SeaDsa ShadowMem and
+Lotus MemorySSA instrumentation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PartialEvaluation/</span></code> contains the LLPE specialization and partial
+evaluation subsystem.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Prefetch/</span></code> contains the profile-guided software prefetching pass.</p></li>
+</ul>
+</section>
+<section id="moduleoptimizer">
+<h2>ModuleOptimizer<a class="headerlink" href="#moduleoptimizer" title="Link to this heading"></a></h2>
+<p><strong>Files</strong>: <code class="docutils literal notranslate"><span class="pre">include/Optimization/PassOrdering/ModuleOptimizer.h</span></code>,
+<code class="docutils literal notranslate"><span class="pre">lib/Optimization/PassOrdering/ModuleOptimizer.cpp</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">llvm_utils::optimiseModule</span></code> runs LLVM’s default per-module optimization
+pipeline using <code class="docutils literal notranslate"><span class="pre">llvm::PassBuilder</span></code> and an <code class="docutils literal notranslate"><span class="pre">llvm::OptimizationLevel</span></code>.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;Optimization/PassOrdering/ModuleOptimizer.h&gt;</span>
+
+<span class="n">llvm</span><span class="o">::</span><span class="n">Module</span><span class="w"> </span><span class="o">*</span><span class="n">M</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+<span class="n">llvm_utils</span><span class="o">::</span><span class="n">optimiseModule</span><span class="p">(</span><span class="n">M</span><span class="p">,</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">OptimizationLevel</span><span class="o">::</span><span class="n">O2</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Use it when a tool wants standard LLVM cleanup before running Lotus analyses or
+custom optimization passes.</p>
+</section>
+<section id="scalar-passes">
+<h2>Scalar passes<a class="headerlink" href="#scalar-passes" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">lib/Optimization/Scalar/</span></code> currently builds <code class="docutils literal notranslate"><span class="pre">CanaryOptimizationScalar</span></code> from
+four passes:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">AggressiveInliner</span></code> (legacy pass name <code class="docutils literal notranslate"><span class="pre">ainline</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DSE</span></code> / <code class="docutils literal notranslate"><span class="pre">createDeadStoreEliminationPass()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GVN</span></code> / <code class="docutils literal notranslate"><span class="pre">createGVNPass()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LICM</span></code> / <code class="docutils literal notranslate"><span class="pre">createLICMPass()</span></code></p></li>
+</ul>
+<p>See <a class="reference internal" href="scalar.html"><span class="doc">Scalar Optimizations</span></a> for the pass-level details and available entry points.</p>
+</section>
+<section id="interprocedural-memoryssa-optimizations">
+<h2>Interprocedural MemorySSA optimizations<a class="headerlink" href="#interprocedural-memoryssa-optimizations" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">lib/Optimization/IPO/</span></code> contains four legacy <code class="docutils literal notranslate"><span class="pre">ModulePass</span></code> implementations
+that operate on ShadowMem-instrumented IR:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">IPDeadStoreElimination</span></code> removes stores and some global initializers whose
+ShadowMem def-use chains never reach an observable load.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">IPRedundantLoadElimination</span></code> removes repeated loads within a block when the
+pointer and TLVar are unchanged.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">IPStoreSinking</span></code> moves stores closer to their first observable use within a
+basic block.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">IPStoreToLoadForwarding</span></code> replaces loads with a unique reaching store value
+found by traversing MemorySSA edges across calls and phis.</p></li>
+</ul>
+<p>See <a class="reference internal" href="ip.html"><span class="doc">Interprocedural MemorySSA Optimizations</span></a> for prerequisites, pass names, and behavior.</p>
+</section>
+<section id="partial-evaluation">
+<h2>Partial evaluation<a class="headerlink" href="#partial-evaluation" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">lib/Optimization/PartialEvaluation/</span></code> contains the historical LLPE engine,
+ported to LLVM 14.x and built as <code class="docutils literal notranslate"><span class="pre">CanaryPE</span></code>. It provides the <code class="docutils literal notranslate"><span class="pre">llpe-analysis</span></code>
+and <code class="docutils literal notranslate"><span class="pre">llpe</span></code> legacy passes plus supporting infrastructure for specialization,
+symbolic reasoning, and committed IR rewriting.</p>
+<p>See <a class="reference internal" href="pe.html"><span class="doc">PE</span></a> for the main components and integration notes.</p>
+</section>
+<section id="software-prefetching">
+<h2>Software prefetching<a class="headerlink" href="#software-prefetching" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">lib/Optimization/Prefetch/</span></code> implements the <code class="docutils literal notranslate"><span class="pre">SWPrefetchingLLVMPass</span></code> legacy
+function pass for profile-guided software prefetching of indirect memory
+accesses.</p>
+<p>See <a class="reference internal" href="swprefetching.html"><span class="doc">SWPrefetching (Software Prefetching)</span></a> for its distance providers, options, and workflow.</p>
+</section>
+<section id="integration-pattern">
+<h2>Integration pattern<a class="headerlink" href="#integration-pattern" title="Link to this heading"></a></h2>
+<p>Typical consumers of this subtree use one of these patterns:</p>
+<ol class="arabic simple">
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">llvm_utils::optimiseModule</span></code> to apply a standard LLVM cleanup pipeline.</p></li>
+<li><p>Add selected scalar or interprocedural legacy passes to a pass manager.</p></li>
+<li><p>Run Lotus analyses, verification, or checker pipelines on the optimized IR.</p></li>
+</ol>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="scalar.html">Scalar Optimizations</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="scalar.html#available-passes">Available passes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scalar.html#aggressiveinliner">AggressiveInliner</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scalar.html#dead-store-elimination">Dead Store Elimination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scalar.html#gvn">GVN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scalar.html#licm">LICM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scalar.html#notes">Notes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ip.html">Interprocedural MemorySSA Optimizations</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ip.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ip.html#main-passes">Main passes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ip.html#configuration">Configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pe.html">PE</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pe.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pe.html#main-components">Main components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pe.html#passes-and-options">Passes and options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pe.html#notes">Notes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="swprefetching.html">SWPrefetching (Software Prefetching)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="swprefetching.html#features">Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="swprefetching.html#command-line-options">Command-line options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="swprefetching.html#distance-providers">Distance providers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="swprefetching.html#algorithm">Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="swprefetching.html#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="swprefetching.html#when-to-use">When to use</a></li>
+<li class="toctree-l2"><a class="reference internal" href="swprefetching.html#related-work">Related work</a></li>
+<li class="toctree-l2"><a class="reference internal" href="swprefetching.html#benchmarks">Benchmarks</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pass_ordering.html">Pass Ordering Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pass_ordering.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pass_ordering.html#moduleoptimizer">ModuleOptimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pass_ordering.html#use-cases">Use cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pass_ordering.html#see-also">See Also</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../ml/index.html" class="btn btn-neutral float-left" title="Overview" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="scalar.html" class="btn btn-neutral float-right" title="Scalar Optimizations" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

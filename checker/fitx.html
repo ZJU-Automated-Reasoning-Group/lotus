@@ -1,0 +1,329 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FiTx: Daily Development-friendly Bug Detection &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="KINT Numerical Bug Checker" href="kint.html" />
+    <link rel="prev" title="Concurrency Bug Checker" href="concurrency.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Checker Framework</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#choosing-a-checker">Choosing a Checker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#id1">Checker Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#build-targets">Build Targets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#programmatic-usage">Programmatic Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#bug-types">Bug Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#integration-points">Integration Points</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#see-also">See Also</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="ae.html">Abstract Execution Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="concurrency.html">Concurrency Bug Checker</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">FiTx: Daily Development-friendly Bug Detection</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#analysis-approach-from-the-paper">Analysis Approach (from the paper)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#components">Components</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#bug-types">Bug Types</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#scope-and-alternatives">Scope and alternatives</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#understanding-the-code">Understanding the code</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#references">References</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="kint.html">KINT Numerical Bug Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulse.html">Pulse Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="report.html">Checker Report Infrastructure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="saber.html">Saber Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="symex.html">Symbolic Execution Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="taint.html">IFDS Taint Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tooling.html">Checker Tooling</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Checker Framework</a></li>
+      <li class="breadcrumb-item active">FiTx: Daily Development-friendly Bug Detection</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/checker/fitx.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="fitx-daily-development-friendly-bug-detection">
+<h1>FiTx: Daily Development-friendly Bug Detection<a class="headerlink" href="#fitx-daily-development-friendly-bug-detection" title="Link to this heading"></a></h1>
+<p>FiTx is a framework for generating <strong>daily development-friendly bug checkers</strong> that focus on well-known bug patterns. It is based on the approach described in:</p>
+<blockquote>
+<div><p><strong>“Balancing Analysis Time and Bug Detection: Daily Development-friendly Bug Detection in Linux”</strong>
+Keita Suzuki, Kenta Ishiguro, Kenji Kono.
+USENIX Annual Technical Conference (ATC), 2024.
+<a class="reference external" href="https://www.usenix.org/conference/atc24/presentation/suzuki">https://www.usenix.org/conference/atc24/presentation/suzuki</a></p>
+</div></blockquote>
+<p><strong>Library Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Checker/FiTx/</span></code></p>
+<p><strong>Headers</strong>: <code class="docutils literal notranslate"><span class="pre">include/Checker/FiTx/</span></code></p>
+<p><strong>Tool Location</strong>: <code class="docutils literal notranslate"><span class="pre">tools/checker/lotus-check-fitx.cpp</span></code></p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>FiTx balances the trade-off between <strong>analysis time</strong> and <strong>bug detection</strong>: it uses computationally lightweight analyses and limits scope to a single compilation unit (translation unit), so that checkers can run quickly during daily development while still finding many real bugs.</p>
+<p>The engine-specific <code class="docutils literal notranslate"><span class="pre">--fitx.report-all-candidates</span></code> parameter disables the
+normal candidate filtering. Shared selection and report controls remain under
+<code class="docutils literal notranslate"><span class="pre">--checks</span></code> and the common report options.</p>
+<p>Design principles from the paper:</p>
+<ul class="simple">
+<li><p><strong>Short analysis time</strong>: Path-insensitive, inter-procedural analysis on the CFG; bottom-up summary-based interprocedural analysis; no indirect function calls; static field offsets only (struct fields or constant array indices).</p></li>
+<li><p><strong>Targeted bug detection</strong>: Typestate-based analysis for well-known patterns (double free, use-after-free, memory leak, refcount errors, double lock/unlock, etc.) that are findable with these lightweight techniques (“FiT analysis” / finger-traceable analysis).</p></li>
+</ul>
+<p>FiTx is not intended to replace heavy-weight static analyzers; it acts as an <strong>early warning</strong> during build/integration so that developers get fast feedback, and more sophisticated tools can focus on harder bugs later.</p>
+</section>
+<section id="analysis-approach-from-the-paper">
+<h2>Analysis Approach (from the paper)<a class="headerlink" href="#analysis-approach-from-the-paper" title="Link to this heading"></a></h2>
+<p><strong>FiT analysis</strong> (finger traceable):</p>
+<ul class="simple">
+<li><p>Scope: single compilation unit.</p></li>
+<li><p>Dataflow: inter-procedural, path-<strong>insensitive</strong>, field-sensitive.</p></li>
+<li><p>Alias: intra-procedural only; no interprocedural alias.</p></li>
+<li><p>Control flow: direct calls only (no indirect calls).</p></li>
+<li><p>Field offsets: compile-time only (struct fields, constant array indices).</p></li>
+</ul>
+<p><strong>Typestate analysis</strong>:</p>
+<ul class="simple">
+<li><p>Each bug is specified as a <strong>typestate property</strong>: a finite state machine (FSM) over variables.</p></li>
+<li><p><strong>Transition rules</strong> consist of: hook instruction (e.g. call, store, load), operand constraints, and target operand. See paper Table 5 (Fun Arg, Fun Call, Store ANY/NULL/NON/Const, Use).</p></li>
+<li><p>The analysis traverses the CFG, merges states from predecessors (by priority, e.g. distance to bug state to suppress false positives), and applies transitions at each instruction.</p></li>
+</ul>
+<p><strong>Return-code aware state propagation</strong> (Section 4.3 of the paper):</p>
+<ul class="simple">
+<li><p>Function summaries record states per <strong>return code</strong> (e.g. 0 for success, negative for error).</p></li>
+<li><p>At a call site, if the return value is used in a branch (e.g. <code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">(err)</span></code>), only the states for the return codes that satisfy that branch are propagated. This reduces false positives from mixing success and error paths.</p></li>
+</ul>
+<p><strong>Bug-checking hooks</strong> (paper Table 6):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">IMMEDIATE</span></code>: right after a transition (default).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">VAR_END</span></code>: end of variable lifetime.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BLOCK_END</span></code>: end of basic block.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">FUNC_END</span></code>: end of function.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MODULE_END</span></code>: end of analysis (e.g. for functions with no in-unit callers).</p></li>
+</ul>
+</section>
+<section id="components">
+<h2>Components<a class="headerlink" href="#components" title="Link to this heading"></a></h2>
+<p><strong>Frontend</strong> (<code class="docutils literal notranslate"><span class="pre">lib/Checker/FiTx/Frontend/</span></code>):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Framework.cpp</span></code> / <code class="docutils literal notranslate"><span class="pre">Framework.h</span></code> – Main FiTx pass; defines typestate checkers and runs them (paper Section 4, 5).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Analyzer.cpp</span></code> – CFG-based typestate analysis: block-by-block state merge, transition application, return-code aware propagation from callee summaries (paper Section 4.2, 4.3).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">State.h</span></code>, <code class="docutils literal notranslate"><span class="pre">StateTransition.h</span></code> – Typestate FSM: states, transitions, notification timing (IMMEDIATE, FUNCTION_END, END_OF_LIFE, MODULE_END).</p></li>
+</ul>
+<p><strong>Framework IR</strong> (<code class="docutils literal notranslate"><span class="pre">lib/Checker/FiTx/Framework_IR/</span></code>):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Analyzer.cpp</span></code> – Builds the framework IR from LLVM: calls, stores, loads, returns; collects possible return values per basic block for <strong>function summaries</strong> and return-code aware propagation (paper Section 4.3).</p></li>
+</ul>
+<p><strong>Core</strong> (<code class="docutils literal notranslate"><span class="pre">lib/Checker/FiTx/Core/</span></code>):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">BasicBlock.h</span></code>, <code class="docutils literal notranslate"><span class="pre">Function.h</span></code>, <code class="docutils literal notranslate"><span class="pre">Value.h</span></code> – CFG and value representation with field-sensitive structure (static field offsets).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Instructions/BranchInstruction.cpp</span></code> – Branch/switch conditions; used to resolve <strong>return-code</strong> at call sites (e.g. <code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">(err)</span></code> vs <code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">(!err)</span></code>) for propagating the correct callee summary (paper Section 4.3).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ValueTypeAlias.cpp</span></code> – Intra-procedural alias for store/load (paper: intra-procedural alias only).</p></li>
+</ul>
+<p><strong>Detectors</strong> (<code class="docutils literal notranslate"><span class="pre">lib/Checker/FiTx/Detector/</span></code>):</p>
+<ul class="simple">
+<li><p>Each detector (e.g. <code class="docutils literal notranslate"><span class="pre">DF_detector/</span></code>, <code class="docutils literal notranslate"><span class="pre">UAF_detector/</span></code>, <code class="docutils literal notranslate"><span class="pre">Leak_detector/</span></code>, <code class="docutils literal notranslate"><span class="pre">Ref_count_detector/</span></code>) defines a typestate FSM for one bug pattern (paper Section 4.1, Table 5; Section 5: DF, DL/DUL, ML, UAF, Ref).</p></li>
+</ul>
+</section>
+<section id="bug-types">
+<h2>Bug Types<a class="headerlink" href="#bug-types" title="Link to this heading"></a></h2>
+<p>FiTx targets well-known patterns that are FiT-analysis findable (paper Table 2, Section 5):</p>
+<ul class="simple">
+<li><p><strong>Double Free (DF)</strong> – Same memory freed twice.</p></li>
+<li><p><strong>Use After Free (UAF)</strong> – Use of freed memory.</p></li>
+<li><p><strong>Memory Leak (ML)</strong> – Allocated memory not freed.</p></li>
+<li><p><strong>Reference counting errors (Ref)</strong> – Missing get/put or unbalanced refcount.</p></li>
+<li><p><strong>Double Lock / Double Unlock (DL / DUL)</strong> – Lock/unlock API misuse.</p></li>
+<li><p><strong>Null Pointer Dereference</strong> – Use of a value tracked as null.</p></li>
+<li><p><strong>Use Before Initialization (UBI)</strong> – Use of an uninitialized value.</p></li>
+</ul>
+<p>The bundled aggregate detector includes the null-pointer and UBI typestate
+definitions in addition to the resource and locking checks above.  The
+framework is extensible with new typestate definitions; this does not imply
+that every FiT-findable pattern described by the paper is enabled today.</p>
+</section>
+<section id="scope-and-alternatives">
+<h2>Scope and alternatives<a class="headerlink" href="#scope-and-alternatives" title="Link to this heading"></a></h2>
+<p>FiTx is intended for fast, translation-unit-oriented development feedback.  It
+overlaps with other engines by design: use <code class="docutils literal notranslate"><span class="pre">pulse</span></code> for bounded,
+witness-oriented memory-safety diagnosis, <code class="docutils literal notranslate"><span class="pre">ae</span></code> for a broad
+abstract-execution pass, and <code class="docutils literal notranslate"><span class="pre">saber</span></code> for sparse value-flow leak and
+double-free checks.  See <span class="xref std std-ref">Choosing a Checker</span> for the
+bug-class guide. Use <code class="docutils literal notranslate"><span class="pre">--checks=&lt;id[,id...]&gt;</span></code> to select <code class="docutils literal notranslate"><span class="pre">double-free</span></code>,
+<code class="docutils literal notranslate"><span class="pre">double-lock</span></code>, <code class="docutils literal notranslate"><span class="pre">double-unlock</span></code>, <code class="docutils literal notranslate"><span class="pre">memory-leak</span></code>, <code class="docutils literal notranslate"><span class="pre">null-deref</span></code>,
+<code class="docutils literal notranslate"><span class="pre">use-after-free</span></code>, <code class="docutils literal notranslate"><span class="pre">use-before-init</span></code>, <code class="docutils literal notranslate"><span class="pre">ref-count</span></code>, or <code class="docutils literal notranslate"><span class="pre">ref-uncount</span></code>.
+Omitting the option, or passing <code class="docutils literal notranslate"><span class="pre">--checks=all</span></code>, enables the full set.</p>
+</section>
+<section id="understanding-the-code">
+<h2>Understanding the code<a class="headerlink" href="#understanding-the-code" title="Link to this heading"></a></h2>
+<p><strong>Analysis flow</strong></p>
+<ol class="arabic simple">
+<li><p><strong>Framework IR</strong> (<code class="docutils literal notranslate"><span class="pre">Framework_IR/Analyzer.cpp</span></code>): For each LLVM function, build a framework CFG (basic blocks, instructions as Call/Store/Load/Return). Collect possible return values per block (constants, call results) for building function summaries.</p></li>
+<li><p><strong>Main pass</strong> (<code class="docutils literal notranslate"><span class="pre">frontend/Framework.cpp</span></code>): For each typestate checker (StateManager), create an Analyzer and run <code class="docutils literal notranslate"><span class="pre">analyze()</span></code>. The analyzer iterates over all framework functions in the module.</p></li>
+<li><p><strong>Per-function analysis</strong> (<code class="docutils literal notranslate"><span class="pre">frontend/Analyzer.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">analyzeFunction</span></code>): Worklist over basic blocks. For each block: (a) <code class="docutils literal notranslate"><span class="pre">createBasicBlockInfo</span></code> merges states from all predecessors; (b) <code class="docutils literal notranslate"><span class="pre">analyzePrevBlockBranch</span></code> applies branch-dependent transitions (e.g. ptr==NULL on true path); (c) for each Call/Store/Load, apply the matching typestate transitions (Fun Arg, Store, Use, Alias); (d) if any state changed, re-queue the block; (e) at end of block, run bug-checking hooks (IMMEDIATE, END_OF_LIFE). After the worklist, <code class="docutils literal notranslate"><span class="pre">analyzeReturnValue</span></code> builds the function summary (return code → blocks), then report at FUNCTION_END and MODULE_END if applicable.</p></li>
+<li><p><strong>Call handling</strong>: On a call, first apply <strong>Fun Arg</strong> transitions (e.g. kfree(ptr)). If the callee is defined in this TU, analyze it (bottom-up), then <strong>copyFunctionValues</strong> or <strong>addPendingFunctionValues</strong>: if the return value is used in a branch (e.g. <code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">(err)</span></code>), only the callee states for the return codes that satisfy that branch are propagated (<strong>return-code aware propagation</strong>); otherwise merge states from all callee exit blocks.</p></li>
+</ol>
+<p><strong>Key data structures</strong></p>
+<ul class="simple">
+<li><p><strong>FunctionInformation</strong> (<code class="docutils literal notranslate"><span class="pre">frontend/Function.h</span></code>): Per-function summary: <code class="docutils literal notranslate"><span class="pre">basic_block_info_</span></code> (per-block value states), <code class="docutils literal notranslate"><span class="pre">return_info_</span></code> (return code → set of blocks), <code class="docutils literal notranslate"><span class="pre">value_collection_</span></code> (related/parent values for propagation).</p></li>
+<li><p><strong>BasicBlockInformation</strong> (<code class="docutils literal notranslate"><span class="pre">frontend/BasicBlock.h</span></code>): Per-block state: <code class="docutils literal notranslate"><span class="pre">value_states_</span></code> (value → TransitionLogs), <code class="docutils literal notranslate"><span class="pre">arg_value_states_</span></code> (for summary: arg index → (value, transitions)), <code class="docutils literal notranslate"><span class="pre">pending_values_</span></code> (per successor block: pending arg states and return value for return-code aware propagation).</p></li>
+<li><p><strong>TransitionLogs</strong> (<code class="docutils literal notranslate"><span class="pre">frontend/State.h</span></code>): History of (transition, instruction) for one value; <code class="docutils literal notranslate"><span class="pre">LeastSignificantSource</span></code> is used to filter reports (only report if the value reached the bug state from a “real” init).</p></li>
+<li><p><strong>StateTransitionManager</strong> (<code class="docutils literal notranslate"><span class="pre">frontend/State.h</span></code>): Lookup transitions by trigger: Fun Arg (function name + arg index), Store (NULL/NON/ANY/CALL_FUNC), Use, Alias. Each detector registers its typestate transitions here.</p></li>
+</ul>
+<p><strong>Adding a new detector</strong></p>
+<ol class="arabic simple">
+<li><p>Define states (init, intermediate, bug) and transitions in a <code class="docutils literal notranslate"><span class="pre">define_states(StateManager&amp;)</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">DFUtils.cpp</span></code>).</p></li>
+<li><p>Register Fun Arg / Store / Use / Alias transitions via <code class="docutils literal notranslate"><span class="pre">TransitionManager</span></code>.</p></li>
+<li><p>Create a <code class="docutils literal notranslate"><span class="pre">FrameworkPass</span></code> subclass that overrides <code class="docutils literal notranslate"><span class="pre">defineStates()</span></code> and calls your <code class="docutils literal notranslate"><span class="pre">define_states</span></code>; add it to <code class="docutils literal notranslate"><span class="pre">FrameworkPass::passes</span></code>.</p></li>
+</ol>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Suzuki, K., Ishiguro, K., Kono, K. “Balancing Analysis Time and Bug Detection: Daily Development-friendly Bug Detection in Linux.” USENIX ATC 2024.</p></li>
+<li><p>FiTx prototype: <a class="reference external" href="https://github.com/sslab-keio/FiTx">https://github.com/sslab-keio/FiTx</a></p></li>
+</ul>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="index.html"><span class="doc">Checker Framework</span></a> – Checker framework overview</p></li>
+<li><p><a class="reference internal" href="taint.html"><span class="doc">IFDS Taint Checker</span></a> – configurable IFDS source-to-sink analysis</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="concurrency.html" class="btn btn-neutral float-left" title="Concurrency Bug Checker" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="kint.html" class="btn btn-neutral float-right" title="KINT Numerical Bug Checker" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

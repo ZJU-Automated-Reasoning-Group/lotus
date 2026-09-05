@@ -1,0 +1,420 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strict Relations Alias Analysis — Algorithm &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Pointer Analysis Metrics" href="metrics.html" />
+    <link rel="prev" title="DynAA — Dynamic Alias AA" href="dynaa.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Alias Analysis</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="alias_analysis.html">Alias Analysis Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="allocaa.html">AllocAA — Allocation-Based AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sparrowaa.html">Sparrow Pointer Analysis — Inclusion AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aserpta.html">AserPTA — Pointer Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cclyzeraa.html">CclyzerAA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dda.html">DDA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dfpa.html">DFPA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dyckaa.html">DyckAA — Dyck-CFL Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seadsa.html">Sea-DSA — Memory Graph AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fpa.html">FPA — Function Pointer Analyses (FLTA/MLTA/MLTADF/KELP)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flowsensitive.html">Flow-Sensitive Pointer Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lotusaa.html">LotusAA — Lotus AA Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="underapproxaa.html">UnderApproxAA — Must-Alias Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dynaa.html">DynAA — Dynamic Alias AA</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Strict Relations Alias Analysis — Algorithm</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#highlights">Highlights</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#usage">Usage</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#inputs-outputs-invariants">Inputs / Outputs / Invariants</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#vssa-ssi-transformation">1. vSSA / SSI Transformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symbolic-range-analysis">2. Symbolic Range Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#strict-inequality-construction">3. Strict-Inequality Construction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#constraint-propagation-solver">4. Constraint Propagation Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#alias-disambiguation-final-decision">5. Alias Disambiguation (Final Decision)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pdg-memory-node-reduction-applicability">6. PDG Memory-Node Reduction (Applicability)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#summary-of-properties">Summary of Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#end-of-document">End of document.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metrics.html">Pointer Analysis Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptsset.html">Points-To Set Backends</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spec.html">Alias Specification Manager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tpa.html">TPA: Flow- and Contex-Sensitive Pointer Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="typequalifier.html">TypeQualifier</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Alias Analysis</a></li>
+      <li class="breadcrumb-item active">Strict Relations Alias Analysis — Algorithm</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/alias/sraa.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="strict-relations-alias-analysis-algorithm">
+<h1>Strict Relations Alias Analysis — Algorithm<a class="headerlink" href="#strict-relations-alias-analysis-algorithm" title="Link to this heading"></a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>Strict Relations Alias Analysis (SRAA) is a pointer-alias analysis that
+proves pointers <em>cannot</em> alias by establishing <strong>strict (&lt;, ≤) relations</strong>
+between symbolic numeric expressions that describe memory objects.
+The technique combines:</p>
+<ul class="simple">
+<li><p>An SSI/e-SSA-style live-range–splitting transformation,</p></li>
+<li><p>A symbolic Range Analysis pass, and</p></li>
+<li><p>A constraint solver for strict inequalities.</p></li>
+<li><p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Alias/Specialized/SRAA</span></code></p></li>
+</ul>
+</section>
+<section id="highlights">
+<h2>Highlights<a class="headerlink" href="#highlights" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Proves <code class="docutils literal notranslate"><span class="pre">NoAlias</span></code> results by reasoning about strict inequalities on pointer offsets</p></li>
+<li><p>Uses <code class="docutils literal notranslate"><span class="pre">InterProceduralRA</span></code> to infer value ranges and propagate constraints</p></li>
+<li><p>Tracks primitive layouts of aggregate types to compare sub-field accesses</p></li>
+</ul>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<p>Register the <code class="docutils literal notranslate"><span class="pre">StrictRelations</span></code> pass (<code class="docutils literal notranslate"><span class="pre">-sraa</span></code>) inside an LLVM pass pipeline or via the Lotus AA wrapper.</p>
+<p>This document focuses solely on the algorithmic workflow of SRAA as implemented in the artifact.</p>
+<section id="inputs-outputs-invariants">
+<h3>Inputs / Outputs / Invariants<a class="headerlink" href="#inputs-outputs-invariants" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Inputs:</strong> LLVM IR in SSA form, size metadata for abstract memory objects, target ABI layout rules.</p></li>
+<li><p><strong>Outputs:</strong> Pairs of pointers classified as <cite>NoAlias</cite> (strictly proven) or <cite>MayAlias</cite>.</p></li>
+<li><p><strong>Invariants:</strong> symbolic expressions remain affine, constraints are monotone, and transformations preserve IR semantics.</p></li>
+</ul>
+<section id="algorithmic-pipeline-high-level-view">
+<h4>Algorithmic Pipeline (High-Level View)<a class="headerlink" href="#algorithmic-pipeline-high-level-view" title="Link to this heading"></a></h4>
+<p>The analysis is structured as a pipeline:</p>
+<ol class="arabic simple">
+<li><p><strong>Live-Range Splitting (vSSA)</strong></p></li>
+<li><p><strong>Range Analysis (RA)</strong></p></li>
+<li><p><strong>Strict-Inequality Generation</strong></p></li>
+<li><p><strong>Constraint Propagation</strong></p></li>
+<li><p><strong>Alias Disambiguation</strong></p></li>
+<li><p><strong>(Optional) PDG node reduction</strong></p></li>
+</ol>
+<p>Data products exchanged between stages:</p>
+<ul class="simple">
+<li><p>vSSA emits per-version def-use chains and symbolic expressions.</p></li>
+<li><p>RA outputs symbolic lower/upper bounds per versioned value.</p></li>
+<li><p>Inequality construction synthesizes strict constraints in canonical form.</p></li>
+<li><p>The solver produces disjointness facts and contradiction reports for diagnostics.</p></li>
+</ul>
+<p>Each stage is described in detail below.</p>
+</section>
+</section>
+</section>
+</section>
+<section id="vssa-ssi-transformation">
+<h1>1. vSSA / SSI Transformation<a class="headerlink" href="#vssa-ssi-transformation" title="Link to this heading"></a></h1>
+<p>SRAA requires precise symbolic information per program point.
+Therefore, the implementation first transforms the IR into a variant of SSI
+(Sparse Static Single Information) called <strong>vSSA</strong>.</p>
+<p>The vSSA transformation performs:</p>
+<ol class="arabic simple">
+<li><p><strong>Splitting at control-flow joins</strong>
+Insert φ-like nodes for variables whose value-flow merges.</p></li>
+<li><p><strong>Splitting at control-flow forks</strong>
+Insert σ-like nodes to preserve flow sensitivity of interval constraints.</p></li>
+<li><p><strong>Splitting at uses of pointer-index expressions</strong>
+Ensures every symbolic expression has a single definition site.</p></li>
+</ol>
+<p>Formally:</p>
+<p>For each variable <em>x</em>:</p>
+<ul class="simple">
+<li><p>Insert φ where <cite>x_in(B1)</cite> ≠ <cite>x_in(B2)</cite></p></li>
+<li><p>Insert σ at outgoing edges when <cite>range(x)</cite> changes on different successors</p></li>
+<li><p>Create a unique version <cite>x_i</cite> for each definition/merge/split</p></li>
+</ul>
+<p>Implementation notes:</p>
+<ul class="simple">
+<li><p>vSSA runs after mem2reg and before alias analysis passes that expect canonical pointers.</p></li>
+<li><p>Synthetic definitions are tagged so later passes can ignore them when materializing code.</p></li>
+<li><p>The transformation keeps debug metadata and dominance info in sync, ensuring downstream passes receive well-formed IR.</p></li>
+</ul>
+<p>This results in a def-use graph suitable for sparse constraint propagation.</p>
+</section>
+<section id="symbolic-range-analysis">
+<h1>2. Symbolic Range Analysis<a class="headerlink" href="#symbolic-range-analysis" title="Link to this heading"></a></h1>
+<p>The Range Analysis pass computes symbolic ranges of the form:</p>
+<p>x ∈ [L(x), U(x)]</p>
+<p>where <cite>L(x)</cite>, <cite>U(x)</cite> are <em>symbolic linear expressions</em> derived from:</p>
+<ul class="simple">
+<li><p>loop induction variables</p></li>
+<li><p>pointer arithmetic (GEP)</p></li>
+<li><p>branch conditions</p></li>
+<li><p>integer arithmetic</p></li>
+<li><p>comparisons</p></li>
+</ul>
+<p>Example symbolic constraints inferred:</p>
+<p>i_3 = i_2 + 1 ⇒ L(i_3) = L(i_2)+1, U(i_3) = U(i_2)+1
+if (i &lt; n) ⇒ U(i) ≤ U(n)-1</p>
+<p>Propagation strategy:</p>
+<ol class="arabic simple">
+<li><p>Seed bounds using constants, known loop trip counts, and structure layout info.</p></li>
+<li><p>Push constraints along vSSA def-use edges in topological order.</p></li>
+<li><p>Relax bounds when a tighter symbolic expression is discovered.</p></li>
+<li><p>Iterate until no bound changes (typically a small number of rounds because the graph is sparse).</p></li>
+</ol>
+<p>The RA solver is <strong>linear</strong>, <strong>sparse</strong>, and propagates constraints until fixed point. It records justification edges so later stages can reconstruct the proof chain that produced every bound.</p>
+</section>
+<section id="strict-inequality-construction">
+<h1>3. Strict-Inequality Construction<a class="headerlink" href="#strict-inequality-construction" title="Link to this heading"></a></h1>
+<p>Given pointer expressions:</p>
+<p>p = base + offset_p
+q = base + offset_q</p>
+<p>SRAA constructs strict inequalities such as:</p>
+<p>offset_p + size_p ≤ offset_q
+offset_q + size_q ≤ offset_p
+offset_p &lt; offset_q</p>
+<p>These are derived from:</p>
+<ul class="simple">
+<li><p>value ranges from RA</p></li>
+<li><p>control-flow–guarded conditions</p></li>
+<li><p>loop bounds</p></li>
+<li><p>comparisons in the IR (e.g., <cite>if (i &lt; j)</cite> introduces <cite>i &lt; j</cite> constraint)</p></li>
+</ul>
+<p>Each inequality is represented in canonical form:</p>
+<p>ax + by + … &lt; k</p>
+<p>Canonicalization steps:</p>
+<ul class="simple">
+<li><p>Normalize coefficients so gcd is 1, making syntactic deduplication easier.</p></li>
+<li><p>Replace non-strict constraints generated by RA (≤) with equivalent strict forms when object sizes allow.</p></li>
+<li><p>Attach provenance (IR instruction, dominance frontier) for auditing and debugging.</p></li>
+</ul>
+<p>The system contains only affine expressions.</p>
+</section>
+<section id="constraint-propagation-solver">
+<h1>4. Constraint Propagation Solver<a class="headerlink" href="#constraint-propagation-solver" title="Link to this heading"></a></h1>
+<p>SRAA maintains a strict-inequality constraint graph:</p>
+<ul class="simple">
+<li><p>Nodes: symbolic variables (offsets, indices, derived expressions)</p></li>
+<li><p>Edges: inequalities of form <cite>x &lt; y + c</cite></p></li>
+</ul>
+<p>Algorithm:</p>
+<ol class="arabic simple">
+<li><p>Initialize graph with inequalities from Range Analysis.</p></li>
+<li><p>For every edge <cite>(x → y)</cite> labeled <cite>+c</cite>, propagate:
+<cite>L(y) ≥ L(x) + c</cite> and <cite>U(x) ≤ U(y) - c</cite></p></li>
+<li><p>When two expressions conflict:
+If <cite>offset_p + size_p ≤ offset_q</cite> is provably true, register a <strong>disjointness fact</strong>.</p></li>
+<li><p>Detect contradictory cycles (negative-weight cycles in the negated system) and mark the originating constraints as infeasible for diagnostics.</p></li>
+<li><p>Continue propagation until a fixed point.</p></li>
+</ol>
+<p>Practical considerations:</p>
+<ul class="simple">
+<li><p>The solver caches shortest paths for repeated queries in interprocedural contexts.</p></li>
+<li><p>Worklists are partitioned per strongly connected component to reduce redundant relaxations.</p></li>
+</ul>
+<p>This is a <em>Bellman–Ford–like relaxation</em> over a directed constraint graph,
+but runs sparsely due to vSSA def-use structure.</p>
+</section>
+<section id="alias-disambiguation-final-decision">
+<h1>5. Alias Disambiguation (Final Decision)<a class="headerlink" href="#alias-disambiguation-final-decision" title="Link to this heading"></a></h1>
+<p>For two memory objects with computed offsets:</p>
+<p><em>Let:</em></p>
+<ul class="simple">
+<li><p>P ranges over <cite>[Lp, Up]</cite></p></li>
+<li><p>Q ranges over <cite>[Lq, Uq]</cite></p></li>
+<li><p>And their sizes: <cite>size(P)</cite> and <cite>size(Q)</cite></p></li>
+</ul>
+<p>SRAA proves <strong>NoAlias</strong> if any of the following hold:</p>
+<ol class="arabic simple">
+<li><dl class="simple">
+<dt>::</dt><dd><p>Up + size(P) ≤ Lq</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>::</dt><dd><p>Uq + size(Q) ≤ Lp</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Strict relation holds::</dt><dd><p>Up &lt; Lq   OR   Uq &lt; Lp</p>
+</dd>
+</dl>
+</li>
+</ol>
+<p>Example:</p>
+<ul class="simple">
+<li><p><cite>p = base + i * 4</cite>, <cite>0 ≤ i &lt; n</cite></p></li>
+<li><p><cite>q = base + (n + j) * 4</cite>, <cite>0 ≤ j &lt; m</cite></p></li>
+<li><p><cite>size(p)</cite> = <cite>size(q)</cite> = 4</p></li>
+</ul>
+<p>RA yields <cite>Up = 4(n-1)</cite> and <cite>Lq = 4n</cite>. Therefore <cite>Up + size(p) = 4n ≤ Lq</cite>, and SRAA reports <cite>NoAlias</cite>.</p>
+<p>If none of the strict inequalities are provable, SRAA returns <strong>MayAlias</strong>.</p>
+<p>Notes:</p>
+<ul class="simple">
+<li><p>Proofs use purely symbolic comparisons.</p></li>
+<li><p>No heap-shape or points-to analysis is required.</p></li>
+<li><p>SRAA is <em>context-insensitive</em> but <em>interprocedural</em>:
+formal-actual parameters are connected via synthetic φ-like merges.</p></li>
+</ul>
+</section>
+<section id="pdg-memory-node-reduction-applicability">
+<h1>6. PDG Memory-Node Reduction (Applicability)<a class="headerlink" href="#pdg-memory-node-reduction-applicability" title="Link to this heading"></a></h1>
+<p>For dependence-graph construction (as used in the paper’s applicability study):</p>
+<p>If two memory objects are proven disjoint,
+the PDG pass merges or eliminates corresponding memory nodes.</p>
+<p>Optimization details:</p>
+<ul class="simple">
+<li><p>Proven <cite>NoAlias</cite> edges are annotated so later passes can skip building memory dependences entirely.</p></li>
+<li><p>When only one direction is proven (e.g., <cite>p</cite> before <cite>q</cite>), the PDG records a directed reduction, shrinking the transitive closure.</p></li>
+</ul>
+<p>The result is fewer nodes and fewer dependence edges,
+which improves precision in downstream analyses.</p>
+</section>
+<section id="summary-of-properties">
+<h1>Summary of Properties<a class="headerlink" href="#summary-of-properties" title="Link to this heading"></a></h1>
+<ul class="simple">
+<li><p><strong>Sparse</strong> due to vSSA/SSI transformation.</p></li>
+<li><p><strong>Linear</strong> constraint solving on affine strict inequalities.</p></li>
+<li><p><strong>Provably sound</strong> for proving disjointness (NoAlias).</p></li>
+<li><p><strong>Flow-sensitive</strong> but <strong>context-insensitive</strong>.</p></li>
+<li><p><strong>Explainable</strong>: every <cite>NoAlias</cite> result carries a justification chain for debugging.</p></li>
+<li><p>Produces <strong>strict (&lt;, ≤) disjointness proofs</strong>, not approximate heuristics.</p></li>
+<li><p>Complements and composes with LLVM’s baseline alias analyses.</p></li>
+</ul>
+</section>
+<section id="end-of-document">
+<h1>End of document.<a class="headerlink" href="#end-of-document" title="Link to this heading"></a></h1>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="dynaa.html" class="btn btn-neutral float-left" title="DynAA — Dynamic Alias AA" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="metrics.html" class="btn btn-neutral float-right" title="Pointer Analysis Metrics" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

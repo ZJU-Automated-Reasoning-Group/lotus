@@ -1,0 +1,442 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Concurrency Bug Checker &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="FiTx: Daily Development-friendly Bug Detection" href="fitx.html" />
+    <link rel="prev" title="Abstract Execution Checker" href="ae.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Checker Framework</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#choosing-a-checker">Choosing a Checker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#id1">Checker Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#build-targets">Build Targets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#programmatic-usage">Programmatic Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#bug-types">Bug Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#integration-points">Integration Points</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#see-also">See Also</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="ae.html">Abstract Execution Checker</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Concurrency Bug Checker</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#components">Components</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#command-line-options">Command-Line Options</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#scope">Scope</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#bug-types">Bug Types</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#analysis-process">Analysis Process</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#programmatic-usage">Programmatic Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#statistics">Statistics</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#limitations">Limitations</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#performance">Performance</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#integration">Integration</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="fitx.html">FiTx: Daily Development-friendly Bug Detection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kint.html">KINT Numerical Bug Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pulse.html">Pulse Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="report.html">Checker Report Infrastructure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="saber.html">Saber Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="symex.html">Symbolic Execution Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="taint.html">IFDS Taint Checker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tooling.html">Checker Tooling</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Checker Framework</a></li>
+      <li class="breadcrumb-item active">Concurrency Bug Checker</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/checker/concurrency.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="concurrency-bug-checker">
+<h1>Concurrency Bug Checker<a class="headerlink" href="#concurrency-bug-checker" title="Link to this heading"></a></h1>
+<p>Static analysis tool for detecting concurrency bugs in multithreaded programs,
+including shared-memory threading bugs plus dedicated OpenMP and MPI protocol
+checks.</p>
+<p><strong>Library Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Checker/Concurrency/</span></code></p>
+<p><strong>Headers</strong>: <code class="docutils literal notranslate"><span class="pre">include/Checker/Concurrency/</span></code></p>
+<p><strong>Tool Location</strong>: <code class="docutils literal notranslate"><span class="pre">tools/checker/lotus-check-concur.cpp</span></code></p>
+<p><strong>Frontend</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=concur</span></code></p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>The concurrency checker analyzes LLVM IR to detect thread safety issues using:</p>
+<ul class="simple">
+<li><p><strong>MHP (May Happen in Parallel) Analysis</strong> – Determines which instructions can execute concurrently</p></li>
+<li><p><strong>Lock Set Analysis</strong> – Tracks which locks protect shared memory accesses</p></li>
+<li><p><strong>Happens-Before Analysis</strong> – Builds synchronization relationships between threads</p></li>
+<li><p><strong>OpenMP Task Analysis</strong> – Tracks task creation, taskgroup/taskwait boundaries, and <code class="docutils literal notranslate"><span class="pre">depend</span></code> relations</p></li>
+<li><p><strong>MPI Communication Analysis</strong> – Tracks point-to-point operations, collectives, requests, and RMA synchronization</p></li>
+</ul>
+<p>All detected bugs are reported through the centralized <code class="docutils literal notranslate"><span class="pre">BugReportMgr</span></code> system, enabling unified JSON and SARIF output.</p>
+</section>
+<section id="components">
+<h2>Components<a class="headerlink" href="#components" title="Link to this heading"></a></h2>
+<p><strong>ConcurrencyChecker</strong> (<code class="docutils literal notranslate"><span class="pre">ConcurrencyChecker.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">ConcurrencyChecker.h</span></code>):</p>
+<ul class="simple">
+<li><p>Main coordinator that orchestrates all concurrency checks</p></li>
+<li><p>Manages statistics and analysis configuration</p></li>
+<li><p>Integrates with <code class="docutils literal notranslate"><span class="pre">BugReportMgr</span></code> for centralized reporting</p></li>
+</ul>
+<p><strong>DataRaceChecker</strong> (<code class="docutils literal notranslate"><span class="pre">DataRaceChecker.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">DataRaceChecker.h</span></code>):</p>
+<ul class="simple">
+<li><p>Detects data races using MHP analysis</p></li>
+<li><p>Identifies concurrent memory accesses without proper synchronization</p></li>
+<li><p>Reports bug type: <code class="docutils literal notranslate"><span class="pre">BUG_DATARACE</span></code> (CWE-362, HIGH importance, ERROR classification)</p></li>
+</ul>
+<p><strong>DeadlockChecker</strong> (<code class="docutils literal notranslate"><span class="pre">DeadlockChecker.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">DeadlockChecker.h</span></code>):</p>
+<ul class="simple">
+<li><p>Detects potential deadlocks using lock set analysis</p></li>
+<li><p>Identifies circular lock dependencies between threads</p></li>
+<li><p>Analyzes lock acquisition order to find cycles</p></li>
+</ul>
+<p><strong>AtomicityChecker</strong> (<code class="docutils literal notranslate"><span class="pre">AtomicityChecker.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">AtomicityChecker.h</span></code>):</p>
+<ul class="simple">
+<li><p>Detects atomicity violations</p></li>
+<li><p>Identifies non-atomic sequences of operations that should be atomic</p></li>
+<li><p>Checks for interleaving of critical sections</p></li>
+</ul>
+<p><strong>OpenMPChecker</strong> (<code class="docutils literal notranslate"><span class="pre">OpenMPChecker.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">OpenMPChecker.h</span></code>):</p>
+<ul class="simple">
+<li><p>Dedicated checker for OpenMP-specific bug patterns</p></li>
+<li><p>Reports unbalanced taskgroup regions</p></li>
+<li><p>Reports unbalanced atomic runtime regions</p></li>
+<li><p>Warns about partial task synchronization through <code class="docutils literal notranslate"><span class="pre">__kmpc_omp_wait_deps</span></code></p></li>
+</ul>
+<p><strong>MPIChecker</strong> (<code class="docutils literal notranslate"><span class="pre">MPIChecker.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">MPIChecker.h</span></code>):</p>
+<ul class="simple">
+<li><p>Dedicated checker for MPI-specific protocol and synchronization bugs</p></li>
+<li><p>Reports orphaned non-blocking requests</p></li>
+<li><p>Reports simple blocking communication deadlocks</p></li>
+<li><p>Reports collective mismatches and conditional collectives</p></li>
+<li><p>Reports unsynchronized RMA operations, RMA races, and leaked windows</p></li>
+</ul>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<p><strong>Basic Usage</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>concur<span class="w"> </span>input.bc
+</pre></div>
+</div>
+<p><strong>Enable Specific Checks</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>concur<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>data-race
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>concur<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>deadlock
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>concur<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>atomicity
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>concur<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>openmp
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>concur<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>mpi
+</pre></div>
+</div>
+<p><strong>Select Checks with a Comma-Separated List</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>concur<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>data-race,deadlock,openmp
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>concur<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>mpi
+</pre></div>
+</div>
+<p><strong>Enable Multiple Checks</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>concur<span class="w"> </span>input.bc<span class="w"> </span>--checks<span class="o">=</span>data-race,deadlock,atomicity
+</pre></div>
+</div>
+<p><strong>Generate JSON Report</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>concur<span class="w"> </span>input.bc<span class="w"> </span>--report-json<span class="o">=</span>report.json
+</pre></div>
+</div>
+<p><strong>Generate SARIF Report</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>concur<span class="w"> </span>input.bc<span class="w"> </span>--report-sarif<span class="o">=</span>report.sarif
+</pre></div>
+</div>
+</section>
+<section id="command-line-options">
+<h2>Command-Line Options<a class="headerlink" href="#command-line-options" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--checks=&lt;id[,id...]&gt;</span></code> – Select <code class="docutils literal notranslate"><span class="pre">data-race</span></code>, <code class="docutils literal notranslate"><span class="pre">deadlock</span></code>, <code class="docutils literal notranslate"><span class="pre">atomicity</span></code>,
+<code class="docutils literal notranslate"><span class="pre">condvar</span></code>, <code class="docutils literal notranslate"><span class="pre">lock-mismatch</span></code>, <code class="docutils literal notranslate"><span class="pre">openmp</span></code>, <code class="docutils literal notranslate"><span class="pre">mpi</span></code>, or <code class="docutils literal notranslate"><span class="pre">cuda</span></code>. Omitting
+this option, or passing <code class="docutils literal notranslate"><span class="pre">--checks=all</span></code>, enables all checks.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--concur.mode=analysis</span></code> – Run analyses and dump facts without emitting bug reports</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--concur.output=&lt;file&gt;</span></code> – Write analysis facts to a file in analysis mode</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--concur.output-format=&lt;text|json&gt;</span></code> – Select the analysis-fact format</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--report-json=&lt;file&gt;</span></code> – Output JSON report to file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--report-sarif=&lt;file&gt;</span></code> – Output SARIF report to file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--report-min-score=&lt;n&gt;</span></code> – Minimum confidence score for reporting (0-100)</p></li>
+</ul>
+</section>
+<section id="scope">
+<h2>Scope<a class="headerlink" href="#scope" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">concur</span></code> is the dedicated engine for shared-memory, OpenMP, and MPI
+concurrency errors.  Its <code class="docutils literal notranslate"><span class="pre">--checks</span></code> option selects only concurrency checker
+families; it does not enable memory-safety, numerical, or taint engines.  See
+<span class="xref std std-ref">Choosing a Checker</span> for the complete checker guide.</p>
+</section>
+<section id="bug-types">
+<h2>Bug Types<a class="headerlink" href="#bug-types" title="Link to this heading"></a></h2>
+<p><strong>Data Races</strong> (<code class="docutils literal notranslate"><span class="pre">BUG_DATARACE</span></code>):</p>
+<ul class="simple">
+<li><p><strong>Description</strong>: Concurrent access to shared memory without proper synchronization</p></li>
+<li><p><strong>CWE</strong>: CWE-362</p></li>
+<li><p><strong>Importance</strong>: HIGH</p></li>
+<li><p><strong>Classification</strong>: ERROR</p></li>
+<li><p><strong>Detection</strong>: MHP analysis identifies instructions that may execute in parallel and access the same memory location without locks</p></li>
+</ul>
+<p><strong>Deadlocks</strong>:</p>
+<ul class="simple">
+<li><p><strong>Description</strong>: Circular lock dependencies between threads that can cause threads to wait indefinitely</p></li>
+<li><p><strong>Detection</strong>: Lock set analysis identifies cycles in lock acquisition order</p></li>
+<li><p><strong>Analysis</strong>: Tracks lock acquisition sequences across threads</p></li>
+</ul>
+<p><strong>Atomicity Violations</strong>:</p>
+<ul class="simple">
+<li><p><strong>Description</strong>: Non-atomic sequences of operations that should be atomic</p></li>
+<li><p><strong>Detection</strong>: Identifies critical sections that can be interleaved incorrectly</p></li>
+<li><p><strong>Analysis</strong>: Checks for proper synchronization around related operations</p></li>
+</ul>
+<p><strong>OpenMP Bugs</strong>:</p>
+<ul class="simple">
+<li><p><strong>Taskgroup mismatch</strong>: Detects <code class="docutils literal notranslate"><span class="pre">__kmpc_taskgroup</span></code> / <code class="docutils literal notranslate"><span class="pre">__kmpc_end_taskgroup</span></code> imbalance</p></li>
+<li><p><strong>Atomic region mismatch</strong>: Detects <code class="docutils literal notranslate"><span class="pre">__kmpc_atomic_start</span></code> / <code class="docutils literal notranslate"><span class="pre">__kmpc_atomic_end</span></code> imbalance</p></li>
+<li><p><strong>Partial task synchronization</strong>: Warns when <code class="docutils literal notranslate"><span class="pre">__kmpc_omp_wait_deps</span></code> may leave sibling tasks unsynchronized</p></li>
+</ul>
+<p><strong>MPI Bugs</strong>:</p>
+<ul class="simple">
+<li><p><strong>Orphaned request</strong>: Non-blocking request without a matching <code class="docutils literal notranslate"><span class="pre">Wait/Test/Request_free/Cancel</span></code></p></li>
+<li><p><strong>Blocking deadlock</strong>: Simple cycles involving blocking send/receive pairs</p></li>
+<li><p><strong>Collective mismatch</strong>: Incompatible collective operations across ranks</p></li>
+<li><p><strong>Conditional collective</strong>: Collectives that may execute only on a subset of ranks</p></li>
+<li><p><strong>Unsynchronized RMA / RMA race</strong>: One-sided accesses without proven synchronization</p></li>
+<li><p><strong>Leaked window</strong>: Window created but not freed</p></li>
+</ul>
+</section>
+<section id="analysis-process">
+<h2>Analysis Process<a class="headerlink" href="#analysis-process" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Parse LLVM IR</strong>: Load module and identify concurrency primitives (threads, locks, synchronization)</p></li>
+<li><p><strong>Build MHP Graph</strong>: Determine which instructions may happen in parallel</p></li>
+<li><p><strong>Lock Set Analysis</strong>: Track which locks protect each memory access</p></li>
+<li><p><strong>Happens-Before Analysis</strong>: Build synchronization relationships (mutexes, barriers, etc.)</p></li>
+<li><p><strong>Pattern Detection</strong>: Identify shared-memory, OpenMP, and MPI-specific bug patterns</p></li>
+<li><p><strong>Report Generation</strong>: Generate reports through centralized <code class="docutils literal notranslate"><span class="pre">BugReportMgr</span></code></p></li>
+</ol>
+</section>
+<section id="programmatic-usage">
+<h2>Programmatic Usage<a class="headerlink" href="#programmatic-usage" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"Checker/Concurrency/ConcurrencyChecker.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"Checker/Framework/BugReportMgr.h"</span>
+
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">concurrency</span><span class="p">;</span>
+
+<span class="c1">// Create checker</span>
+<span class="n">ConcurrencyChecker</span><span class="w"> </span><span class="nf">checker</span><span class="p">(</span><span class="o">*</span><span class="k">module</span><span class="p">);</span>
+
+<span class="c1">// Configure checks</span>
+<span class="n">checker</span><span class="p">.</span><span class="n">enableDataRaceCheck</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+<span class="n">checker</span><span class="p">.</span><span class="n">enableDeadlockCheck</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+<span class="n">checker</span><span class="p">.</span><span class="n">enableAtomicityCheck</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+<span class="n">checker</span><span class="p">.</span><span class="n">enableOpenMPCheck</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+<span class="n">checker</span><span class="p">.</span><span class="n">enableMPICheck</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+
+<span class="n">checker</span><span class="p">.</span><span class="n">runAnalyses</span><span class="p">();</span>
+
+<span class="c1">// Run checks (automatically reports to BugReportMgr)</span>
+<span class="n">checker</span><span class="p">.</span><span class="n">runChecks</span><span class="p">();</span>
+
+<span class="c1">// Get statistics</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">stats</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">checker</span><span class="p">.</span><span class="n">getStatistics</span><span class="p">();</span>
+<span class="n">outs</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Data Races Found: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">stats</span><span class="p">.</span><span class="n">dataRacesFound</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="n">outs</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Deadlocks Found: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">stats</span><span class="p">.</span><span class="n">deadlocksFound</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="n">outs</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Atomicity Violations Found: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">stats</span><span class="p">.</span><span class="n">atomicityViolationsFound</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="n">outs</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"OpenMP Bugs Found: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">stats</span><span class="p">.</span><span class="n">openMPBugsFound</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+<span class="n">outs</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"MPI Bugs Found: "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">stats</span><span class="p">.</span><span class="n">mpiBugsFound</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+
+<span class="c1">// Access centralized reports</span>
+<span class="n">BugReportMgr</span><span class="o">&amp;</span><span class="w"> </span><span class="n">mgr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">BugReportMgr</span><span class="o">::</span><span class="n">get_instance</span><span class="p">();</span>
+<span class="n">mgr</span><span class="p">.</span><span class="n">print_summary</span><span class="p">(</span><span class="n">outs</span><span class="p">());</span>
+</pre></div>
+</div>
+</section>
+<section id="statistics">
+<h2>Statistics<a class="headerlink" href="#statistics" title="Link to this heading"></a></h2>
+<p>The checker provides detailed analysis statistics:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">totalInstructions</span></code> – Total number of instructions analyzed</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mhpPairs</span></code> – Number of instruction pairs that may happen in parallel</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">locksAnalyzed</span></code> – Number of lock operations analyzed</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dataRacesFound</span></code> – Number of data races detected</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">deadlocksFound</span></code> – Number of deadlocks detected</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">atomicityViolationsFound</span></code> – Number of atomicity violations detected</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">condVarBugsFound</span></code> – Number of condition-variable misuse bugs detected</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lockMismatchesFound</span></code> – Number of lock mismatch bugs detected</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">openMPBugsFound</span></code> – Number of OpenMP bugs detected</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mpiBugsFound</span></code> – Number of MPI bugs detected</p></li>
+</ul>
+</section>
+<section id="limitations">
+<h2>Limitations<a class="headerlink" href="#limitations" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Conservative Analysis</strong>: May report false positives due to over-approximation</p></li>
+<li><p><strong>Protocol Coverage</strong>: OpenMP and MPI support focuses on statically recognizable runtime patterns, not full semantic verification</p></li>
+<li><p><strong>Context-Insensitive</strong>: Does not distinguish between different call contexts</p></li>
+<li><p><strong>No Dynamic Analysis</strong>: Static analysis only, cannot detect runtime-specific issues</p></li>
+</ul>
+</section>
+<section id="performance">
+<h2>Performance<a class="headerlink" href="#performance" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Handles multiple threads efficiently using graph-based algorithms</p></li>
+<li><p>MHP analysis scales with the number of threads and instructions</p></li>
+<li><p>Lock set analysis is efficient for typical lock usage patterns</p></li>
+<li><p>Conservative analysis may have false positives but ensures soundness</p></li>
+</ul>
+</section>
+<section id="integration">
+<h2>Integration<a class="headerlink" href="#integration" title="Link to this heading"></a></h2>
+<p>The concurrency checker integrates with:</p>
+<ul class="simple">
+<li><p><strong>BugReportMgr</strong>: Centralized bug reporting system</p></li>
+<li><p><strong>LLVM IR</strong>: Standard LLVM intermediate representation</p></li>
+<li><p><strong>Dyck Alias Analysis</strong>: Pointer analysis for memory access tracking</p></li>
+</ul>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="index.html"><span class="doc">Checker Framework</span></a> – Checker Framework overview</p></li>
+<li><p><a class="reference internal" href="../alias/index.html"><span class="doc">Alias Analysis</span></a> – Alias analysis for pointer information</p></li>
+<li><p><a class="reference internal" href="../analysis/index.html"><span class="doc">Analysis Framework</span></a> – Analysis infrastructure</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="ae.html" class="btn btn-neutral float-left" title="Abstract Execution Checker" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="fitx.html" class="btn btn-neutral float-right" title="FiTx: Daily Development-friendly Bug Detection" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

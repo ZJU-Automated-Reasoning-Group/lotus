@@ -1,0 +1,343 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IFDS / IDE Engine &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="VASCO Value-Context Framework" href="vasco.html" />
+    <link rel="prev" title="Monotone Dataflow Engine" href="mono.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Data Flow Analysis</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="apa.html">Algebraic Program Analysis (APA)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="control_flow.html">Control Flow Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html">Monotone Dataflow Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html#implementation-layout">Implementation Layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html#core-idea">Core Idea</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html#abstract-domain-contract">Abstract Domain Contract</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mono.html#example-analyses">Example Analyses</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">IFDS / IDE Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ifds-set-valued-problems">IFDS: Set-Valued Problems</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#example-taint-analysis">Example — Taint Analysis</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#ide-value-enriched-problems">IDE: Value-Enriched Problems</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#example-linear-constant-propagation">Example — Linear Constant Propagation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-typestate-analysis">Example — Typestate Analysis</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#command-line-tool-lotus-check-engine-taint">Command-Line Tool: lotus-check –engine=taint</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#key-options">Key Options</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html">VASCO Value-Context Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#why-vasco">Why VASCO</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#value-contexts">Value Contexts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#algorithm-sketch">Algorithm Sketch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#core-api">Core API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#results">Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#llvm-instantiation-in-lotus">LLVM Instantiation in Lotus</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#parallel-context-scheduling">Parallel Context Scheduling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#current-scope-and-caveats">Current Scope and Caveats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vasco.html#relationship-to-other-lotus-engines">Relationship to Other Lotus Engines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wpds.html">WPDS Dataflow Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wpds.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wpds.html#core-idea">Core Idea</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wpds.html#example-analyses">Example Analyses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html">Newtonian Program Analysis (NPA)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#conceptual-background">Conceptual Background</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#mathematical-foundation">Mathematical Foundation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#examples-and-applications">Examples and Applications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#distributive-vs-non-distributive-analyses">Distributive vs. Non-Distributive Analyses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#implementation-layout">Implementation Layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#usage-notes">Usage Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#practical-notes-for-numeric-domains">Practical notes for numeric domains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="npa.html#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Data Flow Analysis</a></li>
+      <li class="breadcrumb-item active">IFDS / IDE Engine</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/dataflow/ifds_ide.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ifds-ide-engine">
+<h1>IFDS / IDE Engine<a class="headerlink" href="#ifds-ide-engine" title="Link to this heading"></a></h1>
+</section>
+<section id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h1>
+<p>The <strong>IFDS / IDE engine</strong> in <code class="docutils literal notranslate"><span class="pre">lib/Dataflow/IFDS</span></code> implements the
+algorithms of Reps, Horwitz, and Sagiv for:</p>
+<ul class="simple">
+<li><p><strong>IFDS</strong> — Interprocedural Finite Distributive Subset problems,</p></li>
+<li><p><strong>IDE</strong>  — Interprocedural Distributive Environment problems.</p></li>
+</ul>
+<p>Both are <strong>context-sensitive</strong>, flow-sensitive frameworks expressed
+over an <strong>exploded super-graph</strong> whose nodes are pairs
+<code class="docutils literal notranslate"><span class="pre">(program</span> <span class="pre">point,</span> <span class="pre">data-flow</span> <span class="pre">fact)</span></code>.</p>
+<ul class="simple">
+<li><p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Dataflow/IFDS</span></code></p></li>
+<li><p><strong>Solvers</strong>: <code class="docutils literal notranslate"><span class="pre">IFDSSolver</span></code>, <code class="docutils literal notranslate"><span class="pre">ParallelIFDSSolver</span></code>, <code class="docutils literal notranslate"><span class="pre">IDESolver</span></code></p></li>
+</ul>
+</section>
+<section id="ifds-set-valued-problems">
+<h1>IFDS: Set-Valued Problems<a class="headerlink" href="#ifds-set-valued-problems" title="Link to this heading"></a></h1>
+<p>IFDS targets analyses where facts are just <strong>elements of a finite set</strong>
+and the merge operator is set union (may-analysis).
+Each analysis defines:</p>
+<ul class="simple">
+<li><p>a finite domain <code class="docutils literal notranslate"><span class="pre">D</span></code> of path facts and a distinguished zero fact,</p></li>
+<li><p>flow functions for:</p>
+<ul>
+<li><p>normal instructions,</p></li>
+<li><p>calls,</p></li>
+<li><p>returns,</p></li>
+<li><p>call-to-return (summary edges).</p></li>
+</ul>
+</li>
+</ul>
+<section id="example-taint-analysis">
+<h2>Example — Taint Analysis<a class="headerlink" href="#example-taint-analysis" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">ifds::TaintAnalysis</span></code> is an IFDS client that tracks <strong>tainted
+variables</strong> and <strong>tainted memory locations</strong>:</p>
+<ul class="simple">
+<li><p>facts distinguish tainted SSA values vs. tainted memory,</p></li>
+<li><p>normal flow propagates taint through loads, stores, arithmetic, casts,
+and GEPs,</p></li>
+<li><p>call / return flow map taint across function boundaries,</p></li>
+<li><p>call-to-return flow models configurable <strong>sources</strong>, <strong>sinks</strong>, and
+<strong>sanitizers</strong> using the taint configuration files in <code class="docutils literal notranslate"><span class="pre">config/</span></code>.</p></li>
+</ul>
+</section>
+</section>
+<section id="ide-value-enriched-problems">
+<h1>IDE: Value-Enriched Problems<a class="headerlink" href="#ide-value-enriched-problems" title="Link to this heading"></a></h1>
+<p>IDE extends IFDS by attaching a <strong>value</strong> to each fact, forming an
+environment <code class="docutils literal notranslate"><span class="pre">D</span> <span class="pre">→</span> <span class="pre">L</span></code> where <code class="docutils literal notranslate"><span class="pre">L</span></code> is a lattice.
+Edge functions describe how these values are transformed along the
+exploded super-graph.</p>
+<p>IDE is useful for:</p>
+<ul class="simple">
+<li><p>constant propagation,</p></li>
+<li><p>typestate tracking,</p></li>
+<li><p>must-analyses where join is not simple union.</p></li>
+</ul>
+<section id="example-linear-constant-propagation">
+<h2>Example — Linear Constant Propagation<a class="headerlink" href="#example-linear-constant-propagation" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">IDEConstantPropagation</span></code> associates integer-typed facts with a small
+lattice:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">⊥</span></code> — unreachable,</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">k</span></code> — known constant value,</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">⊤</span></code> — unknown / non-constant.</p></li>
+</ul>
+<p>Edge functions interpret assignments, copies, and arithmetic
+instructions so that, whenever both operands are constant, a constant
+result is propagated; otherwise, the lattice moves toward <code class="docutils literal notranslate"><span class="pre">⊤</span></code>.</p>
+</section>
+<section id="example-typestate-analysis">
+<h2>Example — Typestate Analysis<a class="headerlink" href="#example-typestate-analysis" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">IDETypeState</span></code> tracks <strong>finite-state properties</strong> such as:</p>
+<ul class="simple">
+<li><p>file handles (<code class="docutils literal notranslate"><span class="pre">fopen</span></code>/<code class="docutils literal notranslate"><span class="pre">fclose</span></code>),</p></li>
+<li><p>locks (<code class="docutils literal notranslate"><span class="pre">pthread_mutex_lock</span></code> / <code class="docutils literal notranslate"><span class="pre">unlock</span></code>),</p></li>
+<li><p>heap objects (<code class="docutils literal notranslate"><span class="pre">malloc</span></code>/<code class="docutils literal notranslate"><span class="pre">free</span></code>),</p></li>
+<li><p>sockets and protocol states.</p></li>
+</ul>
+<p>Clients describe a typestate property by:</p>
+<ul class="simple">
+<li><p>defining named states (including error states),</p></li>
+<li><p>registering transitions for operations (functions, opcodes, or custom
+predicates).</p></li>
+</ul>
+<p>Edge functions then implement these transitions over the typestate
+lattice, and the IDE solver yields, at each program point, the
+abstract state of tracked objects.</p>
+</section>
+</section>
+<section id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h1>
+<p>At a high level, an IFDS/IDE analysis is instantiated and solved as:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Pseudo-code sketch</span>
+<span class="k">using</span><span class="w"> </span><span class="n">Analysis</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ifds</span><span class="o">::</span><span class="n">TaintAnalysis</span><span class="p">;</span><span class="w"> </span><span class="c1">// or IDEConstantPropagation, IDETypeState, ...</span>
+<span class="n">Analysis</span><span class="w"> </span><span class="n">problem</span><span class="p">;</span>
+<span class="n">IFDSSolver</span><span class="o">&lt;</span><span class="n">Analysis</span><span class="o">&gt;</span><span class="w"> </span><span class="n">solver</span><span class="p">(</span><span class="n">problem</span><span class="p">);</span>
+<span class="n">solver</span><span class="p">.</span><span class="n">solve</span><span class="p">();</span>
+</pre></div>
+</div>
+</section>
+<section id="command-line-tool-lotus-check-engine-taint">
+<h1>Command-Line Tool: lotus-check –engine=taint<a class="headerlink" href="#command-line-tool-lotus-check-engine-taint" title="Link to this heading"></a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">lotus-check</span> <span class="pre">--engine=taint</span></code> frontend provides an interprocedural taint analysis using the
+IFDS framework.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>taint<span class="w"> </span>&lt;input<span class="w"> </span>bitcode<span class="w"> </span>file&gt;<span class="w"> </span><span class="o">[</span>options<span class="o">]</span>
+</pre></div>
+</div>
+<section id="key-options">
+<h2>Key Options<a class="headerlink" href="#key-options" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--checks=taint-flow</span></code> – Select the taint-flow checker. It is also the
+default because this engine currently exposes one checker.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--taint.sources=&lt;functions&gt;</span></code> – Comma-separated list of custom source functions.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--taint.sinks=&lt;functions&gt;</span></code> – Comma-separated list of custom sink functions.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--verbose</span></code> – Show module and source/sink tagging details.</p></li>
+</ul>
+<p>For the checker-facing usage, reporting behavior, and distinctions from the
+taint tracking embedded in other engines, see <a class="reference internal" href="../checker/taint.html"><span class="doc">IFDS Taint Checker</span></a>.
+* <code class="docutils literal notranslate"><span class="pre">--analysis-stats</span></code> – Print analysis statistics.</p>
+<p>The tool performs interprocedural taint analysis to detect potential security
+vulnerabilities where tainted data (from sources like user input) flows to
+dangerous sink functions (like system calls, memory operations, etc.).</p>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Basic taint analysis</span>
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>taint<span class="w"> </span>input.bc
+
+<span class="c1"># Custom sources and sinks</span>
+./build/bin/lotus-check<span class="w"> </span>--engine<span class="o">=</span>taint<span class="w"> </span>input.bc<span class="w"> </span>--taint.sources<span class="o">=</span>read,scanf<span class="w"> </span>--taint.sinks<span class="o">=</span>system,exec
+</pre></div>
+</div>
+<p>For other command-line tools that build on IFDS/IDE, see
+<a class="reference internal" href="../tools/checker/index.html"><span class="doc">Checker Tools</span></a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="mono.html" class="btn btn-neutral float-left" title="Monotone Dataflow Engine" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="vasco.html" class="btn btn-neutral float-right" title="VASCO Value-Context Framework" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,236 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exact Unary Interleaved Dyck &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Interleaved-Dyck Staged Bounds" href="interleaved_dyck_staged_bounds.html" />
+    <link rel="prev" title="Context-Sensitive Reachability Indexing" href="csindex.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Context-Free Language Analysis</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="cfl_components.html">CFL Reachability Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="classical.html">Classical Grammar-Driven CFL Reachability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pocr_migration.html">POCR Migration Matrix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pearl_stg_sqid.html">Paper Engines: PEARL, Stg, and Sqid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="csindex.html">Context-Sensitive Reachability Indexing</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Exact Unary Interleaved Dyck</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#algorithms">Algorithms</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#exactness-and-directed-input">Exactness and directed input</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#command-line">Command line</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#build-and-test">Build and test</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_staged_bounds.html">Interleaved-Dyck Staged Bounds</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_graph_reduction.html">Interleaved-Dyck Graph Reduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_mcfl.html">Multiple Context-Free Language Reachability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_mutual_refinement.html">Mutual Refinement for CFL Reachability</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Context-Free Language Analysis</a></li>
+      <li class="breadcrumb-item active">Exact Unary Interleaved Dyck</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/cfl/interleaved_dyck_unary.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="exact-unary-interleaved-dyck">
+<h1>Exact Unary Interleaved Dyck<a class="headerlink" href="#exact-unary-interleaved-dyck" title="Link to this heading"></a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">Unary</span></code> module contains exact algorithms for bidirected unary
+<code class="docutils literal notranslate"><span class="pre">D1</span></code>-interleaved-<code class="docutils literal notranslate"><span class="pre">D1</span></code> reachability. The module name identifies the problem
+scope; <code class="docutils literal notranslate"><span class="pre">AdaptiveSolver</span></code> and <code class="docutils literal notranslate"><span class="pre">FixedCounterSolver</span></code> identify the algorithms.</p>
+<p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">include/CFL/InterleavedDyck/Unary/</span></code>,
+<code class="docutils literal notranslate"><span class="pre">lib/CFL/InterleavedDyck/Unary/</span></code></p>
+<section id="algorithms">
+<h2>Algorithms<a class="headerlink" href="#algorithms" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">AdaptiveSolver</span></code></dt><dd><p>Uses the adaptive two-arm construction. <code class="docutils literal notranslate"><span class="pre">solve</span></code> applies the shared
+quotient, chooses <code class="docutils literal notranslate"><span class="pre">K</span> <span class="pre">=</span> <span class="pre">6</span> <span class="pre">*</span> <span class="pre">|V(quotient)|</span></code>, and uses quadratic finite
+control. <code class="docutils literal notranslate"><span class="pre">solveShallow(graph,</span> <span class="pre">K)</span></code> solves exactly inside
+<code class="docutils literal notranslate"><span class="pre">min(counter1,</span> <span class="pre">counter2)</span> <span class="pre">&lt;=</span> <span class="pre">K</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">FixedCounterSolver</span></code></dt><dd><p>Implements Kjelstrøm and Pavlogiannis, POPL 2022 Algorithm 1. For <code class="docutils literal notranslate"><span class="pre">n</span></code>
+processed vertices it stores one counter in states <code class="docutils literal notranslate"><span class="pre">(v,j)</span></code> for
+<code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;=</span> <span class="pre">j</span> <span class="pre">&lt;=</span> <span class="pre">18*n^2</span> <span class="pre">+</span> <span class="pre">6*n</span></code> and leaves the other as a bidirected
+one-counter problem. It is the primary exact baseline for Adaptive.</p>
+</dd>
+</dl>
+<p>Both algorithms share typed graph parsing, unary projection, input policy,
+quotient sparsification, and the bidirected-Dyck component backend.</p>
+</section>
+<section id="exactness-and-directed-input">
+<h2>Exactness and directed input<a class="headerlink" href="#exactness-and-directed-input" title="Link to this heading"></a></h2>
+<p>Every projected arc must have its complement-labeled reverse. Parenthesis IDs
+project to counter 1 and bracket IDs to counter 2. Exactness concerns balanced
+paths between zero-counter configurations; it does not extend to multi-type
+<code class="docutils literal notranslate"><span class="pre">D_k</span></code>-interleaved-<code class="docutils literal notranslate"><span class="pre">D_k</span></code>.</p>
+<p>Both option types default to <code class="docutils literal notranslate"><span class="pre">RequireBidirected</span></code>. The alternative
+<code class="docutils literal notranslate"><span class="pre">AddMissingReverseEdges</span></code> is exact for the resulting symmetrized graph and a
+sound overapproximation for the original directed graph. The parser itself
+never adds reverse edges.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"CFL/InterleavedDyck/Core/Graph.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"CFL/InterleavedDyck/Unary/Solver.h"</span>
+
+<span class="k">using</span><span class="w"> </span><span class="k">namespace</span><span class="w"> </span><span class="nn">lotus</span><span class="o">::</span><span class="nn">cfl</span><span class="p">;</span>
+
+<span class="n">interleaved_dyck</span><span class="o">::</span><span class="n">Graph</span><span class="w"> </span><span class="n">graph</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="n">interleaved_dyck</span><span class="o">::</span><span class="n">Graph</span><span class="o">::</span><span class="n">parseDotFile</span><span class="p">(</span><span class="s">"bidirected.dot"</span><span class="p">);</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">adaptive</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">interleaved_dyck</span><span class="o">::</span><span class="n">unary</span><span class="o">::</span><span class="n">AdaptiveSolver</span><span class="p">{}.</span><span class="n">solve</span><span class="p">(</span><span class="n">graph</span><span class="p">);</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">fixed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">interleaved_dyck</span><span class="o">::</span><span class="n">unary</span><span class="o">::</span><span class="n">FixedCounterSolver</span><span class="p">{}.</span><span class="n">solve</span><span class="p">(</span><span class="n">graph</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+<section id="command-line">
+<h2>Command line<a class="headerlink" href="#command-line" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">cmake --build build --target lotus-cfl-interleaved-dyck-unary</span>
+<span class="go">build/bin/lotus-cfl-interleaved-dyck-unary --algorithm adaptive --stats bidirected.dot</span>
+<span class="go">build/bin/lotus-cfl-interleaved-dyck-unary --algorithm fixed-counter --stats bidirected.dot</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">--direct</span></code> disables shared quotient sparsification. <code class="docutils literal notranslate"><span class="pre">--shallow</span> <span class="pre">K</span></code> applies
+only to Adaptive. <code class="docutils literal notranslate"><span class="pre">--bidirect</span></code> explicitly selects symmetrization, and output
+states the selected algorithm and resulting guarantee.</p>
+<p>The existing <code class="docutils literal notranslate"><span class="pre">benchmarks/real-world/CFL/InterleavedDyck</span></code> corpus is directed,
+so exact runs require a genuinely bidirected corpus. Using <code class="docutils literal notranslate"><span class="pre">--bidirect</span></code> on
+that corpus must be reported as an overapproximate experiment.</p>
+</section>
+<section id="build-and-test">
+<h2>Build and test<a class="headerlink" href="#build-and-test" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">cmake --build build --target interleaved_dyck_unary_test</span>
+<span class="go">ctest --test-dir build -R interleaved_dyck_unary_test --output-on-failure</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="csindex.html" class="btn btn-neutral float-left" title="Context-Sensitive Reachability Indexing" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="interleaved_dyck_staged_bounds.html" class="btn btn-neutral float-right" title="Interleaved-Dyck Staged Bounds" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

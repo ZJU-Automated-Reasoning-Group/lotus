@@ -1,0 +1,390 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TUNA &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Stingx — String Constraint Solver" href="stingx.html" />
+    <link rel="prev" title="SMT Theory Arbitrage (STAUB)" href="staub.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Solvers</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="cudd.html">CUDD (Binary Decision Diagrams)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="smt.html">SMT (Satisfiability Modulo Theories)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wpds.html">WPDS (Weighted Pushdown Systems)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="smtsampler.html">SMT Samplers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="symabs.html">SMT Formula Abstraction (SymAbs)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="staub.html">SMT Theory Arbitrage (STAUB)</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">TUNA</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#components">Components</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#tuna-opt">TUNA-Opt</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tuna-learn">TUNA-Learn</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#build">Build</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#tools">Tools</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1">slot</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#fastslot">fastslot</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#smt2llvm">smt2llvm</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#llvm2smt">llvm2smt</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#llvm2feat">llvm2feat</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pass-configuration-files">Pass Configuration Files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ga-optimizer">GA Optimizer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#relationship-to-staub">Relationship to STAUB</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="stingx.html">Stingx — String Constraint Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="egraphs_simp.html">E-Graph Quantifier Simplification (EGraphsSimp)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fpsolve.html">FPsolve — Fixed-Point Equation Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="libsmt.html">LIBSMT — SMT Solver Abstraction Layer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datalog.html">Native C++ Datalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#third-party-libraries">Third-Party Libraries</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Solvers</a></li>
+      <li class="breadcrumb-item active">TUNA</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/solvers/tuna.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="tuna">
+<h1>TUNA<a class="headerlink" href="#tuna" title="Link to this heading"></a></h1>
+<p>This section documents <code class="docutils literal notranslate"><span class="pre">TUNA</span></code>, the compiler-optimization-based SMT
+simplification toolkit in Lotus.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Solvers/SMT/TUNA/</span></code></p>
+<p><strong>Origin</strong>: <a class="reference external" href="https://dl.acm.org/doi/10.1145/3795879">https://dl.acm.org/doi/10.1145/3795879</a> (“Compiler
+Optimization-Based SMT Simplifications: An In-Depth Study”)</p>
+<p>TUNA speeds up SMT solving by translating SMT-LIB 2 formulas to LLVM IR,
+applying LLVM optimization passes, and translating the optimized IR back to
+SMT-LIB 2. The simplified formula is typically faster to solve than the
+original. A genetic algorithm (GA) searches for the best combination of LLVM
+passes for a given benchmark dataset.</p>
+<p>TUNA is a standalone subproject. It targets LLVM 16 (Lotus itself builds
+against LLVM 14) and is not built by the default Lotus build. See
+<span class="xref std std-ref">tuna-build</span> below.</p>
+</section>
+<section id="components">
+<h2>Components<a class="headerlink" href="#components" title="Link to this heading"></a></h2>
+<section id="tuna-opt">
+<h3>TUNA-Opt<a class="headerlink" href="#tuna-opt" title="Link to this heading"></a></h3>
+<p>The core optimization framework under <code class="docutils literal notranslate"><span class="pre">lib/Solvers/SMT/TUNA/TUNA-Opt/</span></code>.
+It contains two modules:</p>
+<ul class="simple">
+<li><p><strong>SMT2LLVM</strong> (<code class="docutils literal notranslate"><span class="pre">TUNA-Opt/SMT2LLVM/</span></code>): a bidirectional SMT-LIB 2 to LLVM IR
+conversion toolkit, extended from <a class="reference external" href="https://github.com/TUNA-SMT/SLOT">SLOT</a>.
+Builds five command-line tools: <code class="docutils literal notranslate"><span class="pre">slot</span></code>, <code class="docutils literal notranslate"><span class="pre">fastslot</span></code>, <code class="docutils literal notranslate"><span class="pre">smt2llvm</span></code>,
+<code class="docutils literal notranslate"><span class="pre">llvm2smt</span></code>, and <code class="docutils literal notranslate"><span class="pre">llvm2feat</span></code>.</p></li>
+<li><p><strong>GA</strong> (<code class="docutils literal notranslate"><span class="pre">TUNA-Opt/GA/</span></code>): a genetic algorithm optimizer that searches for
+the optimal LLVM pass combination for a dataset of SMT files.</p></li>
+</ul>
+</section>
+<section id="tuna-learn">
+<h3>TUNA-Learn<a class="headerlink" href="#tuna-learn" title="Link to this heading"></a></h3>
+<p>A planned machine-learning-based optimization framework under
+<code class="docutils literal notranslate"><span class="pre">lib/Solvers/SMT/TUNA/TUNA-Learn/</span></code>. Currently a placeholder with no
+implementation.</p>
+</section>
+</section>
+<section id="build">
+<h2>Build<a class="headerlink" href="#build" title="Link to this heading"></a></h2>
+<p id="tuna-build">TUNA is not part of the default Lotus build. Build it from its own CMake
+project:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>lib/Solvers/SMT/TUNA/TUNA-Opt/SMT2LLVM
+mkdir<span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>build
+cmake<span class="w"> </span>..
+make<span class="w"> </span>-j<span class="w"> </span><span class="m">32</span>
+</pre></div>
+</div>
+<p>The build produces five binaries in <code class="docutils literal notranslate"><span class="pre">build/</span></code>: <code class="docutils literal notranslate"><span class="pre">slot</span></code>, <code class="docutils literal notranslate"><span class="pre">fastslot</span></code>,
+<code class="docutils literal notranslate"><span class="pre">smt2llvm</span></code>, <code class="docutils literal notranslate"><span class="pre">llvm2smt</span></code>, and <code class="docutils literal notranslate"><span class="pre">llvm2feat</span></code>.</p>
+<p><strong>Dependencies</strong>: LLVM 16.0.0, Z3 4.12.1, CMake + Ninja, Python 3. The
+dependency paths are configured in <code class="docutils literal notranslate"><span class="pre">SMT2LLVM/CMakeLists.txt</span></code>
+(<code class="docutils literal notranslate"><span class="pre">LLVM_PATH</span></code> and <code class="docutils literal notranslate"><span class="pre">Z3_PATH</span></code>).</p>
+</section>
+<section id="tools">
+<h2>Tools<a class="headerlink" href="#tools" title="Link to this heading"></a></h2>
+<section id="id1">
+<h3>slot<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<p>Full pipeline: SMT-LIB 2 to LLVM IR, optimize, LLVM IR back to SMT-LIB 2.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./slot<span class="w"> </span>-m<span class="w"> </span>-s<span class="w"> </span>problem.smt2<span class="w"> </span>-lu<span class="w"> </span>before.ll<span class="w"> </span>-lo<span class="w"> </span>after.ll<span class="w"> </span>-o<span class="w"> </span>simplified.smt2<span class="w"> </span>-p<span class="w"> </span>../passes-run.txt
+</pre></div>
+</div>
+<p>Options (verified in <code class="docutils literal notranslate"><span class="pre">src/tools/main.cpp</span></code>):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-s</span> <span class="pre">&lt;file&gt;</span></code>: input SMT-LIB 2 file (required)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-o</span> <span class="pre">&lt;file&gt;</span></code>: output SMT-LIB 2 file (default: stdout)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-lu</span> <span class="pre">&lt;file&gt;</span></code>: write LLVM IR before optimization</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-lo</span> <span class="pre">&lt;file&gt;</span></code>: write LLVM IR after optimization</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-t</span> <span class="pre">&lt;file&gt;</span></code>: append timing statistics (CSV)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-m</span></code>: convert constant right-shifts to multiplications</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-p</span> <span class="pre">&lt;file&gt;</span></code>: read the LLVM pass list from a file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-h</span></code>: show help</p></li>
+</ul>
+</section>
+<section id="fastslot">
+<h3>fastslot<a class="headerlink" href="#fastslot" title="Link to this heading"></a></h3>
+<p>Pass-file-driven pipeline for batch processing. Supports <code class="docutils literal notranslate"><span class="pre">-s</span></code>, <code class="docutils literal notranslate"><span class="pre">-o</span></code>,
+<code class="docutils literal notranslate"><span class="pre">-lu</span></code>, <code class="docutils literal notranslate"><span class="pre">-lo</span></code>, <code class="docutils literal notranslate"><span class="pre">-t</span></code>, <code class="docutils literal notranslate"><span class="pre">-m</span></code>, <code class="docutils literal notranslate"><span class="pre">-p</span></code>, and <code class="docutils literal notranslate"><span class="pre">-h</span></code>.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./fastslot<span class="w"> </span>-m<span class="w"> </span>-s<span class="w"> </span>input.smt2<span class="w"> </span>-o<span class="w"> </span>result.smt2<span class="w"> </span>-p<span class="w"> </span>../passes-run.txt
+</pre></div>
+</div>
+</section>
+<section id="smt2llvm">
+<h3>smt2llvm<a class="headerlink" href="#smt2llvm" title="Link to this heading"></a></h3>
+<p>Single-step SMT-LIB 2 to LLVM IR conversion.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./smt2llvm<span class="w"> </span>-s<span class="w"> </span>input.smt2<span class="w"> </span>-lu<span class="w"> </span>output.ll
+</pre></div>
+</div>
+</section>
+<section id="llvm2smt">
+<h3>llvm2smt<a class="headerlink" href="#llvm2smt" title="Link to this heading"></a></h3>
+<p>Single-step LLVM IR to SMT-LIB 2 conversion.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./llvm2smt<span class="w"> </span>-lo<span class="w"> </span>optimized.ll<span class="w"> </span>-o<span class="w"> </span>result.smt2
+</pre></div>
+</div>
+</section>
+<section id="llvm2feat">
+<h3>llvm2feat<a class="headerlink" href="#llvm2feat" title="Link to this heading"></a></h3>
+<p>Extracts program features (instruction counts, control flow, constant
+statistics, etc.) from LLVM IR.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./llvm2feat<span class="w"> </span>-lo<span class="w"> </span>input.ll<span class="w"> </span>-f<span class="w"> </span>./features/
+</pre></div>
+</div>
+</section>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<p>End-to-end SMT simplification:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./slot<span class="w"> </span>-m<span class="w"> </span>-s<span class="w"> </span>problem.smt2<span class="w"> </span>-o<span class="w"> </span>simplified.smt2<span class="w"> </span>-p<span class="w"> </span>../passes-run.txt
+</pre></div>
+</div>
+<p>Step-by-step with intermediate IR inspection:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./smt2llvm<span class="w"> </span>-s<span class="w"> </span>problem.smt2<span class="w"> </span>-lu<span class="w"> </span>before.ll
+opt<span class="w"> </span>-passes<span class="o">=</span><span class="s2">"instcombine,gvn"</span><span class="w"> </span>-S<span class="w"> </span>before.ll<span class="w"> </span>-o<span class="w"> </span>after.ll
+./llvm2smt<span class="w"> </span>-lo<span class="w"> </span>after.ll<span class="w"> </span>-o<span class="w"> </span>simplified.smt2
+</pre></div>
+</div>
+</section>
+<section id="pass-configuration-files">
+<h2>Pass Configuration Files<a class="headerlink" href="#pass-configuration-files" title="Link to this heading"></a></h2>
+<p>The pass lists live in <code class="docutils literal notranslate"><span class="pre">TUNA-Opt/SMT2LLVM/</span></code> and follow the LLVM new Pass
+Manager (<code class="docutils literal notranslate"><span class="pre">-passes=</span></code>) syntax:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>File</p></th>
+<th class="head"><p>Count</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">passes-slot-old.txt</span></code></p></td>
+<td><p>9</p></td>
+<td><p>Core passes used by the original SLOT</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">passes-run.txt</span></code></p></td>
+<td><p>41</p></td>
+<td><p>All currently supported meaningful passes</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">passes-filter.txt</span></code></p></td>
+<td><p>25</p></td>
+<td><p>Subset with clear optimization benefit</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">passes-useful.txt</span></code></p></td>
+<td><p>33</p></td>
+<td><p>Optimization-related passes</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">passes-16.txt</span></code></p></td>
+<td><p>80</p></td>
+<td><p>Base pass list available in LLVM 16</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">passes-all-llvm16.txt</span></code></p></td>
+<td><p>353</p></td>
+<td><p>Full LLVM 16 pass list</p></td>
+</tr>
+</tbody>
+</table>
+<p>See <code class="docutils literal notranslate"><span class="pre">TUNA-Opt/SMT2LLVM/FunctionPasses.md</span></code> for pass descriptions.</p>
+</section>
+<section id="ga-optimizer">
+<h2>GA Optimizer<a class="headerlink" href="#ga-optimizer" title="Link to this heading"></a></h2>
+<p>The GA under <code class="docutils literal notranslate"><span class="pre">TUNA-Opt/GA/</span></code> searches the boolean pass-enable space to
+minimize total pipeline time:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">SMT</span> <span class="o">-&gt;</span> <span class="n">smt2llvm</span> <span class="o">-&gt;</span> <span class="n">LLVM</span> <span class="n">IR</span> <span class="o">-&gt;</span> <span class="n">opt</span> <span class="p">(</span><span class="k">pass</span> <span class="n">combination</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LLVM</span> <span class="n">IR</span> <span class="o">-&gt;</span> <span class="n">llvm2smt</span> <span class="o">-&gt;</span> <span class="n">SMT</span> <span class="o">-&gt;</span> <span class="n">solver</span>
+</pre></div>
+</div>
+<p>Configure paths in <code class="docutils literal notranslate"><span class="pre">GA/config.yaml</span></code> (<code class="docutils literal notranslate"><span class="pre">slot_dir</span></code>, <code class="docutils literal notranslate"><span class="pre">llvm_dir</span></code>,
+<code class="docutils literal notranslate"><span class="pre">dataset_dir</span></code>, <code class="docutils literal notranslate"><span class="pre">smt_solver_path</span></code>, <code class="docutils literal notranslate"><span class="pre">output_csv_path</span></code>,
+<code class="docutils literal notranslate"><span class="pre">smac_log_output_directory</span></code>), then run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>lib/Solvers/SMT/TUNA/TUNA-Opt/GA
+python<span class="w"> </span>-m<span class="w"> </span>ga_optimizer
+</pre></div>
+</div>
+<p>The GA runs 32 iterations with a population size of 32 and 40 parallel
+processes. Pass combinations that beat the baseline solve time are written to
+<code class="docutils literal notranslate"><span class="pre">output_csv_path</span></code> in the format
+<code class="docutils literal notranslate"><span class="pre">file_relative_path,</span> <span class="pre">cost_time,</span> <span class="pre">&lt;pass1&gt;,</span> <span class="pre">&lt;pass2&gt;,</span> <span class="pre">...,</span> <span class="pre">status</span></code>.</p>
+<p>Optional post-processing scripts:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">delta_debugger</span></code>: prune redundant passes from the best
+combination, writing <code class="docutils literal notranslate"><span class="pre">Refine_&lt;original_filename&gt;.csv</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">phrase_time_counter</span></code>: compare total pipeline time across
+strategies (default solve, SLOT default passes, GA best, GA worst, <code class="docutils literal notranslate"><span class="pre">-O3</span></code>)</p></li>
+</ul>
+<p>Runtime logs go to <code class="docutils literal notranslate"><span class="pre">~/logs/RQ1/</span></code> (<code class="docutils literal notranslate"><span class="pre">rq1.info</span></code> and <code class="docutils literal notranslate"><span class="pre">rq1.error</span></code>).</p>
+</section>
+<section id="relationship-to-staub">
+<h2>Relationship to STAUB<a class="headerlink" href="#relationship-to-staub" title="Link to this heading"></a></h2>
+<p>STAUB rewrites unbounded SMT constraints into bounded encodings. Its bounded
+formulas can be translated to LLVM IR by TUNA’s <code class="docutils literal notranslate"><span class="pre">SMT2LLVM</span></code> tools. See
+<a class="reference internal" href="staub.html"><span class="doc">SMT Theory Arbitrage (STAUB)</span></a> for the STAUB flow.</p>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="staub.html"><span class="doc">SMT Theory Arbitrage (STAUB)</span></a> - bounded-theory conversion that feeds TUNA’s SMT2LLVM tools</p></li>
+<li><p><a class="reference internal" href="smt.html"><span class="doc">SMT (Satisfiability Modulo Theories)</span></a> - the SMT solver backend</p></li>
+<li><p><a class="reference internal" href="smtsampler.html"><span class="doc">SMT Samplers</span></a> - SMT model sampling utilities</p></li>
+<li><p><a class="reference internal" href="../tools/solver/index.html"><span class="doc">Solver Tools</span></a> - solver command-line front-ends</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="staub.html" class="btn btn-neutral float-left" title="SMT Theory Arbitrage (STAUB)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="stingx.html" class="btn btn-neutral float-right" title="Stingx — String Constraint Solver" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

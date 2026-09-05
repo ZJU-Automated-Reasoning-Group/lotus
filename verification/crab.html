@@ -1,0 +1,251 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRAB - Abstract Interpretation Library &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="CLAM – Abstract Interpretation Framework" href="clam.html" />
+    <link rel="prev" title="Verification Backend API" href="backend.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Verification</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="analysis.html">Verification Support Analyses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="backend.html">Verification Backend API</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">CRAB - Abstract Interpretation Library</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#repository-structure">Repository Structure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#build-configuration">Build Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#integration-with-lotus">Integration With Lotus</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="clam.html">CLAM – Abstract Interpretation Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="smack.html">SMACK Verification Frontend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sifa.html">Sifa</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seal.html">Seal — Symbolic Automata for Stateful Systems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="symabs-ai.html">SymAbsAI – Symbolic Abstraction + Abstract Interpretation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seahorn.html">SeaHorn Verification Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="failure_directed_trimming.html">Failure-Directed Trimming</a></li>
+<li class="toctree-l2"><a class="reference internal" href="frontend.html">Verification Frontend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transforms.html">Verification Transformation Passes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Verification</a></li>
+      <li class="breadcrumb-item active">CRAB - Abstract Interpretation Library</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/verification/crab.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="crab-abstract-interpretation-library">
+<h1>CRAB - Abstract Interpretation Library<a class="headerlink" href="#crab-abstract-interpretation-library" title="Link to this heading"></a></h1>
+<p>CRAB is the abstract interpretation library vendored in Lotus under
+<code class="docutils literal notranslate"><span class="pre">third-party/crab/</span></code>. It provides the core abstract domains, fixpoint
+engines, and CrabIR infrastructure that CLAM builds on.</p>
+<p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">third-party/crab/</span></code></p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>CRAB is a reusable C++ library for building static analyses over a CFG-based
+intermediate representation called CrabIR. In Lotus, it is primarily consumed
+through CLAM, but the library itself is worth documenting because it contains
+the underlying domain implementations, analyzers, and solver machinery.</p>
+<p><strong>Key Features</strong>:</p>
+<ul class="simple">
+<li><p>Numerical abstract domains such as intervals, congruences, zones, octagons,
+polyhedra, disjunctive intervals, and reduced products</p></li>
+<li><p>Forward, backward, and interprocedural analyses</p></li>
+<li><p>WTO-based fixpoint iteration with widening heuristics and thresholds</p></li>
+<li><p>CrabIR, a strongly typed three-address IR with assumptions and assertions</p></li>
+<li><p>Optional integration with Apron, Elina, LDD/Boxes, and PPLite</p></li>
+</ul>
+</section>
+<section id="repository-structure">
+<h2>Repository Structure<a class="headerlink" href="#repository-structure" title="Link to this heading"></a></h2>
+<p><strong>Headers</strong> (<code class="docutils literal notranslate"><span class="pre">third-party/crab/include/crab/</span></code>):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">cfg/</span></code> - CrabIR CFG definitions and utilities</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">domains/</span></code> - Abstract domains and supporting data structures</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">analysis/</span></code> - Forward, backward, dataflow, and interprocedural analyzers</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fixpoint/</span></code> - Fixpoint iterators, WTO support, and thresholds</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">transforms/</span></code> - IR-level transformations</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">support/</span></code> - Statistics, debugging, and OS helpers</p></li>
+</ul>
+<p><strong>Sources</strong> (<code class="docutils literal notranslate"><span class="pre">third-party/crab/lib/</span></code>):</p>
+<ul class="simple">
+<li><p>Core numeric and domain implementations such as intervals, congruences,
+wrapped intervals, symbolic terms, and region information</p></li>
+</ul>
+</section>
+<section id="build-configuration">
+<h2>Build Configuration<a class="headerlink" href="#build-configuration" title="Link to this heading"></a></h2>
+<p>CRAB is built with CMake and can be compiled standalone or as an embedded
+dependency.</p>
+<p><strong>Common options</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">CRAB_ENABLE_TESTS</span></code> - Build CRAB’s standalone test programs</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CRAB_BUILD_LIBS_SHARED</span></code> - Build shared libraries instead of static ones</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CRAB_USE_APRON</span></code> - Enable Apron-backed domains</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CRAB_USE_ELINA</span></code> - Enable Elina-backed domains</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CRAB_USE_LDD</span></code> - Enable Boxes/LDD domains</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CRAB_USE_PPLITE</span></code> - Enable PPLite-backed domains</p></li>
+</ul>
+<p><strong>Standalone build</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mkdir<span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>build
+cmake<span class="w"> </span>..<span class="w"> </span>-DCRAB_ENABLE_TESTS<span class="o">=</span>ON
+cmake<span class="w"> </span>--build<span class="w"> </span>.
+</pre></div>
+</div>
+</section>
+<section id="integration-with-lotus">
+<h2>Integration With Lotus<a class="headerlink" href="#integration-with-lotus" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>CLAM uses CRAB for abstract domains, fixpoint solving, and its internal IR</p></li>
+<li><p>Lotus documents CLAM as the primary user-facing verifier, while CRAB is the
+lower-level analysis library underneath it</p></li>
+<li><p>CRAB’s domain choices surface in CLAM flags such as <code class="docutils literal notranslate"><span class="pre">--crab-dom</span></code></p></li>
+</ul>
+<p>If you are interested in running analyses directly from Lotus, start with
+<a class="reference internal" href="clam.html"><span class="doc">CLAM – Abstract Interpretation Framework</span></a>. If you need to understand where the domains and abstract
+interpretation machinery come from, CRAB is the relevant component.</p>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="clam.html"><span class="doc">CLAM – Abstract Interpretation Framework</span></a> - Lotus verifier built on top of CRAB</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">third-party/crab/README.md</span></code> - Upstream-oriented build and usage notes</p></li>
+<li><p><a class="reference external" href="https://github.com/seahorn/crab/wiki/Home">https://github.com/seahorn/crab/wiki/Home</a> - CRAB project documentation</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="backend.html" class="btn btn-neutral float-left" title="Verification Backend API" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="clam.html" class="btn btn-neutral float-right" title="CLAM – Abstract Interpretation Framework" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

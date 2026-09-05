@@ -1,0 +1,476 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alias Analysis Tools &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="CFL Tools" href="../cfl/index.html" />
+    <link rel="prev" title="Command-Line Tools" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Lotus
+              <img src="../../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Command-Line Tools</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#tools-by-subdirectory">Tools by Subdirectory</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Alias Analysis Tools</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#sparrowaa-lotus-alias-sparrow-aa">SparrowAA (lotus-alias-sparrow-aa)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tpa-lotus-alias-tpa">TPA (lotus-alias-tpa)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#aserpta-lotus-alias-aser-aa">AserPTA (lotus-alias-aser-aa)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#flowsensitivepta-lotus-alias-fspta">FlowSensitivePTA (lotus-alias-fspta)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dfpa-dfpa">DFPA (dfpa)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#call-graph-construction-lotus-alias-call-graph">Call Graph Construction (lotus-alias-call-graph)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dyckaa-lotus-alias-dyck-aa">DyckAA (lotus-alias-dyck-aa)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lotusaa-lotus-alias-lotus-aa">LotusAA (lotus-alias-lotus-aa)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#fpa-function-pointer-analysis">FPA (Function Pointer Analysis)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#sea-dsa-tools">Sea-DSA Tools</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dynaa-dynamic-alias-analysis">DynAA (Dynamic Alias Analysis)</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../cfl/index.html">CFL Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../checker/index.html">Checker Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../dataflow/index.html">Dataflow Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ir/index.html">PDG Query – Program Dependence Graph Queries</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optimization/index.html">Optimization Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../solver/index.html">Solver Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../verifier/index.html">Verifier Tools</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#scripting-tools">Scripting Tools</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Command-Line Tools</a></li>
+      <li class="breadcrumb-item active">Alias Analysis Tools</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/tools/alias/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="alias-analysis-tools">
+<h1>Alias Analysis Tools<a class="headerlink" href="#alias-analysis-tools" title="Link to this heading"></a></h1>
+<p>This page documents the command-line tools under <code class="docutils literal notranslate"><span class="pre">tools/alias/</span></code>. For the
+underlying algorithms and architecture, see <a class="reference internal" href="../../alias/alias_analysis.html"><span class="doc">Alias Analysis Components</span></a>.</p>
+<section id="sparrowaa-lotus-alias-sparrow-aa">
+<h2>SparrowAA (lotus-alias-sparrow-aa)<a class="headerlink" href="#sparrowaa-lotus-alias-sparrow-aa" title="Link to this heading"></a></h2>
+<p>Inclusion-based points-to analysis (flow-insensitive, context-insensitive, context-sensitive).</p>
+<p><strong>Binary</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-alias-sparrow-aa</span></code>
+<strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">tools/alias/lotus-alias-sparrow-aa.cpp</span></code></p>
+<p><strong>Usage</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-alias-sparrow-aa<span class="w"> </span><span class="o">[</span>options<span class="o">]</span><span class="w"> </span>input.bc
+</pre></div>
+</div>
+<p><strong>Notes</strong>:</p>
+<ul class="simple">
+<li><p>Flow-insensitive, context-insensitive, context-sensitive</p></li>
+<li><p>No on-the-fly call graph construction</p></li>
+<li><p>Good default when you need quick alias information</p></li>
+<li><p>Note: this tool have some redundancies with aserpta, and reuses some header files from it (from context abstraction).</p></li>
+</ul>
+</section>
+<section id="tpa-lotus-alias-tpa">
+<h2>TPA (lotus-alias-tpa)<a class="headerlink" href="#tpa-lotus-alias-tpa" title="Link to this heading"></a></h2>
+<p>Flow- and context-sensitive pointer analysis using semi-sparse representation
+with k-limiting support.</p>
+<p><strong>Binary</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-alias-tpa</span></code>
+<strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">tools/alias/lotus-alias-tpa.cpp</span></code></p>
+<p><strong>Usage</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-alias-tpa<span class="w"> </span><span class="o">[</span>options<span class="o">]</span><span class="w"> </span>input.bc
+</pre></div>
+</div>
+<p><strong>Key Options</strong> (see also <a class="reference internal" href="../../alias/tpa.html"><span class="doc">TPA: Flow- and Contex-Sensitive Pointer Analysis</span></a>):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-ext</span> <span class="pre">&lt;file&gt;</span></code> – External pointer table file for modeling library functions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-no-prepass</span></code> – Skip TPA IR normalization prepasses (GEP expansion, etc.)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-prepass-out</span> <span class="pre">&lt;file&gt;</span></code> – Write module after prepass to file (suffix .ll or .bc)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-cfg-dot-dir</span> <span class="pre">&lt;dir&gt;</span></code> – Write per-function pointer CFGs as .dot files into directory</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-print-pts</span></code> – Print points-to sets for pointers materialized by the analysis</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-print-indirect-calls</span></code> – Print resolved targets for each indirect call</p></li>
+</ul>
+<p><strong>Characteristics</strong>:</p>
+<ul class="simple">
+<li><p>Flow-sensitive: tracks control flow within functions</p></li>
+<li><p>Context-sensitive: supports k-limiting and adaptive context strategies</p></li>
+<li><p>Semi-sparse representation: only analyzes def-use chains, not all program points</p></li>
+<li><p>Field-sensitive memory model: models individual struct fields and array elements</p></li>
+</ul>
+<p><strong>Examples</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Basic analysis</span>
+./build/bin/lotus-alias-tpa<span class="w"> </span>input.bc
+
+<span class="c1"># With external pointer table and output CFG graphs</span>
+./build/bin/lotus-alias-tpa<span class="w"> </span>-ext<span class="w"> </span>ext_table.txt<span class="w"> </span>-cfg-dot-dir<span class="w"> </span>cfgs/<span class="w"> </span>input.bc
+
+<span class="c1"># Print points-to sets and indirect call targets</span>
+./build/bin/lotus-alias-tpa<span class="w"> </span>-print-pts<span class="w"> </span>-print-indirect-calls<span class="w"> </span>input.bc
+
+<span class="c1"># Skip prepass and save preprocessed IR</span>
+./build/bin/lotus-alias-tpa<span class="w"> </span>-no-prepass<span class="w"> </span>-prepass-out<span class="w"> </span>preprocessed.bc<span class="w"> </span>input.bc
+</pre></div>
+</div>
+</section>
+<section id="aserpta-lotus-alias-aser-aa">
+<h2>AserPTA (lotus-alias-aser-aa)<a class="headerlink" href="#aserpta-lotus-alias-aser-aa" title="Link to this heading"></a></h2>
+<p>High-performance constraint-based pointer analysis with multiple context
+sensitivities and solver algorithms.</p>
+<p><strong>Binary</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-alias-aser-aa</span></code>
+<strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">tools/alias/lotus-alias-aser-aa.cpp</span></code></p>
+<p><strong>Usage</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-alias-aser-aa<span class="w"> </span><span class="o">[</span>options<span class="o">]</span><span class="w"> </span>input.bc
+</pre></div>
+</div>
+<p><strong>Key Options</strong> (see also <a class="reference internal" href="../../alias/alias_analysis.html"><span class="doc">Alias Analysis Components</span></a>):</p>
+<ul class="simple">
+<li><p><strong>Analysis mode</strong>:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">-analysis-mode=ci</span></code> – Context-insensitive (default)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-analysis-mode=1-cfa</span></code> – 1-call-site sensitive</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-analysis-mode=2-cfa</span></code> – 2-call-site sensitive</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-analysis-mode=origin</span></code> – Origin-sensitive (thread creation)</p></li>
+</ul>
+</li>
+<li><p><strong>Solver</strong>:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">-solver=basic</span></code> – PartialUpdateSolver</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-solver=wave</span></code> – WavePropagation with SCC detection (default)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-solver=deep</span></code> – DeepPropagation with cycle-aware propagation</p></li>
+</ul>
+</li>
+<li><p><strong>Other</strong>:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">-field-sensitive[=true|false]</span></code> – Field-sensitive memory model</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-dump-stats</span></code> – Print analysis statistics</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-consgraph</span></code> – Dump constraint graph (DOT)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-dump-pts</span></code> – Dump points-to sets</p></li>
+</ul>
+</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1-CFA with deep solver</span>
+./build/bin/lotus-alias-aser-aa<span class="w"> </span>-analysis-mode<span class="o">=</span><span class="m">1</span>-cfa<span class="w"> </span>-solver<span class="o">=</span>deep<span class="w"> </span>input.bc
+</pre></div>
+</div>
+</section>
+<section id="flowsensitivepta-lotus-alias-fspta">
+<h2>FlowSensitivePTA (lotus-alias-fspta)<a class="headerlink" href="#flowsensitivepta-lotus-alias-fspta" title="Link to this heading"></a></h2>
+<p>Exhaustive sparse flow-sensitive pointer analysis. Builds the Lotus
+SVFG/MemorySSA from an ICFG and solves per-node memory <code class="docutils literal notranslate"><span class="pre">IN</span></code>/<code class="docutils literal notranslate"><span class="pre">OUT</span></code> state,
+with an optional object-versioned (<code class="docutils literal notranslate"><span class="pre">vfspta</span></code>) solver.</p>
+<p><strong>Binary</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-alias-fspta</span></code>
+<strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">tools/alias/lotus-alias-fspta.cpp</span></code></p>
+<p><strong>Usage</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-alias-fspta<span class="w"> </span><span class="o">[</span>options<span class="o">]</span><span class="w"> </span>input.bc
+</pre></div>
+</div>
+<p><strong>Key Options</strong> (see also <a class="reference internal" href="../../alias/flowsensitive.html"><span class="doc">Flow-Sensitive Pointer Analysis</span></a>):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--analysis=fspta|vfspta</span></code> – Conventional sparse flow-sensitive analysis (default) or object-versioned analysis</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--points-to-sets=mutable|hash-consed</span></code> – Points-to set backend</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--memory-partition=distinct|intra-disjoint|inter-disjoint</span></code> – MemorySSA region partition strategy</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--print-pts</span></code> – Print top-level points-to results</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--print-memory</span></code> – Print non-empty sparse memory facts</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--dump-stats</span></code> – Print solver statistics (default on)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--dump-svfg=&lt;file&gt;</span></code> – Write the initialized SVFG as a DOT file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--validate-annotations</span></code> – Validate <code class="docutils literal notranslate"><span class="pre">__aser_alias__</span></code>/<code class="docutils literal notranslate"><span class="pre">__aser_no_alias__</span></code> calls</p></li>
+</ul>
+<p><strong>Examples</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Conventional sparse flow-sensitive analysis</span>
+./build/bin/lotus-alias-fspta<span class="w"> </span>input.bc
+
+<span class="c1"># Object-versioned analysis with points-to output</span>
+./build/bin/lotus-alias-fspta<span class="w"> </span>input.bc<span class="w"> </span>--analysis<span class="o">=</span>vfspta<span class="w"> </span>--print-pts
+
+<span class="c1"># Hash-consed points-to sets and SVFG dump</span>
+./build/bin/lotus-alias-fspta<span class="w"> </span>input.bc<span class="w"> </span>--points-to-sets<span class="o">=</span>hash-consed<span class="w"> </span>--dump-svfg<span class="o">=</span>fspta.dot
+</pre></div>
+</div>
+</section>
+<section id="dfpa-dfpa">
+<h2>DFPA (dfpa)<a class="headerlink" href="#dfpa-dfpa" title="Link to this heading"></a></h2>
+<p>Demand-refined function-pointer analysis for indirect-call resolution.
+The DFPA library is still available (<code class="docutils literal notranslate"><span class="pre">lib/Alias/Specialized/DFPA/</span></code>) but
+the standalone <code class="docutils literal notranslate"><span class="pre">dfpa</span></code> CLI frontend has been removed from the current tree.
+Use <code class="docutils literal notranslate"><span class="pre">lotus-alias-call-graph</span></code> with <code class="docutils literal notranslate"><span class="pre">-cg-type=dfpa</span></code> to invoke DFPA
+indirect-call resolution programmatically.</p>
+</section>
+<section id="call-graph-construction-lotus-alias-call-graph">
+<h2>Call Graph Construction (lotus-alias-call-graph)<a class="headerlink" href="#call-graph-construction-lotus-alias-call-graph" title="Link to this heading"></a></h2>
+<p>Unified call-graph construction tool that can drive several underlying pointer
+or call-graph analyses.</p>
+<p><strong>Binary</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-alias-call-graph</span></code>
+<strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">tools/alias/lotus-alias-call-graph.cpp</span></code></p>
+<p><strong>Usage</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-alias-call-graph<span class="w"> </span>-cg-type<span class="o">=</span>dyck<span class="w"> </span>input.bc
+./build/bin/lotus-alias-call-graph<span class="w"> </span>-cg-type<span class="o">=</span>dfpa<span class="w"> </span>-emit-cg-as-json<span class="w"> </span>input.bc
+</pre></div>
+</div>
+<p>Key options:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-cg-type=dyck|lotus|dfpa|fpa-flta|fpa-mlta|fpa-mltadf|fpa-kelp|aserpta-ci|aserpta-1cfa|aserpta-2cfa</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-emit-cg-as-dot</span></code> or <code class="docutils literal notranslate"><span class="pre">-emit-cg-as-json</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-o</span> <span class="pre">&lt;file&gt;</span></code> – output destination</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-S</span></code> – compute graph statistics</p></li>
+</ul>
+</section>
+<section id="dyckaa-lotus-alias-dyck-aa">
+<h2>DyckAA (lotus-alias-dyck-aa)<a class="headerlink" href="#dyckaa-lotus-alias-dyck-aa" title="Link to this heading"></a></h2>
+<p>Unification-based alias analysis using Dyck-CFL reachability.</p>
+<p><strong>Binary</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-alias-dyck-aa</span></code>
+<strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">tools/alias/lotus-alias-dyck-aa.cpp</span></code></p>
+<p><strong>Usage</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-alias-dyck-aa<span class="w"> </span><span class="o">[</span>options<span class="o">]</span><span class="w"> </span>input.bc
+</pre></div>
+</div>
+<p><strong>Key Options</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-print-alias-set-info</span></code> – Print alias sets and relations (DOT)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-count-fp</span></code> – Count possible targets for each function pointer</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-dot-dyck-callgraph</span></code> – Generate call graph from alias results</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-no-function-type-check</span></code> – Disable function type compatibility checking</p></li>
+</ul>
+<p><strong>Typical Use</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Dump alias sets and Dyck-based call graph</span>
+./build/bin/lotus-alias-dyck-aa<span class="w"> </span>-print-alias-set-info<span class="w"> </span>-dot-dyck-callgraph<span class="w"> </span>input.bc
+</pre></div>
+</div>
+</section>
+<section id="lotusaa-lotus-alias-lotus-aa">
+<h2>LotusAA (lotus-alias-lotus-aa)<a class="headerlink" href="#lotusaa-lotus-alias-lotus-aa" title="Link to this heading"></a></h2>
+<p>Lotus-specific, flow-sensitive and field-sensitive pointer analysis with
+on-the-fly call graph construction.</p>
+<p><strong>Binary</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-alias-lotus-aa</span></code>
+<strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">tools/alias/lotus-alias-lotus-aa.cpp</span></code></p>
+<p><strong>Usage</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-alias-lotus-aa<span class="w"> </span><span class="o">[</span>options<span class="o">]</span><span class="w"> </span>input.bc
+</pre></div>
+</div>
+<p><strong>Characteristics</strong>:</p>
+<ul class="simple">
+<li><p>Flow-sensitive intra-procedural analysis</p></li>
+<li><p>Inter-procedural summarization and iterative call graph refinement</p></li>
+<li><p>Designed for high precision on smaller/medium programs</p></li>
+</ul>
+</section>
+<section id="fpa-function-pointer-analysis">
+<h2>FPA (Function Pointer Analysis)<a class="headerlink" href="#fpa-function-pointer-analysis" title="Link to this heading"></a></h2>
+<p>Function pointer analysis toolbox (FLTA, MLTA, MLTADF, KELP) for resolving
+indirect calls.</p>
+<p><strong>Binary</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-alias-fpa</span></code>
+<strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">tools/alias/lotus-alias-fpa.cpp</span></code></p>
+<p><strong>Usage</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-alias-fpa<span class="w"> </span><span class="o">[</span>options<span class="o">]</span><span class="w"> </span>input.bc
+</pre></div>
+</div>
+<p><strong>Key Options</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-analysis-type=&lt;N&gt;</span></code>:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">1</span></code> – FLTA</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">2</span></code> – MLTA</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">3</span></code> – MLTADF</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">4</span></code> – KELP (USENIX Security’24)</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-max-type-layer=&lt;N&gt;</span></code> – Maximum type layer for MLTA (default: 10)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-debug</span></code> – Enable debug output</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-output-file=&lt;path&gt;</span></code> – Output file (&quot;cout&quot; for stdout)</p></li>
+</ul>
+<p><strong>Example</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># KELP-based function pointer analysis</span>
+./build/bin/lotus-alias-fpa<span class="w"> </span>-analysis-type<span class="o">=</span><span class="m">4</span><span class="w"> </span>-debug<span class="w"> </span>input.bc
+</pre></div>
+</div>
+</section>
+<section id="sea-dsa-tools">
+<h2>Sea-DSA Tools<a class="headerlink" href="#sea-dsa-tools" title="Link to this heading"></a></h2>
+<p>Sea-DSA-based memory graph construction and analysis.</p>
+<p><strong>Binaries</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">lotus-alias-sea-dsa-dg</span></code> – Simple Sea-DSA driver</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lotus-alias-seadsa-tool</span></code> – Advanced Sea-DSA analysis tool</p></li>
+</ul>
+<p><strong>Locations</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">tools/alias/lotus-alias-sea-dsa-dg.cpp</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tools/alias/lotus-alias-seadsa-tool.cpp</span></code></p></li>
+</ul>
+<p><strong>Usage</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Basic memory graph generation</span>
+./build/bin/lotus-alias-sea-dsa-dg<span class="w"> </span>--sea-dsa-dot<span class="w"> </span>input.bc
+
+<span class="c1"># Advanced analysis with DOT output directory</span>
+./build/bin/lotus-alias-seadsa-tool<span class="w"> </span>--sea-dsa-dot<span class="w"> </span>--outdir<span class="o">=</span>results/<span class="w"> </span>input.bc
+</pre></div>
+</div>
+<p><strong>Key Options</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--sea-dsa-dot</span></code> – Generate DOT memory graphs</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--sea-dsa-callgraph-dot</span></code> – Generate call graph DOT (if enabled)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--outdir</span> <span class="pre">&lt;DIR&gt;</span></code> – Output directory for generated artifacts</p></li>
+</ul>
+</section>
+<section id="dynaa-dynamic-alias-analysis">
+<h2>DynAA (Dynamic Alias Analysis)<a class="headerlink" href="#dynaa-dynamic-alias-analysis" title="Link to this heading"></a></h2>
+<p>Dynamic checker that validates static alias analyses against runtime behavior.</p>
+<p><strong>Binaries</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">dynaa-instrument</span></code> – Instrument program to log pointer behavior</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dynaa-check</span></code> – Compare runtime logs against static AA</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dynaa-log-dump</span></code> – Dump binary logs to readable format</p></li>
+</ul>
+<p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">tools/alias/dynaa/</span></code></p>
+<p><strong>Typical Workflow</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1. Compile to LLVM bitcode</span>
+clang<span class="w"> </span>-emit-llvm<span class="w"> </span>-c<span class="w"> </span>example.cpp<span class="w"> </span>-o<span class="w"> </span>example.bc
+
+<span class="c1"># 2. Instrument the bitcode</span>
+./build/bin/dynaa-instrument<span class="w"> </span>example.bc<span class="w"> </span>-o<span class="w"> </span>example.inst.bc
+
+<span class="c1"># 3. Build and run the instrumented binary</span>
+clang<span class="w"> </span>example.inst.bc<span class="w"> </span>build/libRuntime.a<span class="w"> </span>-o<span class="w"> </span>example.inst
+<span class="nv">LOG_DIR</span><span class="o">=</span>logs/<span class="w"> </span>./example.inst
+
+<span class="c1"># 4. Check static analysis (e.g., basic-aa) against runtime log</span>
+./build/bin/dynaa-check<span class="w"> </span>example.bc<span class="w"> </span>logs/pts.log<span class="w"> </span>basic-aa
+
+<span class="c1"># 5. Optionally dump the log</span>
+./build/bin/dynaa-log-dump<span class="w"> </span>logs/pts.log
+</pre></div>
+</div>
+<p><strong>Use Cases</strong>:</p>
+<ul class="simple">
+<li><p>Validate soundness/precision of a static alias analysis</p></li>
+<li><p>Investigate mismatches between static and dynamic behavior</p></li>
+<li><p>Support research on alias analysis accuracy</p></li>
+</ul>
+<p>See also the detailed description in <code class="docutils literal notranslate"><span class="pre">tools/alias/dynaa/README.md</span></code>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="Command-Line Tools" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../cfl/index.html" class="btn btn-neutral float-right" title="CFL Tools" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

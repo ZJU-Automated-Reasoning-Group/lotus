@@ -1,0 +1,254 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sea-DSA — Memory Graph AA &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="FPA — Function Pointer Analyses (FLTA/MLTA/MLTADF/KELP)" href="fpa.html" />
+    <link rel="prev" title="DyckAA — Dyck-CFL Analysis" href="dyckaa.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Alias Analysis</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="alias_analysis.html">Alias Analysis Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="allocaa.html">AllocAA — Allocation-Based AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sparrowaa.html">Sparrow Pointer Analysis — Inclusion AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aserpta.html">AserPTA — Pointer Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cclyzeraa.html">CclyzerAA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dda.html">DDA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dfpa.html">DFPA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dyckaa.html">DyckAA — Dyck-CFL Analysis</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Sea-DSA — Memory Graph AA</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#memory-graphs">Memory Graphs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#usage">Usage</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#lotus-alias-sea-dsa-dg">lotus-alias-sea-dsa-dg</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lotus-alias-seadsa-tool">lotus-alias-seadsa-tool</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="fpa.html">FPA — Function Pointer Analyses (FLTA/MLTA/MLTADF/KELP)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flowsensitive.html">Flow-Sensitive Pointer Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lotusaa.html">LotusAA — Lotus AA Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="underapproxaa.html">UnderApproxAA — Must-Alias Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dynaa.html">DynAA — Dynamic Alias AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html">Strict Relations Alias Analysis — Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#vssa-ssi-transformation">1. vSSA / SSI Transformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#symbolic-range-analysis">2. Symbolic Range Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#strict-inequality-construction">3. Strict-Inequality Construction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#constraint-propagation-solver">4. Constraint Propagation Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#alias-disambiguation-final-decision">5. Alias Disambiguation (Final Decision)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#pdg-memory-node-reduction-applicability">6. PDG Memory-Node Reduction (Applicability)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#summary-of-properties">Summary of Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sraa.html#end-of-document">End of document.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metrics.html">Pointer Analysis Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ptsset.html">Points-To Set Backends</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spec.html">Alias Specification Manager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tpa.html">TPA: Flow- and Contex-Sensitive Pointer Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="typequalifier.html">TypeQualifier</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Alias Analysis</a></li>
+      <li class="breadcrumb-item active">Sea-DSA — Memory Graph AA</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/alias/seadsa.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="sea-dsa-memory-graph-aa">
+<h1>Sea-DSA — Memory Graph AA<a class="headerlink" href="#sea-dsa-memory-graph-aa" title="Link to this heading"></a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>Sea-DSA is a <strong>context-sensitive, field-sensitive</strong> alias and memory analysis
+based on <strong>Data Structure Analysis (DSA)</strong>. It builds <strong>heap graphs</strong> that
+summarize program memory and supports modular, interprocedural reasoning.</p>
+<ul class="simple">
+<li><p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/Alias/UnificationBased/seadsa</span></code></p></li>
+<li><p><strong>Tools</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-alias-sea-dsa-dg</span></code>, <code class="docutils literal notranslate"><span class="pre">lotus-alias-seadsa-tool</span></code></p></li>
+<li><p><strong>Use Cases</strong>: Precise mod/ref information, call-graph construction,
+memory-shape reasoning</p></li>
+</ul>
+</section>
+<section id="memory-graphs">
+<h2>Memory Graphs<a class="headerlink" href="#memory-graphs" title="Link to this heading"></a></h2>
+<p>Sea-DSA represents memory as a graph where:</p>
+<ul class="simple">
+<li><p>Nodes correspond to <strong>memory objects</strong> (heap, stack, globals).</p></li>
+<li><p>Edges represent <strong>field</strong> and <strong>pointer</strong> relationships.</p></li>
+<li><p>Attributes encode properties such as singleton-ness, heap/stack origin,
+and mutation/escape information.</p></li>
+</ul>
+<p>Graphs can be built bottom-up, top-down, and globally, and then merged or
+refined through the analysis pipeline.</p>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-alias-sea-dsa-dg<span class="w"> </span>--sea-dsa-dot<span class="w"> </span>example.bc
+./build/bin/lotus-alias-seadsa-tool<span class="w"> </span>--sea-dsa-dot<span class="w"> </span>--outdir<span class="w"> </span>results/<span class="w"> </span>example.bc
+</pre></div>
+</div>
+<section id="lotus-alias-sea-dsa-dg">
+<h3>lotus-alias-sea-dsa-dg<a class="headerlink" href="#lotus-alias-sea-dsa-dg" title="Link to this heading"></a></h3>
+<p>A simple tool for generating memory graphs using Sea-DSA analysis.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-alias-sea-dsa-dg<span class="w"> </span><span class="o">[</span>options<span class="o">]</span><span class="w"> </span>&lt;input<span class="w"> </span>LLVM<span class="w"> </span>bitcode<span class="w"> </span>file&gt;
+</pre></div>
+</div>
+<p>Key options:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--sea-dsa-dot</span></code> – Generate DOT files visualizing the memory graphs</p></li>
+</ul>
+<p>This tool provides a straightforward interface to the Sea-DSA analysis for
+generating memory graphs that can be visualized using Graphviz.</p>
+</section>
+<section id="lotus-alias-seadsa-tool">
+<h3>lotus-alias-seadsa-tool<a class="headerlink" href="#lotus-alias-seadsa-tool" title="Link to this heading"></a></h3>
+<p>Advanced Sea-DSA analysis tool with comprehensive memory graph analysis
+capabilities.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/bin/lotus-alias-seadsa-tool<span class="w"> </span><span class="o">[</span>options<span class="o">]</span><span class="w"> </span>&lt;input<span class="w"> </span>LLVM<span class="w"> </span>bitcode<span class="w"> </span>file&gt;
+</pre></div>
+</div>
+<p>Key options:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--sea-dsa-dot</span></code> – Generate DOT files visualizing memory graphs</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--sea-dsa-callgraph-dot</span></code> – Generate DOT files of the complete call graph</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--outdir</span> <span class="pre">&lt;DIR&gt;</span></code> – Specify an output directory for generated files</p></li>
+</ul>
+<p>This tool provides advanced analysis capabilities for understanding memory usage
+patterns, pointer relationships, and potential memory-related issues in programs.</p>
+<p>Sea-DSA results are consumed by other analyses (e.g., mod/ref, verification
+tools) to obtain a precise view of heap structure and aliasing.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="dyckaa.html" class="btn btn-neutral float-left" title="DyckAA — Dyck-CFL Analysis" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="fpa.html" class="btn btn-neutral float-right" title="FPA — Function Pointer Analyses (FLTA/MLTA/MLTADF/KELP)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

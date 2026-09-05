@@ -1,0 +1,298 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SymAbsAI – Symbolic Abstraction + Abstract Interpretation &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="SeaHorn – Verification Framework" href="../seahorn/index.html" />
+    <link rel="prev" title="Sifa Tool" href="../sifa/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Lotus
+              <img src="../../../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">Command-Line Tools</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html#tools-by-subdirectory">Tools by Subdirectory</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../../alias/index.html">Alias Analysis Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../cfl/index.html">CFL Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../checker/index.html">Checker Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../dataflow/index.html">Dataflow Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../ir/index.html">PDG Query – Program Dependence Graph Queries</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optimization/index.html">Optimization Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../solver/index.html">Solver Tools</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html">Verifier Tools</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../index.html#clam-numerical-abstract-interpretation">CLAM – Numerical Abstract Interpretation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../index.html#symabsai-symbolic-abstraction-abstract-interpretation">SymAbsAI – Symbolic Abstraction + Abstract Interpretation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../index.html#sifa-symbolic-interpretation-with-fluid-abstractions">Sifa – Symbolic Interpretation with Fluid Abstractions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../index.html#seahorn-verification-framework">SeaHorn – Verification Framework</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="../index.html#horn-ice-chc-verification-with-learning">Horn-ICE – CHC Verification with Learning</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#scripting-tools">Scripting Tools</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Command-Line Tools</a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Verifier Tools</a></li>
+      <li class="breadcrumb-item active">SymAbsAI – Symbolic Abstraction + Abstract Interpretation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/tools/verifier/symabs-ai/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="symabsai-symbolic-abstraction-abstract-interpretation">
+<h1>SymAbsAI – Symbolic Abstraction + Abstract Interpretation<a class="headerlink" href="#symabsai-symbolic-abstraction-abstract-interpretation" title="Link to this heading"></a></h1>
+<p>SymAbsAI is a framework for static program analysis using symbolic abstraction
+to provide a flexible interface for designing program analyses in a
+compositional way.</p>
+<p><strong>Binary</strong>: <code class="docutils literal notranslate"><span class="pre">lotus-verify-symabs-ai</span></code>
+<strong>Source</strong>: <code class="docutils literal notranslate"><span class="pre">tools/verifier/symabs-ai/lotus-verify-symabs-ai.cpp</span></code></p>
+<p>For the underlying framework and API documentation, see <a class="reference internal" href="../../../verification/symabs-ai.html"><span class="doc">SymAbsAI – Symbolic Abstraction + Abstract Interpretation</span></a>.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>SymAbsAI provides a command-line tool for running abstract interpretation
+analyses on LLVM bitcode. It supports multiple abstract domains and fragment
+decomposition strategies for scalable analysis.</p>
+<p><strong>Key features</strong>:</p>
+<ul class="simple">
+<li><p>Multiple abstract domains: intervals, numerical relations, constants, memory regions</p></li>
+<li><p>Configurable fragment strategies for balancing precision and performance</p></li>
+<li><p>Configuration file support for reproducible analyses</p></li>
+<li><p>Integration with Z3 for symbolic reasoning</p></li>
+</ul>
+</section>
+<section id="quick-start">
+<h2>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading"></a></h2>
+<p><strong>Basic usage</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Analyze all functions</span>
+./build/bin/lotus-verify-symabs-ai<span class="w"> </span>example.bc
+
+<span class="c1"># Analyze specific function</span>
+./build/bin/lotus-verify-symabs-ai<span class="w"> </span>--function<span class="o">=</span>foo<span class="w"> </span>example.bc
+
+<span class="c1"># Use a configuration file</span>
+./build/bin/lotus-verify-symabs-ai<span class="w"> </span>--config<span class="w"> </span>config/symabs-ai/01_const_function.conf<span class="w"> </span>example.bc
+</pre></div>
+</div>
+<p><strong>List available options</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># List available abstract domains</span>
+./build/bin/lotus-verify-symabs-ai<span class="w"> </span>--list-domains
+
+<span class="c1"># List available configuration files</span>
+./build/bin/lotus-verify-symabs-ai<span class="w"> </span>--list-configs
+
+<span class="c1"># List functions in a module</span>
+./build/bin/lotus-verify-symabs-ai<span class="w"> </span>--list-functions<span class="w"> </span>example.bc
+</pre></div>
+</div>
+</section>
+<section id="configuration-files">
+<h2>Configuration Files<a class="headerlink" href="#configuration-files" title="Link to this heading"></a></h2>
+<p>SymAbsAI uses configuration files (<code class="docutils literal notranslate"><span class="pre">.conf</span></code>) to specify analysis parameters.
+Configuration files are located in <code class="docutils literal notranslate"><span class="pre">config/symabs-ai/</span></code>.</p>
+<p><strong>Example configuration</strong>:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="c1"># Fragment decomposition strategy</span>
+<span class="na">FragmentDecomposition.Strategy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">Edges</span>
+
+<span class="c1"># Abstract domains (comma-separated for product domains)</span>
+<span class="na">AbstractDomain</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">SimpleConstProp, Interval</span>
+
+<span class="c1"># Memory model variant</span>
+<span class="na">MemoryModel.Variant</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">BlockModel</span>
+
+<span class="c1"># Analyzer settings</span>
+<span class="na">Analyzer.WideningDelay</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">20</span>
+
+<span class="c1"># Verbose output</span>
+<span class="na">SymAbsAIPass.Verbose</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">false</span>
+</pre></div>
+</div>
+<p><strong>Common configurations</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">01_const_function.conf</span></code> – Fast constant propagation (whole function)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">03_const_edge.conf</span></code> – Balanced constant propagation (loop-friendly)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">05_const_rel_edge.conf</span></code> – Constants + numerical relations</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">memsafety_sv16_body.conf</span></code> – Memory safety analysis (SV-COMP style)</p></li>
+</ul>
+</section>
+<section id="command-line-options">
+<h2>Command-Line Options<a class="headerlink" href="#command-line-options" title="Link to this heading"></a></h2>
+<p><strong>Domain selection</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--abstract-domain</span> <span class="pre">&lt;NAME&gt;</span></code> – Override domain from config file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--list-domains</span></code> – Show available abstract domains</p></li>
+</ul>
+<p><strong>Function selection</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--function</span> <span class="pre">&lt;NAME&gt;</span></code> – Analyze specific function only</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--list-functions</span></code> – List all functions in the module</p></li>
+</ul>
+<p><strong>Configuration</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--config</span> <span class="pre">&lt;FILE&gt;</span></code> – Use configuration file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--list-configs</span></code> – List available configuration files</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SYMBOLIC_ABSTRACTION_CONFIG=&lt;FILE&gt;</span></code> – Environment variable for default config</p></li>
+</ul>
+<p><strong>Output</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--verbose</span></code> – Enable detailed output</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--dump-cfg</span></code> – Dump control flow graph</p></li>
+</ul>
+</section>
+<section id="abstract-domains">
+<h2>Abstract Domains<a class="headerlink" href="#abstract-domains" title="Link to this heading"></a></h2>
+<p>Available abstract domains include:</p>
+<ul class="simple">
+<li><p><strong>SimpleConstProp</strong> – Constant propagation</p></li>
+<li><p><strong>Interval</strong> – Value range analysis</p></li>
+<li><p><strong>NumRels</strong> – Numerical relations (e.g., <code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">&lt;=</span> <span class="pre">y</span> <span class="pre">+</span> <span class="pre">5</span></code>)</p></li>
+<li><p><strong>Affine</strong> – Affine relationships</p></li>
+<li><p><strong>BitMask</strong> – Bit-level tracking</p></li>
+<li><p><strong>MemRange</strong> – Memory access bounds</p></li>
+<li><p><strong>MemRegions</strong> – Memory region analysis</p></li>
+</ul>
+<p>Multiple domains can be combined using product domains (comma-separated in config).</p>
+</section>
+<section id="fragment-strategies">
+<h2>Fragment Strategies<a class="headerlink" href="#fragment-strategies" title="Link to this heading"></a></h2>
+<p>Fragment decomposition strategies control where abstraction points are placed:</p>
+<ul class="simple">
+<li><p><strong>Function</strong> – Analyze whole function as one fragment (fastest, least precise)</p></li>
+<li><p><strong>Edges</strong> – Abstract after every basic block (most precise, slowest)</p></li>
+<li><p><strong>Headers</strong> – Abstract at loop headers (good balance)</p></li>
+<li><p><strong>Body</strong> – Abstract in loop bodies</p></li>
+<li><p><strong>Backedges</strong> – Abstract at loop backedges</p></li>
+</ul>
+<p>For more details on the framework architecture and API, see <a class="reference internal" href="../../../verification/symabs-ai.html"><span class="doc">SymAbsAI – Symbolic Abstraction + Abstract Interpretation</span></a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../sifa/index.html" class="btn btn-neutral float-left" title="Sifa Tool" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../seahorn/index.html" class="btn btn-neutral float-right" title="SeaHorn – Verification Framework" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

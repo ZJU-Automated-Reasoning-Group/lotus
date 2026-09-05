@@ -1,0 +1,330 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stg Staged Solving &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Sqid Efficient Relation Chaining" href="sqid.html" />
+    <link rel="prev" title="PEARL Multi-Derivation" href="pearl.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Context-Free Language Analysis</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="cfl_components.html">CFL Reachability Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="classical.html">Classical Grammar-Driven CFL Reachability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pocr_migration.html">POCR Migration Matrix</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="pearl_stg_sqid.html">Paper Engines: PEARL, Stg, and Sqid</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="pearl_stg_sqid.html#coverage-summary">Coverage summary</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="pearl.html">PEARL Multi-Derivation</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">Stg Staged Solving</a></li>
+<li class="toctree-l4"><a class="reference internal" href="sqid.html">Sqid Efficient Relation Chaining</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="csindex.html">Context-Sensitive Reachability Indexing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_unary.html">Exact Unary Interleaved Dyck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_staged_bounds.html">Interleaved-Dyck Staged Bounds</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_graph_reduction.html">Interleaved-Dyck Graph Reduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_mcfl.html">Multiple Context-Free Language Reachability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interleaved_dyck_mutual_refinement.html">Mutual Refinement for CFL Reachability</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Context-Free Language Analysis</a></li>
+          <li class="breadcrumb-item"><a href="pearl_stg_sqid.html">Paper Engines: PEARL, Stg, and Sqid</a></li>
+      <li class="breadcrumb-item active">Stg Staged Solving</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/cfl/stg.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="stg-staged-solving">
+<h1>Stg Staged Solving<a class="headerlink" href="#stg-staged-solving" title="Link to this heading"></a></h1>
+<section id="paper">
+<h2>Paper<a class="headerlink" href="#paper" title="Link to this heading"></a></h2>
+<p>Lotus implements Chenghang Shi, Haofeng Li, Jie Lu, and Lian Li,
+<em>Better Not Together: Staged Solving for Context-Free Language Reachability</em>,
+ISSTA 2024 (<a class="reference external" href="https://doi.org/10.1145/3650212.3680346">DOI 10.1145/3650212.3680346</a>).</p>
+</section>
+<section id="problem-and-key-idea">
+<h2>Problem and key idea<a class="headerlink" href="#problem-and-key-idea" title="Link to this heading"></a></h2>
+<p>Many program-analysis grammars combine two different problems:</p>
+<ul class="simple">
+<li><p>a small context-free part that matches paired program actions, such as
+calls and returns, field writes and reads, or address and dereference
+operations; and</p></li>
+<li><p>a much larger regular part that propagates ordinary control or data flow.</p></li>
+</ul>
+<p>A monolithic CFL solver repeatedly mixes both parts. Stg instead identifies a
+<strong>context-free pattern</strong> (CFP), decomposes the grammar into a context-free
+grammar <code class="docutils literal notranslate"><span class="pre">L</span></code> and a regular grammar <code class="docutils literal notranslate"><span class="pre">R</span></code>, and solves them in order:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">Phase</span> <span class="pre">L</span></code></dt><dd><p>Derive only CFP summary edges using a pattern-specific solver.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">Phase</span> <span class="pre">R</span></code></dt><dd><p>Treat those summaries as fixed labels and solve the remaining regular
+expressions using ordered propagation.</p>
+</dd>
+</dl>
+<p>The expensive context-free computation consequently operates on fewer edges,
+while regular reachability can exploit graph order that would not be stable
+during monolithic saturation.</p>
+</section>
+<section id="context-free-patterns-and-decomposition">
+<h2>Context-free patterns and decomposition<a class="headerlink" href="#context-free-patterns-and-decomposition" title="Link to this heading"></a></h2>
+<p>The paper defines a CFP as <code class="docutils literal notranslate"><span class="pre">S'</span> <span class="pre">-&gt;</span> <span class="pre">a</span> <span class="pre">E</span> <span class="pre">b</span></code>. <code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">b</span></code> are matched
+terminal actions, <code class="docutils literal notranslate"><span class="pre">E</span></code> is a regular expression over terminals and grammar
+variables, and <code class="docutils literal notranslate"><span class="pre">S'</span></code> names the summary relation.</p>
+<p>CFP-based decomposition performs four conceptual steps:</p>
+<ol class="arabic simple">
+<li><p>Introduce <code class="docutils literal notranslate"><span class="pre">S'</span> <span class="pre">-&gt;</span> <span class="pre">a</span> <span class="pre">Ec</span> <span class="pre">b</span></code> for each concrete CFP instance.</p></li>
+<li><p>In the remaining productions <code class="docutils literal notranslate"><span class="pre">PR</span></code>, replace occurrences of the concrete
+matched pattern with <code class="docutils literal notranslate"><span class="pre">S'</span></code> and rewrite every right-hand side as a regular
+expression over terminals and summary symbols.</p></li>
+<li><p>Substitute those regular expressions into the body of the <code class="docutils literal notranslate"><span class="pre">S'</span></code>
+production, removing dependencies from <code class="docutils literal notranslate"><span class="pre">L</span></code> back to variables in <code class="docutils literal notranslate"><span class="pre">R</span></code>.</p></li>
+<li><p>Solve <code class="docutils literal notranslate"><span class="pre">L</span> <span class="pre">=</span> <span class="pre">({S'},</span> <span class="pre">Sigma,</span> <span class="pre">PL,</span> <span class="pre">S')</span></code> first and the regular grammar
+<code class="docutils literal notranslate"><span class="pre">R</span> <span class="pre">=</span> <span class="pre">(N</span> <span class="pre">-</span> <span class="pre">{S'},</span> <span class="pre">Sigma</span> <span class="pre">union</span> <span class="pre">{S'},</span> <span class="pre">PR,</span> <span class="pre">S)</span></code> second.</p></li>
+</ol>
+<p>The choice of CFP and the concrete rewritten equations is analysis knowledge.
+Lotus therefore represents the decomposition explicitly with
+<code class="docutils literal notranslate"><span class="pre">StagedSpecification</span></code> rather than guessing patterns from symbol names. The
+library supports several Dyck and Alias CFP entries in one specification.</p>
+</section>
+<section id="dyck-cfp">
+<h2>Dyck CFP<a class="headerlink" href="#dyck-cfp" title="Link to this heading"></a></h2>
+<p>For matched delimiter families <code class="docutils literal notranslate"><span class="pre">Li</span></code> and <code class="docutils literal notranslate"><span class="pre">Mi</span></code> and neutral labels <code class="docutils literal notranslate"><span class="pre">s</span></code>,
+the Phase-L summary is:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Sum -&gt; Li (Sum | s)* Mi
+</pre></div>
+</div>
+<p>The solver maintains the transitive closure of the body relation
+<code class="docutils literal notranslate"><span class="pre">(Sum</span> <span class="pre">|</span> <span class="pre">s)*</span></code>. Each new body path is joined with an incoming <code class="docutils literal notranslate"><span class="pre">Li</span></code> edge and
+the corresponding outgoing <code class="docutils literal notranslate"><span class="pre">Mi</span></code> edge. A newly produced <code class="docutils literal notranslate"><span class="pre">Sum</span></code> edge is
+inserted into the same body closure, which discovers nesting. Lotus reuses its
+incremental transitive-closure utility for this tabulation step instead of
+duplicating an equivalent closure implementation.</p>
+<p>The supplied decomposition helpers implement both instances from the paper:</p>
+<dl class="simple">
+<dt>Standard Dyck</dt><dd><p><code class="docutils literal notranslate"><span class="pre">S</span> <span class="pre">-&gt;</span> <span class="pre">(Sum</span> <span class="pre">|</span> <span class="pre">s)*</span></code> after Phase L.</p>
+</dd>
+<dt>Extended Dyck</dt><dd><p><code class="docutils literal notranslate"><span class="pre">Start</span> <span class="pre">-&gt;</span> <span class="pre">(Sum</span> <span class="pre">|</span> <span class="pre">s</span> <span class="pre">|</span> <span class="pre">Mi)*</span> <span class="pre">(Sum</span> <span class="pre">|</span> <span class="pre">s</span> <span class="pre">|</span> <span class="pre">Li)*</span></code>. The first expression permits
+unmatched closes before a balanced region; the second permits unmatched
+opens after it.</p>
+</dd>
+</dl>
+<p>Matched delimiter attributes are preserved: <code class="docutils literal notranslate"><span class="pre">Li</span></code> is paired only with the
+<code class="docutils literal notranslate"><span class="pre">Mi</span></code> having the same concrete attribute.</p>
+</section>
+<section id="alias-cfp-and-algorithm-1">
+<h2>Alias CFP and Algorithm 1<a class="headerlink" href="#alias-cfp-and-algorithm-1" title="Link to this heading"></a></h2>
+<p>The Alias CFP has the form <code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">-&gt;</span> <span class="pre">a</span> <span class="pre">A*</span> <span class="pre">Y</span> <span class="pre">B*</span> <span class="pre">b</span></code>. To avoid materializing every
+possible <code class="docutils literal notranslate"><span class="pre">A*</span> <span class="pre">Y</span> <span class="pre">B*</span></code> path, Algorithm 1 keeps only paths that can contribute to
+a matched summary. With the paper’s reverse relation written as <code class="docutils literal notranslate"><span class="pre">Abar</span></code>, the
+Lotus specification is:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>X -&gt; open Abar* Y B* close
+</pre></div>
+</div>
+<p>The two path relations are:</p>
+<dl class="simple">
+<dt>Forward path</dt><dd><p><code class="docutils literal notranslate"><span class="pre">u</span> <span class="pre">-&gt;</span> <span class="pre">v</span></code> represents a useful <code class="docutils literal notranslate"><span class="pre">Y</span> <span class="pre">B*</span></code> path. Every <code class="docutils literal notranslate"><span class="pre">Y</span></code> edge seeds the
+forward worklist. A forward path extends over outgoing <code class="docutils literal notranslate"><span class="pre">B</span></code> edges.</p>
+</dd>
+<dt>Backward path</dt><dd><p>Once a forward path reaches a node with a <code class="docutils literal notranslate"><span class="pre">close</span></code> edge, the algorithm
+reverses that path into the backward worklist. A backward path extends over
+outgoing <code class="docutils literal notranslate"><span class="pre">Abar</span></code> edges, which corresponds to walking backward through the
+original <code class="docutils literal notranslate"><span class="pre">A</span></code> relation.</p>
+</dd>
+</dl>
+<p>When a backward path reaches a node with an incoming <code class="docutils literal notranslate"><span class="pre">open</span></code> edge, every
+compatible <code class="docutils literal notranslate"><span class="pre">close</span></code> successor produces an <code class="docutils literal notranslate"><span class="pre">X</span></code> summary edge.</p>
+<p>The feedback block at lines 20-29 of Algorithm 1 is essential. A new <code class="docutils literal notranslate"><span class="pre">X</span></code>
+edge may create new <code class="docutils literal notranslate"><span class="pre">Abar</span></code>, <code class="docutils literal notranslate"><span class="pre">Y</span></code>, or <code class="docutils literal notranslate"><span class="pre">B</span></code> edges through the rewritten
+Phase-L equations. Lotus repeats Phase L to a fixed point and handles them as
+follows:</p>
+<ul class="simple">
+<li><p>new <code class="docutils literal notranslate"><span class="pre">Y</span></code> edges seed new forward paths;</p></li>
+<li><p>new <code class="docutils literal notranslate"><span class="pre">B</span></code> edges extend all forward paths that end at their source; and</p></li>
+<li><p>new <code class="docutils literal notranslate"><span class="pre">Abar</span></code> edges extend all backward paths that end at their source.</p></li>
+</ul>
+<p>This is a dedicated Alias-CFP engine, not a generic grammar substitution.</p>
+</section>
+<section id="regular-phase-r-and-algorithm-2">
+<h2>Regular Phase R and Algorithm 2<a class="headerlink" href="#regular-phase-r-and-algorithm-2" title="Link to this heading"></a></h2>
+<p>Each production in <code class="docutils literal notranslate"><span class="pre">R</span></code> is normalized to disjunctive normal form. Every
+alternative is a sequence <code class="docutils literal notranslate"><span class="pre">e1</span> <span class="pre">e2</span> <span class="pre">...</span> <span class="pre">em</span></code> whose atoms are a symbol or a
+Kleene closure over a union of symbols. Alternatives are evaluated separately
+and their output relations are united.</p>
+<p>For one sequence, Algorithm 2 maintains <code class="docutils literal notranslate"><span class="pre">Rold(v)</span></code>, the sources reaching
+<code class="docutils literal notranslate"><span class="pre">v</span></code> before the current atom, and <code class="docutils literal notranslate"><span class="pre">R(v)</span></code>, the sources reaching <code class="docutils literal notranslate"><span class="pre">v</span></code> after
+it:</p>
+<dl class="simple">
+<dt>Literal atom <code class="docutils literal notranslate"><span class="pre">a</span></code></dt><dd><p>Clear <code class="docutils literal notranslate"><span class="pre">R</span></code> and, for every <code class="docutils literal notranslate"><span class="pre">u</span> <span class="pre">-a-&gt;</span> <span class="pre">v</span></code>, union <code class="docutils literal notranslate"><span class="pre">Rold(u)</span></code> into <code class="docutils literal notranslate"><span class="pre">R(v)</span></code>.</p>
+</dd>
+<dt>Kleene atom <code class="docutils literal notranslate"><span class="pre">a*</span></code></dt><dd><p>Start with <code class="docutils literal notranslate"><span class="pre">R</span> <span class="pre">=</span> <span class="pre">Rold</span></code> for the epsilon case. Build the subgraph containing
+only <code class="docutils literal notranslate"><span class="pre">a</span></code> edges, collapse its strongly connected components, retain one
+source set per component, and propagate the sets once in topological order.</p>
+</dd>
+</dl>
+<p>After each atom, <code class="docutils literal notranslate"><span class="pre">R</span></code> becomes <code class="docutils literal notranslate"><span class="pre">Rold</span></code> for the next iteration. Because all
+Phase-L summaries are fixed before Phase R begins, the SCC order remains
+valid. For sparse graphs the paper characterizes this phase as close to
+quadratic, with complexity <code class="docutils literal notranslate"><span class="pre">O(m</span> <span class="pre">n)</span></code>.</p>
+<p>Nested closures such as <code class="docutils literal notranslate"><span class="pre">(a</span> <span class="pre">b*)*</span></code> use the paper’s auxiliary-nonterminal
+construction: first materialize <code class="docutils literal notranslate"><span class="pre">C</span> <span class="pre">-&gt;</span> <span class="pre">a</span> <span class="pre">b*</span></code>, then solve <code class="docutils literal notranslate"><span class="pre">C*</span></code>.</p>
+</section>
+<section id="lotus-implementation">
+<h2>Lotus implementation<a class="headerlink" href="#lotus-implementation" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>Public API</dt><dd><p><code class="docutils literal notranslate"><span class="pre">include/CFL/Classical/Solvers/Engines/STG/StagedSolver.h</span></code></p>
+</dd>
+<dt>Algorithm</dt><dd><p><code class="docutils literal notranslate"><span class="pre">lib/CFL/Classical/Solvers/Engines/STG/StagedSolver.cpp</span></code></p>
+</dd>
+<dt>Driver</dt><dd><p><code class="docutils literal notranslate"><span class="pre">lotus-cfl-staged</span></code> with <code class="docutils literal notranslate"><span class="pre">standard-dyck</span></code>, <code class="docutils literal notranslate"><span class="pre">extended-dyck</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">alias</span></code> modes. Repeated <code class="docutils literal notranslate"><span class="pre">--phase-l</span></code> and <code class="docutils literal notranslate"><span class="pre">--phase-r</span></code> definitions form
+DNF alternatives.</p>
+</dd>
+</dl>
+<p>Stg is separate from <code class="docutils literal notranslate"><span class="pre">SolverBackend</span></code> because a backend enum and an arbitrary
+CFG do not contain the CFP/decomposition information required by the paper.</p>
+</section>
+<section id="validation">
+<h2>Validation<a class="headerlink" href="#validation" title="Link to this heading"></a></h2>
+<p>Tests compare standard Dyck, extended Dyck, and Alias CFP results with
+monolithic CFL solving. Generated graph tests exercise nesting, multiple
+delimiter families, cycles, and forward/backward Alias paths. Focused tests
+cover Algorithm 1’s new-summary feedback for all three <code class="docutils literal notranslate"><span class="pre">Abar</span></code>/<code class="docutils literal notranslate"><span class="pre">Y</span></code>/<code class="docutils literal notranslate"><span class="pre">B</span></code>
+relations, SCC-ordered Algorithm 2 propagation, DNF unions, and the
+auxiliary-nonterminal treatment of nested Kleene expressions.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="pearl.html" class="btn btn-neutral float-left" title="PEARL Multi-Derivation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="sqid.html" class="btn btn-neutral float-right" title="Sqid Efficient Relation Chaining" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

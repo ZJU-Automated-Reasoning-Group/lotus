@@ -1,0 +1,630 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lotus: Program Analysis Framework &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=a74d790d"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Major Components Overview" href="user_guide/major_components.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            Lotus
+              <img src="_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ir/index.html">Intermediate Representations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Lotus: Program Analysis Framework</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="lotus-program-analysis-framework">
+<h1>Lotus: Program Analysis Framework<a class="headerlink" href="#lotus-program-analysis-framework" title="Link to this heading"></a></h1>
+<p>Lotus is a comprehensive program analysis, verification, and optimization framework built on LLVM. It provides multiple toolkits that can be used individually or in combination for various static analysis tasks.</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/major_components.html">Major Components Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/major_components.html#alias-analysis">Alias Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/major_components.html#intermediate-representations">Intermediate Representations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/major_components.html#machine-learning-features">Machine Learning Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/major_components.html#abstract-interpretation">Abstract Interpretation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/major_components.html#symbolic-automata">Symbolic Automata</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/major_components.html#symbolic-execution">Symbolic Execution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/major_components.html#utilities-and-reachability">Utilities and Reachability</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/architecture.html">Architecture Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/architecture.html#system-architecture">System Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/architecture.html#core-components">Core Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/architecture.html#analysis-flow">Analysis Flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/architecture.html#pointer-analysis-architectures">Pointer Analysis Architectures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/architecture.html#abstract-interpretation-flow-clam">Abstract Interpretation Flow (CLAM)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/architecture.html#data-structures">Data Structures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/architecture.html#performance-considerations">Performance Considerations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/architecture.html#extension-points">Extension Points</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/quickstart.html">Quick Start Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/quickstart.html#basic-usage">Basic Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/quickstart.html#alias-analysis">Alias Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/quickstart.html#bug-detection">Bug Detection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/quickstart.html#abstract-interpretation">Abstract Interpretation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/quickstart.html#program-dependence-graph">Program Dependence Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/quickstart.html#dynamic-validation">Dynamic Validation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/quickstart.html#example-analysis">Example Analysis</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/installation.html">Installation Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/installation.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/installation.html#building-lotus">Building Lotus</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/installation.html#configuration-options">Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/installation.html#z3-installation">Z3 Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/installation.html#troubleshooting">Troubleshooting</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/tutorials.html">Tutorials and Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tutorials.html#tutorial-1-basic-alias-analysis">Tutorial 1: Basic Alias Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tutorials.html#tutorial-2-detecting-integer-overflow">Tutorial 2: Detecting Integer Overflow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tutorials.html#tutorial-3-null-pointer-detection">Tutorial 3: Null Pointer Detection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tutorials.html#tutorial-4-taint-analysis">Tutorial 4: Taint Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tutorials.html#tutorial-5-abstract-interpretation-with-clam">Tutorial 5: Abstract Interpretation with CLAM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tutorials.html#tutorial-6-program-dependence-graph-queries">Tutorial 6: Program Dependence Graph Queries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tutorials.html#tutorial-7-dynamic-validation-with-dynaa">Tutorial 7: Dynamic Validation with DynAA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tutorials.html#tutorial-8-interprocedural-analysis">Tutorial 8: Interprocedural Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tutorials.html#tutorial-9-concurrency-analysis">Tutorial 9: Concurrency Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tutorials.html#best-practices">Best Practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/tutorials.html#next-steps">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/bug_detection.html">Bug Detection with Lotus</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/bug_detection.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/bug_detection.html#bug-categories">Bug Categories</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/bug_detection.html#tool-1-kint-integer-and-array-analysis">Tool 1: Kint - Integer and Array Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/bug_detection.html#tool-2-taint-analysis">Tool 2: Taint Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/bug_detection.html#tool-3-concurrency-checker">Tool 3: Concurrency Checker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/bug_detection.html#best-practices">Best Practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/bug_detection.html#output-formats">Output Formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/bug_detection.html#integration-examples">Integration Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/bug_detection.html#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/pdg_query_language.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/pdg_query_language.html#getting-started">Getting Started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/pdg_query_language.html#language-reference">Language Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/pdg_query_language.html#security-analysis-examples">Security Analysis Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/pdg_query_language.html#query-file-format">Query File Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/pdg_query_language.html#best-practices">Best Practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/pdg_query_language.html#limitations">Limitations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/pdg_query_language.html#performance-tips">Performance Tips</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/pdg_query_language.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/pdg_query_language.html#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/property_based_slicing.html">Property-Based Slicing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/property_based_slicing.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/property_based_slicing.html#property-specification-format">Property Specification Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/property_based_slicing.html#supported-property-types">Supported Property Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/property_based_slicing.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/property_based_slicing.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/property_based_slicing.html#integration-with-verification">Integration with Verification</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/verification_backends.html">Verification Driver Abstraction</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/verification_backends.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/verification_backends.html#supported-drivers">Supported Drivers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/verification_backends.html#property-classes">Property Classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/verification_backends.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/verification_backends.html#result-format">Result Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/verification_backends.html#example-output">Example Output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/verification_backends.html#programmatic-usage">Programmatic Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/verification_backends.html#adding-new-drivers">Adding New Drivers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/instrumentation_passes.html">Instrumentation Passes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/instrumentation_passes.html#available-passes">Available Passes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/instrumentation_passes.html#example-workflow">Example Workflow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/instrumentation_passes.html#all-passes-together">All Passes Together</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/instrumentation_passes.html#integration-with-verification">Integration with Verification</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/troubleshooting.html">Troubleshooting and FAQ</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#installation-issues">Installation Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#analysis-issues">Analysis Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#tool-specific-issues">Tool-Specific Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#performance-tuning">Performance Tuning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#frequently-asked-questions">Frequently Asked Questions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#common-error-messages">Common Error Messages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#getting-help">Getting Help</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_guide/troubleshooting.html#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tools/index.html">Command-Line Tools</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tools/index.html#tools-by-subdirectory">Tools by Subdirectory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tools/index.html#scripting-tools">Scripting Tools</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="alias/index.html">Alias Analysis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="alias/alias_analysis.html">Alias Analysis Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/allocaa.html">AllocAA — Allocation-Based AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/sparrowaa.html">Sparrow Pointer Analysis — Inclusion AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/aserpta.html">AserPTA — Pointer Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/cclyzeraa.html">CclyzerAA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/dda.html">DDA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/dfpa.html">DFPA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/dyckaa.html">DyckAA — Dyck-CFL Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/seadsa.html">Sea-DSA — Memory Graph AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/fpa.html">FPA — Function Pointer Analyses (FLTA/MLTA/MLTADF/KELP)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/flowsensitive.html">Flow-Sensitive Pointer Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/lotusaa.html">LotusAA — Lotus AA Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/underapproxaa.html">UnderApproxAA — Must-Alias Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/dynaa.html">DynAA — Dynamic Alias AA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/sraa.html">Strict Relations Alias Analysis — Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/sraa.html#vssa-ssi-transformation">1. vSSA / SSI Transformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/sraa.html#symbolic-range-analysis">2. Symbolic Range Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/sraa.html#strict-inequality-construction">3. Strict-Inequality Construction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/sraa.html#constraint-propagation-solver">4. Constraint Propagation Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/sraa.html#alias-disambiguation-final-decision">5. Alias Disambiguation (Final Decision)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/sraa.html#pdg-memory-node-reduction-applicability">6. PDG Memory-Node Reduction (Applicability)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/sraa.html#summary-of-properties">Summary of Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/sraa.html#end-of-document">End of document.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/metrics.html">Pointer Analysis Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/ptsset.html">Points-To Set Backends</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/spec.html">Alias Specification Manager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/tpa.html">TPA: Flow- and Contex-Sensitive Pointer Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="alias/typequalifier.html">TypeQualifier</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="analysis/index.html">Analysis Framework</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="analysis/index.html#overview">Overview</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="annotation/index.html">Annotations</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="annotation/annotation.html">Annotation Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="annotation/modref.html">ModRef Function Effect Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="annotation/pointer_effects.html">Pointer Effect Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="annotation/taint_config.html">Taint Configuration Format and API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="annotation/api_spec.html">API Specification System</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="apps/index.html">Applications</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="apps/index.html#components">Components</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cfl/index.html">Context-Free Language Analysis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="cfl/cfl_components.html">CFL Reachability Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cfl/classical.html">Classical Grammar-Driven CFL Reachability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cfl/pocr_migration.html">POCR Migration Matrix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cfl/pearl_stg_sqid.html">Paper Engines: PEARL, Stg, and Sqid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cfl/csindex.html">Context-Sensitive Reachability Indexing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cfl/interleaved_dyck_unary.html">Exact Unary Interleaved Dyck</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cfl/interleaved_dyck_staged_bounds.html">Interleaved-Dyck Staged Bounds</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cfl/interleaved_dyck_graph_reduction.html">Interleaved-Dyck Graph Reduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cfl/interleaved_dyck_mcfl.html">Multiple Context-Free Language Reachability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cfl/interleaved_dyck_mutual_refinement.html">Mutual Refinement for CFL Reachability</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="concurrency/index.html">Concurrency Analysis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="concurrency/index.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="concurrency/index.html#directory-layout">Directory layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="concurrency/index.html#clients">Clients</a></li>
+<li class="toctree-l2"><a class="reference internal" href="concurrency/index.html#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="dataflow/index.html">Data Flow Analysis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/apa.html">Algebraic Program Analysis (APA)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/control_flow.html">Control Flow Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/mono.html">Monotone Dataflow Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/mono.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/mono.html#implementation-layout">Implementation Layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/mono.html#core-idea">Core Idea</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/mono.html#abstract-domain-contract">Abstract Domain Contract</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/mono.html#example-analyses">Example Analyses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/ifds_ide.html">IFDS / IDE Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/ifds_ide.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/ifds_ide.html#ifds-set-valued-problems">IFDS: Set-Valued Problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/ifds_ide.html#ide-value-enriched-problems">IDE: Value-Enriched Problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/ifds_ide.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/ifds_ide.html#command-line-tool-lotus-check-engine-taint">Command-Line Tool: lotus-check –engine=taint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/vasco.html">VASCO Value-Context Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/vasco.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/vasco.html#why-vasco">Why VASCO</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/vasco.html#value-contexts">Value Contexts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/vasco.html#algorithm-sketch">Algorithm Sketch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/vasco.html#core-api">Core API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/vasco.html#results">Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/vasco.html#llvm-instantiation-in-lotus">LLVM Instantiation in Lotus</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/vasco.html#parallel-context-scheduling">Parallel Context Scheduling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/vasco.html#current-scope-and-caveats">Current Scope and Caveats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/vasco.html#relationship-to-other-lotus-engines">Relationship to Other Lotus Engines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/wpds.html">WPDS Dataflow Engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/wpds.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/wpds.html#core-idea">Core Idea</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/wpds.html#example-analyses">Example Analyses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/npa.html">Newtonian Program Analysis (NPA)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/npa.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/npa.html#conceptual-background">Conceptual Background</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/npa.html#mathematical-foundation">Mathematical Foundation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/npa.html#examples-and-applications">Examples and Applications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/npa.html#distributive-vs-non-distributive-analyses">Distributive vs. Non-Distributive Analyses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/npa.html#implementation-layout">Implementation Layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/npa.html#usage-notes">Usage Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/npa.html#practical-notes-for-numeric-domains">Practical notes for numeric domains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataflow/npa.html#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ir/index.html">Intermediate Representations</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ir/icfg.html">ICFG — Interprocedural Control Flow Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/icfg.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/icfg.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/icfg.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/icfg.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/icfg.html#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/pdg.html">PDG — Program Dependence Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/pdg.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/pdg.html#core-passes">Core Passes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/pdg.html#unified-query-api">Unified Query API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/pdg.html#high-level-usage">High-Level Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/pdg.html#lotus-ir-pdg-query-analysis-mode"><cite>lotus-ir-pdg-query</cite> Analysis Mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/ssi.html">SSI — Static Single Information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/ssi.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/ssi.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/ssi.html#ssi-formalism">SSI Formalism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/ssi.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/ssi.html#ssi-instructions">SSI Instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/ssi.html#algorithm">Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/ssi.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/ssi.html#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/vssa.html">vSSA — Variable Static Single Assignment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/vssa.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/vssa.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/vssa.html#vssa-instructions">vSSA Instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/vssa.html#algorithm">Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/vssa.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/vssa.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/vssa.html#integration-with-sraa">Integration with SRAA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/vssa.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/vssa.html#references">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/svfg.html">SVFG — Sparse Value-Flow Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/svfg.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/svfg.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/svfg.html#node-types">Node Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/svfg.html#edge-types">Edge Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/svfg.html#architecture">Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/svfg.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/svfg.html#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/svfg.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/svfg.html#references">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/gvfg.html">GVFG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/gsa.html">GSA — Gated SSA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/gsa.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/gsa.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/gsa.html#core-types">Core Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/gsa.html#passes">Passes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/gsa.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/gsa.html#command-line-options">Command-Line Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/gsa.html#behavior-notes">Behavior Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/shadowmemssa.html">ShadowMem SSA — Sea-DSA Shadow Memory Queries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/shadowmemssa.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/shadowmemssa.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/shadowmemssa.html#shadow-memory-instructions">Shadow Memory Instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/shadowmemssa.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/shadowmemssa.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/shadowmemssa.html#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ir/path_program.html">Path Program</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimization/index.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="optimization/index.html#subdirectories">Subdirectories</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimization/index.html#moduleoptimizer">ModuleOptimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimization/index.html#scalar-passes">Scalar passes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimization/index.html#interprocedural-memoryssa-optimizations">Interprocedural MemorySSA optimizations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimization/index.html#partial-evaluation">Partial evaluation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimization/index.html#software-prefetching">Software prefetching</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimization/index.html#integration-pattern">Integration pattern</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="security/index.html">Security Components</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="security/index.html#overview">Overview</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="solvers/index.html">Solvers</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="solvers/cudd.html">CUDD (Binary Decision Diagrams)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solvers/smt.html">SMT (Satisfiability Modulo Theories)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solvers/wpds.html">WPDS (Weighted Pushdown Systems)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solvers/smtsampler.html">SMT Samplers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solvers/symabs.html">SMT Formula Abstraction (SymAbs)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solvers/staub.html">SMT Theory Arbitrage (STAUB)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solvers/tuna.html">TUNA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solvers/stingx.html">Stingx — String Constraint Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solvers/egraphs_simp.html">E-Graph Quantifier Simplification (EGraphsSimp)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solvers/fpsolve.html">FPsolve — Fixed-Point Equation Solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solvers/libsmt.html">LIBSMT — SMT Solver Abstraction Layer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solvers/datalog.html">Native C++ Datalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solvers/index.html#third-party-libraries">Third-Party Libraries</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="symbolic_execution/index.html">Symbolic Execution</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="symbolic_execution/index.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="symbolic_execution/index.html#core-components">Core Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="symbolic_execution/index.html#analysis-flow">Analysis flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="symbolic_execution/index.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="symbolic_execution/index.html#programmatic-usage">Programmatic usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="symbolic_execution/index.html#tests">Tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="symbolic_execution/index.html#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="transform/index.html">Transforms</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="transform/transforms.html">Transform Passes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transform/nisse.html">Nisse</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="utils/index.html">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="utils/utilities.html">Utility Libraries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils/adt.html">Utility ADTs and Worklists</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils/algorithms.html">Path Expression Algorithms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils/benchmark.html">Microbenchmark Helpers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils/formats.html">Parsing and Serialization Utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils/llvm.html">LLVM Utility Layer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils/parallel.html">Parallel Execution Infrastructure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils/platform.html">Platform and Console Utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils/random.html">Random Number Utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils/types.html">Core Utility Types</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="verification/index.html">Verification</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="verification/analysis.html">Verification Support Analyses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="verification/backend.html">Verification Backend API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="verification/crab.html">CRAB - Abstract Interpretation Library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="verification/clam.html">CLAM – Abstract Interpretation Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="verification/smack.html">SMACK Verification Frontend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="verification/sifa.html">Sifa</a></li>
+<li class="toctree-l2"><a class="reference internal" href="verification/seal.html">Seal — Symbolic Automata for Stateful Systems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="verification/symabs-ai.html">SymAbsAI – Symbolic Abstraction + Abstract Interpretation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="verification/seahorn.html">SeaHorn Verification Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="verification/failure_directed_trimming.html">Failure-Directed Trimming</a></li>
+<li class="toctree-l2"><a class="reference internal" href="verification/frontend.html">Verification Frontend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="verification/transforms.html">Verification Transformation Passes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="checker/index.html">Checker Framework</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="checker/index.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="checker/index.html#choosing-a-checker">Choosing a Checker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="checker/index.html#id1">Checker Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="checker/index.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="checker/index.html#build-targets">Build Targets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="checker/index.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="checker/index.html#programmatic-usage">Programmatic Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="checker/index.html#bug-types">Bug Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="checker/index.html#integration-points">Integration Points</a></li>
+<li class="toctree-l2"><a class="reference internal" href="checker/index.html#see-also">See Also</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="developer/api_reference.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="developer/api_reference.html#alias-analysis-apis">Alias Analysis APIs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/api_reference.html#intermediate-representation-apis">Intermediate Representation APIs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/api_reference.html#data-flow-analysis-apis">Data Flow Analysis APIs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/api_reference.html#abstract-interpretation-apis">Abstract Interpretation APIs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/api_reference.html#constraint-solving-apis">Constraint Solving APIs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/api_reference.html#bug-detection-apis">Bug Detection APIs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/api_reference.html#utility-apis">Utility APIs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/api_reference.html#example-complete-analysis-tool">Example: Complete Analysis Tool</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/api_reference.html#see-also">See Also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="developer/developer_guide.html">Developer Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="developer/developer_guide.html#development-environment-setup">Development Environment Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/developer_guide.html#code-organization">Code Organization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/developer_guide.html#adding-a-new-alias-analysis">Adding a New Alias Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/developer_guide.html#adding-a-new-bug-checker">Adding a New Bug Checker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/developer_guide.html#adding-a-new-abstract-domain">Adding a New Abstract Domain</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/developer_guide.html#adding-a-data-flow-analysis">Adding a Data Flow Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/developer_guide.html#testing-and-debugging">Testing and Debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/developer_guide.html#performance-optimization">Performance Optimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/developer_guide.html#contributing-to-lotus">Contributing to Lotus</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/developer_guide.html#common-pitfalls">Common Pitfalls</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/developer_guide.html#resources">Resources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/developer_guide.html#community">Community</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developer/developer_guide.html#see-also">See Also</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<section id="features">
+<h2>Features<a class="headerlink" href="#features" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Multiple Alias Analysis Algorithms</strong>: DyckAA, Sea-DSA, SparrowAA, AserPTA, TPA, FPA, CFL (via LLVM)</p></li>
+<li><p><strong>Dynamic Analysis Validation</strong>: DynAA for validating static analysis results</p></li>
+<li><p><strong>Intermediate Representations</strong>: PDG, SVFG and its sparse MemorySSA, GVFG,
+ICFG, ShadowMemSSA, and path programs</p></li>
+<li><p><strong>Constraint Solving</strong>: SMT (Z3), BDD (CUDD), WPDS, string constraints (Stingx)</p></li>
+<li><p><strong>Data Flow Analysis</strong>: IFDS/IDE framework, taint analysis</p></li>
+<li><p><strong>Bug Detection</strong>: Integer overflow, null pointer, buffer overflow, concurrency bugs, symbolic execution</p></li>
+<li><p><strong>Symbolic Execution</strong>: Path-sensitive engine for bug checking</p></li>
+<li><p><strong>Symbolic Automata</strong>: Seal — FSM model lifting for stateful systems (CAV 2026)</p></li>
+<li><p><strong>LLVM Integration</strong>: Built on LLVM 14 with comprehensive IR support</p></li>
+</ul>
+</section>
+<section id="supported-platforms">
+<h2>Supported Platforms<a class="headerlink" href="#supported-platforms" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>x86 Linux</p></li>
+<li><p>ARM Mac</p></li>
+<li><p>LLVM 14.0.0</p></li>
+<li><p>Z3 4.11</p></li>
+</ul>
+</section>
+<section id="publications">
+<h2>Publications<a class="headerlink" href="#publications" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>CAV 2026</strong>: <em>Sound and Precise Symbolic Automata Model for Stateful Software Systems</em>.
+Xinlong Wu, Ruiyu Zhou, Peisen Yao, and Qingkai Shi.
+<em>International Conference on Computer Aided Verification</em>.</p></li>
+<li><p><strong>ISSTA 2025</strong>: <em>Program Analysis Combining Generalized Bit-Level and Word-Level Abstractions</em>
+Guangsheng Fan, Liqian Chen, Banghu Yin, Wenyu Zhang, Peisen Yao, and Ji Wang.
+<em>The ACM SIGSOFT International Symposium on Software Testing and Analysis</em>.</p></li>
+<li><p><strong>S&amp;P 2024</strong>: <em>Titan: Efficient Multi-target Directed Greybox Fuzzing</em>
+Heqing Huang, Peisen Yao, Hung-Chun Chiu, Yiyuan Guo, and Charles Zhang.</p></li>
+<li><p><strong>USENIX Security 2024</strong>: <em>Unleashing the Power of Type-Based Call Graph Construction by Using Regional Pointer Information</em>
+Yuandao Cai, Yibo Jin, and Charles Zhang.</p></li>
+<li><p><strong>TSE 2024</strong>: <em>Fast and Precise Static Null Exception Analysis with Synergistic Preprocessing</em>
+Yi Sun, Chengpeng Wang, Gang Fan, Qingkai Shi, and Xiangyu Zhang.</p></li>
+<li><p><strong>OOPSLA 2022</strong>: <em>Indexing the Extended Dyck-CFL Reachability for Context-Sensitive Program Analysis</em>
+Qingkai Shi, Yongchao Wang, Peisen Yao, and Charles Zhang.</p></li>
+</ul>
+</section>
+</section>
+<section id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading"></a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="user_guide/major_components.html" class="btn btn-neutral float-right" title="Major Components Overview" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

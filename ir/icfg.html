@@ -1,0 +1,382 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ICFG — Interprocedural Control Flow Graph &mdash; Lotus Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a74d790d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="PDG — Program Dependence Graph" href="pdg.html" />
+    <link rel="prev" title="Intermediate Representations" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Lotus
+              <img src="../_static/logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/major_components.html">Major Components Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tutorials.html">Tutorials and Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/bug_detection.html">Bug Detection with Lotus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/pdg_query_language.html">PDG Query Language (Cypher)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/property_based_slicing.html">Property-Based Slicing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/verification_backends.html">Verification Driver Abstraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/instrumentation_passes.html">Instrumentation Passes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/troubleshooting.html">Troubleshooting and FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Command-Line Tools</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Components</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../alias/index.html">Alias Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../analysis/index.html">Analysis Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotation/index.html">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../apps/index.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cfl/index.html">Context-Free Language Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concurrency/index.html">Concurrency Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataflow/index.html">Data Flow Analysis</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Intermediate Representations</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">ICFG — Interprocedural Control Flow Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html">PDG — Program Dependence Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#core-passes">Core Passes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#unified-query-api">Unified Query API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#high-level-usage">High-Level Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pdg.html#lotus-ir-pdg-query-analysis-mode"><cite>lotus-ir-pdg-query</cite> Analysis Mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html">SSI — Static Single Information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#ssi-formalism">SSI Formalism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#ssi-instructions">SSI Instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#algorithm">Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ssi.html#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html">vSSA — Variable Static Single Assignment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#vssa-instructions">vSSA Instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#algorithm">Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#integration-with-sraa">Integration with SRAA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vssa.html#references">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html">SVFG — Sparse Value-Flow Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#node-types">Node Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#edge-types">Edge Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#architecture">Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svfg.html#references">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gvfg.html">GVFG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html">GSA — Gated SSA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#core-types">Core Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#passes">Passes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#command-line-options">Command-Line Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gsa.html#behavior-notes">Behavior Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html">ShadowMem SSA — Sea-DSA Shadow Memory Queries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#shadow-memory-instructions">Shadow Memory Instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#components">Components</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadowmemssa.html#integration">Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="path_program.html">Path Program</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#memorymlfeaturespass">MemoryMLFeaturesPass</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#features-extracted">Features Extracted</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#feature-output">Feature Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#analysis-dependencies">Analysis Dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#integration-notes">Integration Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ml/index.html#related-components">Related Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optimization/index.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../security/index.html">Security Components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../solvers/index.html">Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../symbolic_execution/index.html">Symbolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../transform/index.html">Transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils/index.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../verification/index.html">Verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checker/index.html">Checker Framework</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer/api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer/developer_guide.html">Developer Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Lotus</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Intermediate Representations</a></li>
+      <li class="breadcrumb-item active">ICFG — Interprocedural Control Flow Graph</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/ir/icfg.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="icfg-interprocedural-control-flow-graph">
+<h1>ICFG — Interprocedural Control Flow Graph<a class="headerlink" href="#icfg-interprocedural-control-flow-graph" title="Link to this heading"></a></h1>
+</section>
+<section id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h1>
+<p>The <strong>Interprocedural Control Flow Graph (ICFG)</strong> is the primary control-flow
+representation used by many analyses in Lotus.
+It extends the standard intraprocedural CFG with <strong>call</strong> and <strong>return</strong>
+edges to capture interprocedural control flow.</p>
+<ul class="simple">
+<li><p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">lib/IR/ICFG/</span></code>, <code class="docutils literal notranslate"><span class="pre">include/IR/ICFG/</span></code></p></li>
+</ul>
+<p>The ICFG serves as a backbone graph on top of which many of the dataflow
+engines in Lotus operate. It provides a unified view of control flow across
+function boundaries, enabling whole-program analysis.</p>
+</section>
+<section id="key-features">
+<h1>Key Features<a class="headerlink" href="#key-features" title="Link to this heading"></a></h1>
+<ul class="simple">
+<li><p><strong>Interprocedural Edges</strong>: Call and return edges connecting caller and callee code</p></li>
+<li><p><strong>Node Types</strong>: Support for intraprocedural blocks, function entry points, and return points</p></li>
+<li><p><strong>Graph Analysis Utilities</strong>: Back edge detection, reachability queries, and shortest path computation</p></li>
+<li><p><strong>Cycle Removal</strong>: Optional removal of intraprocedural and interprocedural cycles for acyclic analysis</p></li>
+<li><p><strong>Call Graph Integration</strong>: Built-in support for call graph construction and traversal</p></li>
+<li><p><strong>Context-Aware Traversals</strong>: Support for context-sensitive traversals used by dataflow and reachability engines</p></li>
+<li><p><strong>Integration</strong>: Seamless integration with higher-level analyses such as IFDS/IDE, WPDS, and PDG construction</p></li>
+</ul>
+</section>
+<section id="components">
+<h1>Components<a class="headerlink" href="#components" title="Link to this heading"></a></h1>
+<p><strong>ICFG</strong> (<code class="docutils literal notranslate"><span class="pre">ICFG.h</span></code>, <code class="docutils literal notranslate"><span class="pre">ICFG.cpp</span></code>):</p>
+<p>The main graph class that extends <code class="docutils literal notranslate"><span class="pre">GenericGraph&lt;ICFGNode,</span> <span class="pre">ICFGEdge&gt;</span></code>. It provides:</p>
+<ul class="simple">
+<li><p>Node and edge management (add, remove, query)</p></li>
+<li><p>Intraprocedural and interprocedural edge operations</p></li>
+<li><p>Mapping from LLVM basic blocks and functions to ICFG nodes</p></li>
+<li><p>Graph traversal and iteration interfaces</p></li>
+</ul>
+<p><strong>ICFGNode</strong> (<code class="docutils literal notranslate"><span class="pre">ICFGNode.h</span></code>):</p>
+<p>Base class for ICFG nodes with three types:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">IntraBlock</span></code> – Represents a basic block within a function</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">FunEntryBlock</span></code> – Represents a function entry point (currently unused)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">FunRetBlock</span></code> – Represents a function return point (currently unused)</p></li>
+</ul>
+<p>Each node maintains references to its parent function and basic block, and provides
+string representation for debugging.</p>
+<p><strong>ICFGEdge</strong> (<code class="docutils literal notranslate"><span class="pre">ICFGEdge.h</span></code>):</p>
+<p>Represents control flow connections between ICFG nodes with three edge kinds:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">IntraCF</span></code> – Intraprocedural control flow (within a single function)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CallCF</span></code> – Call edge (from caller to callee entry)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">RetCF</span></code> – Return edge (from callee exit back to caller)</p></li>
+</ul>
+<p><strong>ICFGBuilder</strong> (<code class="docutils literal notranslate"><span class="pre">ICFGBuilder.h</span></code>, <code class="docutils literal notranslate"><span class="pre">ICFGBuilder.cpp</span></code>):</p>
+<p>Constructs an ICFG from an LLVM module by:</p>
+<ul class="simple">
+<li><p>Processing all functions to create intraprocedural nodes and edges</p></li>
+<li><p>Adding call edges from call sites to callee entry points</p></li>
+<li><p>Adding return edges from callee exits back to call sites</p></li>
+<li><p>Optionally removing cycles (both intraprocedural loops and interprocedural recursion)</p></li>
+</ul>
+<p><strong>LTCallGraph</strong> (<code class="docutils literal notranslate"><span class="pre">CallGraph.h</span></code>, <code class="docutils literal notranslate"><span class="pre">CallGraph.cpp</span></code>):</p>
+<p>A custom call graph implementation that:</p>
+<ul class="simple">
+<li><p>Builds explicit (direct) call relationships between functions</p></li>
+<li><p>Omits address-taken functions for more precise analysis</p></li>
+<li><p>Maintains call records mapping call instructions to callee functions</p></li>
+<li><p>Provides iteration and query interfaces for call graph traversal</p></li>
+</ul>
+<p><strong>GraphAnalysis</strong> (<code class="docutils literal notranslate"><span class="pre">GraphAnalysis.h</span></code>, <code class="docutils literal notranslate"><span class="pre">GraphAnalysis.cpp</span></code>):</p>
+<p>Utility functions for graph analysis:</p>
+<ul class="simple">
+<li><p><strong>Back Edge Detection</strong>: Finds intraprocedural and interprocedural back edges</p></li>
+<li><p><strong>Reachability</strong>: Checks if one basic block can reach another</p></li>
+<li><p><strong>Shortest Paths</strong>: Computes shortest paths between nodes</p></li>
+<li><p><strong>Distance Maps</strong>: Calculates shortest distances from a source node</p></li>
+</ul>
+</section>
+<section id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h1>
+<p><strong>Building an ICFG</strong>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"IR/ICFG/ICFG.h"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"IR/ICFG/ICFGBuilder.h"</span>
+
+<span class="c1">// Create an empty ICFG</span>
+<span class="n">ICFG</span><span class="o">*</span><span class="w"> </span><span class="n">icfg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ICFG</span><span class="p">();</span>
+
+<span class="c1">// Build ICFG from LLVM module</span>
+<span class="n">ICFGBuilder</span><span class="w"> </span><span class="nf">builder</span><span class="p">(</span><span class="n">icfg</span><span class="p">);</span>
+<span class="n">builder</span><span class="p">.</span><span class="n">setRemoveCycleAfterBuild</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span><span class="w">  </span><span class="c1">// Optional: remove cycles</span>
+<span class="n">builder</span><span class="p">.</span><span class="n">build</span><span class="p">(</span><span class="k">module</span><span class="p">);</span>
+
+<span class="c1">// Access nodes and edges</span>
+<span class="n">ICFGNode</span><span class="o">*</span><span class="w"> </span><span class="n">node</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">icfg</span><span class="o">-&gt;</span><span class="n">getICFGNode</span><span class="p">(</span><span class="n">nodeId</span><span class="p">);</span>
+<span class="n">ICFGEdge</span><span class="o">*</span><span class="w"> </span><span class="n">edge</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">icfg</span><span class="o">-&gt;</span><span class="n">getICFGEdge</span><span class="p">(</span><span class="n">srcNode</span><span class="p">,</span><span class="w"> </span><span class="n">dstNode</span><span class="p">,</span><span class="w"> </span><span class="n">ICFGEdge</span><span class="o">::</span><span class="n">IntraCF</span><span class="p">);</span>
+</pre></div>
+</div>
+<p><strong>Traversing the ICFG</strong>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Iterate over all nodes</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">icfg</span><span class="o">-&gt;</span><span class="n">begin</span><span class="p">();</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">icfg</span><span class="o">-&gt;</span><span class="n">end</span><span class="p">();</span><span class="w"> </span><span class="o">++</span><span class="n">it</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">ICFGNode</span><span class="o">*</span><span class="w"> </span><span class="n">node</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">it</span><span class="o">-&gt;</span><span class="n">second</span><span class="p">;</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">Function</span><span class="o">*</span><span class="w"> </span><span class="n">func</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">node</span><span class="o">-&gt;</span><span class="n">getFunction</span><span class="p">();</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">BasicBlock</span><span class="o">*</span><span class="w"> </span><span class="n">bb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">node</span><span class="o">-&gt;</span><span class="n">getBasicBlock</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="c1">// Iterate over outgoing edges</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">*</span><span class="w"> </span><span class="n">edge</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">node</span><span class="o">-&gt;</span><span class="n">getOutEdges</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">ICFGNode</span><span class="o">*</span><span class="w"> </span><span class="n">dst</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edge</span><span class="o">-&gt;</span><span class="n">getDstNode</span><span class="p">();</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">edge</span><span class="o">-&gt;</span><span class="n">isCallCFGEdge</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Handle call edge</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">edge</span><span class="o">-&gt;</span><span class="n">isRetCFGEdge</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Handle return edge</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Using Graph Analysis Utilities</strong>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"IR/ICFG/GraphAnalysis.h"</span>
+
+<span class="c1">// Find back edges in a function</span>
+<span class="n">std</span><span class="o">::</span><span class="n">set</span><span class="o">&lt;</span><span class="n">ICFGEdge</span><span class="o">*&gt;</span><span class="w"> </span><span class="n">backEdges</span><span class="p">;</span>
+<span class="n">findFunctionBackedgesIntraICFG</span><span class="p">(</span><span class="n">icfg</span><span class="p">,</span><span class="w"> </span><span class="n">func</span><span class="p">,</span><span class="w"> </span><span class="n">backEdges</span><span class="p">);</span>
+
+<span class="c1">// Compute shortest distances</span>
+<span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">ICFGNode</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="kt">uint64_t</span><span class="o">&gt;</span><span class="w"> </span><span class="n">distances</span><span class="p">;</span>
+<span class="n">calculateDistanceMapInterICFGWithDistanceMap</span><span class="p">(</span><span class="n">icfg</span><span class="p">,</span><span class="w"> </span><span class="n">sourceNode</span><span class="p">,</span><span class="w"> </span><span class="n">distances</span><span class="p">);</span>
+
+<span class="c1">// Check reachability</span>
+<span class="kt">bool</span><span class="w"> </span><span class="n">reachable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">isReachableFrom</span><span class="p">(</span><span class="n">fromBB</span><span class="p">,</span><span class="w"> </span><span class="n">toBB</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">DT</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">LI</span><span class="p">,</span><span class="w"> </span><span class="n">iterCount</span><span class="p">);</span>
+</pre></div>
+</div>
+<p><strong>Building a Call Graph</strong>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"IR/ICFG/CallGraph.h"</span>
+
+<span class="c1">// Build call graph from module</span>
+<span class="n">LTCallGraph</span><span class="w"> </span><span class="nf">callGraph</span><span class="p">(</span><span class="k">module</span><span class="p">);</span>
+
+<span class="c1">// Iterate over functions</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">callGraph</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">callGraph</span><span class="p">.</span><span class="n">end</span><span class="p">();</span><span class="w"> </span><span class="o">++</span><span class="n">it</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">llvm</span><span class="o">::</span><span class="n">Function</span><span class="o">*</span><span class="w"> </span><span class="n">func</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">it</span><span class="o">-&gt;</span><span class="n">first</span><span class="p">;</span>
+<span class="w">    </span><span class="n">LTCallGraphNode</span><span class="o">*</span><span class="w"> </span><span class="n">node</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">it</span><span class="o">-&gt;</span><span class="n">second</span><span class="p">.</span><span class="n">get</span><span class="p">();</span>
+
+<span class="w">    </span><span class="c1">// Iterate over callees</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">callRecord</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="n">node</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">llvm</span><span class="o">::</span><span class="n">Value</span><span class="o">*</span><span class="w"> </span><span class="n">callSite</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">callRecord</span><span class="p">.</span><span class="n">first</span><span class="p">;</span>
+<span class="w">        </span><span class="n">LTCallGraphNode</span><span class="o">*</span><span class="w"> </span><span class="n">callee</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">callRecord</span><span class="p">.</span><span class="n">second</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="integration">
+<h1>Integration<a class="headerlink" href="#integration" title="Link to this heading"></a></h1>
+<p>The ICFG is used as the foundation for many analyses in Lotus:</p>
+<ul class="simple">
+<li><p><strong>IFDS/IDE</strong>: The IFDS/IDE dataflow framework uses the ICFG to traverse
+interprocedural paths in the exploded super-graph. Call and return edges
+enable context-sensitive flow functions.</p></li>
+<li><p><strong>WPDS</strong>: Weighted Pushdown Systems use the ICFG to model interprocedural
+control flow with weights attached to edges for value propagation.</p></li>
+<li><p><strong>PDG</strong>: The Program Dependence Graph is built on top of the ICFG, adding
+data dependence edges to the control flow structure.</p></li>
+<li><p><strong>Reachability Analyses</strong>: Various reachability and path-sensitive analyses
+use the ICFG to explore interprocedural execution paths.</p></li>
+<li><p><strong>CFL-Reachability</strong>: Context-free language reachability analyses operate
+over the ICFG structure to handle matching parentheses (call/return pairs).</p></li>
+</ul>
+<p>The ICFG’s design allows analyses to seamlessly traverse both intraprocedural
+and interprocedural control flow without needing to manually handle function
+boundaries, making it an essential component of Lotus’s analysis infrastructure.</p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Intermediate Representations" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="pdg.html" class="btn btn-neutral float-right" title="PDG — Program Dependence Graph" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024-2025, ZJU Programming Languages and Automated Reasoning Group.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

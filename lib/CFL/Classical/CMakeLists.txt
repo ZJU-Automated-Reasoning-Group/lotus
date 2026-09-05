@@ -12,6 +12,8 @@ add_library(CanaryClassicalCFL STATIC
     Solvers/Engines/POCR/PairedTreeClosure.cpp
     Solvers/Engines/POCR/SpecializedEngines.cpp
     Solvers/Engines/PEARL/PearlEngine.cpp
+    Solvers/Engines/EndpointQuotient/EndpointQuotient.cpp
+    Solvers/Engines/EndpointQuotient/EndpointQuotientEngine.cpp
     Solvers/Engines/SQID/SqidEngine.cpp
     Solvers/Engines/STG/StagedSolver.cpp
     Solvers/Preprocessing/GraphSimplification.cpp

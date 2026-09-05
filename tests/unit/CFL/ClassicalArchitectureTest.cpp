@@ -895,6 +895,8 @@ TEST(ClassicalArchitectureTest, ParsesSolverBackendNames) {
   EXPECT_EQ(parseSolverBackend("pocr"), SolverBackend::Pocr);
   EXPECT_EQ(parseSolverBackend("hpocr"), SolverBackend::HierarchicalPocr);
   EXPECT_EQ(parseSolverBackend("focr"), SolverBackend::FullyOrdered);
+  EXPECT_EQ(parseSolverBackend("endpoint-quotient"),
+            SolverBackend::EndpointQuotient);
   EXPECT_THROW(parseSolverBackend("not-a-solver"), std::invalid_argument);
 }
 
@@ -1490,6 +1492,8 @@ TEST(ClassicalArchitectureTest, AllSolverBackendsProduceTheSameClosure) {
   EXPECT_EQ(solveWith(SolverBackend::HierarchicalPocr, graph, grammar),
             baseline);
   EXPECT_EQ(solveWith(SolverBackend::FullyOrdered, graph, grammar), baseline);
+  EXPECT_EQ(solveWith(SolverBackend::EndpointQuotient, graph, grammar),
+            baseline);
   EXPECT_TRUE(baseline.count({"S", 0, 3}) != 0);
 
   LabeledGraph graspan_graph = graph;

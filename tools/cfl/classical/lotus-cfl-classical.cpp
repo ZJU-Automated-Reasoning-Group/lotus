@@ -42,7 +42,7 @@ void usage(std::ostream &stream) {
       << "Usage: lotus-cfl-classical --grammar FILE --graph FILE [options]\n"
          "Options:\n"
          "  --solver sparse-set|sparse-bitvector|graspan|sqid|pearl|"
-         "transitive-closure|pocr|hpocr|focr\n"
+         "transitive-closure|pocr|hpocr|focr|endpoint-quotient\n"
          "  --graph-mode plain|matrix|pag-matrix\n"
          "  --direction plain|reverse|bidirectional\n"
          "  --attribute-domain var:i=N,N,...  Variable-specific domain\n"
@@ -381,6 +381,29 @@ int main(int argc, char **argv) {
           << ",\"focr_cycle_simplifications\":"
           << stats.fully_ordered_cycle_simplifications
           << ",\"graspan_epochs\":" << stats.graspan_epochs
+          << ",\"endpoint_quotient_cells\":" << stats.endpoint_quotient_cells
+          << ",\"endpoint_quotient_facts\":"
+          << stats.endpoint_quotient_facts
+          << ",\"endpoint_quotient_seed_facts\":"
+          << stats.endpoint_quotient_seed_facts
+          << ",\"endpoint_quotient_inferred_facts\":"
+          << stats.endpoint_quotient_inferred_facts
+          << ",\"endpoint_quotient_binary_joins\":"
+          << stats.endpoint_quotient_binary_joins
+          << ",\"endpoint_quotient_bridge_pairs\":"
+          << stats.endpoint_quotient_bridge_pairs
+          << ",\"endpoint_quotient_source_classes\":"
+          << stats.endpoint_quotient_source_classes
+          << ",\"endpoint_quotient_target_classes\":"
+          << stats.endpoint_quotient_target_classes
+          << ",\"endpoint_quotient_nullable_symbols\":"
+          << stats.endpoint_quotient_nullable_symbols
+          << ",\"endpoint_quotient_preprocess_us\":"
+          << stats.endpoint_quotient_preprocess_us
+          << ",\"endpoint_quotient_saturation_us\":"
+          << stats.endpoint_quotient_saturation_us
+          << ",\"endpoint_quotient_count_us\":"
+          << stats.endpoint_quotient_count_us
           << ",\"simplified_nodes\":" << simplification_stats.reduced_nodes
           << ",\"scc_nodes_merged\":" << simplification_stats.scc_nodes_merged
           << ",\"folded_nodes\":" << simplification_stats.folded_nodes

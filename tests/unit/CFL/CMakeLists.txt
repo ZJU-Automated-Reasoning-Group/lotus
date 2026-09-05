@@ -44,6 +44,11 @@ add_lotus_targeted_test(interleaved_dyck_mcfl_test
 target_compile_definitions(interleaved_dyck_mcfl_test PRIVATE
     MCFL_DATASET_DIR="${CMAKE_SOURCE_DIR}/benchmarks/real-world/CFL/InterleavedDyck/taint")
 
+add_lotus_targeted_test(EndpointQuotientEngineTest
+    EndpointQuotientEngineTest.cpp
+    LINK_LIBS
+        CanaryClassicalCFL)
+
 add_lotus_targeted_test(ClassicalAdaptersTest ClassicalAdaptersTest.cpp
     LINK_LIBS
         CanaryClassicalCFLAliasClient
@@ -52,7 +57,7 @@ add_lotus_targeted_test(ClassicalAdaptersTest ClassicalAdaptersTest.cpp
 if(TARGET lotus-cfl-classical)
     foreach(classical_backend
             sparse-set sparse-bitvector graspan sqid pearl transitive-closure pocr hpocr
-            focr)
+            focr endpoint-quotient)
         add_test(NAME classical_cfl_cli_${classical_backend}
             COMMAND $<TARGET_FILE:lotus-cfl-classical>
                 --grammar ${CMAKE_SOURCE_DIR}/tests/regress/CFL/Classical/chain.grammar
@@ -200,7 +205,7 @@ endif()
 if(TARGET lotus-cfl-vf)
     foreach(classical_backend
             sparse-set sparse-bitvector graspan sqid pearl transitive-closure pocr hpocr
-            focr)
+            focr endpoint-quotient)
         add_test(NAME classical_cfl_vf_${classical_backend}
             COMMAND $<TARGET_FILE:lotus-cfl-vf>
                 --solver ${classical_backend}

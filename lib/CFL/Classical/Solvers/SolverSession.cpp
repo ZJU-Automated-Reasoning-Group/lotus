@@ -1,5 +1,6 @@
 #include "CFL/Classical/Solvers/SolverSession.h"
 
+#include "CFL/Classical/Solvers/Engines/EndpointQuotient/EndpointQuotientEngine.h"
 #include "CFL/Classical/Solvers/Engines/PEARL/PearlEngine.h"
 #include "CFL/Classical/Solvers/Engines/POCR/FullyOrderedClosure.h"
 #include "CFL/Classical/Solvers/Engines/POCR/PairedTreeClosure.h"
@@ -286,6 +287,8 @@ createSolverRelation(SolverBackend backend,
   case SolverBackend::FullyOrdered:
     return std::make_unique<FullyOrderedClosureRelation>(
         transitive_symbols, node_count, simplify_focr_cycles);
+  case SolverBackend::EndpointQuotient:
+    return createRelation(RelationBackend::SparseSets, node_count);
   }
   throw std::invalid_argument("Unknown CFL solver backend");
 }
@@ -312,6 +315,8 @@ const char *solverBackendName(SolverBackend backend) {
     return "hpocr";
   case SolverBackend::FullyOrdered:
     return "focr";
+  case SolverBackend::EndpointQuotient:
+    return "endpoint-quotient";
   }
   return "unknown";
 }
@@ -343,6 +348,9 @@ SolverBackend parseSolverBackend(std::string_view name) {
   }
   if (name == "focr") {
     return SolverBackend::FullyOrdered;
+  }
+  if (name == "endpoint-quotient") {
+    return SolverBackend::EndpointQuotient;
   }
   throw std::invalid_argument("Unknown solver: " + std::string(name));
 }
@@ -391,6 +399,10 @@ public:
       pearl_engine_ = std::make_unique<engines::PearlEngine>(
           grammar, *relation_, graph.vertexCount(), std::move(pearl_options));
     }
+    if (backend_ == SolverBackend::EndpointQuotient) {
+      eq_engine_ = std::make_unique<engines::EndpointQuotientEngine>(
+          grammar, *relation_, graph.vertexCount());
+    }
     if (unidirectional_) {
       candidate_relation_ = createRelation(RelationBackend::SparseBitVectors,
                                            graph.vertexCount());
@@ -437,6 +449,9 @@ public:
     if (pearl_engine_) {
       pearl_engine_->ensureNodeCount(graph_.vertexCount());
     }
+    if (eq_engine_) {
+      eq_engine_->ensureNodeCount(graph_.vertexCount());
+    }
     if (candidate_relation_) {
       candidate_relation_->ensureNodeCount(graph_.vertexCount());
     }
@@ -462,7 +477,8 @@ public:
     stats.grammar_transitive_symbols = grammar_.transitiveSymbols().size();
     stats.input_edges = input_edges_;
 
-    if (backend_ != SolverBackend::Pearl && backend_ != SolverBackend::Sqid) {
+    if (backend_ != SolverBackend::Pearl && backend_ != SolverBackend::Sqid &&
+        backend_ != SolverBackend::EndpointQuotient) {
       for (SymbolId symbol : grammar_.nullableSymbolIds()) {
         for (NodeId node = nullable_seeded_nodes_; node < graph_.vertexCount();
              ++node) {
@@ -491,6 +507,26 @@ public:
           std::max(sqid.peak_in_worklist, sqid.peak_out_worklist);
     } else if (backend_ == SolverBackend::Graspan) {
       solveGraspan(stats);
+    } else if (backend_ == SolverBackend::EndpointQuotient) {
+      const engines::EndpointQuotientStatistics eq = eq_engine_->solve();
+      stats.classical_iterations += eq.binary_joins;
+      stats.processed_work_items += eq.worklist_pops;
+      stats.duplicate_edges += eq.duplicate_facts;
+      stats.added_edges += eq.derived_facts;
+      stats.peak_worklist_size =
+          std::max(stats.peak_worklist_size, eq.peak_worklist);
+      stats.endpoint_quotient_cells = eq.cells;
+      stats.endpoint_quotient_facts = eq.logical_facts;
+      stats.endpoint_quotient_seed_facts = eq.seed_facts;
+      stats.endpoint_quotient_inferred_facts = eq.inferred_facts;
+      stats.endpoint_quotient_binary_joins = eq.binary_joins;
+      stats.endpoint_quotient_bridge_pairs = eq.bridge_pairs;
+      stats.endpoint_quotient_source_classes = eq.source_classes;
+      stats.endpoint_quotient_target_classes = eq.target_classes;
+      stats.endpoint_quotient_nullable_symbols = eq.nullable_symbols;
+      stats.endpoint_quotient_preprocess_us = eq.preprocess_us;
+      stats.endpoint_quotient_saturation_us = eq.saturation_us;
+      stats.endpoint_quotient_count_us = eq.count_us;
     } else if (backend_ == SolverBackend::HierarchicalPocr) {
       do {
         while (!primary_worklist_.empty()) {
@@ -867,6 +903,15 @@ private:
 
   bool addDerived(SymbolId symbol, NodeId source, NodeId target,
                   ReachabilityStats &stats, bool force_candidate = false) {
+    if (backend_ == SolverBackend::EndpointQuotient) {
+      if (!eq_engine_->addEdge(symbol, source, target)) {
+        ++stats.duplicate_edges;
+        return false;
+      }
+      addCandidate(symbol, source, target, force_candidate);
+      ++stats.added_edges;
+      return true;
+    }
     if (backend_ == SolverBackend::Pearl) {
       if (!pearl_engine_->addEdge(symbol, source, target)) {
         ++stats.duplicate_edges;
@@ -1050,6 +1095,13 @@ private:
   }
 
   bool insertInputFact(SymbolId symbol, NodeId source, NodeId target) {
+    if (backend_ == SolverBackend::EndpointQuotient) {
+      if (!eq_engine_->addEdge(symbol, source, target)) {
+        return false;
+      }
+      addCandidate(symbol, source, target, true);
+      return true;
+    }
     if (backend_ == SolverBackend::Pearl) {
       if (!pearl_engine_->addEdge(symbol, source, target)) {
         return false;
@@ -1143,6 +1195,7 @@ private:
   std::unique_ptr<GraspanData> graspan_current_;
   std::unique_ptr<engines::SqidEngine> sqid_engine_;
   std::unique_ptr<engines::PearlEngine> pearl_engine_;
+  std::unique_ptr<engines::EndpointQuotientEngine> eq_engine_;
   std::size_t input_edges_ = 0;
   std::size_t current_peak_worklist_size_ = 0;
   std::size_t pending_derived_edges_ = 0;

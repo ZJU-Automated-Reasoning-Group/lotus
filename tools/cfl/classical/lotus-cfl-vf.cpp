@@ -37,7 +37,7 @@ void usage(std::ostream &stream) {
   stream << "Usage: lotus-cfl-vf [options] INPUT.{ll,bc}\n"
             "Options:\n"
             "  --solver sparse-set|sparse-bitvector|graspan|sqid|pearl|"
-            "transitive-closure|pocr|hpocr|focr\n"
+            "transitive-closure|pocr|hpocr|focr|endpoint-quotient\n"
             "  --engine grammar|pocr-vfa|focr-vfa\n"
             "  --focr-scc\n"
             "  --query SOURCE,TARGET       Query named LLVM values\n"

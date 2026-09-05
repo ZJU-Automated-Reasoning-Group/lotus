@@ -58,6 +58,18 @@ struct ReachabilityStats {
   std::size_t fully_ordered_critical_edge_removals = 0;
   std::size_t fully_ordered_cycle_simplifications = 0;
   std::size_t graspan_epochs = 0;
+  std::size_t endpoint_quotient_cells = 0;
+  std::size_t endpoint_quotient_facts = 0;
+  std::size_t endpoint_quotient_seed_facts = 0;
+  std::size_t endpoint_quotient_inferred_facts = 0;
+  std::size_t endpoint_quotient_binary_joins = 0;
+  std::size_t endpoint_quotient_bridge_pairs = 0;
+  std::size_t endpoint_quotient_source_classes = 0;
+  std::size_t endpoint_quotient_target_classes = 0;
+  std::size_t endpoint_quotient_nullable_symbols = 0;
+  std::uint64_t endpoint_quotient_preprocess_us = 0;
+  std::uint64_t endpoint_quotient_saturation_us = 0;
+  std::uint64_t endpoint_quotient_count_us = 0;
 
   // Aggregates report how many solve calls they combine.
   std::size_t solver_rounds = 1;
@@ -83,6 +95,8 @@ enum class SolverBackend {
   HierarchicalPocr,
   /// Fully ordered CFL reachability with an edge-critical graph.
   FullyOrdered,
+  /// Grammar-indexed endpoint-quotient (GEQ) compressed exact solving.
+  EndpointQuotient,
 };
 
 struct SolverOptions {
